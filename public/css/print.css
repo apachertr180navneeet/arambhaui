@@ -1,0 +1,97 @@
+/* ==========================================================================
+   PRINT STYLESHEET - PURCHASE ORDER, JOB WORK CHALLAN, DISPATCH NOTE, LABELS
+   ========================================================================== */
+
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 12pt !important;
+  }
+
+  .app-sidebar,
+  .app-header,
+  .table-toolbar,
+  .table-pagination,
+  .btn,
+  .modal-footer,
+  .modal-close-btn,
+  .icon-btn,
+  #toast-container,
+  .no-print {
+    display: none !important;
+  }
+
+  .main-wrapper {
+    margin-left: 0 !important;
+    padding: 0 !important;
+  }
+
+  .main-content {
+    padding: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .card, .table-card, .modal-dialog {
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .print-document-container {
+    width: 100%;
+    padding: 20px;
+    background: #ffffff;
+  }
+
+  .print-header-grid {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 2px solid #000;
+    padding-bottom: 12px;
+    margin-bottom: 20px;
+  }
+
+  .print-doc-title {
+    font-size: 18pt;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+
+  .print-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 15px 0;
+  }
+
+  .print-table th, .print-table td {
+    border: 1px solid #333;
+    padding: 8px 10px;
+    text-align: left;
+    font-size: 10pt;
+  }
+
+  .print-table th {
+    background-color: #f1f5f9 !important;
+    font-weight: bold;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .print-footer-grid {
+    margin-top: 40px;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .print-sign-box {
+    border-top: 1px solid #333;
+    padding-top: 8px;
+    width: 200px;
+    text-align: center;
+    font-size: 10pt;
+  }
+}
