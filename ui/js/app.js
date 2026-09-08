@@ -173,10 +173,12 @@ const App = {
       else if (s === "tracking") html = ProductionView.renderTracking();
       else html = ProductionView.renderOrders();
     } else if (m === "qr") {
-      if (s === "generator") html = QRView.renderGenerator();
-      else if (s === "scanner") html = QRView.renderScanner();
-      else if (s === "history") html = QRView.renderHistory();
-      else html = QRView.renderGenerator();
+      if (s === "scanner") QRView.activeTab = "customer-portal";
+      else if (s === "generator") QRView.activeTab = "discount";
+      else if (s === "history" || s === "vouchers") QRView.activeTab = "vouchers";
+      else if (s === "lot-label") QRView.activeTab = "lot-label";
+      else QRView.activeTab = "customer-portal";
+      html = QRView.renderGenerator();
     } else if (m === "dispatch") {
       if (s === "ready") html = DispatchView.renderReady();
       else html = DispatchView.renderDispatch();

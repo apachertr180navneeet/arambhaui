@@ -1173,7 +1173,7 @@ const INITIAL_DATA = {
     { id: "NOTIF-4", title: "Payment Received", desc: "₹75,000 received from ABC Fashion via NEFT", time: "5h ago", type: "success", unread: false }
   ],
 
-  // 19. Standalone Discount QR Vouchers
+  // 19. Standalone Discount QR Vouchers & Single-Use Redemptions
   discountCoupons: [
     {
       id: "CPN-001",
@@ -1184,9 +1184,13 @@ const INITIAL_DATA = {
       minBill: 1000,
       validTill: "2026-09-30",
       color: "#0f172a",
+      usageType: "single",
       status: "Active",
       createdAt: "2026-08-13",
-      timesScanned: 5
+      timesScanned: 0,
+      redeemedByPhone: null,
+      redeemedAt: null,
+      claimId: null
     },
     {
       id: "CPN-002",
@@ -1197,9 +1201,13 @@ const INITIAL_DATA = {
       minBill: 500,
       validTill: "2026-10-15",
       color: "#4f46e5",
-      status: "Active",
+      usageType: "single",
+      status: "Redeemed / Expired",
       createdAt: "2026-08-13",
-      timesScanned: 8
+      timesScanned: 1,
+      redeemedByPhone: "+91 98201 55432",
+      redeemedAt: "2026-09-07 16:45:12",
+      claimId: "CLM-2026-0391"
     },
     {
       id: "CPN-003",
@@ -1210,9 +1218,13 @@ const INITIAL_DATA = {
       minBill: 3000,
       validTill: "2026-12-31",
       color: "#059669",
+      usageType: "single",
       status: "Active",
       createdAt: "2026-08-12",
-      timesScanned: 14
+      timesScanned: 0,
+      redeemedByPhone: null,
+      redeemedAt: null,
+      claimId: null
     },
     {
       id: "CPN-004",
@@ -1223,9 +1235,30 @@ const INITIAL_DATA = {
       minBill: 0,
       validTill: "2026-11-30",
       color: "#7c3aed",
-      status: "Active",
+      usageType: "single",
+      status: "Redeemed / Expired",
       createdAt: "2026-08-10",
-      timesScanned: 22
+      timesScanned: 1,
+      redeemedByPhone: "+91 98112 55678",
+      redeemedAt: "2026-09-08 11:20:04",
+      claimId: "CLM-2026-0402"
+    },
+    {
+      id: "CPN-005",
+      code: "FLASH50-INSTANT",
+      type: "fixed",
+      amount: 50,
+      title: "Instant Counter Offer",
+      minBill: 200,
+      validTill: "2026-08-31",
+      color: "#e11d48",
+      usageType: "single",
+      status: "Expired",
+      createdAt: "2026-08-01",
+      timesScanned: 0,
+      redeemedByPhone: null,
+      redeemedAt: null,
+      claimId: null
     }
   ]
 };

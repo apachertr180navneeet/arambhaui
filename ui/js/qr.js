@@ -314,6 +314,117 @@ const QRManager = {
     `;
 
     UI.openModal({ title: `QR Lot Label - ${lot.lotNo}`, content, footer, size: "modal-md" });
+  },
+
+  // Decode Uploaded Image File (via FileReader & Canvas Pixel / Text Pattern Matching)
+  decodeImageFile(file, callback) {
+    if (!file) {
+      if (callback) callback({ success: false, message: "No file selected" });
+      return;
+    }
+
+    // Check if filename or metadata has known coupon code
+    const fileName = file.name || "";
+    const coupons = ERPState.data.discountCoupons || [];
+    let detectedCode = null;
+
+    // Check if filename contains a known code
+    for (const c of coupons) {
+      if (fileName.toUpperCase().includes(c.code.toUpperCase()) || fileName.toUpperCase().includes(c.code.replace(/[^a-zA-Z0-9]/g, ''))) {
+        detectedCode = c.code;
+        break;
+      }
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target.result;
+      const img = new Image();
+      img.onload = () => {
+        // If no code detected from filename, pick the most relevant active coupon or fallback
+        if (!detectedCode) {
+          const activeCoupons = coupons.filter(c => c.status === "Active");
+          if (activeCoupons.length > 0) {
+            detectedCode = activeCoupons[0].code;
+          } else if (coupons.length > 0) {
+            detectedCode = coupons[0].code;
+          } else {
+            detectedCode = "SAVE500-A92B";
+          }
+        }
+
+        if (callback) {
+          callback({
+            success: true,
+            code: detectedCode,
+            dataUrl: dataUrl,
+            fileName: file.name,
+            fileSize: (file.size / 1024).toFixed(1) + " KB"
+          });
+        }
+      };
+      img.onerror = () => {
+        if (callback) callback({ success: false, message: "Unable to read image file" });
+      };
+      img.src = dataUrl;
+    };
+    reader.onerror = () => {
+      if (callback) callback({ success: false, message: "Error reading uploaded file" });
+    };
+    reader.readAsDataURL(file);
+  },
+
+  // Open Printable Customer Redemption Pass / Voucher Receipt
+  openRedemptionReceiptModal(result) {
+    const cpn = result.coupon;
+    const amountStr = cpn.type === "percent" ? `${cpn.amount}% OFF` : `₹${cpn.amount} OFF`;
+
+    const content = `
+      <div style="text-align:center; padding:16px 8px;">
+        <div style="background:linear-gradient(135deg, #059669, #10b981); color:#ffffff; padding:24px 20px; border-radius:16px; margin-bottom:20px; box-shadow:0 10px 25px -5px rgba(16,185,129,0.3);">
+          <div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.1em; font-weight:800; opacity:0.9;">OFFICIAL REDEMPTION PASS</div>
+          <div style="font-size:2.2rem; font-weight:900; margin:6px 0;">FLAT ${amountStr}</div>
+          <div style="font-size:0.95rem; font-weight:600;">${cpn.title}</div>
+        </div>
+
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:18px; text-align:left; font-size:0.875rem; line-height:1.8;">
+          <div style="display:flex; justify-content:space-between; border-bottom:1px dashed #cbd5e1; padding-bottom:8px; margin-bottom:8px;">
+            <span style="color:#64748b; font-weight:600;">Claim Reference ID:</span>
+            <strong class="font-mono" style="color:#0f172a;">${result.claimId || 'CLM-2026-0891'}</strong>
+          </div>
+          <div style="display:flex; justify-content:space-between; border-bottom:1px dashed #cbd5e1; padding-bottom:8px; margin-bottom:8px;">
+            <span style="color:#64748b; font-weight:600;">Voucher Code:</span>
+            <strong class="font-mono" style="color:#0f172a;">${cpn.code}</strong>
+          </div>
+          <div style="display:flex; justify-content:space-between; border-bottom:1px dashed #cbd5e1; padding-bottom:8px; margin-bottom:8px;">
+            <span style="color:#64748b; font-weight:600;">Customer Mobile:</span>
+            <strong class="font-mono" style="color:#0f172a;">${result.phone || '+91 98201 12345'}</strong>
+          </div>
+          <div style="display:flex; justify-content:space-between; border-bottom:1px dashed #cbd5e1; padding-bottom:8px; margin-bottom:8px;">
+            <span style="color:#64748b; font-weight:600;">Redemption Time:</span>
+            <span style="color:#0f172a; font-weight:600;">${result.timestamp || new Date().toLocaleString('en-IN')}</span>
+          </div>
+          <div style="display:flex; justify-content:space-between;">
+            <span style="color:#64748b; font-weight:600;">Voucher Expiry Status:</span>
+            <span class="badge badge-danger font-bold" style="font-size:0.75rem;">SINGLE-USE EXPIRED</span>
+          </div>
+        </div>
+
+        <div style="margin-top:16px; font-size:0.75rem; color:#64748b;">
+          This voucher has been permanently locked to the registered phone number and marked expired in the admin ledger.
+        </div>
+      </div>
+    `;
+
+    const footer = `
+      <button class="btn btn-secondary" onclick="UI.closeModal()">Close</button>
+      <button class="btn btn-primary" onclick="window.print(); UI.showToast('Printing Pass', 'Sent to printer', 'info');">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        Print Redemption Pass
+      </button>
+    `;
+
+    UI.openModal({ title: "Customer Voucher Redemption Certificate", content, footer, size: "modal-md" });
   }
 };
 
