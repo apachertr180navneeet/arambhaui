@@ -18,7 +18,7 @@ const App = {
       this.updateHeaderBadges();
     });
 
-    // Listen to hash changes (browser back/forward or programmatic changes)
+    // Listen to browser hash changes
     window.addEventListener("hashchange", () => {
       const h = window.location.hash.replace("#/", "");
       if (h) {
@@ -378,23 +378,9 @@ const App = {
 
   logout() {
     UI.closeModal();
-    const logoutForm = document.querySelector('form[action*="logout"]');
-    if (logoutForm) {
-      logoutForm.submit();
-    } else {
-      const form = document.createElement('form');
-      form.method = 'POST';
-      form.action = '/logout';
-      const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-      if (csrf) {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = '_token';
-        input.value = csrf;
-        form.appendChild(input);
-      }
-      document.body.appendChild(form);
-      form.submit();
+    const loginOverlay = document.getElementById("login-modal-overlay");
+    if (loginOverlay) {
+      loginOverlay.style.display = "flex";
     }
   },
 
