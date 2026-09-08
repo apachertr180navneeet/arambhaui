@@ -18,22 +18,70 @@ const App = {
       this.updateHeaderBadges();
     });
 
+    // Listen to browser popstate (back/forward history navigation)
+    window.addEventListener("popstate", (e) => {
+      const target = this.getRouteFromLocation();
+      this.navigate(target.module, target.submodule, false);
+    });
+
     // Initial navigation
-    const hash = window.location.hash.replace("#/", "");
-    if (hash) {
-      const parts = hash.split("/");
-      this.navigate(parts[0], parts[1] || "overview", false);
-    } else {
-      this.navigate("dashboard", "overview", false);
+    const initial = this.getRouteFromLocation();
+    this.navigate(initial.module, initial.submodule, false);
+
+    // If URL had a '#' in it, remove it cleanly
+    if (window.location.hash) {
+      const cleanPath = this.getPathForRoute(initial.module, initial.submodule);
+      window.history.replaceState({ module: initial.module, submodule: initial.submodule }, "", cleanPath);
     }
   },
 
-  navigate(module, submodule = "overview", updateHash = true) {
+  getPathForRoute(module, submodule = "overview") {
+    if (module === "dashboard" && (!submodule || submodule === "overview")) {
+      return "/dashboard";
+    }
+    return `/${module}/${submodule}`;
+  },
+
+  getRouteFromLocation() {
+    if (window.location.hash) {
+      const cleanHash = window.location.hash.replace(/^#\/?/, "");
+      if (cleanHash) {
+        const parts = cleanHash.split("/").filter(Boolean);
+        if (parts.length > 0) {
+          return { module: parts[0], submodule: parts[1] || "overview" };
+        }
+      }
+    }
+
+    const pathname = window.location.pathname.replace(/^\/+|\/+$/g, "");
+    if (pathname) {
+      let parts = pathname.split("/").filter(Boolean);
+      if (parts[0] === "dashboard" && parts.length > 1) {
+        parts.shift();
+      }
+      if (parts.length === 1 && parts[0] === "dashboard") {
+        return { module: "dashboard", submodule: "overview" };
+      }
+      if (parts.length > 0) {
+        return { module: parts[0], submodule: parts[1] || "overview" };
+      }
+    }
+
+    return { module: "dashboard", submodule: "overview" };
+  },
+
+  navigate(module, submodule = "overview", updateUrl = true) {
     this.currentModule = module;
     this.currentSubmodule = submodule;
 
-    if (updateHash) {
-      window.location.hash = `#/${module}/${submodule}`;
+    const targetPath = this.getPathForRoute(module, submodule);
+
+    if (updateUrl) {
+      if (window.location.pathname !== targetPath || window.location.hash) {
+        window.history.pushState({ module, submodule }, "", targetPath);
+      }
+    } else if (window.location.hash) {
+      window.history.replaceState({ module, submodule }, "", targetPath);
     }
 
     this.updateSidebarUI(module, submodule);

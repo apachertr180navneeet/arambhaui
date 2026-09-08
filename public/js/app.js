@@ -22,37 +22,86 @@ const App = {
     // Sync live backend data from database
     ERPState.syncWithBackend();
 
-    // Listen to browser hash changes
+    // Listen to browser popstate (back/forward history navigation)
+    window.addEventListener("popstate", (e) => {
+      const target = this.getRouteFromLocation();
+      this.navigate(target.module, target.submodule, false);
+    });
+
+    // Listen for any legacy hashchange just in case, and clean it up
     window.addEventListener("hashchange", () => {
-      const h = window.location.hash.replace("#/", "");
-      if (h) {
-        const parts = h.split("/");
-        const mod = parts[0];
-        const sub = parts[1] || "overview";
-        if (mod !== this.currentModule || sub !== this.currentSubmodule) {
-          this.navigate(mod, sub, false);
-        }
-      }
+      const target = this.getRouteFromLocation();
+      this.navigate(target.module, target.submodule, true);
     });
 
     // Initial navigation
-    const hash = window.location.hash.replace("#/", "");
-    if (hash) {
-      const parts = hash.split("/");
-      this.navigate(parts[0], parts[1] || "overview", false);
-    } else if (window.INITIAL_ROUTE && window.INITIAL_ROUTE.module && window.INITIAL_ROUTE.module !== "dashboard") {
-      this.navigate(window.INITIAL_ROUTE.module, window.INITIAL_ROUTE.submodule || "overview", true);
-    } else {
-      this.navigate("dashboard", "overview", false);
+    const initial = this.getRouteFromLocation();
+    this.navigate(initial.module, initial.submodule, false);
+
+    // If URL had a '#' in it, remove it cleanly without page reload
+    if (window.location.hash) {
+      const cleanPath = this.getPathForRoute(initial.module, initial.submodule);
+      window.history.replaceState({ module: initial.module, submodule: initial.submodule }, "", cleanPath);
     }
   },
 
-  navigate(module, submodule = "overview", updateHash = true) {
+  getPathForRoute(module, submodule = "overview") {
+    if (module === "dashboard" && (!submodule || submodule === "overview")) {
+      return "/dashboard";
+    }
+    return `/${module}/${submodule}`;
+  },
+
+  getRouteFromLocation() {
+    // 1. Check if URL has a legacy hash: #/masters/sizes or #masters/sizes
+    if (window.location.hash) {
+      const cleanHash = window.location.hash.replace(/^#\/?/, "");
+      if (cleanHash) {
+        const parts = cleanHash.split("/").filter(Boolean);
+        if (parts.length > 0) {
+          return { module: parts[0], submodule: parts[1] || "overview" };
+        }
+      }
+    }
+
+    // 2. Check window.INITIAL_ROUTE provided by server
+    if (window.INITIAL_ROUTE && window.INITIAL_ROUTE.module && window.INITIAL_ROUTE.module !== "dashboard") {
+      return {
+        module: window.INITIAL_ROUTE.module,
+        submodule: window.INITIAL_ROUTE.submodule || "overview"
+      };
+    }
+
+    // 3. Parse pathname: e.g. /masters/sizes or /dashboard/masters/sizes
+    const pathname = window.location.pathname.replace(/^\/+|\/+$/g, "");
+    if (pathname) {
+      let parts = pathname.split("/").filter(Boolean);
+      if (parts[0] === "dashboard" && parts.length > 1) {
+        parts.shift();
+      }
+      if (parts.length === 1 && parts[0] === "dashboard") {
+        return { module: "dashboard", submodule: "overview" };
+      }
+      if (parts.length > 0) {
+        return { module: parts[0], submodule: parts[1] || "overview" };
+      }
+    }
+
+    return { module: "dashboard", submodule: "overview" };
+  },
+
+  navigate(module, submodule = "overview", updateUrl = true) {
     this.currentModule = module;
     this.currentSubmodule = submodule;
 
-    if (updateHash) {
-      window.location.hash = `#/${module}/${submodule}`;
+    const targetPath = this.getPathForRoute(module, submodule);
+
+    if (updateUrl) {
+      if (window.location.pathname !== targetPath || window.location.hash) {
+        window.history.pushState({ module, submodule }, "", targetPath);
+      }
+    } else if (window.location.hash) {
+      window.history.replaceState({ module, submodule }, "", targetPath);
     }
 
     this.updateSidebarUI(module, submodule);

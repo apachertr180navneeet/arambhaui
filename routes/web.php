@@ -43,6 +43,7 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard/{module}/{submodule?}', [DashboardController::class, 'moduleRoute'])->name('dashboard.module');
 
     // ==========================================
     // 1. CORE MASTERS MANAGEMENT
