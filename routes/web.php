@@ -48,6 +48,7 @@ Route::middleware('auth')->group(function () {
     // 1. CORE MASTERS MANAGEMENT
     // ==========================================
     Route::prefix('masters')->name('masters.')->group(function () {
+        Route::get('customers/{customer}/statement', [CustomerController::class, 'statement'])->name('customers.statement');
         Route::resource('customers', CustomerController::class);
         Route::resource('vendors', VendorController::class);
         Route::resource('jobworkers', JobWorkerController::class);

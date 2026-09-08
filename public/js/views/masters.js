@@ -4,146 +4,448 @@
    ========================================================================== */
 
 const MastersView = {
-  // 1. CUSTOMER MASTER
+  // 1. CUSTOMER MASTER STATE & CONTROLLER
+  _custState: {
+    search: "",
+    status: "",
+    city: "",
+    balanceFilter: "",
+    sortBy: "name_asc",
+    page: 1,
+    pageSize: 10,
+    activeDrawerTab: "overview",
+    activeCustomerId: null
+  },
+
   renderCustomers() {
-    const customers = ERPState.data.customers;
+    const allCustomers = ERPState.data.customers || [];
+    const stats = ERPState.getCustomerStats();
+
+    // 1. Filter customers
+    let filtered = allCustomers.filter(c => {
+      const q = (this._custState.search || "").toLowerCase().trim();
+      if (q) {
+        const matchName = (c.name || "").toLowerCase().includes(q);
+        const matchComp = (c.companyName || "").toLowerCase().includes(q);
+        const matchCode = (c.id || c.code || "").toLowerCase().includes(q);
+        const matchPhone = (c.mobile || c.phone || "").toLowerCase().includes(q);
+        const matchEmail = (c.email || "").toLowerCase().includes(q);
+        const matchGst = (c.gstin || "").toLowerCase().includes(q);
+        const matchCity = (c.city || "").toLowerCase().includes(q);
+        const matchContact = (c.contactPerson || "").toLowerCase().includes(q);
+        if (!matchName && !matchComp && !matchCode && !matchPhone && !matchEmail && !matchGst && !matchCity && !matchContact) {
+          return false;
+        }
+      }
+
+      if (this._custState.status && c.status !== this._custState.status) {
+        return false;
+      }
+
+      if (this._custState.city && c.city !== this._custState.city) {
+        return false;
+      }
+
+      if (this._custState.balanceFilter === "due" && !(Number(c.outstanding) > 0)) {
+        return false;
+      }
+      if (this._custState.balanceFilter === "zero" && Number(c.outstanding) > 0) {
+        return false;
+      }
+      if (this._custState.balanceFilter === "risk" && !((Number(c.outstanding) || 0) >= (Number(c.creditLimit) || 0) * 0.9 && (Number(c.outstanding) || 0) > 0)) {
+        return false;
+      }
+
+      return true;
+    });
+
+    // 2. Sort customers
+    filtered.sort((a, b) => {
+      switch (this._custState.sortBy) {
+        case "name_asc":
+          return (a.name || "").localeCompare(b.name || "");
+        case "name_desc":
+          return (b.name || "").localeCompare(a.name || "");
+        case "due_desc":
+          return (Number(b.outstanding) || 0) - (Number(a.outstanding) || 0);
+        case "due_asc":
+          return (Number(a.outstanding) || 0) - (Number(b.outstanding) || 0);
+        case "credit_desc":
+          return (Number(b.creditLimit) || 0) - (Number(a.creditLimit) || 0);
+        case "recent":
+          return (b.id || "").localeCompare(a.id || "");
+        default:
+          return (a.name || "").localeCompare(b.name || "");
+      }
+    });
+
+    // 3. Paginate
+    const totalRecords = filtered.length;
+    const pageSize = this._custState.pageSize === "all" ? totalRecords : Number(this._custState.pageSize || 10);
+    const totalPages = Math.max(1, Math.ceil(totalRecords / (pageSize || 1)));
+    
+    if (this._custState.page > totalPages) this._custState.page = totalPages;
+    if (this._custState.page < 1) this._custState.page = 1;
+    
+    const startIndex = (this._custState.page - 1) * pageSize;
+    const paginated = pageSize === totalRecords ? filtered : filtered.slice(startIndex, startIndex + pageSize);
 
     return `
-      <div class="table-card">
-        <div class="table-toolbar">
-          <div class="table-toolbar-left">
-            <div class="table-search-box">
-              <svg class="table-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-              <input type="text" class="table-search-input" id="cust-search" placeholder="Search by customer name, city, GSTIN..." oninput="MastersView.filterCustomers()">
+      <div style="display:flex; flex-direction:column; gap:20px;">
+        
+        <!-- Top KPI Dynamic Metrics Row -->
+        <div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:16px;">
+          
+          <div class="kpi-card" style="background:#ffffff; border-radius:var(--radius-xl); border:1px solid var(--slate-200); padding:18px; box-shadow:var(--shadow-sm); display:flex; align-items:center; gap:16px;">
+            <div style="width:46px; height:46px; border-radius:12px; background:var(--primary-50); color:var(--primary-600); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
             </div>
-            <select class="table-filter-select" id="cust-status-filter" onchange="MastersView.filterCustomers()">
-              <option value="">All Statuses</option>
-              <option value="Active">Active</option>
-              <option value="Inactive">Inactive</option>
-            </select>
+            <div>
+              <div style="font-size:0.75rem; color:var(--slate-500); font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Total Customers</div>
+              <div style="font-size:1.45rem; font-weight:800; color:var(--slate-900); margin-top:2px;">${stats.total} <span style="font-size:0.8rem; font-weight:600; color:var(--success-600); background:#ecfdf5; padding:2px 8px; border-radius:12px; border:1px solid #a7f3d0;">${stats.active} Active</span></div>
+            </div>
           </div>
 
-          <div class="table-toolbar-right">
-            <button class="btn btn-secondary btn-sm" onclick="MastersView.exportCustomers()">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              Export CSV
-            </button>
-            <button class="btn btn-primary btn-sm" onclick="MastersView.openCustomerModal()">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              Add Customer
-            </button>
+          <div class="kpi-card" style="background:#ffffff; border-radius:var(--radius-xl); border:1px solid var(--slate-200); padding:18px; box-shadow:var(--shadow-sm); display:flex; align-items:center; gap:16px;">
+            <div style="width:46px; height:46px; border-radius:12px; background:#fef2f2; color:var(--danger-600); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            </div>
+            <div>
+              <div style="font-size:0.75rem; color:var(--slate-500); font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Total Outstanding</div>
+              <div style="font-size:1.45rem; font-weight:800; color:var(--danger-600); margin-top:2px;">${UI.formatCurrency(stats.totalOutstanding)}</div>
+            </div>
           </div>
+
+          <div class="kpi-card" style="background:#ffffff; border-radius:var(--radius-xl); border:1px solid var(--slate-200); padding:18px; box-shadow:var(--shadow-sm); display:flex; align-items:center; gap:16px;">
+            <div style="width:46px; height:46px; border-radius:12px; background:#f0fdf4; color:var(--success-600); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+            </div>
+            <div>
+              <div style="font-size:0.75rem; color:var(--slate-500); font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Approved Credit Limit</div>
+              <div style="font-size:1.45rem; font-weight:800; color:var(--slate-800); margin-top:2px;">${UI.formatCurrency(stats.totalCreditLimit)}</div>
+            </div>
+          </div>
+
+          <div class="kpi-card" style="background:#ffffff; border-radius:var(--radius-xl); border:1px solid var(--slate-200); padding:18px; box-shadow:var(--shadow-sm); display:flex; align-items:center; gap:16px;">
+            <div style="width:46px; height:46px; border-radius:12px; background:${stats.highRisk > 0 ? '#fffbeb' : '#f8fafc'}; color:${stats.highRisk > 0 ? '#d97706' : '#64748b'}; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/></svg>
+            </div>
+            <div>
+              <div style="font-size:0.75rem; color:var(--slate-500); font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Credit Utilization</div>
+              <div style="font-size:1.45rem; font-weight:800; color:${Number(stats.creditUtilization) > 75 ? 'var(--danger-600)' : 'var(--primary-700)'}; margin-top:2px;">
+                ${stats.creditUtilization}%
+                ${stats.highRisk > 0 ? `<span style="font-size:0.75rem; font-weight:700; color:#b45309; background:#fef3c7; padding:2px 6px; border-radius:10px; margin-left:4px;">${stats.highRisk} High Risk</span>` : ''}
+              </div>
+            </div>
+          </div>
+
         </div>
 
-        <div class="table-responsive">
-          <table class="data-table" id="customers-table">
-            <thead>
-              <tr>
-                <th>Customer ID</th>
-                <th>Customer Name</th>
-                <th>Contact Person</th>
-                <th>Mobile</th>
-                <th>GSTIN</th>
-                <th>City</th>
-                <th>Credit Limit</th>
-                <th>Outstanding</th>
-                <th>Status</th>
-                <th style="text-align:right;">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${customers.map(c => `
-                <tr id="cust-row-${c.id}">
-                  <td class="mono-cell font-bold" style="color:var(--primary-600);">${c.id}</td>
-                  <td class="primary-cell">
-                    <a href="javascript:void(0)" onclick="MastersView.openCustomerDrawer('${c.id}')">${c.name}</a>
-                    <div style="font-size:0.75rem; color:var(--slate-400);">${c.companyName}</div>
-                  </td>
-                  <td>${c.contactPerson}</td>
-                  <td>${c.mobile}</td>
-                  <td class="mono-cell">${c.gstin}</td>
-                  <td>${c.city}</td>
-                  <td>${UI.formatCurrency(c.creditLimit)}</td>
-                  <td class="font-bold" style="color:${c.outstanding > 0 ? 'var(--danger-600)' : 'var(--success-600)'};">
-                    ${UI.formatCurrency(c.outstanding)}
-                  </td>
-                  <td>${UI.formatStatusBadge(c.status)}</td>
-                  <td class="table-actions">
-                    <button class="table-action-btn view" title="View Profile" onclick="MastersView.openCustomerDrawer('${c.id}')">View</button>
-                    <button class="table-action-btn edit" title="Edit Customer" onclick="MastersView.openCustomerModal('${c.id}')">Edit</button>
-                    <button class="table-action-btn delete" title="Delete Customer" onclick="MastersView.confirmDeleteCustomer('${c.id}')">Delete</button>
-                  </td>
+        <!-- Main Table & Filter Container -->
+        <div class="table-card">
+          
+          <!-- Advanced Multi-Filter Toolbar -->
+          <div class="table-toolbar" style="gap:12px; flex-wrap:wrap;">
+            <div class="table-toolbar-left" style="display:flex; gap:10px; flex-wrap:wrap; flex:1; min-width:320px;">
+              
+              <!-- Search Box -->
+              <div class="table-search-box" style="min-width:240px; flex:1.2;">
+                <svg class="table-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <input type="text" class="table-search-input" id="cust-search" value="${this._custState.search}" placeholder="Search name, phone, GSTIN, city..." oninput="MastersView.onCustomerSearch(this.value)">
+                ${this._custState.search ? `
+                  <button onclick="MastersView.onCustomerSearch(''); document.getElementById('cust-search').value='';" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; color:var(--slate-400);">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
+                ` : ''}
+              </div>
+
+              <!-- Status Filter -->
+              <select class="table-filter-select" onchange="MastersView.onCustomerFilter('status', this.value)" style="min-width:125px;">
+                <option value="">All Statuses</option>
+                <option value="Active" ${this._custState.status === 'Active' ? 'selected' : ''}>Active</option>
+                <option value="Inactive" ${this._custState.status === 'Inactive' ? 'selected' : ''}>Inactive</option>
+                <option value="Blocked" ${this._custState.status === 'Blocked' ? 'selected' : ''}>Blocked</option>
+              </select>
+
+              <!-- City Filter -->
+              <select class="table-filter-select" onchange="MastersView.onCustomerFilter('city', this.value)" style="min-width:125px;">
+                <option value="">All Cities</option>
+                ${stats.cities.map(ct => `<option value="${ct}" ${this._custState.city === ct ? 'selected' : ''}>${ct}</option>`).join('')}
+              </select>
+
+              <!-- Balance Filter -->
+              <select class="table-filter-select" onchange="MastersView.onCustomerFilter('balanceFilter', this.value)" style="min-width:140px;">
+                <option value="">All Balances</option>
+                <option value="due" ${this._custState.balanceFilter === 'due' ? 'selected' : ''}>Payment Due (>0)</option>
+                <option value="zero" ${this._custState.balanceFilter === 'zero' ? 'selected' : ''}>Zero Balance (₹0)</option>
+                <option value="risk" ${this._custState.balanceFilter === 'risk' ? 'selected' : ''}>High Risk (>90%)</option>
+              </select>
+
+              <!-- Sort Order -->
+              <select class="table-filter-select" onchange="MastersView.onCustomerFilter('sortBy', this.value)" style="min-width:140px;">
+                <option value="name_asc" ${this._custState.sortBy === 'name_asc' ? 'selected' : ''}>Name (A → Z)</option>
+                <option value="name_desc" ${this._custState.sortBy === 'name_desc' ? 'selected' : ''}>Name (Z → A)</option>
+                <option value="due_desc" ${this._custState.sortBy === 'due_desc' ? 'selected' : ''}>Highest Balance</option>
+                <option value="due_asc" ${this._custState.sortBy === 'due_asc' ? 'selected' : ''}>Lowest Balance</option>
+                <option value="credit_desc" ${this._custState.sortBy === 'credit_desc' ? 'selected' : ''}>Credit Limit</option>
+                <option value="recent" ${this._custState.sortBy === 'recent' ? 'selected' : ''}>Newest First</option>
+              </select>
+
+            </div>
+
+            <div class="table-toolbar-right" style="display:flex; gap:8px;">
+              <button class="btn btn-secondary btn-sm" onclick="MastersView.exportCustomers()" title="Export CSV file">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Export CSV
+              </button>
+              
+              <button class="btn btn-secondary btn-sm" onclick="MastersView.printCustomerDirectory()" title="Print Customer List">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
+                Print
+              </button>
+
+              <button class="btn btn-primary btn-sm" onclick="MastersView.openCustomerModal()">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Add Customer
+              </button>
+            </div>
+          </div>
+
+          <!-- Responsive Data Table -->
+          <div class="table-responsive">
+            <table class="data-table" id="customers-table">
+              <thead>
+                <tr>
+                  <th style="width:110px;">Customer ID</th>
+                  <th>Customer / Entity</th>
+                  <th>Contact Person & Phone</th>
+                  <th>GSTIN</th>
+                  <th>City & State</th>
+                  <th>Credit Limit</th>
+                  <th>Outstanding Balance</th>
+                  <th>Status</th>
+                  <th style="text-align:right; min-width:210px;">Actions</th>
                 </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                ${paginated.length > 0 ? paginated.map(c => {
+                  const outAmt = Number(c.outstanding) || 0;
+                  const credLim = Number(c.creditLimit) || 1;
+                  const utilPercent = Math.min(100, Math.round((outAmt / credLim) * 100));
+                  const isHighRisk = outAmt >= credLim * 0.9 && outAmt > 0;
+                  const initials = (c.name || "CU").split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
 
-        <div class="table-pagination">
-          <div class="pagination-info">Showing <strong>${customers.length}</strong> of <strong>${customers.length}</strong> customers</div>
-          <div class="pagination-controls">
-            <button class="page-btn" disabled>Previous</button>
-            <button class="page-btn active">1</button>
-            <button class="page-btn" disabled>Next</button>
+                  return `
+                    <tr id="cust-row-${c.id}" class="${isHighRisk ? 'row-highlight-warning' : ''}">
+                      <td class="mono-cell font-bold" style="color:var(--primary-600);">
+                        <span style="background:var(--primary-50); padding:3px 7px; border-radius:6px; border:1px solid var(--primary-100);">${c.id || c.code}</span>
+                      </td>
+                      
+                      <td class="primary-cell">
+                        <div style="display:flex; align-items:center; gap:10px;">
+                          <div style="width:34px; height:34px; border-radius:8px; background:linear-gradient(135deg, var(--primary-600), var(--primary-800)); color:#ffffff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.75rem; flex-shrink:0;">
+                            ${initials}
+                          </div>
+                          <div>
+                            <a href="javascript:void(0)" onclick="MastersView.openCustomerDrawer('${c.id}')" style="font-weight:700; color:var(--slate-900); text-decoration:none;" onmouseover="this.style.color='var(--primary-600)'" onmouseout="this.style.color='var(--slate-900)'">
+                              ${c.name}
+                            </a>
+                            <div style="font-size:0.725rem; color:var(--slate-500); margin-top:1px;">${c.companyName || c.name}</div>
+                          </div>
+                        </div>
+                      </td>
+
+                      <td>
+                        <div style="font-weight:600; color:var(--slate-800); font-size:0.825rem;">${c.contactPerson || '-'}</div>
+                        <div style="font-size:0.75rem; color:var(--slate-500); margin-top:2px;">
+                          <a href="tel:${c.mobile || c.phone}" style="color:inherit; text-decoration:none;" title="Click to call">
+                            ${c.mobile || c.phone || '-'}
+                          </a>
+                        </div>
+                      </td>
+
+                      <td class="mono-cell">
+                        ${c.gstin ? `
+                          <div style="display:inline-flex; align-items:center; gap:4px; background:var(--slate-100); padding:2px 6px; border-radius:4px; font-size:0.775rem;">
+                            <span>${c.gstin}</span>
+                            <button onclick="navigator.clipboard.writeText('${c.gstin}'); UI.showToast('Copied', 'GSTIN copied to clipboard', 'info');" style="background:none; border:none; cursor:pointer; padding:0; color:var(--slate-400);" title="Copy GSTIN">
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                            </button>
+                          </div>
+                        ` : `<span style="color:var(--slate-400); font-size:0.75rem;">Unregistered</span>`}
+                      </td>
+
+                      <td>
+                        <div style="font-size:0.825rem; font-weight:600; color:var(--slate-800);">${c.city || 'Mumbai'}</div>
+                        <div style="font-size:0.725rem; color:var(--slate-400);">${c.state || 'Maharashtra'}</div>
+                      </td>
+
+                      <td>
+                        <div style="font-weight:700; color:var(--slate-800); font-size:0.825rem;">${UI.formatCurrency(credLim)}</div>
+                        <div style="font-size:0.7rem; color:var(--slate-500);">${c.paymentTerms || '30 Days Net'}</div>
+                      </td>
+
+                      <td>
+                        <div style="display:flex; align-items:baseline; justify-content:space-between; gap:6px;">
+                          <span style="font-size:0.875rem; font-weight:800; color:${outAmt > 0 ? (isHighRisk ? 'var(--danger-700)' : 'var(--danger-600)') : 'var(--success-600)'};">
+                            ${UI.formatCurrency(outAmt)}
+                          </span>
+                          ${outAmt > 0 ? `<span style="font-size:0.7rem; color:var(--slate-500);">${utilPercent}%</span>` : ''}
+                        </div>
+                        ${outAmt > 0 ? `
+                          <div style="width:100%; height:4px; background:var(--slate-200); border-radius:2px; margin-top:4px; overflow:hidden;">
+                            <div style="width:${utilPercent}%; height:100%; background:${isHighRisk ? 'var(--danger-500)' : (utilPercent > 50 ? '#f59e0b' : 'var(--primary-500)')}; border-radius:2px;"></div>
+                          </div>
+                        ` : ''}
+                      </td>
+
+                      <td>
+                        ${UI.formatStatusBadge(c.status || 'Active')}
+                      </td>
+
+                      <td class="table-actions" style="text-align:right;">
+                        <button class="table-action-btn view" title="View Profile & History" onclick="MastersView.openCustomerDrawer('${c.id}')">View</button>
+                        <button class="table-action-btn" style="color:var(--primary-700); background:var(--primary-50);" title="View Statement Ledger" onclick="MastersView.openCustomerStatementModal('${c.id}')">Ledger</button>
+                        <button class="table-action-btn" style="color:var(--success-700); background:#f0fdf4;" title="Record Receipt" onclick="MastersView.openCustomerReceiptModal('${c.id}')">Receipt</button>
+                        <button class="table-action-btn edit" title="Edit Customer" onclick="MastersView.openCustomerModal('${c.id}')">Edit</button>
+                        <button class="table-action-btn delete" title="Delete Customer" onclick="MastersView.confirmDeleteCustomer('${c.id}')">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                        </button>
+                      </td>
+                    </tr>
+                  `;
+                }).join('') : `
+                  <tr>
+                    <td colspan="9" style="text-align:center; padding:40px 20px;">
+                      <div style="width:50px; height:50px; border-radius:50%; background:var(--slate-100); color:var(--slate-400); display:flex; align-items:center; justify-content:center; margin:0 auto 12px;">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                      </div>
+                      <h4 style="color:var(--slate-800); font-size:0.95rem; margin-bottom:4px;">No matching customers found</h4>
+                      <p style="color:var(--slate-500); font-size:0.8rem; margin-bottom:16px;">Try adjusting your search query, status, city or balance filter.</p>
+                      <button class="btn btn-secondary btn-sm" onclick="MastersView.resetCustomerFilters()">Reset All Filters</button>
+                    </td>
+                  </tr>
+                `}
+              </tbody>
+            </table>
           </div>
+
+          <!-- Dynamic Pagination Controls -->
+          <div class="table-pagination" style="padding:14px 20px; border-top:1px solid var(--slate-200); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+            <div class="pagination-info" style="font-size:0.825rem; color:var(--slate-600);">
+              Showing <strong>${totalRecords > 0 ? startIndex + 1 : 0}</strong> to <strong>${Math.min(startIndex + pageSize, totalRecords)}</strong> of <strong>${totalRecords}</strong> customer accounts
+            </div>
+
+            <div style="display:flex; align-items:center; gap:12px;">
+              <div style="display:flex; align-items:center; gap:6px; font-size:0.8rem; color:var(--slate-500);">
+                <span>Per Page:</span>
+                <select class="table-filter-select" style="padding:4px 24px 4px 8px; font-size:0.8rem;" onchange="MastersView.onCustomerPageSize(this.value)">
+                  <option value="5" ${this._custState.pageSize === 5 || this._custState.pageSize === '5' ? 'selected' : ''}>5</option>
+                  <option value="10" ${this._custState.pageSize === 10 || this._custState.pageSize === '10' ? 'selected' : ''}>10</option>
+                  <option value="25" ${this._custState.pageSize === 25 || this._custState.pageSize === '25' ? 'selected' : ''}>25</option>
+                  <option value="50" ${this._custState.pageSize === 50 || this._custState.pageSize === '50' ? 'selected' : ''}>50</option>
+                  <option value="all" ${this._custState.pageSize === 'all' ? 'selected' : ''}>All</option>
+                </select>
+              </div>
+
+              <div class="pagination-controls" style="display:flex; gap:4px;">
+                <button class="page-btn" ${this._custState.page <= 1 ? 'disabled' : ''} onclick="MastersView.onCustomerPageChange(${this._custState.page - 1})">Previous</button>
+                
+                ${Array.from({ length: totalPages }, (_, i) => i + 1).map(p => {
+                  if (totalPages > 6 && Math.abs(p - this._custState.page) > 2 && p !== 1 && p !== totalPages) {
+                    return p === 2 || p === totalPages - 1 ? `<span style="padding:4px 6px; color:var(--slate-400);">...</span>` : '';
+                  }
+                  return `<button class="page-btn ${this._custState.page === p ? 'active' : ''}" onclick="MastersView.onCustomerPageChange(${p})">${p}</button>`;
+                }).join('')}
+                
+                <button class="page-btn" ${this._custState.page >= totalPages ? 'disabled' : ''} onclick="MastersView.onCustomerPageChange(${this._custState.page + 1})">Next</button>
+              </div>
+            </div>
+          </div>
+
         </div>
       </div>
     `;
   },
 
-  filterCustomers() {
-    const q = (document.getElementById("cust-search")?.value || "").toLowerCase();
-    const st = (document.getElementById("cust-status-filter")?.value || "").toLowerCase();
-    const rows = document.querySelectorAll("#customers-table tbody tr");
+  onCustomerSearch(val) {
+    this._custState.search = val;
+    this._custState.page = 1;
+    App.refreshCurrentView();
+  },
 
-    rows.forEach(r => {
-      const text = r.innerText.toLowerCase();
-      const matchQ = !q || text.includes(q);
-      const matchSt = !st || text.includes(st);
-      r.style.display = matchQ && matchSt ? "" : "none";
-    });
+  onCustomerFilter(key, val) {
+    this._custState[key] = val;
+    this._custState.page = 1;
+    App.refreshCurrentView();
+  },
+
+  onCustomerPageChange(page) {
+    this._custState.page = page;
+    App.refreshCurrentView();
+  },
+
+  onCustomerPageSize(size) {
+    this._custState.pageSize = size;
+    this._custState.page = 1;
+    App.refreshCurrentView();
+  },
+
+  resetCustomerFilters() {
+    this._custState.search = "";
+    this._custState.status = "";
+    this._custState.city = "";
+    this._custState.balanceFilter = "";
+    this._custState.sortBy = "name_asc";
+    this._custState.page = 1;
+    App.refreshCurrentView();
   },
 
   openCustomerModal(customerId = null) {
     const isEdit = !!customerId;
-    const cust = isEdit ? ERPState.data.customers.find(c => c.id === customerId) : {};
+    const cust = isEdit ? ERPState.getCustomerById(customerId) || {} : {};
 
     const content = `
-      <form id="customer-form">
+      <form id="customer-form" onsubmit="event.preventDefault(); document.getElementById('btn-save-cust').click();">
+        <div style="background:var(--slate-50); padding:12px 16px; border-radius:var(--radius-md); margin-bottom:16px; border:1px solid var(--slate-200); font-size:0.825rem; color:var(--slate-600); display:flex; align-items:center; gap:8px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--primary-600); flex-shrink:0;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          <span>${isEdit ? `Editing Master Record for <strong>${cust.name}</strong> (${cust.id})` : 'New Customer account will be auto-assigned a unique code and added to live ERP Database.'}</span>
+        </div>
+
         <div class="form-grid">
           <div class="form-group">
-            <label class="form-label">Customer Brand / Display Name <span class="required-star">*</span></label>
-            <input type="text" class="form-control" id="cust-name" required value="${cust.name || ''}" placeholder="e.g. ABC Fashion">
+            <label class="form-label">Customer / Brand Display Name <span class="required-star">*</span></label>
+            <input type="text" class="form-control" id="cust-name" required value="${cust.name || ''}" placeholder="e.g. Vogue Fashions Mumbai">
           </div>
 
           <div class="form-group">
-            <label class="form-label">Registered Company Name <span class="required-star">*</span></label>
-            <input type="text" class="form-control" id="cust-company" required value="${cust.companyName || ''}" placeholder="e.g. ABC Fashion Apparels Pvt Ltd">
+            <label class="form-label">Registered Legal Entity Name</label>
+            <input type="text" class="form-control" id="cust-company" value="${cust.companyName || ''}" placeholder="e.g. Vogue Retail Ltd.">
           </div>
 
           <div class="form-group">
-            <label class="form-label">Contact Person <span class="required-star">*</span></label>
-            <input type="text" class="form-control" id="cust-contact" required value="${cust.contactPerson || ''}" placeholder="e.g. Rajesh Khanna">
+            <label class="form-label">Primary Contact Person <span class="required-star">*</span></label>
+            <input type="text" class="form-control" id="cust-contact" required value="${cust.contactPerson || ''}" placeholder="e.g. Rajesh Sharma">
           </div>
 
           <div class="form-group">
             <label class="form-label">Mobile Number <span class="required-star">*</span></label>
-            <input type="text" class="form-control" id="cust-mobile" required value="${cust.mobile || ''}" placeholder="+91 98201 12345">
+            <input type="tel" class="form-control font-mono" id="cust-mobile" required value="${cust.mobile || cust.phone || ''}" placeholder="+91 98201 54321">
           </div>
 
           <div class="form-group">
             <label class="form-label">Email Address <span class="required-star">*</span></label>
-            <input type="email" class="form-control" id="cust-email" required value="${cust.email || ''}" placeholder="purchase@abcfashion.com">
+            <input type="email" class="form-control" id="cust-email" required value="${cust.email || ''}" placeholder="rajesh@voguefashions.in">
           </div>
 
           <div class="form-group">
-            <label class="form-label">GSTIN <span class="required-star">*</span></label>
-            <input type="text" class="form-control font-mono" id="cust-gstin" required value="${cust.gstin || ''}" placeholder="27AAACA1234A1Z5">
+            <label class="form-label">GSTIN (15 Digits)</label>
+            <input type="text" class="form-control font-mono" id="cust-gstin" maxlength="15" style="text-transform:uppercase;" value="${cust.gstin || ''}" placeholder="27AABCV1234F1Z8">
           </div>
 
           <div class="form-group col-span-2">
-            <label class="form-label">Address</label>
-            <textarea class="form-control" id="cust-address" placeholder="Unit / Street address">${cust.address || ''}</textarea>
+            <label class="form-label">Billing & Dispatch Address</label>
+            <textarea class="form-control" id="cust-address" rows="2" placeholder="Factory / Office unit, Road, Industrial Area">${cust.address || ''}</textarea>
           </div>
 
           <div class="form-group">
@@ -158,30 +460,38 @@ const MastersView = {
 
           <div class="form-group">
             <label class="form-label">Pincode</label>
-            <input type="text" class="form-control" id="cust-pincode" value="${cust.pincode || '400013'}">
+            <input type="text" class="form-control font-mono" id="cust-pincode" maxlength="6" value="${cust.pincode || '400093'}">
           </div>
 
           <div class="form-group">
-            <label class="form-label">Credit Limit (₹)</label>
-            <input type="number" class="form-control" id="cust-credit" value="${cust.creditLimit || 2500000}">
+            <label class="form-label">Approved Credit Limit (₹)</label>
+            <input type="number" class="form-control font-mono" id="cust-credit" min="0" step="50000" value="${cust.creditLimit !== undefined ? cust.creditLimit : 1500000}">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">${isEdit ? 'Current Outstanding Balance (₹)' : 'Opening Outstanding Balance (₹)'}</label>
+            <input type="number" class="form-control font-mono" id="cust-outstanding" min="0" step="1000" value="${cust.outstanding || 0}">
           </div>
 
           <div class="form-group">
             <label class="form-label">Payment Terms</label>
             <select class="form-control" id="cust-terms">
-              <option value="Immediate" ${cust.paymentTerms === 'Immediate' ? 'selected' : ''}>Immediate</option>
-              <option value="15 Days" ${cust.paymentTerms === '15 Days' ? 'selected' : ''}>15 Days</option>
-              <option value="30 Days" ${cust.paymentTerms === '30 Days' || !cust.paymentTerms ? 'selected' : ''}>30 Days</option>
-              <option value="45 Days" ${cust.paymentTerms === '45 Days' ? 'selected' : ''}>45 Days</option>
-              <option value="60 Days" ${cust.paymentTerms === '60 Days' ? 'selected' : ''}>60 Days</option>
+              <option value="Immediate" ${cust.paymentTerms === 'Immediate' ? 'selected' : ''}>Immediate (Advance)</option>
+              <option value="7 Days" ${cust.paymentTerms === '7 Days' ? 'selected' : ''}>Net 7 Days</option>
+              <option value="15 Days" ${cust.paymentTerms === '15 Days' ? 'selected' : ''}>Net 15 Days</option>
+              <option value="30 Days" ${cust.paymentTerms === '30 Days' || !cust.paymentTerms || cust.paymentTerms === 'Net 30 Days' ? 'selected' : ''}>Net 30 Days</option>
+              <option value="45 Days" ${cust.paymentTerms === '45 Days' ? 'selected' : ''}>Net 45 Days</option>
+              <option value="60 Days" ${cust.paymentTerms === '60 Days' ? 'selected' : ''}>Net 60 Days</option>
+              <option value="90 Days" ${cust.paymentTerms === '90 Days' ? 'selected' : ''}>Net 90 Days</option>
             </select>
           </div>
 
           <div class="form-group">
-            <label class="form-label">Status</label>
+            <label class="form-label">Account Status</label>
             <select class="form-control" id="cust-status">
-              <option value="Active" ${cust.status === 'Active' ? 'selected' : ''}>Active</option>
+              <option value="Active" ${cust.status === 'Active' || !cust.status ? 'selected' : ''}>Active</option>
               <option value="Inactive" ${cust.status === 'Inactive' ? 'selected' : ''}>Inactive</option>
+              <option value="Blocked" ${cust.status === 'Blocked' ? 'selected' : ''}>Blocked (Credit Hold)</option>
             </select>
           </div>
         </div>
@@ -193,34 +503,42 @@ const MastersView = {
       <button class="btn btn-primary" id="btn-save-cust">${isEdit ? 'Update Customer' : 'Save Customer'}</button>
     `;
 
-    UI.openModal({ title: isEdit ? `Edit Customer - ${cust.name}` : "Add New Customer", content, footer, size: "modal-lg" });
+    UI.openModal({ title: isEdit ? `Edit Customer - ${cust.name}` : "Add New Customer Account", content, footer, size: "modal-lg" });
 
     document.getElementById("btn-save-cust").onclick = () => {
       const name = document.getElementById("cust-name").value.trim();
-      if (!name) return UI.showToast("Required Field", "Customer Name is required", "error");
+      const mobile = document.getElementById("cust-mobile").value.trim();
+      const email = document.getElementById("cust-email").value.trim();
+      const contactPerson = document.getElementById("cust-contact").value.trim();
+
+      if (!name) return UI.showToast("Required Field", "Customer / Brand Name is required", "error");
+      if (!mobile) return UI.showToast("Required Field", "Mobile Number is required", "error");
+      if (!email) return UI.showToast("Required Field", "Email Address is required", "error");
 
       const payload = {
         name,
-        companyName: document.getElementById("cust-company").value.trim(),
-        contactPerson: document.getElementById("cust-contact").value.trim(),
-        mobile: document.getElementById("cust-mobile").value.trim(),
-        email: document.getElementById("cust-email").value.trim(),
-        gstin: document.getElementById("cust-gstin").value.trim(),
+        companyName: document.getElementById("cust-company").value.trim() || name,
+        contactPerson,
+        mobile,
+        phone: mobile,
+        email,
+        gstin: document.getElementById("cust-gstin").value.trim().toUpperCase(),
         address: document.getElementById("cust-address").value.trim(),
         city: document.getElementById("cust-city").value.trim(),
         state: document.getElementById("cust-state").value.trim(),
         pincode: document.getElementById("cust-pincode").value.trim(),
-        creditLimit: Number(document.getElementById("cust-credit").value),
+        creditLimit: Number(document.getElementById("cust-credit").value) || 0,
+        outstanding: Number(document.getElementById("cust-outstanding").value) || 0,
         paymentTerms: document.getElementById("cust-terms").value,
         status: document.getElementById("cust-status").value
       };
 
       if (isEdit) {
         ERPState.updateCustomer(customerId, payload);
-        UI.showToast("Customer Updated", `${name} was updated successfully`, "success");
+        UI.showToast("Customer Updated", `${name} updated successfully in ERP database`, "success");
       } else {
-        ERPState.addCustomer(payload);
-        UI.showToast("Customer Added", `${name} added to Customer Master`, "success");
+        const created = ERPState.addCustomer(payload);
+        UI.showToast("Customer Created", `${name} (${created.id}) registered successfully`, "success");
       }
 
       UI.closeModal();
@@ -228,112 +546,565 @@ const MastersView = {
     };
   },
 
-  openCustomerDrawer(customerId) {
-    const cust = ERPState.data.customers.find(c => c.id === customerId);
+  openCustomerDrawer(customerId, initialTab = "overview") {
+    const cust = ERPState.getCustomerById(customerId);
     if (!cust) return;
 
-    const orders = ERPState.data.salesOrders.filter(o => o.customerId === customerId || o.customer === cust.name);
-    const invoices = ERPState.data.invoices.filter(i => i.customer === cust.name);
+    this._custState.activeCustomerId = customerId;
+    this._custState.activeDrawerTab = initialTab;
 
-    const content = `
+    const stmt = ERPState.getCustomerStatement(customerId);
+    const orders = stmt ? stmt.orders : [];
+    const invoices = stmt ? stmt.invoices : [];
+    const payments = stmt ? stmt.payments : [];
+
+    const outAmt = Number(cust.outstanding) || 0;
+    const credLim = Number(cust.creditLimit) || 1;
+    const utilPercent = Math.min(100, Math.round((outAmt / credLim) * 100));
+    const availableCredit = Math.max(0, credLim - outAmt);
+    const isHighRisk = outAmt >= credLim * 0.9 && outAmt > 0;
+
+    const renderOverviewTab = () => `
       <div style="display:flex; flex-direction:column; gap:20px;">
-        <!-- KPI Row -->
-        <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:12px;">
-          <div style="background:var(--slate-50); padding:12px; border-radius:var(--radius-md); border:1px solid var(--slate-200);">
-            <div style="font-size:0.7rem; color:var(--slate-500); font-weight:700; text-transform:uppercase;">Outstanding</div>
-            <div style="font-size:1.15rem; font-weight:800; color:var(--danger-600); margin-top:2px;">${UI.formatCurrency(cust.outstanding)}</div>
+        
+        <!-- Financial Health Progress & KPIs -->
+        <div style="background:var(--slate-50); border:1px solid var(--slate-200); border-radius:var(--radius-lg); padding:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <span style="font-size:0.8rem; font-weight:700; color:var(--slate-700); text-transform:uppercase;">Credit Utilization</span>
+            <span style="font-size:0.85rem; font-weight:800; color:${isHighRisk ? 'var(--danger-600)' : 'var(--primary-600)'};">${utilPercent}% Used</span>
           </div>
-          <div style="background:var(--slate-50); padding:12px; border-radius:var(--radius-md); border:1px solid var(--slate-200);">
-            <div style="font-size:0.7rem; color:var(--slate-500); font-weight:700; text-transform:uppercase;">Credit Limit</div>
-            <div style="font-size:1.15rem; font-weight:800; color:var(--slate-800); margin-top:2px;">${UI.formatCurrency(cust.creditLimit)}</div>
+          <div style="width:100%; height:8px; background:var(--slate-200); border-radius:4px; overflow:hidden;">
+            <div style="width:${utilPercent}%; height:100%; background:${isHighRisk ? 'var(--danger-500)' : (utilPercent > 60 ? '#f59e0b' : 'var(--primary-500)')}; border-radius:4px; transition:width 0.4s ease;"></div>
           </div>
-          <div style="background:var(--slate-50); padding:12px; border-radius:var(--radius-md); border:1px solid var(--slate-200);">
-            <div style="font-size:0.7rem; color:var(--slate-500); font-weight:700; text-transform:uppercase;">Payment Terms</div>
-            <div style="font-size:1.15rem; font-weight:800; color:var(--primary-700); margin-top:2px;">${cust.paymentTerms}</div>
+          <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; margin-top:14px; text-align:center;">
+            <div style="background:#ffffff; padding:10px; border-radius:8px; border:1px solid var(--slate-200);">
+              <div style="font-size:0.7rem; color:var(--slate-500); font-weight:600;">Outstanding</div>
+              <div style="font-size:1.1rem; font-weight:800; color:${outAmt > 0 ? 'var(--danger-600)' : 'var(--success-600)'}; margin-top:2px;">${UI.formatCurrency(outAmt)}</div>
+            </div>
+            <div style="background:#ffffff; padding:10px; border-radius:8px; border:1px solid var(--slate-200);">
+              <div style="font-size:0.7rem; color:var(--slate-500); font-weight:600;">Available Credit</div>
+              <div style="font-size:1.1rem; font-weight:800; color:var(--success-600); margin-top:2px;">${UI.formatCurrency(availableCredit)}</div>
+            </div>
+            <div style="background:#ffffff; padding:10px; border-radius:8px; border:1px solid var(--slate-200);">
+              <div style="font-size:0.7rem; color:var(--slate-500); font-weight:600;">Credit Limit</div>
+              <div style="font-size:1.1rem; font-weight:800; color:var(--slate-800); margin-top:2px;">${UI.formatCurrency(credLim)}</div>
+            </div>
           </div>
         </div>
 
-        <!-- Details Card -->
+        <!-- Company & Contact Profile -->
         <div style="border:1px solid var(--slate-200); border-radius:var(--radius-lg); padding:16px;">
-          <h4 style="font-size:0.9rem; margin-bottom:12px; color:var(--slate-900);">Company Information</h4>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:0.825rem;">
-            <div><span style="color:var(--slate-500);">Contact Person:</span> <strong>${cust.contactPerson}</strong></div>
-            <div><span style="color:var(--slate-500);">Mobile:</span> <strong>${cust.mobile}</strong></div>
-            <div><span style="color:var(--slate-500);">Email:</span> <strong>${cust.email}</strong></div>
-            <div><span style="color:var(--slate-500);">GSTIN:</span> <code class="font-mono">${cust.gstin}</code></div>
-            <div style="grid-column:span 2;"><span style="color:var(--slate-500);">Billing Address:</span> ${cust.address}, ${cust.city}, ${cust.state} - ${cust.pincode}</div>
+          <h4 style="font-size:0.9rem; margin-bottom:12px; color:var(--slate-900); display:flex; align-items:center; gap:8px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            Company & Contact Information
+          </h4>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; font-size:0.825rem;">
+            <div><span style="color:var(--slate-500);">Legal Name:</span> <strong style="color:var(--slate-800);">${cust.companyName || cust.name}</strong></div>
+            <div><span style="color:var(--slate-500);">Contact Person:</span> <strong style="color:var(--slate-800);">${cust.contactPerson || '-'}</strong></div>
+            <div><span style="color:var(--slate-500);">Mobile Phone:</span> <a href="tel:${cust.mobile}" style="color:var(--primary-600); font-weight:600; text-decoration:none;">${cust.mobile || '-'}</a></div>
+            <div><span style="color:var(--slate-500);">Email:</span> <a href="mailto:${cust.email}" style="color:var(--primary-600); font-weight:600; text-decoration:none;">${cust.email || '-'}</a></div>
+            <div><span style="color:var(--slate-500);">GSTIN:</span> <code class="font-mono font-bold">${cust.gstin || 'Unregistered'}</code></div>
+            <div><span style="color:var(--slate-500);">Payment Terms:</span> <strong>${cust.paymentTerms || '30 Days Net'}</strong></div>
+            <div style="grid-column:span 2;"><span style="color:var(--slate-500);">Address:</span> ${cust.address ? `${cust.address}, ${cust.city}, ${cust.state} - ${cust.pincode}` : `${cust.city}, ${cust.state}`}</div>
           </div>
         </div>
 
-        <!-- Recent Sales Orders -->
-        <div>
-          <h4 style="font-size:0.9rem; margin-bottom:8px; color:var(--slate-900);">Active Sales Orders (${orders.length})</h4>
-          ${orders.length > 0 ? `
+        <!-- Quick Summary Metrics -->
+        <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:10px;">
+          <div style="background:#ffffff; border:1px solid var(--slate-200); border-radius:var(--radius-md); padding:12px; text-align:center;">
+            <div style="font-size:0.75rem; color:var(--slate-500);">Sales Orders</div>
+            <div style="font-size:1.25rem; font-weight:800; color:var(--slate-900); margin-top:2px;">${orders.length}</div>
+          </div>
+          <div style="background:#ffffff; border:1px solid var(--slate-200); border-radius:var(--radius-md); padding:12px; text-align:center;">
+            <div style="font-size:0.75rem; color:var(--slate-500);">Tax Invoices</div>
+            <div style="font-size:1.25rem; font-weight:800; color:var(--slate-900); margin-top:2px;">${invoices.length}</div>
+          </div>
+          <div style="background:#ffffff; border:1px solid var(--slate-200); border-radius:var(--radius-md); padding:12px; text-align:center;">
+            <div style="font-size:0.75rem; color:var(--slate-500);">Payment Receipts</div>
+            <div style="font-size:1.25rem; font-weight:800; color:var(--slate-900); margin-top:2px;">${payments.length}</div>
+          </div>
+        </div>
+
+        <!-- Action Shortcuts -->
+        <div style="display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap; margin-top:8px;">
+          <button class="btn btn-secondary btn-sm" onclick="MastersView.openCustomerModal('${cust.id}')">Edit Profile</button>
+          <button class="btn btn-secondary btn-sm" onclick="MastersView.openCustomerStatementModal('${cust.id}')">Statement / Ledger</button>
+          <button class="btn btn-success btn-sm" onclick="MastersView.openCustomerReceiptModal('${cust.id}')">Record Payment</button>
+          <button class="btn btn-primary btn-sm" onclick="UI.closeDrawer(); App.navigate('invoices', 'create'); setTimeout(() => { if(window.InvoicesView) InvoicesView.onCustomerSelect('${cust.name}'); }, 150);">
+            + Create Invoice
+          </button>
+        </div>
+      </div>
+    `;
+
+    const renderOrdersTab = () => `
+      <div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <h4 style="font-size:0.9rem; color:var(--slate-900); margin:0;">Active & Historical Customer Orders (${orders.length})</h4>
+          <button class="btn btn-primary btn-sm" onclick="UI.closeDrawer(); App.navigate('production', 'orders');">
+            + New Production Order
+          </button>
+        </div>
+        ${orders.length > 0 ? `
+          <div class="table-responsive">
             <table class="data-table" style="font-size:0.8rem;">
               <thead>
                 <tr>
                   <th>Order No</th>
-                  <th>Product</th>
-                  <th>Qty</th>
-                  <th>Amount</th>
+                  <th>Style / Product</th>
+                  <th>Quantity</th>
+                  <th>Total Amount</th>
+                  <th>Delivery</th>
                   <th>Status</th>
                 </tr>
               </thead>
               <tbody>
                 ${orders.map(o => `
                   <tr>
-                    <td class="mono-cell font-bold">${o.id}</td>
-                    <td>${o.product}</td>
-                    <td class="font-mono">${o.quantity.toLocaleString('en-IN')} pcs</td>
-                    <td>${UI.formatCurrency(o.amount)}</td>
-                    <td>${UI.formatStatusBadge(o.status)}</td>
+                    <td class="mono-cell font-bold" style="color:var(--primary-600);">${o.id}</td>
+                    <td><strong>${o.product || o.style || '-'}</strong></td>
+                    <td class="font-mono">${(o.quantity || 0).toLocaleString('en-IN')} pcs</td>
+                    <td class="font-bold font-mono">${UI.formatCurrency(o.amount || 0)}</td>
+                    <td style="font-size:0.75rem;">${o.deliveryDate || o.targetDate || '-'}</td>
+                    <td>${UI.formatStatusBadge(o.status || 'Active')}</td>
                   </tr>
                 `).join('')}
               </tbody>
             </table>
-          ` : `<p style="font-size:0.825rem; color:var(--slate-500);">No active orders for this customer.</p>`}
-        </div>
+          </div>
+        ` : `<div style="text-align:center; padding:30px; color:var(--slate-400); font-size:0.85rem;">No sales orders recorded for this customer yet.</div>`}
+      </div>
+    `;
 
-        <!-- Action Shortcuts -->
-        <div style="display:flex; gap:10px; justify-content:flex-end;">
-          <button class="btn btn-secondary btn-sm" onclick="MastersView.openCustomerModal('${cust.id}')">Edit Profile</button>
-          <button class="btn btn-primary btn-sm" onclick="App.navigate('accounts', 'receipts'); setTimeout(() => AccountsView.openReceiptModal('${cust.name}'), 100); UI.closeDrawer();">
-            Receive Payment
+    const renderInvoicesTab = () => `
+      <div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <h4 style="font-size:0.9rem; color:var(--slate-900); margin:0;">GST Tax Invoices (${invoices.length})</h4>
+          <button class="btn btn-primary btn-sm" onclick="UI.closeDrawer(); App.navigate('invoices', 'create');">
+            + New Sales Invoice
           </button>
         </div>
+        ${invoices.length > 0 ? `
+          <div class="table-responsive">
+            <table class="data-table" style="font-size:0.8rem;">
+              <thead>
+                <tr>
+                  <th>Invoice No</th>
+                  <th>Date</th>
+                  <th>Amount</th>
+                  <th>Paid</th>
+                  <th>Balance</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${invoices.map(i => `
+                  <tr>
+                    <td class="mono-cell font-bold" style="color:var(--primary-600);">${i.invoiceNo}</td>
+                    <td>${i.date}</td>
+                    <td class="font-bold font-mono">${UI.formatCurrency(i.amount)}</td>
+                    <td class="font-mono" style="color:var(--success-700);">${UI.formatCurrency(i.paidAmount || 0)}</td>
+                    <td class="font-bold font-mono" style="color:${(i.balanceAmount || 0) > 0 ? 'var(--danger-600)' : 'var(--success-600)'};">
+                      ${UI.formatCurrency(i.balanceAmount !== undefined ? i.balanceAmount : (i.amount - (i.paidAmount || 0)))}
+                    </td>
+                    <td>${UI.formatStatusBadge(i.status)}</td>
+                    <td>
+                      <button class="table-action-btn view" onclick="UI.closeDrawer(); App.navigate('invoices', 'list'); setTimeout(() => { if(window.InvoicesView) InvoicesView.openInvoiceModal('${i.invoiceNo}'); }, 150);">View</button>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        ` : `<div style="text-align:center; padding:30px; color:var(--slate-400); font-size:0.85rem;">No invoices generated for this customer yet.</div>`}
+      </div>
+    `;
+
+    const renderPaymentsTab = () => `
+      <div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <h4 style="font-size:0.9rem; color:var(--slate-900); margin:0;">Payment Receipts & Settlements (${payments.length})</h4>
+          <button class="btn btn-success btn-sm" onclick="MastersView.openCustomerReceiptModal('${cust.id}')">
+            + Record Receipt
+          </button>
+        </div>
+        ${payments.length > 0 ? `
+          <div class="table-responsive">
+            <table class="data-table" style="font-size:0.8rem;">
+              <thead>
+                <tr>
+                  <th>Receipt ID</th>
+                  <th>Date</th>
+                  <th>Payment Mode</th>
+                  <th>UTR / Reference</th>
+                  <th>Settled Amount</th>
+                  <th>Remarks</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${payments.map(p => `
+                  <tr>
+                    <td class="mono-cell font-bold" style="color:var(--success-700);">${p.id}</td>
+                    <td>${p.date}</td>
+                    <td>${p.mode}</td>
+                    <td class="mono-cell" style="font-size:0.75rem;">${p.refNo}</td>
+                    <td class="font-bold font-mono" style="color:var(--success-700);">${UI.formatCurrency(p.amount)}</td>
+                    <td style="font-size:0.75rem; color:var(--slate-500);">${p.remarks || '-'}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        ` : `<div style="text-align:center; padding:30px; color:var(--slate-400); font-size:0.85rem;">No payment receipts recorded for this customer yet.</div>`}
+      </div>
+    `;
+
+    const drawerBodyContent = `
+      <div id="cust-drawer-tab-content">
+        ${initialTab === 'overview' ? renderOverviewTab() : 
+          initialTab === 'orders' ? renderOrdersTab() : 
+          initialTab === 'invoices' ? renderInvoicesTab() : 
+          renderPaymentsTab()}
       </div>
     `;
 
     UI.openDrawer({
       title: cust.name,
-      subtitle: `${cust.id} • ${cust.companyName}`,
-      tabs: [{ id: "overview", label: "Overview" }, { id: "orders", label: "Orders" }, { id: "invoices", label: "Invoices" }],
-      content,
+      subtitle: `${cust.id} • ${cust.companyName || cust.name} • ${cust.city || 'Mumbai'}`,
+      tabs: [
+        { id: "overview", label: "Overview & Profile" },
+        { id: "orders", label: `Orders (${orders.length})` },
+        { id: "invoices", label: `Invoices (${invoices.length})` },
+        { id: "payments", label: `Receipts (${payments.length})` }
+      ],
+      content: drawerBodyContent,
       size: "drawer-lg"
     });
+
+    // Add click listeners to drawer tab buttons
+    setTimeout(() => {
+      document.querySelectorAll(".drawer-tab-btn").forEach(btn => {
+        btn.onclick = () => {
+          document.querySelectorAll(".drawer-tab-btn").forEach(b => b.classList.remove("active"));
+          btn.classList.add("active");
+          const tabId = btn.getAttribute("data-tab");
+          const tabContentContainer = document.getElementById("cust-drawer-tab-content");
+          if (tabContentContainer) {
+            if (tabId === "overview") tabContentContainer.innerHTML = renderOverviewTab();
+            else if (tabId === "orders") tabContentContainer.innerHTML = renderOrdersTab();
+            else if (tabId === "invoices") tabContentContainer.innerHTML = renderInvoicesTab();
+            else if (tabId === "payments") tabContentContainer.innerHTML = renderPaymentsTab();
+          }
+        };
+      });
+    }, 50);
+  },
+
+  openCustomerStatementModal(customerId) {
+    const cust = ERPState.getCustomerById(customerId);
+    if (!cust) return;
+
+    const stmt = ERPState.getCustomerStatement(customerId);
+    if (!stmt) return;
+
+    const content = `
+      <div id="customer-statement-print-area">
+        <!-- Statement Header -->
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:2px solid var(--slate-900); padding-bottom:16px; margin-bottom:16px;">
+          <div>
+            <h2 style="font-size:1.25rem; font-weight:800; color:var(--slate-900); margin:0;">STATEMENT OF ACCOUNT</h2>
+            <div style="font-size:0.8rem; color:var(--slate-500); margin-top:2px;">FashionWorks Pvt. Ltd. • GarmentERP</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:0.75rem; color:var(--slate-500);">Statement Date</div>
+            <div style="font-size:0.9rem; font-weight:700; color:var(--slate-900);">${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
+          </div>
+        </div>
+
+        <!-- Customer Summary Card -->
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; background:var(--slate-50); border:1px solid var(--slate-200); border-radius:var(--radius-md); padding:14px; margin-bottom:18px; font-size:0.825rem;">
+          <div>
+            <div style="font-size:0.7rem; color:var(--slate-500); text-transform:uppercase; font-weight:700;">Account Details</div>
+            <div style="font-size:1rem; font-weight:800; color:var(--slate-900); margin-top:2px;">${cust.name}</div>
+            <div style="color:var(--slate-600);">${cust.companyName || ''}</div>
+            <div style="color:var(--slate-500); margin-top:4px;">GSTIN: <span class="font-mono font-bold">${cust.gstin || 'Unregistered'}</span></div>
+            <div style="color:var(--slate-500);">${cust.address || ''}, ${cust.city}</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:0.7rem; color:var(--slate-500); text-transform:uppercase; font-weight:700;">Financial Summary</div>
+            <div style="margin-top:4px;"><span style="color:var(--slate-500);">Total Invoiced:</span> <strong class="font-mono">${UI.formatCurrency(stmt.totalInvoiced)}</strong></div>
+            <div><span style="color:var(--slate-500);">Total Received:</span> <strong class="font-mono" style="color:var(--success-700);">${UI.formatCurrency(stmt.totalReceived)}</strong></div>
+            <div style="margin-top:6px; font-size:1.05rem; font-weight:800; color:${(cust.outstanding || 0) > 0 ? 'var(--danger-600)' : 'var(--success-600)'};">
+              Net Balance Due: ${UI.formatCurrency(cust.outstanding || 0)}
+            </div>
+          </div>
+        </div>
+
+        <!-- Statement Ledger Table -->
+        <div class="table-responsive">
+          <table class="data-table" style="font-size:0.8rem;">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Transaction Details</th>
+                <th>Reference #</th>
+                <th style="text-align:right;">Debit (₹)</th>
+                <th style="text-align:right;">Credit (₹)</th>
+                <th style="text-align:right;">Running Balance (₹)</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${stmt.ledger.length > 0 ? stmt.ledger.map(row => `
+                <tr>
+                  <td>${row.date}</td>
+                  <td><strong>${row.type}</strong> <div style="font-size:0.725rem; color:var(--slate-500);">${row.description}</div></td>
+                  <td class="mono-cell font-bold">${row.ref}</td>
+                  <td style="text-align:right; font-mono; font-weight:600; color:${row.debit > 0 ? 'var(--danger-600)' : 'inherit'};">
+                    ${row.debit > 0 ? UI.formatCurrency(row.debit) : '-'}
+                  </td>
+                  <td style="text-align:right; font-mono; font-weight:600; color:${row.credit > 0 ? 'var(--success-700)' : 'inherit'};">
+                    ${row.credit > 0 ? UI.formatCurrency(row.credit) : '-'}
+                  </td>
+                  <td style="text-align:right; font-mono; font-weight:700; color:${row.balance > 0 ? 'var(--danger-700)' : 'var(--success-700)'};">
+                    ${UI.formatCurrency(row.balance)}
+                  </td>
+                </tr>
+              `).join('') : `
+                <tr>
+                  <td colspan="6" style="text-align:center; padding:20px; color:var(--slate-400);">No transactions found for this statement period.</td>
+                </tr>
+              `}
+            </tbody>
+            <tfoot>
+              <tr style="background:var(--slate-50); font-weight:800;">
+                <td colspan="3" style="text-align:right;">Total Summary:</td>
+                <td style="text-align:right; color:var(--danger-600);">${UI.formatCurrency(stmt.totalInvoiced)}</td>
+                <td style="text-align:right; color:var(--success-700);">${UI.formatCurrency(stmt.totalReceived)}</td>
+                <td style="text-align:right; color:${(cust.outstanding || 0) > 0 ? 'var(--danger-700)' : 'var(--success-700)'};">${UI.formatCurrency(cust.outstanding || 0)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    `;
+
+    const footer = `
+      <button class="btn btn-secondary" onclick="UI.closeModal()">Close</button>
+      <button class="btn btn-primary" onclick="MastersView.printCustomerStatement('${cust.id}')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
+        Print / Save PDF
+      </button>
+    `;
+
+    UI.openModal({ title: `Account Statement - ${cust.name}`, content, footer, size: "modal-lg" });
+  },
+
+  printCustomerStatement(customerId) {
+    const printContent = document.getElementById("customer-statement-print-area");
+    if (!printContent) return;
+
+    const printWin = window.open('', '', 'width=900,height=700');
+    printWin.document.write(`
+      <html>
+        <head>
+          <title>Account Statement - ${customerId}</title>
+          <style>
+            body { font-family: 'Plus Jakarta Sans', Arial, sans-serif; padding: 25px; color: #0f172a; }
+            table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; }
+            th, td { border: 1px solid #cbd5e1; padding: 8px 10px; text-align: left; }
+            th { background: #f1f5f9; }
+            .font-mono { font-family: monospace; }
+            .font-bold { font-weight: bold; }
+          </style>
+        </head>
+        <body>
+          ${printContent.innerHTML}
+        </body>
+      </html>
+    `);
+    printWin.document.close();
+    printWin.focus();
+    setTimeout(() => {
+      printWin.print();
+      printWin.close();
+    }, 300);
+  },
+
+  printCustomerDirectory() {
+    const customers = ERPState.data.customers || [];
+    const printWin = window.open('', '', 'width=1000,height=700');
+    printWin.document.write(`
+      <html>
+        <head>
+          <title>Customer Master Directory - GarmentERP</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 25px; font-size: 12px; }
+            h2 { margin-bottom: 4px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+            th, td { border: 1px solid #cbd5e1; padding: 6px 8px; text-align: left; }
+            th { background: #f1f5f9; font-weight: bold; }
+          </style>
+        </head>
+        <body>
+          <h2>FashionWorks Pvt. Ltd. - Customer Master Directory</h2>
+          <p>Generated on ${new Date().toLocaleString()}</p>
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Company</th>
+                <th>Contact</th>
+                <th>Mobile</th>
+                <th>GSTIN</th>
+                <th>City</th>
+                <th>Credit Limit</th>
+                <th>Outstanding</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${customers.map(c => `
+                <tr>
+                  <td>${c.id}</td>
+                  <td><strong>${c.name}</strong></td>
+                  <td>${c.companyName || ''}</td>
+                  <td>${c.contactPerson || ''}</td>
+                  <td>${c.mobile || c.phone || ''}</td>
+                  <td>${c.gstin || '-'}</td>
+                  <td>${c.city || ''}</td>
+                  <td>₹${(c.creditLimit || 0).toLocaleString('en-IN')}</td>
+                  <td>₹${(c.outstanding || 0).toLocaleString('en-IN')}</td>
+                  <td>${c.status || 'Active'}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `);
+    printWin.document.close();
+    printWin.focus();
+    setTimeout(() => {
+      printWin.print();
+      printWin.close();
+    }, 300);
+  },
+
+  openCustomerReceiptModal(customerId) {
+    const cust = ERPState.getCustomerById(customerId);
+    if (!cust) return;
+
+    const content = `
+      <form id="cust-quick-receipt-form">
+        <div style="background:var(--primary-50); padding:12px; border-radius:var(--radius-md); margin-bottom:16px; border:1px solid var(--primary-100);">
+          <div style="font-size:0.8rem; color:var(--primary-700); font-weight:700;">Customer Account</div>
+          <div style="font-size:1.05rem; font-weight:800; color:var(--slate-900);">${cust.name}</div>
+          <div style="font-size:0.825rem; color:var(--slate-600); margin-top:2px;">Current Outstanding Balance: <strong class="font-mono" style="color:var(--danger-600);">${UI.formatCurrency(cust.outstanding || 0)}</strong></div>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Payment Date <span class="required-star">*</span></label>
+            <input type="date" class="form-control" id="qrec-date" value="${new Date().toISOString().split('T')[0]}">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Received Amount (₹) <span class="required-star">*</span></label>
+            <input type="number" class="form-control font-mono font-bold" id="qrec-amount" min="1" max="${cust.outstanding || 99999999}" value="${cust.outstanding > 0 ? cust.outstanding : 50000}" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Payment Mode <span class="required-star">*</span></label>
+            <select class="form-control" id="qrec-mode">
+              <option value="Bank Transfer (NEFT)">Bank Transfer (NEFT)</option>
+              <option value="RTGS">RTGS</option>
+              <option value="UPI / QR Payment">UPI / QR Payment</option>
+              <option value="Cheque Deposit">Cheque Deposit</option>
+              <option value="Cash Receipt">Cash Receipt</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Bank Reference / UTR Number <span class="required-star">*</span></label>
+            <input type="text" class="form-control font-mono" id="qrec-ref" required value="UTR${Date.now().toString().slice(-8)}" placeholder="e.g. UTR / Cheque No">
+          </div>
+
+          <div class="form-group col-span-2">
+            <label class="form-label">Notes & Remarks</label>
+            <textarea class="form-control" id="qrec-remarks" rows="2" placeholder="Payment towards outstanding balance"></textarea>
+          </div>
+        </div>
+      </form>
+    `;
+
+    const footer = `
+      <button class="btn btn-secondary" onclick="UI.closeModal()">Cancel</button>
+      <button class="btn btn-success" id="btn-save-qrec">Confirm & Settle Balance</button>
+    `;
+
+    UI.openModal({ title: `Receive Payment - ${cust.name}`, content, footer, size: "modal-md" });
+
+    document.getElementById("btn-save-qrec").onclick = () => {
+      const amount = Number(document.getElementById("qrec-amount").value);
+      const date = document.getElementById("qrec-date").value;
+      const mode = document.getElementById("qrec-mode").value;
+      const refNo = document.getElementById("qrec-ref").value.trim();
+      const remarks = document.getElementById("qrec-remarks").value.trim();
+
+      if (amount <= 0) return UI.showToast("Invalid Amount", "Payment amount must be greater than 0", "error");
+      if (!refNo) return UI.showToast("Required", "Bank Reference / UTR number is required", "error");
+
+      ERPState.recordPayment({
+        customer: cust.name,
+        amount,
+        date,
+        mode,
+        refNo,
+        remarks
+      });
+
+      UI.showToast("Payment Recorded", `₹${amount.toLocaleString('en-IN')} credited to ${cust.name}`, "success");
+      UI.closeModal();
+      UI.closeDrawer();
+      App.refreshCurrentView();
+    };
   },
 
   confirmDeleteCustomer(id) {
-    const cust = ERPState.data.customers.find(c => c.id === id);
+    const cust = ERPState.getCustomerById(id);
     if (!cust) return;
 
     UI.showConfirm({
-      title: "Delete Customer?",
-      message: `Are you sure you want to delete <strong>${cust.name}</strong>? This action cannot be undone.`,
-      confirmText: "Delete Customer",
+      title: "Delete Customer Account?",
+      message: `Are you sure you want to permanently delete <strong>${cust.name}</strong> (${cust.id})? This will remove their master records.`,
+      confirmText: "Yes, Delete Customer",
       isDanger: true,
       onConfirm: () => {
         ERPState.deleteCustomer(id);
-        UI.showToast("Customer Deleted", `${cust.name} was removed`, "warning");
+        UI.showToast("Customer Deleted", `${cust.name} removed from master records`, "warning");
         App.refreshCurrentView();
       }
     });
   },
 
   exportCustomers() {
-    const headers = ["Customer ID", "Customer Name", "Company Name", "Contact Person", "Mobile", "Email", "GSTIN", "City", "Credit Limit", "Outstanding", "Status"];
-    const rows = ERPState.data.customers.map(c => [
-      c.id, c.name, c.companyName, c.contactPerson, c.mobile, c.email, c.gstin, c.city, c.creditLimit, c.outstanding, c.status
+    const headers = ["Customer ID", "Customer Name", "Company Name", "Contact Person", "Mobile", "Email", "GSTIN", "City", "State", "Credit Limit", "Outstanding", "Payment Terms", "Status"];
+    const rows = (ERPState.data.customers || []).map(c => [
+      c.id || c.code,
+      c.name,
+      c.companyName || '',
+      c.contactPerson || '',
+      c.mobile || c.phone || '',
+      c.email || '',
+      c.gstin || '',
+      c.city || '',
+      c.state || '',
+      c.creditLimit || 0,
+      c.outstanding || 0,
+      c.paymentTerms || '30 Days',
+      c.status || 'Active'
     ]);
     UI.exportToCSV("Customer_Master_Report", headers, rows);
   },

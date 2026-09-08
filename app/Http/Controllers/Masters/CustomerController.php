@@ -12,7 +12,22 @@ class CustomerController extends Controller
     public function index(Request $request)
     {
         if ($request->wantsJson() || $request->ajax()) {
-            return response()->json(Customer::latest()->get());
+            $query = Customer::withCount(['invoices', 'payments', 'productionOrders']);
+            if ($request->has('search') && !empty($request->search)) {
+                $search = $request->search;
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                      ->orWhere('company_name', 'like', "%{$search}%")
+                      ->orWhere('phone', 'like', "%{$search}%")
+                      ->orWhere('email', 'like', "%{$search}%")
+                      ->orWhere('gstin', 'like', "%{$search}%")
+                      ->orWhere('city', 'like', "%{$search}%");
+                });
+            }
+            if ($request->has('status') && !empty($request->status)) {
+                $query->where('status', $request->status);
+            }
+            return response()->json($query->latest()->get());
         }
 
         return view('dashboard', [
@@ -26,21 +41,30 @@ class CustomerController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'phone' => 'required|string|max:20',
+            'phone' => 'required|string|max:30',
             'company_name' => 'nullable|string|max:255',
+            'contact_person' => 'nullable|string|max:255',
             'email' => 'nullable|email|max:255',
             'gstin' => 'nullable|string|max:50',
             'address' => 'nullable|string',
+            'city' => 'nullable|string|max:100',
+            'state' => 'nullable|string|max:100',
             'credit_limit' => 'nullable|numeric',
-            'payment_terms' => 'nullable|string'
+            'outstanding' => 'nullable|numeric',
+            'payment_terms' => 'nullable|string|max:100',
+            'status' => 'nullable|string|in:Active,Inactive,Blocked'
         ]);
+
+        if (empty($validated['status'])) {
+            $validated['status'] = 'Active';
+        }
 
         $count = Customer::count() + 1;
         $validated['code'] = 'CUST-' . str_pad($count, 3, '0', STR_PAD_LEFT);
         $customer = Customer::create($validated);
 
         if ($request->wantsJson() || $request->ajax()) {
-            return response()->json(['success' => true, 'customer' => $customer]);
+            return response()->json(['success' => true, 'customer' => $customer, 'message' => 'Customer created successfully.']);
         }
 
         return redirect()->route('masters.customers.index')->with('success', 'Customer created successfully.');
@@ -48,29 +72,62 @@ class CustomerController extends Controller
 
     public function show(Customer $customer)
     {
-        return response()->json($customer->load(['invoices', 'payments']));
+        return response()->json([
+            'success' => true,
+            'customer' => $customer->load(['invoices', 'payments', 'productionOrders'])
+        ]);
     }
 
     public function update(Request $request, Customer $customer)
     {
         $validated = $request->validate([
             'name' => 'sometimes|required|string|max:255',
-            'phone' => 'sometimes|required|string|max:20',
+            'phone' => 'sometimes|required|string|max:30',
             'company_name' => 'nullable|string|max:255',
+            'contact_person' => 'nullable|string|max:255',
             'email' => 'nullable|email|max:255',
             'gstin' => 'nullable|string|max:50',
             'address' => 'nullable|string',
+            'city' => 'nullable|string|max:100',
+            'state' => 'nullable|string|max:100',
             'credit_limit' => 'nullable|numeric',
-            'status' => 'nullable|string'
+            'outstanding' => 'nullable|numeric',
+            'payment_terms' => 'nullable|string|max:100',
+            'status' => 'nullable|string|in:Active,Inactive,Blocked'
         ]);
 
         $customer->update($validated);
-        return response()->json(['success' => true, 'customer' => $customer]);
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json(['success' => true, 'customer' => $customer, 'message' => 'Customer updated successfully.']);
+        }
+
+        return redirect()->route('masters.customers.index')->with('success', 'Customer updated successfully.');
     }
 
     public function destroy(Customer $customer)
     {
+        $name = $customer->name;
         $customer->delete();
-        return response()->json(['success' => true, 'message' => 'Customer deleted.']);
+
+        return response()->json([
+            'success' => true,
+            'message' => "Customer {$name} deleted successfully."
+        ]);
+    }
+
+    public function statement(Customer $customer)
+    {
+        $invoices = $customer->invoices()->latest()->get();
+        $payments = $customer->payments()->latest()->get();
+
+        return response()->json([
+            'success' => true,
+            'customer' => $customer,
+            'invoices' => $invoices,
+            'payments' => $payments,
+            'current_outstanding' => $customer->outstanding
+        ]);
     }
 }
+

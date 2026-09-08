@@ -66,39 +66,311 @@ class ERPStateManager {
     }
   }
 
+  // CSRF Token Helper
+  getCsrfToken() {
+    return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+  }
+
   // --- 1. CUSTOMERS ---
   addCustomer(customer) {
-    const id = `CUST-${String(this.data.customers.length + 1).padStart(3, '0')}`;
+    const nextNum = (this.data.customers || []).length + 1;
+    const id = customer.id || `CUST-${String(nextNum).padStart(3, '0')}`;
     const newCust = {
       id,
-      ...customer,
-      outstanding: Number(customer.openingBalance || 0),
-      totalOrders: 0,
-      createdAt: new Date().toISOString().split('T')[0],
+      code: id,
+      name: customer.name || "",
+      companyName: customer.companyName || customer.company_name || customer.name || "",
+      contactPerson: customer.contactPerson || customer.contact_person || "",
+      mobile: customer.mobile || customer.phone || "",
+      phone: customer.phone || customer.mobile || "",
+      email: customer.email || "",
+      gstin: (customer.gstin || "").toUpperCase(),
+      address: customer.address || "",
+      city: customer.city || "Mumbai",
+      state: customer.state || "Maharashtra",
+      pincode: customer.pincode || "400013",
+      creditLimit: Number(customer.creditLimit || customer.credit_limit || 2500000),
+      paymentTerms: customer.paymentTerms || customer.payment_terms || "30 Days",
+      outstanding: Number(customer.outstanding || customer.openingBalance || 0),
+      totalOrders: Number(customer.totalOrders || 0),
+      createdAt: customer.createdAt || new Date().toISOString().split('T')[0],
       status: customer.status || "Active"
     };
+
+    if (!this.data.customers) this.data.customers = [];
     this.data.customers.unshift(newCust);
-    this.logActivity(`Added new customer: ${newCust.name}`, "Customer Master", id);
+    this.logActivity(`Added new customer: ${newCust.name} (${id})`, "Customer Master", id);
     this.saveState();
+
+    // Async sync with Laravel Backend
+    try {
+      fetch('/masters/customers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-CSRF-TOKEN': this.getCsrfToken(),
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+          name: newCust.name,
+          company_name: newCust.companyName,
+          contact_person: newCust.contactPerson,
+          phone: newCust.phone || newCust.mobile,
+          email: newCust.email,
+          gstin: newCust.gstin,
+          address: newCust.address,
+          city: newCust.city,
+          state: newCust.state,
+          credit_limit: newCust.creditLimit,
+          outstanding: newCust.outstanding,
+          payment_terms: newCust.paymentTerms,
+          status: newCust.status
+        })
+      }).then(r => r.json()).then(res => {
+        if (res && res.customer && res.customer.id) {
+          newCust.dbId = res.customer.id;
+        }
+      }).catch(err => console.warn("Background API sync note:", err));
+    } catch (e) {
+      console.warn("Could not dispatch async customer create:", e);
+    }
+
     return newCust;
   }
 
   updateCustomer(id, updatedData) {
-    const idx = this.data.customers.findIndex(c => c.id === id);
+    const idx = (this.data.customers || []).findIndex(c => c.id === id || c.code === id || c.name === id);
     if (idx !== -1) {
-      this.data.customers[idx] = { ...this.data.customers[idx], ...updatedData };
-      this.logActivity(`Updated customer details: ${this.data.customers[idx].name}`, "Customer Master", id);
+      const current = this.data.customers[idx];
+      const merged = {
+        ...current,
+        ...updatedData,
+        companyName: updatedData.companyName || updatedData.company_name || current.companyName,
+        contactPerson: updatedData.contactPerson || updatedData.contact_person || current.contactPerson,
+        mobile: updatedData.mobile || updatedData.phone || current.mobile,
+        phone: updatedData.phone || updatedData.mobile || current.phone || current.mobile,
+        gstin: (updatedData.gstin !== undefined ? updatedData.gstin : current.gstin || "").toUpperCase(),
+        creditLimit: updatedData.creditLimit !== undefined ? Number(updatedData.creditLimit) : current.creditLimit,
+        outstanding: updatedData.outstanding !== undefined ? Number(updatedData.outstanding) : current.outstanding
+      };
+      this.data.customers[idx] = merged;
+      this.logActivity(`Updated customer details: ${merged.name}`, "Customer Master", id);
       this.saveState();
+
+      // Async sync with Laravel Backend
+      const targetId = current.dbId || id;
+      try {
+        fetch(`/masters/customers/${targetId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': this.getCsrfToken(),
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          body: JSON.stringify({
+            name: merged.name,
+            company_name: merged.companyName,
+            contact_person: merged.contactPerson,
+            phone: merged.phone || merged.mobile,
+            email: merged.email,
+            gstin: merged.gstin,
+            address: merged.address,
+            city: merged.city,
+            state: merged.state,
+            credit_limit: merged.creditLimit,
+            outstanding: merged.outstanding,
+            payment_terms: merged.paymentTerms,
+            status: merged.status
+          })
+        }).catch(err => console.warn("Background API update note:", err));
+      } catch (e) {
+        console.warn("Could not dispatch async customer update:", e);
+      }
+
+      return merged;
     }
+    return null;
   }
 
   deleteCustomer(id) {
-    const cust = this.data.customers.find(c => c.id === id);
+    const cust = (this.data.customers || []).find(c => c.id === id || c.code === id || c.name === id);
     if (cust) {
-      this.data.customers = this.data.customers.filter(c => c.id !== id);
+      this.data.customers = this.data.customers.filter(c => c.id !== id && c.code !== id);
       this.logActivity(`Deleted customer: ${cust.name}`, "Customer Master", id);
       this.saveState();
+
+      // Async sync with Laravel Backend
+      const targetId = cust.dbId || id;
+      try {
+        fetch(`/masters/customers/${targetId}`, {
+          method: 'DELETE',
+          headers: {
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': this.getCsrfToken(),
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        }).catch(err => console.warn("Background API delete note:", err));
+      } catch (e) {
+        console.warn("Could not dispatch async customer delete:", e);
+      }
     }
+  }
+
+  getCustomerById(idOrName) {
+    if (!idOrName) return null;
+    return (this.data.customers || []).find(c => 
+      c.id === idOrName || 
+      c.code === idOrName || 
+      (c.name && c.name.toLowerCase() === idOrName.toLowerCase())
+    );
+  }
+
+  getCustomerStats() {
+    const list = this.data.customers || [];
+    const total = list.length;
+    const active = list.filter(c => c.status === "Active").length;
+    const inactive = list.filter(c => c.status === "Inactive").length;
+    const blocked = list.filter(c => c.status === "Blocked").length;
+    const totalOutstanding = list.reduce((sum, c) => sum + (Number(c.outstanding) || 0), 0);
+    const totalCreditLimit = list.reduce((sum, c) => sum + (Number(c.creditLimit) || 0), 0);
+    const creditUtilization = totalCreditLimit > 0 ? ((totalOutstanding / totalCreditLimit) * 100).toFixed(1) : 0;
+    const highRisk = list.filter(c => (Number(c.outstanding) || 0) >= (Number(c.creditLimit) || 0) * 0.9 && (Number(c.outstanding) || 0) > 0).length;
+    const cities = [...new Set(list.map(c => c.city).filter(Boolean))].sort();
+
+    return {
+      total,
+      active,
+      inactive,
+      blocked,
+      totalOutstanding,
+      totalCreditLimit,
+      creditUtilization,
+      highRisk,
+      cities
+    };
+  }
+
+  getCustomerStatement(customerIdOrName) {
+    const cust = this.getCustomerById(customerIdOrName);
+    if (!cust) return null;
+
+    const invoices = (this.data.invoices || []).filter(i => 
+      i.customerId === cust.id || 
+      (i.customer && i.customer.toLowerCase() === cust.name.toLowerCase())
+    );
+
+    const payments = (this.data.payments || []).filter(p => 
+      p.customerId === cust.id || 
+      (p.customer && p.customer.toLowerCase() === cust.name.toLowerCase())
+    );
+
+    const orders = (this.data.salesOrders || []).filter(o => 
+      o.customerId === cust.id || 
+      (o.customer && o.customer.toLowerCase() === cust.name.toLowerCase())
+    );
+
+    // Build chronological ledger entries
+    const entries = [];
+
+    // Add invoices (Debit entries)
+    invoices.forEach(inv => {
+      entries.push({
+        date: inv.date || "2026-08-01",
+        type: "Sales Invoice",
+        ref: inv.invoiceNo || "INV-NEW",
+        orderNo: inv.orderNo || "-",
+        description: `Tax Invoice - ${inv.items ? inv.items.length + ' item(s)' : 'Goods supplied'}`,
+        debit: Number(inv.amount || 0),
+        credit: 0,
+        status: inv.status || "Unpaid"
+      });
+    });
+
+    // Add payments (Credit entries)
+    payments.forEach(pay => {
+      entries.push({
+        date: pay.date || new Date().toISOString().split('T')[0],
+        type: "Payment Receipt",
+        ref: pay.id || "REC-NEW",
+        orderNo: pay.invoiceNo || "-",
+        description: `Payment Received via ${pay.mode || 'Bank'} (Ref: ${pay.refNo || 'Direct'})`,
+        debit: 0,
+        credit: Number(pay.amount || 0),
+        status: "Received"
+      });
+    });
+
+    // Sort by date ascending
+    entries.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    // Calculate running balance
+    let runningBalance = 0;
+    const ledgerWithBalance = entries.map(entry => {
+      runningBalance += (entry.debit - entry.credit);
+      return {
+        ...entry,
+        balance: runningBalance
+      };
+    });
+
+    const totalInvoiced = invoices.reduce((sum, i) => sum + (Number(i.amount) || 0), 0);
+    const totalReceived = payments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+    const calculatedOutstanding = totalInvoiced > 0 ? Math.max(0, totalInvoiced - totalReceived) : (cust.outstanding || 0);
+
+    return {
+      customer: cust,
+      invoices,
+      payments,
+      orders,
+      ledger: ledgerWithBalance,
+      totalInvoiced,
+      totalReceived,
+      calculatedOutstanding,
+      creditLimit: cust.creditLimit,
+      creditAvailable: Math.max(0, (cust.creditLimit || 0) - (cust.outstanding || 0))
+    };
+  }
+
+  recordPayment(paymentData) {
+    if (!this.data.payments) this.data.payments = [];
+    const nextNum = this.data.payments.length + 1;
+    const id = `REC-${new Date().getFullYear()}-${String(nextNum).padStart(4, '0')}`;
+    
+    const newPayment = {
+      id,
+      customer: paymentData.customer,
+      invoiceNo: paymentData.invoiceNo || "",
+      date: paymentData.date || new Date().toISOString().split('T')[0],
+      amount: Number(paymentData.amount || 0),
+      mode: paymentData.mode || "Bank Transfer (NEFT)",
+      refNo: paymentData.refNo || `UTR${Date.now().toString().slice(-8)}`,
+      remarks: paymentData.remarks || "Payment received and accounted"
+    };
+
+    this.data.payments.unshift(newPayment);
+
+    // Update Customer Outstanding Dynamically
+    const cust = this.getCustomerById(paymentData.customer);
+    if (cust) {
+      cust.outstanding = Math.max(0, (Number(cust.outstanding) || 0) - newPayment.amount);
+      this.updateCustomer(cust.id, { outstanding: cust.outstanding });
+    }
+
+    // If linked invoice exists, update its status
+    if (paymentData.invoiceNo && this.data.invoices) {
+      const inv = this.data.invoices.find(i => i.invoiceNo === paymentData.invoiceNo);
+      if (inv) {
+        inv.paidAmount = (Number(inv.paidAmount) || 0) + newPayment.amount;
+        inv.balanceAmount = Math.max(0, (Number(inv.amount) || 0) - inv.paidAmount);
+        inv.status = inv.balanceAmount <= 0 ? "Paid" : "Partially Paid";
+      }
+    }
+
+    this.logActivity(`Received payment of ₹${newPayment.amount.toLocaleString('en-IN')} from ${newPayment.customer} (Ref: ${newPayment.refNo})`, "Settlements", id);
+    this.saveState();
+    return newPayment;
   }
 
   // --- 2. VENDORS ---

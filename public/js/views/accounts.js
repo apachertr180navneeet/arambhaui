@@ -7,13 +7,13 @@
 const AccountsView = {
   // 1. CUSTOMER SETTLEMENTS
   renderCustomerSettlement() {
-    const customers = ERPState.data.customers;
+    const customers = ERPState.data.customers || [];
 
     return `
       <div class="table-card">
         <div class="table-toolbar">
           <div class="table-toolbar-left">
-            <h3 style="font-size:1.05rem;">Customer Accounts & Settlement Ledger</h3>
+            <h3 style="font-size:1.05rem; font-weight:700; color:var(--slate-900);">Customer Accounts & Settlement Ledger</h3>
           </div>
 
           <div class="table-toolbar-right">
@@ -41,21 +41,26 @@ const AccountsView = {
             </thead>
             <tbody>
               ${customers.map(c => {
-                const invoiced = c.outstanding + 800000;
-                const paid = 800000;
+                const stmt = ERPState.getCustomerStatement(c.id);
+                const invoiced = stmt ? stmt.totalInvoiced : ((c.outstanding || 0) + 500000);
+                const paid = stmt ? stmt.totalReceived : 500000;
+                const outAmt = Number(c.outstanding) || 0;
                 return `
                   <tr>
-                    <td class="mono-cell font-bold" style="color:var(--primary-600);">${c.id}</td>
-                    <td class="primary-cell">${c.name}</td>
-                    <td>${c.companyName}</td>
-                    <td>${c.paymentTerms}</td>
+                    <td class="mono-cell font-bold" style="color:var(--primary-600);">${c.id || c.code}</td>
+                    <td class="primary-cell">
+                      <a href="javascript:void(0)" onclick="MastersView.openCustomerDrawer('${c.id}')" style="font-weight:700; color:var(--slate-900); text-decoration:none;">${c.name}</a>
+                    </td>
+                    <td>${c.companyName || c.name}</td>
+                    <td>${c.paymentTerms || '30 Days'}</td>
                     <td class="font-mono">${UI.formatCurrency(invoiced)}</td>
                     <td class="font-mono" style="color:var(--success-700);">${UI.formatCurrency(paid)}</td>
-                    <td class="font-bold font-mono" style="color:${c.outstanding > 0 ? 'var(--danger-600)' : 'var(--success-600)'};">
-                      ${UI.formatCurrency(c.outstanding)}
+                    <td class="font-bold font-mono" style="color:${outAmt > 0 ? 'var(--danger-600)' : 'var(--success-600)'};">
+                      ${UI.formatCurrency(outAmt)}
                     </td>
-                    <td>${UI.formatStatusBadge(c.outstanding > 0 ? 'Payment Due' : 'Settled')}</td>
-                    <td class="table-actions">
+                    <td>${UI.formatStatusBadge(outAmt > 0 ? 'Payment Due' : 'Settled')}</td>
+                    <td class="table-actions" style="text-align:right;">
+                      <button class="table-action-btn" style="color:var(--primary-700); background:var(--primary-50);" onclick="MastersView.openCustomerStatementModal('${c.id}')">Statement</button>
                       <button class="btn btn-primary btn-sm" onclick="AccountsView.openReceiptModal('${c.name}')">Record Receipt</button>
                     </td>
                   </tr>
