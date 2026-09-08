@@ -1851,7 +1851,7 @@ const MastersView = {
                       <!-- Edit Button -->
                       <button 
                         title="Edit Unit" 
-                        onclick="MastersView.openUnitModal(${item.id || `'${item.code}'`})"
+                        onclick="MastersView.openUnitModal('${item.id || item.code}')"
                         style="width:36px; height:36px; border-radius:8px; border:1px solid #d1d5db; background:#ffffff; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; color:#6b7280; box-shadow:0 1px 2px rgba(0,0,0,0.05); transition:all 0.15s ease;"
                         onmouseover="this.style.borderColor='#6366f1'; this.style.color='#4f46e5'; this.style.background='#f5f3ff';"
                         onmouseout="this.style.borderColor='#d1d5db'; this.style.color='#6b7280'; this.style.background='#ffffff';"
@@ -1862,7 +1862,7 @@ const MastersView = {
                       <!-- Delete Button -->
                       <button 
                         title="Delete Unit" 
-                        onclick="MastersView.deleteUnit(${item.id || `'${item.code}'`})"
+                        onclick="MastersView.deleteUnit('${item.id || item.code}')"
                         style="width:36px; height:36px; border-radius:8px; border:1px solid #d1d5db; background:#ffffff; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; color:#ef4444; box-shadow:0 1px 2px rgba(0,0,0,0.05); transition:all 0.15s ease;"
                         onmouseover="this.style.borderColor='#ef4444'; this.style.color='#b91c1c'; this.style.background='#fef2f2';"
                         onmouseout="this.style.borderColor='#d1d5db'; this.style.color='#ef4444'; this.style.background='#ffffff';"

@@ -383,23 +383,23 @@
   </div>
 
   <!-- Application Logic Scripts -->
-  <script src="{{ asset('js/data.js') }}"></script>
-  <script src="{{ asset('js/state.js') }}"></script>
-  <script src="{{ asset('js/components.js') }}"></script>
-  <script src="{{ asset('js/charts.js') }}"></script>
-  <script src="{{ asset('js/qr.js') }}"></script>
-  <script src="{{ asset('js/views/dashboard.js') }}"></script>
-  <script src="{{ asset('js/views/masters.js') }}"></script>
-  <script src="{{ asset('js/views/purchase.js') }}"></script>
-  <script src="{{ asset('js/views/jobwork-view.js') }}"></script>
-  <script src="{{ asset('js/views/production.js') }}"></script>
-  <script src="{{ asset('js/views/qr-view.js') }}"></script>
-  <script src="{{ asset('js/views/dispatch.js') }}"></script>
-  <script src="{{ asset('js/views/invoices.js') }}"></script>
-  <script src="{{ asset('js/views/accounts.js') }}"></script>
-  <script src="{{ asset('js/views/reports.js') }}"></script>
-  <script src="{{ asset('js/views/admin.js') }}"></script>
-  <script src="{{ asset('js/app.js') }}"></script>
+  <script src="{{ asset('js/data.js') }}?v={{ time() }}"></script>
+  <script src="{{ asset('js/state.js') }}?v={{ time() }}"></script>
+  <script src="{{ asset('js/components.js') }}?v={{ time() }}"></script>
+  <script src="{{ asset('js/charts.js') }}?v={{ time() }}"></script>
+  <script src="{{ asset('js/qr.js') }}?v={{ time() }}"></script>
+  <script src="{{ asset('js/views/dashboard.js') }}?v={{ time() }}"></script>
+  <script src="{{ asset('js/views/masters.js') }}?v={{ time() }}"></script>
+  <script src="{{ asset('js/views/purchase.js') }}?v={{ time() }}"></script>
+  <script src="{{ asset('js/views/jobwork-view.js') }}?v={{ time() }}"></script>
+  <script src="{{ asset('js/views/production.js') }}?v={{ time() }}"></script>
+  <script src="{{ asset('js/views/qr-view.js') }}?v={{ time() }}"></script>
+  <script src="{{ asset('js/views/dispatch.js') }}?v={{ time() }}"></script>
+  <script src="{{ asset('js/views/invoices.js') }}?v={{ time() }}"></script>
+  <script src="{{ asset('js/views/accounts.js') }}?v={{ time() }}"></script>
+  <script src="{{ asset('js/views/reports.js') }}?v={{ time() }}"></script>
+  <script src="{{ asset('js/views/admin.js') }}?v={{ time() }}"></script>
+  <script src="{{ asset('js/app.js') }}?v={{ time() }}"></script>
 
   <script>
     window.INITIAL_ROUTE = {

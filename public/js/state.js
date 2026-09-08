@@ -1236,7 +1236,14 @@ class ERPStateManager {
   }
 
   getUnitById(id) {
-    return (this.data.units || []).find(u => u.id == id || u.code === id || (u.name || '').toLowerCase() === (id || '').toLowerCase());
+    if (id === null || id === undefined) return null;
+    const strId = String(id).toLowerCase();
+    return (this.data.units || []).find(u => 
+      u.id == id || 
+      (u.dbId && u.dbId == id) || 
+      (u.code && u.code.toLowerCase() === strId) || 
+      (u.name && u.name.toLowerCase() === strId)
+    );
   }
 
   getUnitStats() {
