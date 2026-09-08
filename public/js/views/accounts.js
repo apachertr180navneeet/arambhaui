@@ -67,8 +67,14 @@ const AccountsView = {
                     </td>
                     <td>${UI.formatStatusBadge(outAmt > 0 ? 'Payment Due' : 'Settled')}</td>
                     <td class="table-actions" style="text-align:right;">
-                      <button class="table-action-btn" style="color:var(--primary-700); background:var(--primary-50);" onclick="MastersView.openCustomerStatementModal('${c.id}')">Statement</button>
-                      <button class="btn btn-primary btn-sm" onclick="AccountsView.openReceiptModal('${c.name}')">Record Receipt</button>
+                      <button class="table-action-btn ledger" title="View Customer Account Ledger" onclick="MastersView.openCustomerStatementModal('${c.id}')">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                        Ledger
+                      </button>
+                      <button class="table-action-btn receipt" onclick="AccountsView.openReceiptModal('${c.name}')">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                        Receipt
+                      </button>
                     </td>
                   </tr>
                 `;

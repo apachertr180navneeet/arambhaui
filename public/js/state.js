@@ -699,22 +699,88 @@ class ERPStateManager {
     const cust = this.getCustomerById(customerId);
     if (!cust) return null;
 
-    const custName = cust.name;
-    const invoices = (this.data.invoices || []).filter(i => (i.customer || '').toLowerCase() === custName.toLowerCase());
-    const orders = (this.data.productionOrders || []).filter(o => (o.customer || '').toLowerCase() === custName.toLowerCase());
-    const payments = (this.data.payments || []).filter(p => (p.customer || '').toLowerCase() === custName.toLowerCase());
+    const custName = (cust.name || '').trim().toLowerCase();
+    const custCode = (cust.id || cust.code || '').trim().toLowerCase();
 
-    const totalInvoiced = invoices.reduce((sum, i) => sum + (Number(i.amount || i.grandTotal) || 0), 0);
-    const totalPaid = payments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+    const invoices = (this.data.invoices || []).filter(i => {
+      const c = (i.customer || '').trim().toLowerCase();
+      const code = (i.customerId || '').trim().toLowerCase();
+      return c === custName || (custCode && code === custCode);
+    });
+
+    const orders = (this.data.productionOrders || []).filter(o => {
+      const c = (o.customer || '').trim().toLowerCase();
+      return c === custName;
+    });
+
+    const payments = (this.data.payments || []).filter(p => {
+      const c = (p.customer || '').trim().toLowerCase();
+      return c === custName;
+    });
+
+    const totalInvoiced = invoices.reduce((sum, i) => sum + (Number(i.amount || i.grandTotal || i.totalAmount) || 0), 0);
+    const totalReceived = payments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+    const totalPaid = totalReceived;
+
+    // Build unified chronological ledger
+    const ledger = [];
+
+    invoices.forEach(inv => {
+      const amt = Number(inv.grandTotal || inv.amount || inv.totalAmount || 0);
+      ledger.push({
+        date: inv.date || inv.invoiceDate || "2026-09-01",
+        type: "Tax Invoice",
+        description: `Tax Invoice ${inv.invoiceNo || inv.id}`,
+        ref: inv.invoiceNo || inv.id,
+        debit: amt,
+        credit: 0
+      });
+    });
+
+    payments.forEach(pay => {
+      const amt = Number(pay.amount || 0);
+      ledger.push({
+        date: pay.date || pay.paymentDate || "2026-09-01",
+        type: "Payment Receipt",
+        description: `Payment via ${pay.mode || 'Bank'} (${pay.refNo || pay.reference || 'Direct'})`,
+        ref: pay.refNo || pay.receiptNo || "RCP-001",
+        debit: 0,
+        credit: amt
+      });
+    });
+
+    // If no explicit transactions but customer has outstanding balance:
+    if (ledger.length === 0 && Number(cust.outstanding || 0) > 0) {
+      ledger.push({
+        date: "2026-09-01",
+        type: "Opening Balance",
+        description: "Initial ledger balance brought forward",
+        ref: "OB-2026",
+        debit: Number(cust.outstanding),
+        credit: 0
+      });
+    }
+
+    // Sort chronologically
+    ledger.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    // Compute running balance
+    let runningBalance = 0;
+    ledger.forEach(row => {
+      runningBalance += (row.debit - row.credit);
+      row.balance = runningBalance;
+    });
 
     return {
       customer: cust,
       invoices,
       orders,
       payments,
-      totalInvoiced,
+      ledger,
+      totalInvoiced: totalInvoiced || (ledger.length > 0 ? ledger.reduce((s, r) => s + r.debit, 0) : Number(cust.outstanding || 0)),
+      totalReceived,
       totalPaid,
-      outstanding: Number(cust.outstanding || 0),
+      outstanding: Number(cust.outstanding || runningBalance || 0),
       availableCredit: Math.max(0, (cust.creditLimit || 0) - (cust.outstanding || 0))
     };
   }

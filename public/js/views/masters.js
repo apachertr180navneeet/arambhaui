@@ -305,8 +305,14 @@ const MastersView = {
 
                       <td class="table-actions" style="text-align:right;">
                         <button class="table-action-btn view" title="View Profile & History" onclick="MastersView.openCustomerDrawer('${c.id}')">View</button>
-                        <button class="table-action-btn" style="color:var(--primary-700); background:var(--primary-50);" title="View Statement Ledger" onclick="MastersView.openCustomerStatementModal('${c.id}')">Ledger</button>
-                        <button class="table-action-btn" style="color:var(--success-700); background:#f0fdf4;" title="Record Receipt" onclick="MastersView.openCustomerReceiptModal('${c.id}')">Receipt</button>
+                        <button class="table-action-btn ledger" title="View Statement Ledger" onclick="MastersView.openCustomerStatementModal('${c.id}')">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                          Ledger
+                        </button>
+                        <button class="table-action-btn receipt" title="Record Receipt" onclick="MastersView.openCustomerReceiptModal('${c.id}')">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                          Receipt
+                        </button>
                         <button class="table-action-btn edit" title="Edit Customer" onclick="MastersView.openCustomerModal('${c.id}')">Edit</button>
                         <button class="table-action-btn delete" title="Delete Customer" onclick="MastersView.confirmDeleteCustomer('${c.id}')">
                           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
@@ -627,10 +633,19 @@ const MastersView = {
 
         <!-- Action Shortcuts -->
         <div style="display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap; margin-top:8px;">
-          <button class="btn btn-secondary btn-sm" onclick="MastersView.openCustomerModal('${cust.id}')">Edit Profile</button>
-          <button class="btn btn-secondary btn-sm" onclick="MastersView.openCustomerStatementModal('${cust.id}')">Statement / Ledger</button>
-          <button class="btn btn-success btn-sm" onclick="MastersView.openCustomerReceiptModal('${cust.id}')">Record Payment</button>
-          <button class="btn btn-primary btn-sm" onclick="UI.closeDrawer(); App.navigate('invoices', 'create'); setTimeout(() => { if(window.InvoicesView) InvoicesView.onCustomerSelect('${cust.name}'); }, 150);">
+          <button class="btn btn-secondary btn-sm" onclick="MastersView.openCustomerModal('${cust.id}')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+            Edit Profile
+          </button>
+          <button class="btn btn-primary btn-sm" style="background:#2563eb; color:#ffffff;" onclick="MastersView.openCustomerStatementModal('${cust.id}')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+            Account Ledger
+          </button>
+          <button class="btn btn-success btn-sm" onclick="MastersView.openCustomerReceiptModal('${cust.id}')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+            Record Payment
+          </button>
+          <button class="btn btn-secondary btn-sm" onclick="UI.closeDrawer(); App.navigate('invoices', 'create'); setTimeout(() => { if(window.InvoicesView) InvoicesView.onCustomerSelect('${cust.name}'); }, 150);">
             + Create Invoice
           </button>
         </div>

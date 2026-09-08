@@ -190,29 +190,69 @@
 
 .table-action-btn {
   background: #ffffff;
-  border: 1px solid var(--slate-200);
+  border: 1px solid var(--slate-300);
   border-radius: var(--radius-sm);
-  padding: 4px 8px;
-  color: var(--slate-600);
+  padding: 4px 9px;
+  color: var(--slate-700);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 0.725rem;
+  font-size: 0.75rem;
   font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
   transition: all var(--transition-fast);
 }
 
 .table-action-btn:hover {
   background-color: var(--slate-100);
   color: var(--slate-900);
-  border-color: var(--slate-300);
+  border-color: var(--slate-400);
 }
 
-.table-action-btn.view:hover { color: var(--primary-600); border-color: var(--primary-300); }
-.table-action-btn.edit:hover { color: var(--warning-600); border-color: var(--warning-300); }
-.table-action-btn.delete:hover { color: var(--danger-600); border-color: var(--danger-300); }
-.table-action-btn.qr:hover { color: var(--purple-600); border-color: var(--purple-300); }
+.table-action-btn.ledger {
+  color: #1d4ed8 !important;
+  background-color: #eff6ff !important;
+  border: 1px solid #93c5fd !important;
+  font-weight: 700 !important;
+  box-shadow: 0 1px 2px rgba(37, 99, 235, 0.08);
+}
+
+.table-action-btn.ledger:hover {
+  background-color: #2563eb !important;
+  color: #ffffff !important;
+  border-color: #2563eb !important;
+}
+
+.table-action-btn.receipt {
+  color: #047857 !important;
+  background-color: #ecfdf5 !important;
+  border: 1px solid #86efac !important;
+  font-weight: 700 !important;
+  box-shadow: 0 1px 2px rgba(16, 185, 129, 0.08);
+}
+
+.table-action-btn.receipt:hover {
+  background-color: #059669 !important;
+  color: #ffffff !important;
+  border-color: #059669 !important;
+}
+
+.table-action-btn.view {
+  color: #334155;
+  background-color: #f8fafc;
+  border: 1px solid #cbd5e1;
+}
+
+.table-action-btn.view:hover {
+  color: #0f172a;
+  background-color: #e2e8f0;
+}
+
+.table-action-btn.edit:hover { color: var(--warning-700); border-color: var(--warning-400); background-color: var(--warning-50); }
+.table-action-btn.delete:hover { color: var(--danger-700); border-color: var(--danger-400); background-color: var(--danger-50); }
+.table-action-btn.qr:hover { color: var(--purple-700); border-color: var(--purple-400); background-color: var(--purple-50); }
 
 /* Table Pagination Bar */
 .table-pagination {
