@@ -355,6 +355,11 @@
   <script src="{{ asset('js/app.js') }}"></script>
 
   <script>
+    window.INITIAL_ROUTE = {
+      module: "{{ $module ?? '' }}",
+      submodule: "{{ $submodule ?? '' }}"
+    };
+
     // Initialize Application on DOM Ready
     document.addEventListener("DOMContentLoaded", () => {
       App.init();

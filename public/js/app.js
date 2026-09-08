@@ -18,11 +18,26 @@ const App = {
       this.updateHeaderBadges();
     });
 
+    // Listen to hash changes (browser back/forward or programmatic changes)
+    window.addEventListener("hashchange", () => {
+      const h = window.location.hash.replace("#/", "");
+      if (h) {
+        const parts = h.split("/");
+        const mod = parts[0];
+        const sub = parts[1] || "overview";
+        if (mod !== this.currentModule || sub !== this.currentSubmodule) {
+          this.navigate(mod, sub, false);
+        }
+      }
+    });
+
     // Initial navigation
     const hash = window.location.hash.replace("#/", "");
     if (hash) {
       const parts = hash.split("/");
       this.navigate(parts[0], parts[1] || "overview", false);
+    } else if (window.INITIAL_ROUTE && window.INITIAL_ROUTE.module && window.INITIAL_ROUTE.module !== "dashboard") {
+      this.navigate(window.INITIAL_ROUTE.module, window.INITIAL_ROUTE.submodule || "overview", true);
     } else {
       this.navigate("dashboard", "overview", false);
     }
