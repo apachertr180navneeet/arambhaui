@@ -48,6 +48,9 @@ const UI = {
 
   // --- Modal Dialog System ---
   openModal({ title, content, footer = "", size = "modal-lg" }) {
+    // Automatically close any open drawer to avoid overlay collisions
+    this.closeDrawer();
+
     let backdrop = document.getElementById("global-modal-backdrop");
     if (!backdrop) {
       backdrop = document.createElement("div");
@@ -137,6 +140,11 @@ const UI = {
     const backdrop = document.getElementById("global-drawer-backdrop");
     if (backdrop) {
       backdrop.classList.remove("open");
+      setTimeout(() => {
+        if (!backdrop.classList.contains("open")) {
+          backdrop.innerHTML = "";
+        }
+      }, 300);
     }
   },
 
