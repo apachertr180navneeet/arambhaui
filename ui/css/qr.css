@@ -1,0 +1,516 @@
+/* ==========================================================================
+   QR MANAGEMENT - GENERATOR, SCANNER VIEWPORT & PRINTABLE LABELS
+   ========================================================================== */
+
+/* QR Generator View */
+.qr-layout-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 24px;
+}
+
+@media (max-width: 900px) {
+  .qr-layout-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.qr-card-preview {
+  background: #ffffff;
+  border: 2px dashed var(--slate-300);
+  border-radius: var(--radius-xl);
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  background: #ffffff;
+}
+
+.qr-code-box {
+  background: #ffffff;
+  padding: 16px;
+  border: 1px solid var(--slate-200);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  display: inline-block;
+  margin-bottom: 16px;
+}
+
+.qr-lot-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  color: var(--slate-900);
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+
+.qr-lot-meta {
+  font-size: 0.825rem;
+  color: var(--slate-600);
+  max-width: 320px;
+  margin-bottom: 16px;
+}
+
+/* Printable Industrial QR Label Template */
+.industrial-qr-label {
+  width: 100%;
+  max-width: 380px;
+  border: 2px solid #0f172a;
+  border-radius: 8px;
+  padding: 14px;
+  background: #ffffff;
+  color: #0f172a;
+  font-family: var(--font-sans);
+  text-align: left;
+  box-shadow: var(--shadow-md);
+}
+
+.label-header {
+  border-bottom: 2px solid #0f172a;
+  padding-bottom: 6px;
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.label-company-name {
+  font-size: 0.85rem;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+}
+
+.label-tag {
+  font-size: 0.65rem;
+  background: #0f172a;
+  color: #ffffff;
+  padding: 2px 6px;
+  font-weight: 700;
+  border-radius: 2px;
+}
+
+.label-body-grid {
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  gap: 12px;
+  align-items: center;
+}
+
+.label-qr-img {
+  width: 86px;
+  height: 86px;
+  border: 1px solid #cbd5e1;
+  padding: 4px;
+  background: #ffffff;
+}
+
+.label-details {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 0.75rem;
+}
+
+.label-row {
+  display: flex;
+  justify-content: space-between;
+}
+
+.label-key {
+  color: #64748b;
+  font-weight: 600;
+}
+
+.label-val {
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.label-barcode-footer {
+  margin-top: 10px;
+  border-top: 1px dashed #cbd5e1;
+  padding-top: 6px;
+  text-align: center;
+}
+
+.label-barcode-svg {
+  height: 28px;
+  width: 90%;
+  margin: 0 auto;
+}
+
+/* QR Camera Scanner Simulator View */
+.scanner-viewport-wrapper {
+  background: #090d16;
+  border-radius: var(--radius-2xl);
+  padding: 32px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-xl);
+}
+
+.scanner-viewfinder {
+  width: 280px;
+  height: 280px;
+  border: 2px dashed rgba(255, 255, 255, 0.3);
+  border-radius: var(--radius-xl);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 20px 0;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* Laser Scan Animation Line */
+.scanner-laser {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, #ef4444, #f43f5e, #ef4444, transparent);
+  box-shadow: 0 0 12px #ef4444;
+  top: 10%;
+  animation: scanLaser 2.2s ease-in-out infinite alternate;
+}
+
+@keyframes scanLaser {
+  0% { top: 10%; }
+  100% { top: 90%; }
+}
+
+.scanner-corners {
+  position: absolute;
+  inset: -2px;
+  pointer-events: none;
+}
+
+.scanner-corners::before,
+.scanner-corners::after {
+  content: '';
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border-color: #38bdf8;
+  border-style: solid;
+}
+
+.scanner-corners::before {
+  top: 0; left: 0;
+  border-width: 3px 0 0 3px;
+  border-top-left-radius: 12px;
+}
+
+.scanner-corners::after {
+  bottom: 0; right: 0;
+  border-width: 0 3px 3px 0;
+  border-bottom-right-radius: 12px;
+}
+
+.scanner-status-text {
+  color: #94a3b8;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+/* Scanned Result Card */
+.scanned-lot-card {
+  background: #ffffff;
+  border: 1px solid var(--primary-300);
+  border-radius: var(--radius-xl);
+  padding: 24px;
+  box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.15);
+  margin-top: 20px;
+  animation: fadeInDown 0.3s ease;
+}
+
+.scanned-lot-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--slate-200);
+  padding-bottom: 14px;
+  margin-bottom: 16px;
+}
+
+.scanned-lot-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 640px) {
+  .scanned-lot-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.scanned-item-field {
+  background: var(--slate-50);
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--slate-200);
+}
+
+.scanned-field-label {
+  font-size: 0.725rem;
+  font-weight: 600;
+  color: var(--slate-500);
+  text-transform: uppercase;
+}
+
+.scanned-field-val {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--slate-900);
+  margin-top: 2px;
+}
+
+/* ==========================================================================
+   STANDALONE DISCOUNT & AMOUNT QR GENERATOR STYLES (NO INDUSTRIAL LABELS)
+   ========================================================================== */
+
+.qr-tabs-nav {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  background: var(--slate-100);
+  padding: 6px;
+  border-radius: var(--radius-lg);
+  overflow-x: auto;
+}
+
+.qr-tab-btn {
+  padding: 8px 18px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--slate-600);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.qr-tab-btn:hover {
+  color: var(--slate-900);
+}
+
+.qr-tab-btn.active {
+  background: #ffffff;
+  color: var(--primary-600);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Quick Amount Selector Chips */
+.quick-amount-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.amount-chip-btn {
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1.5px solid var(--slate-200);
+  background: var(--slate-50);
+  font-size: 0.825rem;
+  font-weight: 700;
+  color: var(--slate-700);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.amount-chip-btn:hover {
+  border-color: var(--primary-400);
+  background: var(--primary-50);
+  color: var(--primary-700);
+}
+
+.amount-chip-btn.active {
+  background: var(--primary-600);
+  border-color: var(--primary-600);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35);
+}
+
+/* Color Picker Chips */
+.qr-color-picker-grid {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.qr-color-circle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 0 1px var(--slate-300);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.qr-color-circle:hover {
+  transform: scale(1.15);
+}
+
+.qr-color-circle.active {
+  box-shadow: 0 0 0 2.5px var(--primary-600);
+}
+
+/* Standalone Discount QR Code Preview Card */
+.standalone-qr-card {
+  width: 100%;
+  max-width: 360px;
+  margin: 0 auto;
+  background: #ffffff;
+  border: 1px solid var(--slate-200);
+  border-radius: 16px;
+  box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.1);
+  overflow: hidden;
+  text-align: center;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.standalone-qr-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 36px -4px rgba(15, 23, 42, 0.14);
+}
+
+.discount-badge-banner {
+  padding: 12px 16px;
+  color: #ffffff;
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.pure-qr-wrapper {
+  padding: 24px;
+  background: #ffffff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.qr-voucher-meta {
+  padding: 0 20px 20px;
+}
+
+.qr-coupon-code-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--slate-100);
+  border: 1px dashed var(--slate-300);
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  color: var(--slate-900);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-bottom: 12px;
+}
+
+.qr-coupon-code-pill:hover {
+  background: var(--primary-50);
+  border-color: var(--primary-400);
+  color: var(--primary-700);
+}
+
+.qr-offer-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--slate-900);
+  margin-bottom: 6px;
+}
+
+.qr-terms-text {
+  font-size: 0.775rem;
+  color: var(--slate-500);
+  line-height: 1.4;
+}
+
+/* Scanned Discount Celebration Card */
+.discount-redeemed-card {
+  background: linear-gradient(135deg, #ffffff, #f0fdf4);
+  border: 2px solid #86efac;
+  border-radius: var(--radius-xl);
+  padding: 28px;
+  box-shadow: 0 12px 30px -5px rgba(22, 163, 74, 0.2);
+  margin-top: 24px;
+  animation: fadeInDown 0.35s ease;
+}
+
+.discount-redeemed-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid #bbf7d0;
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+}
+
+.discount-redeemed-amount {
+  font-size: 2.25rem;
+  font-weight: 900;
+  color: #15803d;
+  font-family: var(--font-mono);
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.discount-redeemed-bill-box {
+  background: #ffffff;
+  border: 1px solid #bbf7d0;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 16px 0;
+}
+
+/* Printable Standalone Voucher Card */
+.print-discount-sheet {
+  display: flex;
+  justify-content: center;
+  padding: 16px;
+}
+
+.voucher-print-card {
+  width: 320px;
+  background: #ffffff;
+  border-radius: 12px;
+  overflow: hidden;
+  text-align: center;
+  box-shadow: var(--shadow-lg);
+}
+
+.voucher-print-header {
+  color: #ffffff;
+  padding: 16px;
+}
+
+.voucher-print-body {
+  padding: 20px;
+}
+
