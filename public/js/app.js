@@ -165,7 +165,8 @@ const App = {
       vendors: "Vendor Master",
       jobworkers: "Job Worker Master",
       items: "Item Master",
-      sizes: "Size & Color Master",
+      units: "Unit Master",
+      sizes: "Unit Master",
       assign: "Job Assign Orders",
       "inward-report": "Job Inward & Ready Report",
       orders: "Sales Orders",
@@ -228,7 +229,7 @@ const App = {
       else if (s === "vendors") html = MastersView.renderVendors();
       else if (s === "jobworkers") html = MastersView.renderJobWorkers();
       else if (s === "items") html = MastersView.renderItems();
-      else if (s === "sizes") html = MastersView.renderSizesAndColors();
+      else if (s === "units" || s === "sizes") html = MastersView.renderUnits();
       else html = MastersView.renderCustomers();
     } else if (m === "purchase") {
       if (s === "inward") html = PurchaseView.renderInwards();

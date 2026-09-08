@@ -1699,112 +1699,410 @@ const MastersView = {
     UI.exportToCSV("Item_Master_Report", headers, rows);
   },
 
-  // 5. SIZE & COLOR MANAGEMENT MATRIX
-  renderSizesAndColors() {
+  // 5. UNIT MASTER (UOM) MANAGEMENT - HIERARCHICAL CONVERSION LOGIC
+  renderUnits() {
+    const rawUnits = ERPState.data.units || [];
+    
+    // Group base units and their respective sub-units
+    const baseUnits = rawUnits.filter(u => !u.parentId);
+    const subUnits = rawUnits.filter(u => !!u.parentId);
+
+    // Build ordered list where each base unit is immediately followed by its sub-units
+    const orderedList = [];
+    baseUnits.forEach((base, index) => {
+      orderedList.push({ ...base, rowIndex: index + 1, isChild: false });
+      const children = subUnits.filter(sub => sub.parentId == base.id || sub.parentId == base.dbId || (base.code && sub.parentName === base.code) || (base.name && sub.parentName === base.name));
+      children.forEach(child => {
+        orderedList.push({
+          ...child,
+          rowIndex: null,
+          isChild: true,
+          parentObj: base,
+          conversionDisplay: child.conversionFactor ? `1 ${base.name} = ${Number(child.conversionFactor).toFixed(2)} ${child.name}` : (child.conversionText || "—")
+        });
+      });
+    });
+
+    // Also include any orphan sub-units whose parent might not be in base list
+    subUnits.forEach(sub => {
+      const alreadyAdded = orderedList.some(item => item.id == sub.id || (item.dbId && item.dbId == sub.dbId));
+      if (!alreadyAdded) {
+        orderedList.push({
+          ...sub,
+          rowIndex: null,
+          isChild: true,
+          parentObj: { name: sub.parentName || "Parent" },
+          conversionDisplay: sub.conversionFactor ? `1 ${sub.parentName || 'Unit'} = ${Number(sub.conversionFactor).toFixed(2)} ${sub.name}` : (sub.conversionText || "—")
+        });
+      }
+    });
+
+    const totalCount = orderedList.length;
+
     return `
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:24px;">
-        <!-- Size Master Card -->
-        <div class="card">
-          <div class="card-header">
-            <div>
-              <div class="card-title">Garment Size Master</div>
-              <div class="card-subtitle">Configured standard sizes for apparel cutting & bundles</div>
+      <!-- Main Unit Master Container matching screenshot -->
+      <div style="background:#ffffff; border-radius:16px; border:1px solid #e5e7eb; box-shadow:0 1px 3px rgba(0,0,0,0.04); padding:28px; margin-bottom:30px;">
+        
+        <!-- Top Toolbar: Search Bar (Left) & Add Unit Button (Right) -->
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:28px; flex-wrap:wrap; gap:16px;">
+          <!-- Search Bar -->
+          <div style="display:flex; align-items:center; gap:10px; width:100%; max-width:440px;">
+            <div style="position:relative; flex:1;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" style="position:absolute; left:16px; top:50%; transform:translateY(-50%);"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input 
+                type="text" 
+                id="input-search-unit"
+                placeholder="Search unit..." 
+                oninput="MastersView.filterGenericTable('table-unit-master-custom', this.value)"
+                style="width:100%; height:44px; padding:8px 16px 8px 44px; border:1px solid #e5e7eb; border-radius:9999px; font-size:0.95rem; color:#111827; outline:none; background:#ffffff; transition:all 0.2s ease;"
+                onfocus="this.style.borderColor='#6366f1'; this.style.boxShadow='0 0 0 3px rgba(99,102,241,0.1)';"
+                onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none';"
+              >
             </div>
-            <button class="btn btn-primary btn-sm" onclick="UI.showToast('Add Size', 'New size configured', 'info')">+ Add Size</button>
+            <button 
+              class="btn" 
+              onclick="MastersView.filterGenericTable('table-unit-master-custom', document.getElementById('input-search-unit').value)"
+              style="height:44px; padding:0 24px; background:#6366f1; color:#ffffff; font-weight:700; border-radius:9999px; border:none; cursor:pointer; font-size:0.95rem; display:inline-flex; align-items:center; justify-content:center; transition:background 0.2s ease;"
+              onmouseover="this.style.background='#4f46e5'"
+              onmouseout="this.style.background='#6366f1'"
+            >
+              Search
+            </button>
           </div>
-          <div style="display:flex; flex-wrap:wrap; gap:10px;">
-            ${ERPState.data.sizes.map(s => `
-              <div style="padding:12px 20px; background:var(--slate-100); border:1px solid var(--slate-300); border-radius:var(--radius-lg); font-weight:800; font-size:1.1rem; color:var(--slate-900);">
-                ${s}
-              </div>
-            `).join('')}
-          </div>
-        </div>
 
-        <!-- Color Master Card -->
-        <div class="card">
-          <div class="card-header">
-            <div>
-              <div class="card-title">Color Shade Master</div>
-              <div class="card-subtitle">Approved dyeing & fabric color palettes</div>
-            </div>
-            <button class="btn btn-primary btn-sm" onclick="UI.showToast('Add Color', 'New color palette added', 'info')">+ Add Color</button>
-          </div>
-          <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:10px;">
-            ${ERPState.data.colors.map(c => `
-              <div style="display:flex; align-items:center; gap:10px; padding:8px 12px; border:1px solid var(--slate-200); border-radius:var(--radius-md); background:var(--slate-50);">
-                <span style="width:24px; height:24px; border-radius:50%; background:${c.hex}; border:1px solid rgba(0,0,0,0.15);"></span>
-                <span style="font-weight:700; font-size:0.85rem; color:var(--slate-900);">${c.name}</span>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-      </div>
-
-      <!-- Size x Color Stock Matrix Breakdown -->
-      <div class="card">
-        <div class="card-header">
+          <!-- Add Unit Button (Forest Green Pill) -->
           <div>
-            <div class="card-title">Sample Inventory Matrix: Premium Cotton T-Shirt (GAR-TSH-001)</div>
-            <div class="card-subtitle">Real-time SKU quantities by Color x Size combinations</div>
+            <button 
+              class="btn" 
+              onclick="MastersView.openUnitModal()"
+              style="height:44px; padding:0 24px; background:#059669; color:#ffffff; font-weight:700; border-radius:9999px; border:none; cursor:pointer; font-size:0.95rem; display:inline-flex; align-items:center; gap:8px; box-shadow:0 2px 4px rgba(5,150,105,0.2); transition:all 0.2s ease;"
+              onmouseover="this.style.background='#047857'; this.style.transform='translateY(-1px)';"
+              onmouseout="this.style.background='#059669'; this.style.transform='translateY(0)';"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              + Add Unit
+            </button>
           </div>
         </div>
 
-        <div class="table-responsive">
-          <table class="data-table" style="text-align:center;">
+        <!-- Custom Unit Table matching screenshot -->
+        <div style="overflow-x:auto; border-radius:12px; border:1px solid #e5e7eb;">
+          <table class="data-table" id="table-unit-master-custom" style="width:100%; border-collapse:collapse; text-align:left;">
             <thead>
-              <tr>
-                <th style="text-align:left;">Color Variant</th>
-                <th>S</th>
-                <th>M</th>
-                <th>L</th>
-                <th>XL</th>
-                <th>XXL</th>
-                <th>Total Color Qty</th>
+              <tr style="background:#ffffff; border-bottom:1px solid #e5e7eb;">
+                <th style="padding:16px 20px; font-size:0.75rem; font-weight:700; color:#6b7280; text-transform:uppercase; letter-spacing:0.05em; width:60px;">#</th>
+                <th style="padding:16px 20px; font-size:0.75rem; font-weight:700; color:#6b7280; text-transform:uppercase; letter-spacing:0.05em; width:25%;">UNIT NAME</th>
+                <th style="padding:16px 20px; font-size:0.75rem; font-weight:700; color:#6b7280; text-transform:uppercase; letter-spacing:0.05em; width:22%;">PARENT UNIT</th>
+                <th style="padding:16px 20px; font-size:0.75rem; font-weight:700; color:#6b7280; text-transform:uppercase; letter-spacing:0.05em; width:25%;">CONVERSION</th>
+                <th style="padding:16px 20px; font-size:0.75rem; font-weight:700; color:#6b7280; text-transform:uppercase; letter-spacing:0.05em; width:14%;">STATUS</th>
+                <th style="padding:16px 20px; font-size:0.75rem; font-weight:700; color:#6b7280; text-transform:uppercase; letter-spacing:0.05em; width:14%; text-align:right;">ACTION</th>
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td style="text-align:left; font-weight:700;"><span style="display:inline-block; width:10px; height:10px; background:#0f172a; border-radius:50%; margin-right:6px;"></span> Black</td>
-                <td class="font-mono">150</td>
-                <td class="font-mono">300</td>
-                <td class="font-mono">450</td>
-                <td class="font-mono">200</td>
-                <td class="font-mono">100</td>
-                <td class="font-bold font-mono">1,200</td>
-              </tr>
-              <tr>
-                <td style="text-align:left; font-weight:700;"><span style="display:inline-block; width:10px; height:10px; background:#1e3a8a; border-radius:50%; margin-right:6px;"></span> Navy Blue</td>
-                <td class="font-mono">400</td>
-                <td class="font-mono">900</td>
-                <td class="font-mono">1,200</td>
-                <td class="font-mono">800</td>
-                <td class="font-mono">350</td>
-                <td class="font-bold font-mono">3,650</td>
-              </tr>
-              <tr>
-                <td style="text-align:left; font-weight:700;"><span style="display:inline-block; width:10px; height:10px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:50%; margin-right:6px;"></span> White</td>
-                <td class="font-mono">250</td>
-                <td class="font-mono">600</td>
-                <td class="font-mono">850</td>
-                <td class="font-mono">500</td>
-                <td class="font-mono">200</td>
-                <td class="font-bold font-mono">2,400</td>
-              </tr>
-              <tr style="background:var(--slate-100); font-weight:800;">
-                <td style="text-align:left;">Total Stock Across Sizes</td>
-                <td class="font-mono">800</td>
-                <td class="font-mono">1,800</td>
-                <td class="font-mono">2,500</td>
-                <td class="font-mono">1,500</td>
-                <td class="font-mono">650</td>
-                <td class="font-mono" style="color:var(--primary-700);">7,250 PCS</td>
-              </tr>
+              ${orderedList.length === 0 ? `
+                <tr>
+                  <td colspan="6" style="text-align:center; padding:40px; color:#9ca3af;">
+                    <div style="font-weight:700; font-size:1rem; margin-bottom:4px;">No Units Registered</div>
+                    <div style="font-size:0.85rem;">Click "+ Add Unit" above to configure your base and sub-units.</div>
+                  </td>
+                </tr>
+              ` : orderedList.map(item => `
+                <tr style="background:${item.isChild ? '#ffffff' : '#ede9fe'}; border-bottom:1px solid ${item.isChild ? '#f3f4f6' : '#ddd6fe'}; transition:background 0.15s ease;">
+                  
+                  <!-- Column #: Number for Base, empty/indent for Child -->
+                  <td style="padding:18px 20px; font-size:0.95rem; font-weight:600; color:#4b5563;">
+                    ${item.isChild ? '' : item.rowIndex}
+                  </td>
+
+                  <!-- Column UNIT NAME -->
+                  <td style="padding:18px 20px;">
+                    ${item.isChild ? `
+                      <div style="display:flex; align-items:center; gap:8px; padding-left:24px; color:#111827; font-size:0.925rem;">
+                        <span style="color:#6366f1; font-weight:700; font-size:1.1rem; line-height:1;">↳</span>
+                        <span style="font-weight:600; color:#1f2937;">${item.name}</span>
+                      </div>
+                    ` : `
+                      <span style="font-weight:800; font-size:0.95rem; color:#111827; letter-spacing:0.02em;">
+                        ${item.name}
+                      </span>
+                    `}
+                  </td>
+
+                  <!-- Column PARENT UNIT -->
+                  <td style="padding:18px 20px; font-size:0.925rem; font-weight:600; color:#374151;">
+                    ${item.isChild ? (item.parentName || (item.parentObj ? item.parentObj.name : '—')) : '—'}
+                  </td>
+
+                  <!-- Column CONVERSION -->
+                  <td style="padding:18px 20px; font-size:0.925rem; font-weight:700; color:#111827;">
+                    ${item.isChild ? item.conversionDisplay : '—'}
+                  </td>
+
+                  <!-- Column STATUS -->
+                  <td style="padding:18px 20px;">
+                    <span style="display:inline-flex; align-items:center; justify-content:center; padding:4px 14px; background:#dcfce7; color:#15803d; border-radius:9999px; font-size:0.8rem; font-weight:700; letter-spacing:0.02em;">
+                      ${item.status || 'Active'}
+                    </span>
+                  </td>
+
+                  <!-- Column ACTION (Edit & Delete Icon Buttons in white rounded boxes) -->
+                  <td style="padding:18px 20px; text-align:right;">
+                    <div style="display:flex; justify-content:flex-end; gap:8px;">
+                      <!-- Edit Button -->
+                      <button 
+                        title="Edit Unit" 
+                        onclick="MastersView.openUnitModal(${item.id || `'${item.code}'`})"
+                        style="width:36px; height:36px; border-radius:8px; border:1px solid #d1d5db; background:#ffffff; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; color:#6b7280; box-shadow:0 1px 2px rgba(0,0,0,0.05); transition:all 0.15s ease;"
+                        onmouseover="this.style.borderColor='#6366f1'; this.style.color='#4f46e5'; this.style.background='#f5f3ff';"
+                        onmouseout="this.style.borderColor='#d1d5db'; this.style.color='#6b7280'; this.style.background='#ffffff';"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                      </button>
+
+                      <!-- Delete Button -->
+                      <button 
+                        title="Delete Unit" 
+                        onclick="MastersView.deleteUnit(${item.id || `'${item.code}'`})"
+                        style="width:36px; height:36px; border-radius:8px; border:1px solid #d1d5db; background:#ffffff; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; color:#ef4444; box-shadow:0 1px 2px rgba(0,0,0,0.05); transition:all 0.15s ease;"
+                        onmouseover="this.style.borderColor='#ef4444'; this.style.color='#b91c1c'; this.style.background='#fef2f2';"
+                        onmouseout="this.style.borderColor='#d1d5db'; this.style.color='#ef4444'; this.style.background='#ffffff';"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              `).join('')}
             </tbody>
           </table>
         </div>
+
+        <!-- Bottom Pagination Row matching screenshot -->
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:24px; flex-wrap:wrap; gap:12px; font-size:0.9rem; color:#6b7280;">
+          <div>
+            Showing <strong style="color:#111827;">1</strong> to <strong style="color:#111827;">${totalCount}</strong> of <strong style="color:#111827;">${totalCount}</strong> units
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <button 
+              disabled 
+              style="padding:6px 14px; border-radius:8px; border:1px solid #e5e7eb; background:#f9fafb; color:#9ca3af; font-weight:600; font-size:0.85rem; cursor:not-allowed;"
+            >
+              &laquo; Prev
+            </button>
+            <span style="padding:6px 12px; font-weight:700; color:#111827; font-size:0.9rem;">1/1</span>
+            <button 
+              disabled 
+              style="padding:6px 14px; border-radius:8px; border:1px solid #e5e7eb; background:#f9fafb; color:#9ca3af; font-weight:600; font-size:0.85rem; cursor:not-allowed;"
+            >
+              Next &raquo;
+            </button>
+          </div>
+        </div>
+
       </div>
     `;
+  },
+
+  // Modal: Add or Edit Unit with Parent Unit & Conversion Logic
+  openUnitModal(unitId = null) {
+    const isEdit = unitId !== null && unitId !== undefined;
+    const unit = isEdit ? ERPState.getUnitById(unitId) : {
+      name: "",
+      code: "",
+      parentId: null,
+      parentName: "",
+      conversionFactor: "",
+      status: "Active"
+    };
+
+    if (isEdit && !unit) return;
+
+    // Get all available parent units (excluding this unit if editing to prevent cycle)
+    const availableParents = (ERPState.data.units || []).filter(u => {
+      if (isEdit && (u.id == unitId || (u.dbId && u.dbId == unitId))) return false;
+      return !u.parentId; // Only base units can be parent
+    });
+
+    const content = `
+      <form id="form-unit-modal" style="display:flex; flex-direction:column; gap:18px;">
+        
+        <!-- Unit Name -->
+        <div class="form-group">
+          <label class="form-label required" style="font-weight:700; color:#374151;">Unit Name</label>
+          <input 
+            type="text" 
+            id="unit-name-input" 
+            class="form-control" 
+            placeholder="e.g. KG, gm, PCS, PAIR, MTR, cm" 
+            value="${unit.name || ''}" 
+            required 
+            style="height:44px; border-radius:8px; font-size:0.95rem; font-weight:600;"
+            oninput="MastersView.updateConversionPreview()"
+          >
+          <span class="form-hint" style="color:#6b7280; font-size:0.8rem; margin-top:4px;">Enter unit name or abbreviation (e.g. PAIR, PCS, KG, gm, MTR)</span>
+        </div>
+
+        <!-- Parent Unit Selection -->
+        <div class="form-group">
+          <label class="form-label" style="font-weight:700; color:#374151;">Parent Unit (Optional)</label>
+          <select 
+            id="unit-parent-select" 
+            class="form-control" 
+            style="height:44px; border-radius:8px; font-size:0.95rem; font-weight:600;"
+            onchange="MastersView.toggleConversionFields(this.value)"
+          >
+            <option value="">— None (This is a Base Unit) —</option>
+            ${availableParents.map(p => `
+              <option value="${p.id || p.dbId}" ${((unit.parentId == p.id || unit.parentId == p.dbId) || (unit.parentName && (unit.parentName === p.name || unit.parentName === p.code))) ? 'selected' : ''}>
+                ${p.name}
+              </option>
+            `).join('')}
+          </select>
+          <span class="form-hint" style="color:#6b7280; font-size:0.8rem; margin-top:4px;">Select a parent unit if this unit is a sub-unit (e.g. gm under KG, cm under MTR)</span>
+        </div>
+
+        <!-- Conversion Factor Field (Shown if Parent is selected) -->
+        <div id="conversion-fields-container" style="display:${unit.parentId ? 'block' : 'none'}; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:16px;">
+          <div class="form-group" style="margin-bottom:10px;">
+            <label class="form-label required" style="font-weight:700; color:#374151;">Conversion Factor</label>
+            <div style="display:flex; align-items:center; gap:10px;">
+              <input 
+                type="number" 
+                step="any"
+                id="unit-conversion-factor" 
+                class="form-control" 
+                placeholder="e.g. 1000 for gm under KG (1 KG = 1000 gm)" 
+                value="${unit.conversionFactor || ''}" 
+                style="height:44px; border-radius:8px; font-size:0.95rem; font-weight:700;"
+                oninput="MastersView.updateConversionPreview()"
+              >
+            </div>
+          </div>
+          <div id="conversion-live-preview" style="font-size:0.9rem; font-weight:800; color:#4f46e5; background:#ede9fe; padding:10px 14px; border-radius:8px; border:1px solid #c7d2fe;">
+            Conversion: 1 Parent = ? Unit
+          </div>
+        </div>
+
+        <!-- Status -->
+        <div class="form-group">
+          <label class="form-label required" style="font-weight:700; color:#374151;">Status</label>
+          <select id="unit-status-select" class="form-control" style="height:44px; border-radius:8px; font-size:0.95rem;">
+            <option value="Active" ${unit.status === 'Active' ? 'selected' : ''}>Active</option>
+            <option value="Inactive" ${unit.status === 'Inactive' ? 'selected' : ''}>Inactive</option>
+          </select>
+        </div>
+
+      </form>
+    `;
+
+    const footer = `
+      <button class="btn btn-secondary" onclick="UI.closeModal()" style="border-radius:8px; padding:8px 18px;">Cancel</button>
+      <button class="btn btn-primary" id="btn-save-unit-custom" style="background:#059669; border:none; border-radius:8px; padding:8px 22px; font-weight:700;">${isEdit ? 'Update Unit' : 'Save Unit'}</button>
+    `;
+
+    UI.openModal({
+      title: isEdit ? `Edit Unit: ${unit.name}` : "Add New Unit",
+      content,
+      footer,
+      size: "modal-md"
+    });
+
+    // Initialize preview immediately if editing
+    setTimeout(() => {
+      this.updateConversionPreview();
+    }, 50);
+
+    document.getElementById("btn-save-unit-custom").onclick = () => {
+      const name = document.getElementById("unit-name-input").value.trim();
+      const parentSelect = document.getElementById("unit-parent-select");
+      const parentId = parentSelect.value ? Number(parentSelect.value) : null;
+      const parentName = parentId && parentSelect.selectedIndex >= 0 ? parentSelect.options[parentSelect.selectedIndex].text.trim() : null;
+      const conversionFactor = parentId ? Number(document.getElementById("unit-conversion-factor").value) : null;
+      const status = document.getElementById("unit-status-select").value;
+
+      if (!name) return UI.showToast("Required Field", "Please enter Unit Name (e.g. PAIR, PCS, KG, gm)", "error");
+      if (parentId && (!conversionFactor || conversionFactor <= 0)) {
+        return UI.showToast("Required Field", "Please specify a valid conversion factor (e.g. 1000 for gm under KG)", "error");
+      }
+
+      const payload = {
+        name,
+        code: name,
+        parentId,
+        parentName,
+        conversionFactor,
+        status
+      };
+
+      if (isEdit) {
+        ERPState.updateUnit(unitId, payload);
+        UI.showToast("Unit Updated", `${name} updated successfully`, "success");
+      } else {
+        const created = ERPState.addUnit(payload);
+        UI.showToast("Unit Added", `${name} registered successfully`, "success");
+      }
+
+      UI.closeModal();
+      App.refreshCurrentView();
+    };
+  },
+
+  toggleConversionFields(parentId) {
+    const container = document.getElementById("conversion-fields-container");
+    if (!container) return;
+    if (parentId) {
+      container.style.display = "block";
+      this.updateConversionPreview();
+    } else {
+      container.style.display = "none";
+    }
+  },
+
+  updateConversionPreview() {
+    const preview = document.getElementById("conversion-live-preview");
+    const nameInput = document.getElementById("unit-name-input");
+    const parentSelect = document.getElementById("unit-parent-select");
+    const factorInput = document.getElementById("unit-conversion-factor");
+    if (!preview || !nameInput || !parentSelect || !factorInput) return;
+
+    const name = nameInput.value.trim() || "Unit";
+    const parentName = parentSelect.value && parentSelect.selectedIndex >= 0 ? parentSelect.options[parentSelect.selectedIndex].text.trim() : "Parent";
+    const factor = Number(factorInput.value) || 1;
+
+    preview.innerText = `1 ${parentName} = ${factor.toFixed(2)} ${name}`;
+  },
+
+  deleteUnit(unitId) {
+    const unit = ERPState.getUnitById(unitId);
+    if (!unit) return;
+
+    UI.showConfirm({
+      title: "Delete Unit?",
+      message: `Are you sure you want to delete <strong>${unit.name}</strong>?`,
+      confirmText: "Delete Unit",
+      isDanger: true,
+      onConfirm: () => {
+        ERPState.deleteUnit(unitId);
+        UI.showToast("Unit Deleted", `${unit.name} deleted successfully`, "warning");
+        App.refreshCurrentView();
+      }
+    });
+  },
+
+  exportUnits() {
+    const headers = ["Unit Name", "Parent Unit", "Conversion Rate", "Status"];
+    const rows = (ERPState.data.units || []).map(u => [
+      u.name,
+      u.parentName || "—",
+      u.conversionFactor ? `1 ${u.parentName} = ${Number(u.conversionFactor).toFixed(2)} ${u.name}` : "—",
+      u.status || "Active"
+    ]);
+    UI.exportToCSV("Unit_Master_Report", headers, rows);
+  },
+
+  // Backward compatibility aliases
+  renderSizesAndColors() {
+    return this.renderUnits();
   },
 
   filterGenericTable(tableId, query) {

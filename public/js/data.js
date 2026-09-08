@@ -38,14 +38,11 @@ const INITIAL_DATA = {
   vendors: [],
   jobWorkers: [],
   items: [],
-  sizes: ["XS", "S", "M", "L", "XL", "2XL", "3XL"],
-  colors: [
-    { name: "Navy Blue", hex: "#1e3a8a" },
-    { name: "Crimson Red", hex: "#dc2626" },
-    { name: "Olive Green", hex: "#65a30d" },
-    { name: "Charcoal Grey", hex: "#374151" },
-    { name: "Pure White", hex: "#ffffff" },
-    { name: "Jet Black", hex: "#0f172a" }
+  units: [
+    { id: 1, name: "PAIR", code: "PAIR", parentId: null, parentName: null, conversionFactor: null, symbol: "pr", status: "Active" },
+    { id: 2, name: "PCS", code: "PCS", parentId: null, parentName: null, conversionFactor: null, symbol: "pcs", status: "Active" },
+    { id: 3, name: "KG", code: "KG", parentId: null, parentName: null, conversionFactor: null, symbol: "kg", status: "Active" },
+    { id: 4, name: "gm", code: "gm", parentId: 3, parentName: "KG", conversionFactor: 1000.00, symbol: "gm", status: "Active" }
   ],
   processes: [
     "Cutting",

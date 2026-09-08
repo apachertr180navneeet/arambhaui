@@ -76,7 +76,7 @@
               <a class="submenu-link" data-route="masters/vendors" data-module="masters" data-submodule="vendors">Vendor Master</a>
               <a class="submenu-link" data-route="masters/jobworkers" data-module="masters" data-submodule="jobworkers">Job Worker Master</a>
               <a class="submenu-link" data-route="masters/items" data-module="masters" data-submodule="items">Item Master</a>
-              <a class="submenu-link" data-route="masters/sizes" data-module="masters" data-submodule="sizes">Size & Color Master</a>
+              <a class="submenu-link" data-route="masters/units" data-module="masters" data-submodule="units">Unit Master</a>
             </div>
           </div>
         </div>

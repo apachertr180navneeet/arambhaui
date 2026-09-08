@@ -112,7 +112,7 @@ class ERPStateManager {
         vendors,
         jobWorkers,
         items,
-        sizesColors,
+        units,
         purchaseOrders,
         purchaseInwards,
         jobAssignments,
@@ -130,7 +130,7 @@ class ERPStateManager {
         fetchSafe('/masters/vendors'),
         fetchSafe('/masters/jobworkers'),
         fetchSafe('/masters/items'),
-        fetchSafe('/masters/sizes'),
+        fetchSafe('/masters/units'),
         fetchSafe('/purchase/orders'),
         fetchSafe('/purchase/inward'),
         fetchSafe('/jobwork/assign'),
@@ -236,13 +236,20 @@ class ERPStateManager {
         }));
       }
 
-      if (sizesColors) {
-        if (Array.isArray(sizesColors.sizes)) {
-          this.data.sizes = sizesColors.sizes.map(s => s.name);
-        }
-        if (Array.isArray(sizesColors.colors)) {
-          this.data.colors = sizesColors.colors.map(c => ({ name: c.name, hex: c.hex_code }));
-        }
+      if (Array.isArray(units)) {
+        this.data.units = units.map(u => ({
+          id: u.id,
+          dbId: u.id,
+          code: u.code || u.name,
+          name: u.name,
+          parentId: u.parent_id || null,
+          parentName: u.parent ? u.parent.name : null,
+          conversionFactor: u.conversion_factor !== null && u.conversion_factor !== undefined ? Number(u.conversion_factor) : null,
+          symbol: u.symbol || "",
+          decimalPlaces: Number(u.decimal_places ?? 2),
+          description: u.description || "",
+          status: u.status || "Active"
+        }));
       }
 
       if (Array.isArray(purchaseOrders)) {
@@ -1091,46 +1098,160 @@ class ERPStateManager {
   }
 
   // =========================================================================
-  // 5. SIZES & COLORS
+  // 5. UNIT MASTER CRUD
   // =========================================================================
-  addSize(sizeName) {
-    if (!this.data.sizes) this.data.sizes = [];
-    if (!this.data.sizes.includes(sizeName)) {
-      this.data.sizes.push(sizeName);
+  addUnit(unit) {
+    const nextNum = (this.data.units || []).length + 1;
+    const name = (unit.name || "").trim();
+    const code = (unit.code || name || `UNT-${String(nextNum).padStart(2, '0')}`).trim();
+    const parentId = unit.parentId ? Number(unit.parentId) : null;
+    let parentName = unit.parentName || null;
+    if (parentId && !parentName) {
+      const p = (this.data.units || []).find(u => u.id == parentId || u.dbId == parentId);
+      if (p) parentName = p.name;
+    }
+    const conversionFactor = unit.conversionFactor !== null && unit.conversionFactor !== undefined && unit.conversionFactor !== "" ? Number(unit.conversionFactor) : null;
+
+    const newUnit = {
+      id: unit.id || nextNum,
+      code: code,
+      name: name,
+      parentId: parentId,
+      parentName: parentName,
+      conversionFactor: conversionFactor,
+      symbol: unit.symbol || code.toLowerCase(),
+      decimalPlaces: Number(unit.decimalPlaces !== undefined ? unit.decimalPlaces : (unit.decimal_places !== undefined ? unit.decimal_places : 2)),
+      description: unit.description || "",
+      status: unit.status || "Active"
+    };
+
+    if (!this.data.units) this.data.units = [];
+    this.data.units.push(newUnit);
+    this.logActivity(`Added unit: ${newUnit.name}`, "Unit Master", newUnit.name);
+    this.saveState();
+
+    fetch('/masters/units', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-CSRF-TOKEN': this.getCsrfToken(),
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      body: JSON.stringify({
+        code: newUnit.code,
+        name: newUnit.name,
+        parent_id: newUnit.parentId,
+        conversion_factor: newUnit.conversionFactor,
+        symbol: newUnit.symbol,
+        decimal_places: newUnit.decimalPlaces,
+        description: newUnit.description,
+        status: newUnit.status
+      })
+    }).then(r => r.json()).then(res => {
+      if (res && res.unit && res.unit.id) {
+        newUnit.dbId = res.unit.id;
+        newUnit.id = res.unit.id;
+        if (res.unit.parent) newUnit.parentName = res.unit.parent.name;
+        this.saveState();
+      }
+    }).catch(e => console.warn("Unit sync note:", e));
+
+    return newUnit;
+  }
+
+  updateUnit(id, updatedData) {
+    const idx = (this.data.units || []).findIndex(u => u.id == id || (u.dbId && u.dbId == id) || u.code === id);
+    if (idx !== -1) {
+      const current = this.data.units[idx];
+      const name = (updatedData.name !== undefined ? updatedData.name : current.name).trim();
+      const code = (updatedData.code !== undefined ? updatedData.code : current.code).trim();
+      const parentId = updatedData.parentId !== undefined ? (updatedData.parentId ? Number(updatedData.parentId) : null) : current.parentId;
+      let parentName = updatedData.parentName !== undefined ? updatedData.parentName : current.parentName;
+      if (parentId && (!parentName || updatedData.parentId !== current.parentId)) {
+        const p = (this.data.units || []).find(u => u.id == parentId || u.dbId == parentId);
+        if (p) parentName = p.name;
+      } else if (!parentId) {
+        parentName = null;
+      }
+      const conversionFactor = updatedData.conversionFactor !== undefined ? (updatedData.conversionFactor !== null && updatedData.conversionFactor !== "" ? Number(updatedData.conversionFactor) : null) : current.conversionFactor;
+
+      this.data.units[idx] = {
+        ...current,
+        ...updatedData,
+        code,
+        name,
+        parentId,
+        parentName,
+        conversionFactor,
+        status: updatedData.status || current.status
+      };
+      this.logActivity(`Updated unit: ${name}`, "Unit Master", name);
       this.saveState();
 
-      fetch('/masters/sizes', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'X-CSRF-TOKEN': this.getCsrfToken(),
-          'X-Requested-With': 'XMLHttpRequest'
-        },
-        body: JSON.stringify({ name: sizeName, sort_order: this.data.sizes.length })
-      }).catch(e => console.warn("Size store note:", e));
+      const dbId = current.dbId || current.id;
+      if (dbId) {
+        fetch(`/masters/units/${dbId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': this.getCsrfToken(),
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          body: JSON.stringify({
+            code: code,
+            name: name,
+            parent_id: parentId,
+            conversion_factor: conversionFactor,
+            symbol: updatedData.symbol !== undefined ? updatedData.symbol : current.symbol,
+            decimal_places: updatedData.decimalPlaces !== undefined ? updatedData.decimalPlaces : current.decimalPlaces,
+            description: updatedData.description !== undefined ? updatedData.description : current.description,
+            status: updatedData.status || current.status
+          })
+        }).catch(e => console.warn("Unit update note:", e));
+      }
     }
   }
 
-  addColor(colorName, hexCode) {
-    if (!this.data.colors) this.data.colors = [];
-    const exists = this.data.colors.find(c => c.name.toLowerCase() === colorName.toLowerCase());
-    if (!exists) {
-      this.data.colors.push({ name: colorName, hex: hexCode || "#1e3a8a" });
+  deleteUnit(id) {
+    const unit = (this.data.units || []).find(u => u.id == id || u.code === id || (u.dbId && u.dbId == id));
+    if (unit) {
+      this.data.units = this.data.units.filter(u => u.id != id && u.code !== id && (!u.dbId || u.dbId != id));
+      this.logActivity(`Deleted unit: ${unit.name} (${unit.code})`, "Unit Master", unit.code);
       this.saveState();
 
-      fetch('/masters/colors', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'X-CSRF-TOKEN': this.getCsrfToken(),
-          'X-Requested-With': 'XMLHttpRequest'
-        },
-        body: JSON.stringify({ name: colorName, hex_code: hexCode || "#1e3a8a" })
-      }).catch(e => console.warn("Color store note:", e));
+      const dbId = unit.dbId || unit.id;
+      if (dbId) {
+        fetch(`/masters/units/${dbId}`, {
+          method: 'DELETE',
+          headers: {
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': this.getCsrfToken(),
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        }).catch(e => console.warn("Unit delete note:", e));
+      }
     }
   }
+
+  getUnitById(id) {
+    return (this.data.units || []).find(u => u.id == id || u.code === id || (u.name || '').toLowerCase() === (id || '').toLowerCase());
+  }
+
+  getUnitStats() {
+    const units = this.data.units || [];
+    return {
+      total: units.length,
+      active: units.filter(u => u.status === 'Active').length,
+      inactive: units.filter(u => u.status === 'Inactive').length,
+      decimals: units.filter(u => (u.decimalPlaces || 0) > 0).length
+    };
+  }
+
+  // Backward compatibility safety
+  addSize(sizeName) { if (!this.data.sizes) this.data.sizes = []; if (!this.data.sizes.includes(sizeName)) this.data.sizes.push(sizeName); }
+  addColor(colorName, hex) { if (!this.data.colors) this.data.colors = []; this.data.colors.push({ name: colorName, hex: hex || '#000' }); }
 
   // =========================================================================
   // 6. PURCHASE ORDERS & INWARDS

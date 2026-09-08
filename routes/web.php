@@ -7,7 +7,7 @@ use App\Http\Controllers\Masters\CustomerController;
 use App\Http\Controllers\Masters\VendorController;
 use App\Http\Controllers\Masters\JobWorkerController;
 use App\Http\Controllers\Masters\ItemController;
-use App\Http\Controllers\Masters\SizeColorController;
+use App\Http\Controllers\Masters\UnitController;
 use App\Http\Controllers\Purchase\PurchaseOrderController;
 use App\Http\Controllers\Purchase\PurchaseInwardController;
 use App\Http\Controllers\JobWork\JobAssignController;
@@ -54,9 +54,11 @@ Route::middleware('auth')->group(function () {
         Route::resource('vendors', VendorController::class);
         Route::resource('jobworkers', JobWorkerController::class);
         Route::resource('items', ItemController::class);
-        Route::get('sizes', [SizeColorController::class, 'index'])->name('sizes.index');
-        Route::post('sizes', [SizeColorController::class, 'storeSize'])->name('sizes.store');
-        Route::post('colors', [SizeColorController::class, 'storeColor'])->name('colors.store');
+        Route::resource('units', UnitController::class);
+        // Fallback for previous sizes route
+        Route::get('sizes', function () {
+            return redirect()->route('masters.units.index');
+        })->name('sizes.index');
     });
 
     // ==========================================
