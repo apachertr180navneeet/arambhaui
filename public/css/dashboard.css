@@ -1,5 +1,6 @@
 /* ==========================================================================
-   DASHBOARD STYLES - KPIS, PRODUCTION PIPELINE & CHARTS
+   DASHBOARD STYLES - KPIS, PRODUCTION PIPELINE, CHARTS & METRICS
+   GarmentERP - Enterprise Manufacturing Operations
    ========================================================================== */
 
 /* Dashboard Header & Controls */
@@ -7,22 +8,23 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 24px;
+  margin-bottom: 22px;
   flex-wrap: wrap;
-  gap: 16px;
+  gap: 14px;
 }
 
 .dashboard-title-wrap h1 {
-  font-size: 1.5rem;
+  font-size: 1.45rem;
   color: var(--slate-900);
   font-weight: 800;
   display: flex;
   align-items: center;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .dashboard-subtitle {
-  font-size: 0.875rem;
+  font-size: 0.825rem;
   color: var(--slate-500);
   margin-top: 3px;
 }
@@ -30,7 +32,8 @@
 .dashboard-controls {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .date-filter-group {
@@ -40,18 +43,21 @@
   border-radius: var(--radius-md);
   padding: 3px;
   box-shadow: var(--shadow-xs);
+  overflow-x: auto;
+  max-width: 100%;
 }
 
 .date-filter-btn {
   background: none;
   border: none;
-  padding: 6px 12px;
-  font-size: 0.8rem;
+  padding: 5px 12px;
+  font-size: 0.775rem;
   font-weight: 600;
   color: var(--slate-600);
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: all var(--transition-fast);
+  white-space: nowrap;
 }
 
 .date-filter-btn:hover {
@@ -68,7 +74,7 @@
 .kpi-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 18px;
+  gap: 16px;
   margin-bottom: 24px;
 }
 
@@ -78,9 +84,10 @@
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 600px) {
   .kpi-grid {
     grid-template-columns: 1fr;
+    gap: 12px;
   }
 }
 
@@ -88,14 +95,14 @@
   background: #ffffff;
   border: 1px solid var(--slate-200);
   border-radius: var(--radius-xl);
-  padding: 18px 20px;
+  padding: 16px 18px;
   box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   position: relative;
   overflow: hidden;
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
   cursor: pointer;
 }
 
@@ -126,24 +133,26 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
+  gap: 8px;
 }
 
 .kpi-title {
-  font-size: 0.8rem;
+  font-size: 0.775rem;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   color: var(--slate-500);
 }
 
 .kpi-icon-wrap {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-lg);
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .kpi-icon-wrap.blue { background: var(--primary-50); color: var(--primary-600); }
@@ -154,10 +163,10 @@
 .kpi-icon-wrap.slate { background: var(--slate-100); color: var(--slate-700); }
 
 .kpi-value {
-  font-size: 1.65rem;
+  font-size: 1.5rem;
   font-weight: 800;
   color: var(--slate-900);
-  line-height: 1.1;
+  line-height: 1.15;
   letter-spacing: -0.02em;
   margin-bottom: 8px;
 }
@@ -166,7 +175,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 0.775rem;
+  font-size: 0.75rem;
+  flex-wrap: wrap;
+  gap: 4px;
 }
 
 .kpi-trend {
@@ -189,7 +200,7 @@
   background: #ffffff;
   border: 1px solid var(--slate-200);
   border-radius: var(--radius-xl);
-  padding: 22px 24px;
+  padding: 18px 20px;
   margin-bottom: 24px;
   box-shadow: var(--shadow-sm);
 }
@@ -198,11 +209,13 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 18px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .pipeline-header-title {
-  font-size: 1.05rem;
+  font-size: 1rem;
   font-weight: 700;
   color: var(--slate-900);
   display: flex;
@@ -212,24 +225,19 @@
 
 .pipeline-track {
   display: grid;
-  grid-template-columns: repeat(9, 1fr);
+  grid-template-columns: repeat(9, minmax(110px, 1fr));
   gap: 8px;
   position: relative;
   overflow-x: auto;
-  padding-bottom: 4px;
-}
-
-@media (max-width: 1200px) {
-  .pipeline-track {
-    grid-template-columns: repeat(9, minmax(130px, 1fr));
-  }
+  padding-bottom: 6px;
+  -webkit-overflow-scrolling: touch;
 }
 
 .pipeline-step {
   background: var(--slate-50);
   border: 1px solid var(--slate-200);
   border-radius: var(--radius-lg);
-  padding: 12px 10px;
+  padding: 10px 8px;
   text-align: center;
   position: relative;
   cursor: pointer;
@@ -269,15 +277,15 @@
 }
 
 .pipeline-step-name {
-  font-size: 0.775rem;
+  font-size: 0.75rem;
   font-weight: 700;
   color: var(--slate-800);
-  margin-bottom: 4px;
+  margin-bottom: 3px;
   white-space: nowrap;
 }
 
 .pipeline-step-qty {
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   font-weight: 800;
   color: var(--primary-700);
   font-family: var(--font-mono);
@@ -287,13 +295,14 @@
   font-size: 0.65rem;
   color: var(--slate-500);
   margin-top: 2px;
+  white-space: nowrap;
 }
 
 /* Charts Grid */
 .charts-grid {
   display: grid;
   grid-template-columns: 2fr 1fr;
-  gap: 20px;
+  gap: 18px;
   margin-bottom: 24px;
 }
 
@@ -311,22 +320,41 @@
   justify-content: center;
 }
 
+/* Bottom Grid Layout */
+.dashboard-bottom-grid {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 18px;
+}
+
+@media (max-width: 1024px) {
+  .dashboard-bottom-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Job Work Status Summary Cards */
 .jobwork-status-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 12px;
+  gap: 10px;
   margin-top: 14px;
 }
 
 @media (max-width: 900px) {
+  .jobwork-status-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
   .jobwork-status-grid {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
 .jw-status-card {
-  padding: 12px 14px;
+  padding: 10px 12px;
   border-radius: var(--radius-md);
   background: var(--slate-50);
   border: 1px solid var(--slate-200);
@@ -334,40 +362,40 @@
 }
 
 .jw-status-label {
-  font-size: 0.725rem;
+  font-size: 0.7rem;
   color: var(--slate-500);
   font-weight: 600;
   text-transform: uppercase;
 }
 
 .jw-status-count {
-  font-size: 1.25rem;
+  font-size: 1.15rem;
   font-weight: 800;
   color: var(--slate-900);
-  margin-top: 4px;
+  margin-top: 3px;
 }
 
 /* Recent Activity Timeline */
 .timeline-list {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
   position: relative;
-  padding-left: 8px;
+  padding-left: 6px;
 }
 
 .timeline-item {
   display: flex;
-  gap: 14px;
+  gap: 12px;
   position: relative;
 }
 
 .timeline-item::before {
   content: '';
   position: absolute;
-  left: 15px;
-  top: 32px;
-  bottom: -16px;
+  left: 14px;
+  top: 30px;
+  bottom: -14px;
   width: 2px;
   background: var(--slate-200);
 }
@@ -377,8 +405,8 @@
 }
 
 .timeline-icon {
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -399,22 +427,23 @@
   border: 1px solid var(--slate-200);
   border-radius: var(--radius-md);
   padding: 10px 14px;
+  min-width: 0;
 }
 
 .timeline-title {
-  font-size: 0.85rem;
+  font-size: 0.825rem;
   font-weight: 600;
   color: var(--slate-900);
 }
 
 .timeline-desc {
-  font-size: 0.775rem;
+  font-size: 0.75rem;
   color: var(--slate-600);
   margin-top: 2px;
 }
 
 .timeline-time {
-  font-size: 0.7rem;
+  font-size: 0.675rem;
   color: var(--slate-400);
   margin-top: 4px;
 }

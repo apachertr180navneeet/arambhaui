@@ -266,7 +266,7 @@ const InvoicesView = {
         </div>
 
         <!-- ROW 1: INVOICE NO, DATE, DUE DATE, PAYMENT TERMS -->
-        <div class="dispatch-header-row-3" style="grid-template-columns: 1fr 1fr 1fr 1fr; gap:14px;">
+        <div class="form-row-4">
           <div class="dispatch-field-group">
             <label class="dispatch-field-label">TAX INVOICE NO.</label>
             <input type="text" class="dispatch-input-styled readonly-bg" id="inv-field-no" value="${nextInvNo}">
@@ -295,7 +295,7 @@ const InvoicesView = {
         </div>
 
         <!-- ROW 2: CUSTOMER SELECTION & DISPATCH LINK -->
-        <div class="dispatch-header-row-2" style="margin-top:14px; grid-template-columns: 1.5fr 1fr;">
+        <div class="form-row-2" style="margin-top:14px;">
           <div class="dispatch-field-group">
             <label class="dispatch-field-label">CUSTOMER (CONSIGNEE) <span class="required-star">*</span></label>
             <select class="dispatch-input-styled" id="inv-field-customer" onchange="InvoicesView.onCustomerSelect(this.value)">
@@ -314,7 +314,7 @@ const InvoicesView = {
         </div>
 
         <!-- DYNAMIC CUSTOMER DETAILS PREVIEW CARD -->
-        <div id="inv-customer-details-card" style="margin:14px 0 20px 0; padding:12px 16px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; font-size:0.825rem;">
+        <div id="inv-customer-details-card" class="grid-responsive-3" style="margin:14px 0 20px 0; padding:12px 16px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; font-size:0.825rem;">
           <div>
             <div style="font-weight:700; color:#475569; font-size:0.725rem; text-transform:uppercase;">Billing Address</div>
             <div id="inv-preview-address" style="color:#0f172a; margin-top:2px;">Select a customer to view address</div>
@@ -334,7 +334,7 @@ const InvoicesView = {
           <div class="dispatch-section-title">Invoice Line Items & GST Rates</div>
 
           <!-- INPUT ROW -->
-          <div style="display:grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr 1fr; gap:10px; margin-bottom:12px;">
+          <div class="dispatch-items-grid">
             <div class="dispatch-field-group">
               <label class="dispatch-field-label">ITEM / FABRIC DESCRIPTION</label>
               <select class="dispatch-input-styled" id="inv-line-item" onchange="InvoicesView.onItemChange(this)">

@@ -290,7 +290,7 @@ const JobWorkView = {
           <div class="dispatch-section-title">Items & Fabric Details</div>
 
           <!-- ROW 4: LOT NO, ITEM, AVAILABLE METER, METER, NET METER, RATE -->
-          <div class="dispatch-items-grid" style="grid-template-columns: repeat(6, 1fr);">
+          <div class="dispatch-items-grid">
             <div class="dispatch-field-group">
               <label class="dispatch-field-label">LOT NO</label>
               <select class="dispatch-input-styled" id="jw-item-lot">
@@ -313,17 +313,17 @@ const JobWorkView = {
 
             <div class="dispatch-field-group">
               <label class="dispatch-field-label">METER</label>
-              <input type="number" class="dispatch-input-styled" id="jw-item-meter" placeholder="Me" oninput="JobWorkView.recalcJobCalculations()">
+              <input type="number" class="dispatch-input-styled" id="jw-item-meter" placeholder="Enter meters" oninput="JobWorkView.recalcJobCalculations()">
             </div>
 
             <div class="dispatch-field-group">
               <label class="dispatch-field-label">NET METER</label>
-              <input type="number" class="dispatch-input-styled readonly-bg" id="jw-net-meter" placeholder="Ne" readonly>
+              <input type="number" class="dispatch-input-styled readonly-bg" id="jw-net-meter" placeholder="Net meters" readonly>
             </div>
 
             <div class="dispatch-field-group">
               <label class="dispatch-field-label">RATE (₹)</label>
-              <input type="number" class="dispatch-input-styled" id="jw-item-rate" placeholder="Ra" value="25" oninput="JobWorkView.recalcJobCalculations()">
+              <input type="number" class="dispatch-input-styled" id="jw-item-rate" placeholder="Rate ₹" value="25" oninput="JobWorkView.recalcJobCalculations()">
             </div>
           </div>
 

@@ -289,7 +289,7 @@ const DashboardView = {
       </div>
 
       <!-- Bottom Row: Stock Overview & Activity Log -->
-      <div style="display:grid; grid-template-columns:1.3fr 1fr; gap:20px;">
+      <div class="dashboard-bottom-grid">
         <!-- Stock Overview -->
         <div class="card">
           <div class="card-header">

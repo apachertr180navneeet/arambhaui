@@ -218,10 +218,10 @@ const DispatchView = {
           <div class="dispatch-section-title">Items Details</div>
 
           <!-- ROW 4: BALE NO, ITEM, LOT NO, AVAILABLE METER, METER, NET METER, RATE -->
-          <div class="dispatch-items-grid" style="grid-template-columns: repeat(7, 1fr);">
+          <div class="dispatch-items-grid">
             <div class="dispatch-field-group">
               <label class="dispatch-field-label">BALE NO.</label>
-              <input type="text" class="dispatch-input-styled" id="disp-bale-no" placeholder="Bale" value="${initialBaleNo}">
+              <input type="text" class="dispatch-input-styled" id="disp-bale-no" placeholder="Bale No" value="${initialBaleNo}">
             </div>
 
             <div class="dispatch-field-group">
@@ -247,17 +247,17 @@ const DispatchView = {
 
             <div class="dispatch-field-group">
               <label class="dispatch-field-label">METER</label>
-              <input type="number" class="dispatch-input-styled" id="disp-item-meter" placeholder="Me" oninput="DispatchView.recalcDispatchRowCalculations()">
+              <input type="number" class="dispatch-input-styled" id="disp-item-meter" placeholder="Enter meters" oninput="DispatchView.recalcDispatchRowCalculations()">
             </div>
 
             <div class="dispatch-field-group">
               <label class="dispatch-field-label">NET METER</label>
-              <input type="number" class="dispatch-input-styled readonly-bg" id="disp-net-meter" placeholder="Ne" oninput="DispatchView.recalcDispatchRowCalculations()">
+              <input type="number" class="dispatch-input-styled readonly-bg" id="disp-net-meter" placeholder="Net meters" oninput="DispatchView.recalcDispatchRowCalculations()">
             </div>
 
             <div class="dispatch-field-group">
               <label class="dispatch-field-label">RATE</label>
-              <input type="number" class="dispatch-input-styled" id="disp-item-rate" placeholder="Ra" value="145" oninput="DispatchView.recalcDispatchRowCalculations()">
+              <input type="number" class="dispatch-input-styled" id="disp-item-rate" placeholder="Rate ₹" value="145" oninput="DispatchView.recalcDispatchRowCalculations()">
             </div>
           </div>
 

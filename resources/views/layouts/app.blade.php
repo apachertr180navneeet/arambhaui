@@ -40,6 +40,10 @@
           </div>
           <div class="brand-subtitle">Manufacturing Management</div>
         </div>
+        <!-- Mobile Sidebar Close Button -->
+        <button class="sidebar-close-btn" id="sidebar-close-btn" title="Close Sidebar" aria-label="Close Sidebar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
       </div>
 
       <!-- Navigation Tree -->
@@ -257,6 +261,9 @@
         </div>
       </div>
     </aside>
+
+    <!-- Sidebar Backdrop for Mobile Overlay -->
+    <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
 
     <!-- ==========================================
          MAIN VIEWPORT WRAPPER
