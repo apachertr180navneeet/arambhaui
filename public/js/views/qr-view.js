@@ -582,12 +582,19 @@ const QRView = {
               </tr>
             </thead>
             <tbody>
-              ${coupons.map(c => {
-                const isRedeemed = c.status === "Redeemed / Expired" || (c.timesScanned > 0);
-                const isActive = c.status === "Active";
+              ${coupons.length === 0 ? `
+                <tr>
+                  <td colspan="9" style="text-align:center; padding:32px 20px; color:var(--slate-400);">
+                    <div style="font-size:1rem; font-weight:600; color:var(--slate-600); margin-bottom:4px;">No QR Vouchers Generated</div>
+                    <div style="font-size:0.825rem;">Click <strong>+ Create Single-Use QR</strong> to generate a discount voucher.</div>
+                  </td>
+                </tr>
+              ` : coupons.map(c => {
+                const isRedeemed = c.status === "Redeemed / Expired" || (c.timesScanned > 0) || c.isRedeemed;
+                const isActive = c.status === "Active" && !c.isRedeemed;
 
                 return `
-                  <tr id="voucher-row-${c.id}">
+                  <tr id="voucher-row-${c.id || c.code}">
                     <td>
                       <div style="background:#ffffff; border:1px solid var(--slate-200); border-radius:6px; padding:3px; display:inline-block;">
                         ${QRManager.generateQRSVG(c.code, 44, c.color || '#0f172a')}
@@ -599,11 +606,11 @@ const QRView = {
                       </span>
                     </td>
                     <td>
-                      <span class="badge ${c.amount >= 500 ? 'badge-success' : 'badge-primary'}" style="font-size:0.825rem; font-weight:800;">
-                        ${c.type === 'percent' ? `${c.amount}% OFF` : `₹${c.amount} OFF`}
+                      <span class="badge ${c.discountPercent >= 15 || c.amount >= 500 ? 'badge-success' : 'badge-primary'}" style="font-size:0.825rem; font-weight:800;">
+                        ${c.discountPercent ? `${c.discountPercent}% OFF` : (c.type === 'percent' ? `${c.amount}% OFF` : `₹${c.amount || 500} OFF`)}
                       </span>
                     </td>
-                    <td class="font-bold">${c.title}</td>
+                    <td class="font-bold">${c.title || c.customerName || 'Discount Voucher'}</td>
                     <td>
                       <span style="font-size:0.75rem; color:var(--slate-600); font-weight:600;">
                         ${c.usageType === 'multi' ? 'Multi-Use' : '⚡ Single-Use (Auto-Expire)'}
@@ -632,7 +639,7 @@ const QRView = {
                       ${c.redeemedAt ? `
                         <div style="font-size:0.8rem; font-weight:600; color:var(--slate-700);">${c.redeemedAt}</div>
                       ` : `
-                        <span style="color:var(--slate-400); font-size:0.75rem;">Valid till: ${c.validTill}</span>
+                        <span style="color:var(--slate-400); font-size:0.75rem;">Valid till: ${c.validTill || c.validUntil || '2026-12-31'}</span>
                       `}
                     </td>
                     <td class="table-actions">

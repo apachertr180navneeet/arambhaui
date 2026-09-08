@@ -84,4 +84,11 @@ class JobAssignController extends Controller
     {
         return response()->json($assign->load('items'));
     }
+
+    public function destroy(JobAssignment $assign)
+    {
+        $assign->items()->delete();
+        $assign->delete();
+        return response()->json(['success' => true, 'message' => 'Job order removed.']);
+    }
 }

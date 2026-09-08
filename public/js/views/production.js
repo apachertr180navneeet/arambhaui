@@ -49,18 +49,25 @@ const ProductionView = {
               </tr>
             </thead>
             <tbody>
-              ${orders.map(so => {
+              ${(!orders || orders.length === 0) ? `
+                <tr>
+                  <td colspan="11" style="text-align:center; padding:32px 20px; color:var(--slate-400);">
+                    <div style="font-size:1rem; font-weight:600; color:var(--slate-600); margin-bottom:4px;">No Sales / Production Orders Found</div>
+                    <div style="font-size:0.825rem;">Click the <strong>Book Sales Order</strong> button above to schedule a new garment manufacturing batch.</div>
+                  </td>
+                </tr>
+              ` : orders.map(so => {
                 const itemCount = so.items ? so.items.length : 1;
-                const displayItem = so.items && so.items.length > 0 ? so.items[0].item : (so.product || "Fabric");
+                const displayItem = so.items && so.items.length > 0 ? (so.items[0].item || so.items[0].name) : (so.product || "Garment Order");
                 const totalMeters = so.items ? so.items.reduce((acc, it) => acc + Number(it.qty || it.netMeter || 0), 0) : (so.quantity || 0);
-                const displayStage = so.items && so.items.length > 0 ? so.items[0].stage : (so.stage || "Grey");
+                const displayStage = so.items && so.items.length > 0 ? so.items[0].stage : (so.stage || "Cutting");
 
                 return `
                   <tr>
-                    <td class="mono-cell font-bold" style="color:var(--primary-600); font-size:0.95rem;">${so.pchNo || so.id}</td>
+                    <td class="mono-cell font-bold" style="color:var(--primary-600); font-size:0.95rem;">${so.pchNo || so.id || so.orderNo}</td>
                     <td class="mono-cell font-bold" style="color:var(--slate-700);">${so.bno || '-'}</td>
                     <td class="primary-cell">
-                      <div class="font-bold">${so.customer}</div>
+                      <div class="font-bold">${so.customer || 'Customer'}</div>
                       ${so.remark ? `<div style="font-size:0.75rem; color:var(--slate-500); max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${so.remark}</div>` : ''}
                     </td>
                     <td>${UI.formatDate(so.orderDate || so.date)}</td>
@@ -69,13 +76,14 @@ const ProductionView = {
                       ${itemCount > 1 ? `<span class="badge badge-primary" style="font-size:0.7rem; margin-top:2px;">+ ${itemCount - 1} more items</span>` : ''}
                     </td>
                     <td><span class="badge badge-slate">${displayStage}</span></td>
-                    <td class="font-bold font-mono">${totalMeters.toLocaleString('en-IN')} M</td>
-                    <td class="font-bold font-mono" style="color:#059669;">${UI.formatCurrency(so.amount)}</td>
+                    <td class="font-bold font-mono">${Number(totalMeters).toLocaleString('en-IN')} M</td>
+                    <td class="font-bold font-mono" style="color:#059669;">${UI.formatCurrency(so.amount || (totalMeters * (so.rate || 100)))}</td>
                     <td><span class="badge ${so.freight === 'Paid' ? 'badge-success' : 'badge-slate'}">${so.freight || 'To Pay'}</span></td>
-                    <td>${UI.formatStatusBadge(so.status)}</td>
+                    <td>${UI.formatStatusBadge(so.status || 'Scheduled')}</td>
                     <td class="table-actions">
                       <button class="table-action-btn qr" title="Print QR Lot Tag" onclick="QRManager.openPrintLabelModal('${so.items && so.items[0] ? so.items[0].lotNo : (so.lotNo || so.id)}')">QR Tag</button>
                       <button class="table-action-btn edit" title="Assign Job Work" onclick="ProductionView.openAssignJobWorkModal('${so.id}')">Assign JW</button>
+                      <button class="table-action-btn delete" onclick="ProductionView.deleteOrder('${so.id}')">Delete</button>
                     </td>
                   </tr>
                 `;
@@ -1477,5 +1485,20 @@ const ProductionView = {
       content,
       size: "drawer-lg"
     });
+  },
+
+  deleteOrder(id) {
+    UI.showConfirm({
+      title: "Delete Production Order?",
+      message: `Are you sure you want to delete order <strong>${id}</strong>?`,
+      confirmText: "Delete Order",
+      isDanger: true,
+      onConfirm: () => {
+        ERPState.deleteProductionOrder(id);
+        UI.showToast("Order Deleted", `${id} removed from schedule`, "warning");
+        App.refreshCurrentView();
+      }
+    });
   }
 };
+

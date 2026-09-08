@@ -148,7 +148,14 @@ const JobWorkView = {
               </tr>
             </thead>
             <tbody>
-              ${jobWorks.map(jw => {
+              ${(jobWorks || []).length === 0 ? `
+                <tr>
+                  <td colspan="11" style="text-align:center; padding:32px 20px; color:var(--slate-400);">
+                    <div style="font-size:1rem; font-weight:600; color:var(--slate-600); margin-bottom:4px;">No Job Work Assignments Found</div>
+                    <div style="font-size:0.825rem;">Click <strong>+ Assign Job Work</strong> above to issue cutting bundles or garments to a vendor unit.</div>
+                  </td>
+                </tr>
+              ` : jobWorks.map(jw => {
                 const totalQty = Number(jw.netMeter || jw.sentQty || jw.quantity || 0);
                 const pending = Number(jw.pendingQty !== undefined ? jw.pendingQty : totalQty);
                 const isDone = jw.status === 'Completed' || pending === 0;

@@ -96,4 +96,11 @@ class PurchaseOrderController extends Controller
     {
         return response()->json($order->load('items'));
     }
+
+    public function destroy(PurchaseOrder $order)
+    {
+        $order->items()->delete();
+        $order->delete();
+        return response()->json(['success' => true, 'message' => 'Purchase order removed.']);
+    }
 }

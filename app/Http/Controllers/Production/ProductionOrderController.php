@@ -71,4 +71,31 @@ class ProductionOrderController extends Controller
     {
         return response()->json($order);
     }
+
+    public function update(Request $request, ProductionOrder $order)
+    {
+        $validated = $request->validate([
+            'customer_name' => 'sometimes|required|string|max:255',
+            'style_name' => 'sometimes|required|string|max:255',
+            'order_qty' => 'sometimes|required|integer|min:1',
+            'unit_price' => 'sometimes|required|numeric|min:0',
+            'current_stage' => 'nullable|string',
+            'progress_percent' => 'nullable|integer',
+            'status' => 'nullable|string'
+        ]);
+
+        if (isset($validated['order_qty']) && isset($validated['unit_price'])) {
+            $validated['total_amount'] = $validated['order_qty'] * $validated['unit_price'];
+        }
+
+        $order->update($validated);
+        return response()->json(['success' => true, 'order' => $order]);
+    }
+
+    public function destroy(ProductionOrder $order)
+    {
+        $order->delete();
+        return response()->json(['success' => true, 'message' => 'Production order removed.']);
+    }
 }
+

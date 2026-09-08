@@ -86,4 +86,11 @@ class DispatchController extends Controller
     {
         return response()->json($challan->load('items'));
     }
+
+    public function destroy(DispatchChallan $challan)
+    {
+        $challan->items()->delete();
+        $challan->delete();
+        return response()->json(['success' => true, 'message' => 'Dispatch challan removed.']);
+    }
 }

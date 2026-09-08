@@ -139,38 +139,41 @@ const ERPCharts = {
     const el = document.getElementById(containerId);
     if (!el) return;
 
-    const stats = ERPState.getDashboardStats();
-    const total = stats.rawStock + stats.wipStock + stats.finishedStock;
+    const stats = ERPState.getDashboardStats() || {};
+    const rawStock = Number(stats.rawStock) || 0;
+    const wipStock = Number(stats.wipStock) || 0;
+    const finishedStock = Number(stats.finishedStock) || 0;
+    const total = rawStock + wipStock + finishedStock || 1;
 
-    const rawPct = Math.round((stats.rawStock / total) * 100);
-    const wipPct = Math.round((stats.wipStock / total) * 100);
-    const finPct = Math.round((stats.finishedStock / total) * 100);
+    const rawPct = Math.round((rawStock / total) * 100);
+    const wipPct = Math.round((wipStock / total) * 100);
+    const finPct = Math.round((finishedStock / total) * 100);
 
     el.innerHTML = `
       <div style="display:flex; flex-direction:column; gap:16px; width:100%;">
         <!-- Multi-segment progress bar -->
         <div style="height:14px; border-radius:var(--radius-full); background:var(--slate-200); display:flex; overflow:hidden;">
-          <div style="width:${rawPct}%; background:#3b82f6;" title="Raw Materials: ${stats.rawStock.toLocaleString('en-IN')} units"></div>
-          <div style="width:${wipPct}%; background:#f59e0b;" title="WIP Stock: ${stats.wipStock.toLocaleString('en-IN')} units"></div>
-          <div style="width:${finPct}%; background:#10b981;" title="Finished Goods: ${stats.finishedStock.toLocaleString('en-IN')} units"></div>
+          <div style="width:${rawPct}%; background:#3b82f6;" title="Raw Materials: ${rawStock.toLocaleString('en-IN')} units"></div>
+          <div style="width:${wipPct}%; background:#f59e0b;" title="WIP Stock: ${wipStock.toLocaleString('en-IN')} units"></div>
+          <div style="width:${finPct}%; background:#10b981;" title="Finished Goods: ${finishedStock.toLocaleString('en-IN')} units"></div>
         </div>
 
         <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:12px;">
           <div style="padding:12px; background:var(--primary-50); border:1px solid var(--primary-100); border-radius:var(--radius-md);">
             <div style="font-size:0.725rem; font-weight:700; color:var(--primary-700); text-transform:uppercase;">Raw Material</div>
-            <div style="font-size:1.15rem; font-weight:800; color:var(--primary-900); margin-top:2px;">${stats.rawStock.toLocaleString('en-IN')} <span style="font-size:0.7rem; font-weight:normal;">units</span></div>
+            <div style="font-size:1.15rem; font-weight:800; color:var(--primary-900); margin-top:2px;">${rawStock.toLocaleString('en-IN')} <span style="font-size:0.7rem; font-weight:normal;">units</span></div>
             <div style="font-size:0.7rem; color:var(--primary-600); margin-top:2px;">${rawPct}% of total inventory</div>
           </div>
 
           <div style="padding:12px; background:var(--warning-50); border:1px solid #fde68a; border-radius:var(--radius-md);">
             <div style="font-size:0.725rem; font-weight:700; color:var(--warning-700); text-transform:uppercase;">Work In Progress</div>
-            <div style="font-size:1.15rem; font-weight:800; color:var(--warning-900); margin-top:2px;">${stats.wipStock.toLocaleString('en-IN')} <span style="font-size:0.7rem; font-weight:normal;">units</span></div>
+            <div style="font-size:1.15rem; font-weight:800; color:var(--warning-900); margin-top:2px;">${wipStock.toLocaleString('en-IN')} <span style="font-size:0.7rem; font-weight:normal;">units</span></div>
             <div style="font-size:0.7rem; color:var(--warning-600); margin-top:2px;">${wipPct}% in active job work</div>
           </div>
 
           <div style="padding:12px; background:var(--success-50); border:1px solid #bbf7d0; border-radius:var(--radius-md);">
             <div style="font-size:0.725rem; font-weight:700; color:var(--success-700); text-transform:uppercase;">Finished Goods</div>
-            <div style="font-size:1.15rem; font-weight:800; color:var(--success-900); margin-top:2px;">${stats.finishedStock.toLocaleString('en-IN')} <span style="font-size:0.7rem; font-weight:normal;">units</span></div>
+            <div style="font-size:1.15rem; font-weight:800; color:var(--success-900); margin-top:2px;">${finishedStock.toLocaleString('en-IN')} <span style="font-size:0.7rem; font-weight:normal;">units</span></div>
             <div style="font-size:0.7rem; color:var(--success-600); margin-top:2px;">${finPct}% ready for shipping</div>
           </div>
         </div>

@@ -43,23 +43,31 @@ const PurchaseView = {
               </tr>
             </thead>
             <tbody>
-              ${orders.map(po => {
-                const totalQty = po.items.reduce((acc, it) => acc + it.qty, 0);
+              ${(orders || []).length === 0 ? `
+                <tr>
+                  <td colspan="9" style="text-align:center; padding:32px 20px; color:var(--slate-400);">
+                    <div style="font-size:1rem; font-weight:600; color:var(--slate-600); margin-bottom:4px;">No Purchase Orders Found</div>
+                    <div style="font-size:0.825rem;">Click the <strong>Create Purchase Order</strong> button above to raise an order for raw material.</div>
+                  </td>
+                </tr>
+              ` : orders.map(po => {
+                const totalQty = (po.items || []).reduce((acc, it) => acc + Number(it.qty || 0), 0);
                 return `
                   <tr>
                     <td class="mono-cell font-bold" style="color:var(--primary-600);">${po.id}</td>
                     <td class="primary-cell">${po.vendor}</td>
                     <td>${UI.formatDate(po.poDate)}</td>
-                    <td>${po.items.map(i => i.item).join(', ')}</td>
+                    <td>${(po.items || []).map(i => i.item || i.item_name).join(', ') || 'Raw Material'}</td>
                     <td class="font-mono">${totalQty.toLocaleString('en-IN')}</td>
-                    <td class="font-bold font-mono">${UI.formatCurrency(po.grandTotal)}</td>
+                    <td class="font-bold font-mono">${UI.formatCurrency(po.grandTotal || 0)}</td>
                     <td>${UI.formatDate(po.expectedDate)}</td>
-                    <td>${UI.formatStatusBadge(po.status)}</td>
+                    <td>${UI.formatStatusBadge(po.status || 'Approved')}</td>
                     <td class="table-actions">
                       <button class="table-action-btn view" onclick="PurchaseView.openPrintPOModal('${po.id}')">Print PO</button>
                       ${po.status === 'Approved' ? `
                         <button class="table-action-btn edit" style="color:var(--success-600);" onclick="PurchaseView.openInwardFromPO('${po.id}')">Inward (GRN)</button>
                       ` : ''}
+                      <button class="table-action-btn delete" onclick="PurchaseView.deletePO('${po.id}')">Delete</button>
                     </td>
                   </tr>
                 `;
@@ -110,18 +118,25 @@ const PurchaseView = {
               </tr>
             </thead>
             <tbody>
-              ${inwards.map(grn => `
+              ${(inwards || []).length === 0 ? `
+                <tr>
+                  <td colspan="10" style="text-align:center; padding:32px 20px; color:var(--slate-400);">
+                    <div style="font-size:1rem; font-weight:600; color:var(--slate-600); margin-bottom:4px;">No Inward Goods Receipts</div>
+                    <div style="font-size:0.825rem;">Click the <strong>New Goods Receipt (GRN)</strong> button above or receive from an approved PO.</div>
+                  </td>
+                </tr>
+              ` : inwards.map(grn => `
                 <tr>
                   <td class="mono-cell font-bold" style="color:var(--primary-600);">${grn.id}</td>
-                  <td class="mono-cell">${grn.poNumber}</td>
+                  <td class="mono-cell">${grn.poNumber || '-'}</td>
                   <td class="primary-cell">${grn.vendor}</td>
                   <td>${UI.formatDate(grn.receivedDate)}</td>
                   <td>${grn.item}</td>
-                  <td class="font-mono">${grn.orderedQty.toLocaleString('en-IN')}</td>
-                  <td class="font-mono">${grn.receivedQty.toLocaleString('en-IN')}</td>
-                  <td class="font-mono font-bold" style="color:var(--success-700);">${grn.acceptedQty.toLocaleString('en-IN')}</td>
-                  <td class="mono-cell font-bold">${grn.lotNumber}</td>
-                  <td>${UI.formatStatusBadge(grn.status)}</td>
+                  <td class="font-mono">${(grn.orderedQty || 0).toLocaleString('en-IN')}</td>
+                  <td class="font-mono">${(grn.receivedQty || 0).toLocaleString('en-IN')}</td>
+                  <td class="font-mono font-bold" style="color:var(--success-700);">${(grn.acceptedQty || 0).toLocaleString('en-IN')}</td>
+                  <td class="mono-cell font-bold">${grn.lotNumber || '-'}</td>
+                  <td>${UI.formatStatusBadge(grn.status || 'Approved')}</td>
                 </tr>
               `).join('')}
             </tbody>
@@ -458,7 +473,7 @@ const PurchaseView = {
         receivedDate: document.getElementById("grn-date").value
       };
 
-      const newGRN = ERPState.createPurchaseInward(payload);
+      const newGRN = ERPState.addPurchaseInward(payload);
       UI.showToast("Stock Inward Completed", `GRN ${newGRN.id} accepted. Raw material stock increased!`, "success");
       UI.closeModal();
       App.refreshCurrentView();
@@ -475,9 +490,24 @@ const PurchaseView = {
     }
   },
 
+  deletePO(id) {
+    UI.showConfirm({
+      title: "Delete Purchase Order?",
+      message: `Are you sure you want to delete purchase order <strong>${id}</strong>?`,
+      confirmText: "Delete PO",
+      isDanger: true,
+      onConfirm: () => {
+        ERPState.deletePurchaseOrder(id);
+        UI.showToast("PO Deleted", `${id} removed`, "warning");
+        App.refreshCurrentView();
+      }
+    });
+  },
+
   exportPOs() {
     const headers = ["PO Number", "Vendor", "PO Date", "Expected Date", "Subtotal", "Tax Total", "Grand Total", "Status"];
-    const rows = ERPState.data.purchaseOrders.map(p => [p.id, p.vendor, p.poDate, p.expectedDate, p.subtotal, p.taxTotal, p.grandTotal, p.status]);
+    const rows = (ERPState.data.purchaseOrders || []).map(p => [p.id, p.vendor, p.poDate, p.expectedDate, p.subtotal, p.taxTotal, p.grandTotal, p.status]);
     UI.exportToCSV("Purchase_Orders_Report", headers, rows);
   }
 };
+

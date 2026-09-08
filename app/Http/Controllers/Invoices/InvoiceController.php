@@ -132,4 +132,11 @@ class InvoiceController extends Controller
     {
         return response()->json($invoice->load('items'));
     }
+
+    public function destroy(Invoice $invoice)
+    {
+        $invoice->items()->delete();
+        $invoice->delete();
+        return response()->json(['success' => true, 'message' => 'Invoice removed.']);
+    }
 }

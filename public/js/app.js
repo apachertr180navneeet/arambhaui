@@ -16,7 +16,11 @@ const App = {
     // Subscribe to state updates to refresh active view automatically
     ERPState.subscribe(() => {
       this.updateHeaderBadges();
+      this.refreshCurrentView();
     });
+
+    // Sync live backend data from database
+    ERPState.syncWithBackend();
 
     // Listen to browser hash changes
     window.addEventListener("hashchange", () => {

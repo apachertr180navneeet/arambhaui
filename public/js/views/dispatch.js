@@ -67,7 +67,7 @@ const DispatchView = {
 
   // 2. DISPATCH LIST (CHALLANS & SHIPMENTS)
   renderDispatch() {
-    const dispatches = ERPState.data.dispatches;
+    const dispatches = ERPState.data.dispatchChallans || ERPState.data.dispatches || [];
 
     return `
       <div class="table-card">
@@ -104,26 +104,33 @@ const DispatchView = {
               </tr>
             </thead>
             <tbody>
-              ${dispatches.map(d => {
-                const baleCount = d.items ? d.items.length : 1;
-                const totalMtr = d.items ? d.items.reduce((acc, it) => acc + Number(it.netMeter || it.meter || 0), 0) : (d.quantity || 0);
+              ${dispatches.length === 0 ? `
+                <tr>
+                  <td colspan="10" style="text-align:center; padding:32px 20px; color:var(--slate-400);">
+                    <div style="font-size:1rem; font-weight:600; color:var(--slate-600); margin-bottom:4px;">No Dispatch Challans Found</div>
+                    <div style="font-size:0.825rem;">Click <strong>Add Order Dispatch</strong> to generate a delivery challan & Lorry Receipt.</div>
+                  </td>
+                </tr>
+              ` : dispatches.map(d => {
+                const baleCount = d.items ? d.items.length : (d.totalCartons || 1);
+                const totalMtr = d.items ? d.items.reduce((acc, it) => acc + Number(it.netMeter || it.meter || 0), 0) : (d.totalQty || d.quantity || 0);
                 const grandTotal = d.invoiceAmount || 0;
-                const firstItem = d.items && d.items.length > 0 ? d.items[0].item : (d.item || "Fabric");
+                const firstItem = d.items && d.items.length > 0 ? d.items[0].item : (d.item || "Finished Goods");
 
                 return `
                   <tr>
-                    <td class="mono-cell font-bold" style="color:var(--primary-600); font-size:0.95rem;">${d.orderDispatchNo || d.id}</td>
-                    <td class="mono-cell font-bold" style="color:var(--slate-700);">${d.billNo || d.invoiceNo || '-'}</td>
+                    <td class="mono-cell font-bold" style="color:var(--primary-600); font-size:0.95rem;">${d.orderDispatchNo || d.challanNo || d.id}</td>
+                    <td class="mono-cell font-bold" style="color:var(--slate-700);">${d.billNo || d.invoiceNo || d.lrNumber || '-'}</td>
                     <td class="primary-cell">${d.customer}</td>
                     <td>${d.transport || d.transporter || '-'}</td>
                     <td>
                       <div class="font-bold">${firstItem}</div>
-                      <span class="badge badge-slate" style="font-size:0.7rem; margin-top:2px;">${baleCount} Bale(s)</span>
+                      <span class="badge badge-slate" style="font-size:0.7rem; margin-top:2px;">${baleCount} Carton(s)</span>
                     </td>
-                    <td class="font-bold font-mono">${totalMtr.toLocaleString('en-IN')} M</td>
+                    <td class="font-bold font-mono">${Number(totalMtr).toLocaleString('en-IN')} M</td>
                     <td class="font-bold font-mono" style="color:#059669;">${UI.formatCurrency(grandTotal)}</td>
                     <td>${UI.formatDate(d.dispatchDate || d.date)}</td>
-                    <td>${UI.formatStatusBadge(d.status || 'Pending')}</td>
+                    <td>${UI.formatStatusBadge(d.status || 'In Transit')}</td>
                     <td class="table-actions">
                       <button class="table-action-btn view" onclick="DispatchView.openPrintDispatchChallanModal('${d.id}')">Print LR</button>
                     </td>

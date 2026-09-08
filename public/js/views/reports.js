@@ -58,7 +58,7 @@ const ReportsView = {
 
   // 2. ITEM STOCK LEDGER (RUNNING BALANCE)
   renderItemLedger() {
-    const ledger = ERPState.data.itemLedger;
+    const ledger = ERPState.data.itemLedger || [];
 
     return `
       <div class="table-card">
@@ -92,17 +92,21 @@ const ReportsView = {
               </tr>
             </thead>
             <tbody>
-              ${ledger.map(l => `
+              ${ledger.length === 0 ? `
+                <tr>
+                  <td colspan="9" style="text-align:center; padding:32px 20px; color:var(--slate-400);">No stock ledger entries recorded yet.</td>
+                </tr>
+              ` : ledger.map(l => `
                 <tr>
                   <td>${UI.formatDate(l.date)}</td>
                   <td class="mono-cell font-bold">${l.ref}</td>
                   <td class="primary-cell">${l.item}</td>
                   <td><span class="badge ${l.inward > 0 ? 'badge-success' : 'badge-danger'}">${l.type}</span></td>
                   <td class="mono-cell">${l.lot || '-'}</td>
-                  <td class="font-bold font-mono" style="color:var(--success-600);">${l.inward > 0 ? '+' + l.inward.toLocaleString('en-IN') : '-'}</td>
-                  <td class="font-bold font-mono" style="color:var(--danger-600);">${l.outward > 0 ? '-' + l.outward.toLocaleString('en-IN') : '-'}</td>
-                  <td class="font-bold font-mono" style="color:var(--primary-800);">${l.balance.toLocaleString('en-IN')}</td>
-                  <td>${l.user}</td>
+                  <td class="font-bold font-mono" style="color:var(--success-600);">${l.inward > 0 ? '+' + Number(l.inward).toLocaleString('en-IN') : '-'}</td>
+                  <td class="font-bold font-mono" style="color:var(--danger-600);">${l.outward > 0 ? '-' + Number(l.outward).toLocaleString('en-IN') : '-'}</td>
+                  <td class="font-bold font-mono" style="color:var(--primary-800);">${Number(l.balance).toLocaleString('en-IN')}</td>
+                  <td>${l.user || 'System'}</td>
                 </tr>
               `).join('')}
             </tbody>
@@ -114,13 +118,13 @@ const ReportsView = {
 
   exportLedger() {
     const headers = ["Date", "Reference", "Item", "Transaction Type", "Lot", "Inward", "Outward", "Balance", "User"];
-    const rows = ERPState.data.itemLedger.map(l => [l.date, l.ref, l.item, l.type, l.lot, l.inward, l.outward, l.balance, l.user]);
+    const rows = (ERPState.data.itemLedger || []).map(l => [l.date, l.ref, l.item, l.type, l.lot, l.inward, l.outward, l.balance, l.user]);
     UI.exportToCSV("Item_Stock_Ledger", headers, rows);
   },
 
   // 3. STOCK REPORT
   renderStockReport() {
-    const items = ERPState.data.items;
+    const items = ERPState.data.items || [];
 
     return `
       <div class="table-card">
@@ -141,31 +145,33 @@ const ReportsView = {
                 <th>Item Description</th>
                 <th>Type</th>
                 <th>Unit</th>
-                <th>Opening Stock</th>
-                <th>Total Inward</th>
-                <th>Total Outward</th>
                 <th>Current Stock</th>
                 <th>Reorder Level</th>
+                <th>Unit Cost (₹)</th>
                 <th>Stock Valuation (₹)</th>
               </tr>
             </thead>
             <tbody>
-              ${items.map(i => {
-                const val = i.currentStock * i.rate;
+              ${items.length === 0 ? `
+                <tr>
+                  <td colspan="8" style="text-align:center; padding:32px 20px; color:var(--slate-400);">No inventory items recorded in catalog.</td>
+                </tr>
+              ` : items.map(i => {
+                const stock = Number(i.currentStock || 0);
+                const rate = Number(i.rate || i.unitCost || 0);
+                const val = stock * rate;
                 return `
                   <tr>
-                    <td class="mono-cell font-bold">${i.code}</td>
+                    <td class="mono-cell font-bold">${i.code || i.id}</td>
                     <td class="primary-cell">${i.name}</td>
-                    <td><span class="badge badge-primary">${i.type}</span></td>
-                    <td>${i.unit}</td>
-                    <td class="font-mono">${i.openingStock.toLocaleString('en-IN')}</td>
-                    <td class="font-mono" style="color:var(--success-700);">${i.inwardStock.toLocaleString('en-IN')}</td>
-                    <td class="font-mono" style="color:var(--danger-700);">${i.outwardStock.toLocaleString('en-IN')}</td>
-                    <td class="font-bold font-mono" style="color:${i.currentStock <= i.reorderLevel ? 'var(--danger-600)' : 'var(--slate-900)'};">
-                      ${i.currentStock.toLocaleString('en-IN')}
+                    <td><span class="badge badge-primary">${i.type || 'Raw Material'}</span></td>
+                    <td>${i.unit || 'Meters'}</td>
+                    <td class="font-bold font-mono" style="color:${stock <= (i.reorderLevel || 100) ? 'var(--danger-600)' : 'var(--slate-900)'};">
+                      ${stock.toLocaleString('en-IN')}
                     </td>
-                    <td class="font-mono text-muted">${i.reorderLevel.toLocaleString('en-IN')}</td>
-                    <td class="font-bold font-mono">${UI.formatCurrency(val)}</td>
+                    <td class="font-mono text-muted">${(i.reorderLevel || 100).toLocaleString('en-IN')}</td>
+                    <td class="font-mono">₹${rate.toLocaleString('en-IN')}</td>
+                    <td class="font-bold font-mono" style="color:#059669;">${UI.formatCurrency(val)}</td>
                   </tr>
                 `;
               }).join('')}
@@ -178,6 +184,8 @@ const ReportsView = {
 
   // 4. LOT-WISE PURCHASE REPORT
   renderLotPurchase() {
+    const inwards = ERPState.data.purchaseInwards || [];
+
     return `
       <div class="table-card">
         <div class="table-toolbar">
@@ -195,32 +203,26 @@ const ReportsView = {
                 <th>Vendor</th>
                 <th>Purchase Date</th>
                 <th>Purchased Qty</th>
-                <th>Rate / Unit (₹)</th>
-                <th>Total PO Value</th>
-                <th>Current Unused Stock</th>
+                <th>Warehouse</th>
+                <th>Status</th>
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td class="mono-cell font-bold" style="color:var(--primary-600);">RAW-LOT-COT-8812</td>
-                <td class="primary-cell">100% Combed Cotton Fabric 180 GSM</td>
-                <td>Shree Fabrics</td>
-                <td>12 Aug 2026</td>
-                <td class="font-mono">5,000 Meters</td>
-                <td class="font-mono">₹145</td>
-                <td class="font-bold font-mono">₹7,61,250</td>
-                <td class="font-bold font-mono" style="color:var(--success-700);">4,400 Meters</td>
-              </tr>
-              <tr>
-                <td class="mono-cell font-bold" style="color:var(--primary-600);">RAW-LOT-DEN-9014</td>
-                <td class="primary-cell">Heavy Indigo Denim Fabric 12 Oz</td>
-                <td>ABC Textile Supplier</td>
-                <td>08 Aug 2026</td>
-                <td class="font-mono">4,000 Meters</td>
-                <td class="font-mono">₹220</td>
-                <td class="font-bold font-mono">₹9,24,000</td>
-                <td class="font-bold font-mono" style="color:var(--success-700);">3,200 Meters</td>
-              </tr>
+              ${inwards.length === 0 ? `
+                <tr>
+                  <td colspan="7" style="text-align:center; padding:32px 20px; color:var(--slate-400);">No lot purchase records found.</td>
+                </tr>
+              ` : inwards.map(inw => `
+                <tr>
+                  <td class="mono-cell font-bold" style="color:var(--primary-600);">${inw.lotNumber || inw.id}</td>
+                  <td class="primary-cell">${inw.item}</td>
+                  <td>${inw.vendor}</td>
+                  <td>${UI.formatDate(inw.receivedDate)}</td>
+                  <td class="font-mono">${Number(inw.acceptedQty || inw.receivedQty || 0).toLocaleString('en-IN')}</td>
+                  <td>${inw.warehouse || 'Main Raw Material Store'}</td>
+                  <td>${UI.formatStatusBadge(inw.status || 'Approved')}</td>
+                </tr>
+              `).join('')}
             </tbody>
           </table>
         </div>
@@ -230,6 +232,8 @@ const ReportsView = {
 
   // 5. LOT-WISE SALES REPORT
   renderLotSales() {
+    const invoices = ERPState.data.invoices || [];
+
     return `
       <div class="table-card">
         <div class="table-toolbar">
@@ -242,37 +246,31 @@ const ReportsView = {
           <table class="data-table">
             <thead>
               <tr>
-                <th>Production Lot</th>
+                <th>Invoice / Lot</th>
                 <th>Customer</th>
-                <th>Finished Product</th>
                 <th>Sales Order Ref</th>
-                <th>Sold Qty</th>
-                <th>Dispatched Qty</th>
-                <th>Balance Qty</th>
-                <th>Settlement Status</th>
+                <th>Invoice Date</th>
+                <th>Invoice Amount</th>
+                <th>Paid Amount</th>
+                <th>Status</th>
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td class="mono-cell font-bold" style="color:var(--primary-600);">LOT-2026-00138</td>
-                <td class="primary-cell">StyleHub Retail</td>
-                <td>Premium Cotton Crew Neck T-Shirt</td>
-                <td class="mono-cell">SO-2026-1048</td>
-                <td class="font-mono">4,200 Pcs</td>
-                <td class="font-mono font-bold" style="color:var(--success-700);">4,200 Pcs</td>
-                <td class="font-mono">0 Pcs</td>
-                <td><span class="badge badge-success">Fully Dispatched</span></td>
-              </tr>
-              <tr>
-                <td class="mono-cell font-bold" style="color:var(--primary-600);">LOT-2026-00140</td>
-                <td class="primary-cell">Reliance Garments</td>
-                <td>Men's Slim Fit Formal Shirt</td>
-                <td class="mono-cell">SO-2026-1047</td>
-                <td class="font-mono">4,500 Pcs</td>
-                <td class="font-mono font-bold" style="color:var(--warning-700);">0 Pcs</td>
-                <td class="font-mono">4,550 Pcs</td>
-                <td><span class="badge badge-warning">Ready in WH-02</span></td>
-              </tr>
+              ${invoices.length === 0 ? `
+                <tr>
+                  <td colspan="7" style="text-align:center; padding:32px 20px; color:var(--slate-400);">No sales delivery fulfillment records found.</td>
+                </tr>
+              ` : invoices.map(inv => `
+                <tr>
+                  <td class="mono-cell font-bold" style="color:var(--primary-600);">${inv.invoiceNo || inv.id}</td>
+                  <td class="primary-cell">${inv.customer}</td>
+                  <td class="mono-cell">${inv.orderNo || '-'}</td>
+                  <td>${UI.formatDate(inv.invoiceDate || inv.date)}</td>
+                  <td class="font-bold font-mono">${UI.formatCurrency(inv.amount || inv.grandTotal || 0)}</td>
+                  <td class="font-bold font-mono" style="color:var(--success-700);">${UI.formatCurrency(inv.paidAmount || 0)}</td>
+                  <td>${UI.formatStatusBadge(inv.status || 'Sent')}</td>
+                </tr>
+              `).join('')}
             </tbody>
           </table>
         </div>

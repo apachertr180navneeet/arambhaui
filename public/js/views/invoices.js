@@ -150,41 +150,48 @@ const InvoicesView = {
               </tr>
             </thead>
             <tbody>
-              ${invoices.map(inv => {
-                const bal = Number(inv.balanceAmount !== undefined ? inv.balanceAmount : (inv.amount - (inv.paidAmount || 0)));
+              ${invoices.length === 0 ? `
+                <tr>
+                  <td colspan="10" style="text-align:center; padding:32px 20px; color:var(--slate-400);">
+                    <div style="font-size:1rem; font-weight:600; color:var(--slate-600); margin-bottom:4px;">No Sales Invoices Generated</div>
+                    <div style="font-size:0.825rem;">Click <strong>+ Create Sales Invoice</strong> above to raise a GST invoice for completed orders.</div>
+                  </td>
+                </tr>
+              ` : invoices.map(inv => {
+                const bal = Number(inv.balanceAmount !== undefined ? inv.balanceAmount : (Number(inv.amount || inv.grandTotal || 0) - (inv.paidAmount || 0)));
                 const paid = Number(inv.paidAmount || 0);
                 const statusClass = inv.status === 'Paid' ? 'badge-success' : (inv.status === 'Partially Paid' ? 'badge-warning' : 'badge-danger');
 
                 return `
                   <tr data-customer="${(inv.customer || '').toLowerCase()}" data-status="${inv.status}">
-                    <td class="mono-cell font-bold" style="color:var(--primary-600); font-size:0.95rem;">${inv.invoiceNo}</td>
+                    <td class="mono-cell font-bold" style="color:var(--primary-600); font-size:0.95rem;">${inv.invoiceNo || inv.id}</td>
                     <td class="primary-cell">
                       <div class="font-bold">${inv.customer}</div>
-                      <span style="font-size:0.75rem; color:var(--slate-500);">${inv.customerGstin || 'GSTIN: 27AABCF1234F1Z5'}</span>
+                      <span style="font-size:0.75rem; color:var(--slate-500);">${inv.companyName || ''}</span>
                     </td>
-                    <td>${UI.formatDate(inv.date)}</td>
+                    <td>${UI.formatDate(inv.invoiceDate || inv.date)}</td>
                     <td class="font-mono">${UI.formatDate(inv.dueDate)}</td>
                     <td class="mono-cell font-bold" style="color:var(--slate-600);">${inv.dispatchRef || inv.orderNo || '-'}</td>
-                    <td class="font-bold font-mono">${UI.formatCurrency(inv.amount)}</td>
+                    <td class="font-bold font-mono">${UI.formatCurrency(inv.amount || inv.grandTotal || 0)}</td>
                     <td class="font-mono" style="color:var(--success-700); font-weight:600;">${UI.formatCurrency(paid)}</td>
                     <td class="font-bold font-mono" style="color:${bal > 0 ? 'var(--danger-600)' : 'var(--success-700)'};">
                       ${UI.formatCurrency(bal)}
                     </td>
                     <td>
                       <span class="badge ${statusClass}">
-                        <span class="badge-dot"></span>${inv.status}
+                        <span class="badge-dot"></span>${inv.status || 'Sent'}
                       </span>
                     </td>
                     <td class="table-actions" style="text-align:right;">
-                      <button class="table-action-btn view" title="Print GST Tax Invoice" onclick="InvoicesView.openPrintInvoiceModal('${inv.invoiceNo}')">
+                      <button class="table-action-btn view" title="Print GST Tax Invoice" onclick="InvoicesView.openPrintInvoiceModal('${inv.invoiceNo || inv.id}')">
                         Print Invoice
                       </button>
                       ${bal > 0 ? `
-                        <button class="table-action-btn" style="color:var(--success-700); background:#f0fdf4;" title="Record Customer Payment" onclick="InvoicesView.openRecordPaymentModal('${inv.invoiceNo}')">
+                        <button class="table-action-btn" style="color:var(--success-700); background:#f0fdf4;" title="Record Customer Payment" onclick="InvoicesView.openRecordPaymentModal('${inv.invoiceNo || inv.id}')">
                           Pay ₹
                         </button>
                       ` : ''}
-                      <button class="table-action-btn delete" title="Delete Invoice" onclick="InvoicesView.deleteInvoice('${inv.invoiceNo}')">
+                      <button class="table-action-btn delete" title="Delete Invoice" onclick="InvoicesView.deleteInvoice('${inv.invoiceNo || inv.id}')">
                         ✕
                       </button>
                     </td>

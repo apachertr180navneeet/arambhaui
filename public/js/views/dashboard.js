@@ -6,14 +6,20 @@
 const DashboardView = {
   render() {
     const stats = ERPState.getDashboardStats();
-    const activity = ERPState.data.activityLogs.slice(0, 6);
+    const activity = (ERPState.data.activityLogs || []).slice(0, 6);
+    const dispatches = ERPState.data.dispatchChallans || ERPState.data.dispatches || [];
+    const purchaseInwards = ERPState.data.purchaseInwards || ERPState.data.purchaseOrders || [];
+    const items = ERPState.data.items || [];
+    const customers = ERPState.data.customers || [];
+    const vendors = ERPState.data.vendors || [];
+    const userName = ERPState.data.currentUser ? ERPState.data.currentUser.name : "Admin";
 
     return `
       <!-- Top Greetings & Date Filters -->
       <div class="dashboard-top-bar">
         <div class="dashboard-title-wrap">
           <h1>
-            Good Morning, ${ERPState.data.currentUser.name}
+            Good Morning, ${userName}
             <span style="font-size:0.75rem; font-weight:600; padding:2px 8px; background:var(--primary-100); color:var(--primary-700); border-radius:var(--radius-full); vertical-align:middle;">LIVE OPS</span>
           </h1>
           <p class="dashboard-subtitle">Here's what's happening with your manufacturing operations today at FashionWorks Pvt. Ltd.</p>
@@ -44,7 +50,7 @@ const DashboardView = {
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>
             </div>
           </div>
-          <div class="kpi-value">${ERPState.data.dispatches.length} Notes</div>
+          <div class="kpi-value">${dispatches.length} Notes</div>
           <div class="kpi-bottom">
             <span class="kpi-trend up">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
@@ -77,7 +83,7 @@ const DashboardView = {
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
             </div>
           </div>
-          <div class="kpi-value">${ERPState.data.purchaseOrders.length} Inwards</div>
+          <div class="kpi-value">${purchaseInwards.length} Inwards</div>
           <div class="kpi-bottom">
             <span class="kpi-trend down" style="color:var(--warning-600);">Raw Material Store</span>
             <span class="kpi-period">Verified</span>
@@ -92,7 +98,7 @@ const DashboardView = {
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>
             </div>
           </div>
-          <div class="kpi-value">${stats.readyForDispatch} Orders</div>
+          <div class="kpi-value">${stats.readyForDispatch || 0} Orders</div>
           <div class="kpi-bottom">
             <span class="kpi-trend up">QC Passed</span>
             <span class="kpi-period">WH Unit 2</span>
@@ -107,7 +113,7 @@ const DashboardView = {
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
             </div>
           </div>
-          <div class="kpi-value">${ERPState.data.items.length} Items</div>
+          <div class="kpi-value">${items.length} Items</div>
           <div class="kpi-bottom">
             <span class="kpi-trend up">Fabrics & Qualities</span>
             <span class="kpi-period">Active Master</span>
@@ -122,7 +128,7 @@ const DashboardView = {
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
             </div>
           </div>
-          <div class="kpi-value">${ERPState.data.customers.length} Accounts</div>
+          <div class="kpi-value">${customers.length} Accounts</div>
           <div class="kpi-bottom">
             <span class="kpi-trend up">Verified Parties</span>
             <span class="kpi-period">Direct Clients</span>
@@ -137,7 +143,7 @@ const DashboardView = {
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
             </div>
           </div>
-          <div class="kpi-value">${ERPState.data.vendors.length} Vendors</div>
+          <div class="kpi-value">${vendors.length} Vendors</div>
           <div class="kpi-bottom">
             <span class="kpi-trend up">Yarn & Mills</span>
             <span class="kpi-period">Active Supply</span>
@@ -152,12 +158,13 @@ const DashboardView = {
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
             </div>
           </div>
-          <div class="kpi-value">${ERPState.data.dispatches.reduce((acc, d) => acc + Number(d.quantity || 0), 0).toLocaleString('en-IN')} M</div>
+          <div class="kpi-value">${dispatches.reduce((acc, d) => acc + Number(d.quantity || 0), 0).toLocaleString('en-IN')} M</div>
           <div class="kpi-bottom">
             <span class="kpi-trend up">Outward Shipments</span>
             <span class="kpi-period">All Transports</span>
           </div>
         </div>
+      </div>
       </div>
 
       <!-- 9-Stage Visual Production Pipeline Workflow -->

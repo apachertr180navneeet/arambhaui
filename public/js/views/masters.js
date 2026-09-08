@@ -170,7 +170,7 @@ const MastersView = {
               <!-- City Filter -->
               <select class="table-filter-select" onchange="MastersView.onCustomerFilter('city', this.value)" style="min-width:125px;">
                 <option value="">All Cities</option>
-                ${stats.cities.map(ct => `<option value="${ct}" ${this._custState.city === ct ? 'selected' : ''}>${ct}</option>`).join('')}
+                ${(stats.cities || []).map(ct => `<option value="${ct}" ${this._custState.city === ct ? 'selected' : ''}>${ct}</option>`).join('')}
               </select>
 
               <!-- Balance Filter -->
@@ -1149,17 +1149,24 @@ const MastersView = {
               </tr>
             </thead>
             <tbody>
-              ${vendors.map(v => `
+              ${(vendors || []).length === 0 ? `
                 <tr>
-                  <td class="mono-cell font-bold" style="color:var(--primary-600);">${v.id}</td>
+                  <td colspan="10" style="text-align:center; padding:32px 20px; color:var(--slate-400);">
+                    <div style="font-size:1rem; font-weight:600; color:var(--slate-600); margin-bottom:4px;">No Vendors Registered</div>
+                    <div style="font-size:0.825rem;">Click the <strong>+ Add Vendor</strong> button above to register your first supplier.</div>
+                  </td>
+                </tr>
+              ` : vendors.map(v => `
+                <tr>
+                  <td class="mono-cell font-bold" style="color:var(--primary-600);">${v.id || v.code}</td>
                   <td class="primary-cell">${v.name}</td>
-                  <td><span class="badge badge-slate">${v.category}</span></td>
-                  <td>${v.contactPerson}</td>
-                  <td>${v.mobile}</td>
-                  <td class="mono-cell">${v.gstin}</td>
-                  <td>${v.paymentTerms}</td>
-                  <td class="font-bold" style="color:${v.outstanding > 0 ? 'var(--danger-600)' : 'var(--success-600)'};">${UI.formatCurrency(v.outstanding)}</td>
-                  <td>${UI.formatStatusBadge(v.status)}</td>
+                  <td><span class="badge badge-slate">${v.category || 'Supplier'}</span></td>
+                  <td>${v.contactPerson || '-'}</td>
+                  <td>${v.mobile || v.phone || '-'}</td>
+                  <td class="mono-cell">${v.gstin || '-'}</td>
+                  <td>${v.paymentTerms || '30 Days'}</td>
+                  <td class="font-bold" style="color:${(v.outstanding || 0) > 0 ? 'var(--danger-600)' : 'var(--success-600)'};">${UI.formatCurrency(v.outstanding || 0)}</td>
+                  <td>${UI.formatStatusBadge(v.status || 'Active')}</td>
                   <td class="table-actions">
                     <button class="table-action-btn edit" onclick="MastersView.openVendorModal('${v.id}')">Edit</button>
                     <button class="table-action-btn delete" onclick="MastersView.confirmDeleteVendor('${v.id}')">Delete</button>
@@ -1327,16 +1334,23 @@ const MastersView = {
               </tr>
             </thead>
             <tbody>
-              ${workers.map(w => `
+              ${(workers || []).length === 0 ? `
                 <tr>
-                  <td class="mono-cell font-bold" style="color:var(--primary-600);">${w.id}</td>
+                  <td colspan="9" style="text-align:center; padding:32px 20px; color:var(--slate-400);">
+                    <div style="font-size:1rem; font-weight:600; color:var(--slate-600); margin-bottom:4px;">No Job Workers Registered</div>
+                    <div style="font-size:0.825rem;">Click the <strong>+ Add Job Worker</strong> button above to register a stitching/cutting/printing partner.</div>
+                  </td>
+                </tr>
+              ` : workers.map(w => `
+                <tr>
+                  <td class="mono-cell font-bold" style="color:var(--primary-600);">${w.id || w.code}</td>
                   <td class="primary-cell">${w.name}</td>
-                  <td><span class="badge badge-purple">${w.process}</span></td>
-                  <td class="font-bold">₹${w.rate} / ${w.rateUnit || 'Piece'}</td>
-                  <td>${w.capacityPerDay.toLocaleString('en-IN')} pcs/day</td>
-                  <td>${w.city}</td>
-                  <td class="font-bold">${UI.formatCurrency(w.outstanding)}</td>
-                  <td>${UI.formatStatusBadge(w.status)}</td>
+                  <td><span class="badge badge-purple">${w.process || 'Stitching'}</span></td>
+                  <td class="font-bold">₹${w.rate || 20} / ${w.rateUnit || 'Piece'}</td>
+                  <td>${(w.capacityPerDay || 1000).toLocaleString('en-IN')} pcs/day</td>
+                  <td>${w.city || '-'}</td>
+                  <td class="font-bold">${UI.formatCurrency(w.outstanding || 0)}</td>
+                  <td>${UI.formatStatusBadge(w.status || 'Active')}</td>
                   <td class="table-actions">
                     <button class="table-action-btn edit" onclick="MastersView.openJobWorkerModal('${w.id}')">Edit</button>
                     <button class="table-action-btn delete" onclick="MastersView.confirmDeleteJobWorker('${w.id}')">Delete</button>
@@ -1503,21 +1517,28 @@ const MastersView = {
               </tr>
             </thead>
             <tbody>
-              ${items.map(i => `
+              ${(items || []).length === 0 ? `
                 <tr>
-                  <td class="mono-cell font-bold" style="color:var(--primary-600);">${i.code}</td>
-                  <td class="primary-cell">${i.name}</td>
-                  <td><span class="badge badge-primary">${i.type}</span></td>
-                  <td>${i.category}</td>
-                  <td>${i.unit}</td>
-                  <td class="mono-cell">${i.hsn || '6109'}</td>
-                  <td class="font-bold">₹${i.rate}</td>
-                  <td class="font-bold font-mono" style="color:${i.currentStock <= i.reorderLevel ? 'var(--danger-600)' : 'var(--slate-900)'};">
-                    ${i.currentStock.toLocaleString('en-IN')} ${i.unit}
-                    ${i.currentStock <= i.reorderLevel ? '<span class="badge badge-danger" style="margin-left:4px;">LOW</span>' : ''}
+                  <td colspan="11" style="text-align:center; padding:32px 20px; color:var(--slate-400);">
+                    <div style="font-size:1rem; font-weight:600; color:var(--slate-600); margin-bottom:4px;">No Items in Catalog</div>
+                    <div style="font-size:0.825rem;">Click the <strong>+ Add Item</strong> button above to register fabrics, trims, or garments.</div>
                   </td>
-                  <td class="font-mono text-muted">${i.reorderLevel.toLocaleString('en-IN')}</td>
-                  <td>${UI.formatStatusBadge(i.status)}</td>
+                </tr>
+              ` : items.map(i => `
+                <tr>
+                  <td class="mono-cell font-bold" style="color:var(--primary-600);">${i.code || i.id}</td>
+                  <td class="primary-cell">${i.name}</td>
+                  <td><span class="badge badge-primary">${i.type || 'Raw Material'}</span></td>
+                  <td>${i.category || 'Fabric'}</td>
+                  <td>${i.unit || 'Meters'}</td>
+                  <td class="mono-cell">${i.hsn || '5208'}</td>
+                  <td class="font-bold">₹${i.rate || i.unitCost || 0}</td>
+                  <td class="font-bold font-mono" style="color:${(i.currentStock || 0) <= (i.reorderLevel || 100) ? 'var(--danger-600)' : 'var(--slate-900)'};">
+                    ${(i.currentStock || 0).toLocaleString('en-IN')} ${i.unit || 'Meters'}
+                    ${(i.currentStock || 0) <= (i.reorderLevel || 100) ? '<span class="badge badge-danger" style="margin-left:4px;">LOW</span>' : ''}
+                  </td>
+                  <td class="font-mono text-muted">${(i.reorderLevel || 100).toLocaleString('en-IN')}</td>
+                  <td>${UI.formatStatusBadge(i.status || 'Active')}</td>
                   <td class="table-actions">
                     <button class="table-action-btn edit" onclick="MastersView.openItemModal('${i.id}')">Edit</button>
                     <button class="table-action-btn delete" onclick="MastersView.confirmDeleteItem('${i.id}')">Delete</button>

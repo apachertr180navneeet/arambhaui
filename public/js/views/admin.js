@@ -103,17 +103,12 @@ const AdminView = {
 
       if (!name || !email) return UI.showToast("Required Fields", "Name and email are required", "error");
 
-      ERPState.data.users.push({
-        id: `USR-00${ERPState.data.users.length + 1}`,
+      ERPState.addUser({
         name,
         email,
         role,
-        status: "Active",
-        lastLogin: "Just now"
+        password: "Garment@2026"
       });
-
-      ERPState.logActivity(`Created user account for ${name} (${role})`, "Users", name);
-      ERPState.saveState();
 
       UI.showToast("User Created", `Access granted for ${name}`, "success");
       UI.closeModal();

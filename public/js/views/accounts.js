@@ -40,10 +40,17 @@ const AccountsView = {
               </tr>
             </thead>
             <tbody>
-              ${customers.map(c => {
+              ${customers.length === 0 ? `
+                <tr>
+                  <td colspan="9" style="text-align:center; padding:32px 20px; color:var(--slate-400);">
+                    <div style="font-size:1rem; font-weight:600; color:var(--slate-600); margin-bottom:4px;">No Customer Accounts Found</div>
+                    <div style="font-size:0.825rem;">Add customers in the Customer Master to view statements and record settlements.</div>
+                  </td>
+                </tr>
+              ` : customers.map(c => {
                 const stmt = ERPState.getCustomerStatement(c.id);
-                const invoiced = stmt ? stmt.totalInvoiced : ((c.outstanding || 0) + 500000);
-                const paid = stmt ? stmt.totalReceived : 500000;
+                const invoiced = stmt ? stmt.totalInvoiced : Number(c.outstanding || 0);
+                const paid = stmt ? stmt.totalPaid : 0;
                 const outAmt = Number(c.outstanding) || 0;
                 return `
                   <tr>
@@ -74,7 +81,10 @@ const AccountsView = {
   },
 
   openReceiptModal(customerName = null) {
-    const customers = ERPState.data.customers;
+    const customers = ERPState.data.customers || [];
+    if (customers.length === 0) {
+      return UI.showToast("No Customers", "Please register a customer first in Customer Master", "warning");
+    }
     const selectedCust = customerName ? customers.find(c => c.name === customerName) : customers[0];
 
     const content = `
@@ -83,7 +93,7 @@ const AccountsView = {
           <div class="form-group">
             <label class="form-label">Customer Account <span class="required-star">*</span></label>
             <select class="form-control" id="rec-cust" onchange="AccountsView.syncReceiptCust(this.value)">
-              ${customers.map(c => `<option value="${c.name}" ${selectedCust && selectedCust.name === c.name ? 'selected' : ''}>${c.name} (Outstanding: ${UI.formatCurrency(c.outstanding)})</option>`).join('')}
+              ${customers.map(c => `<option value="${c.name}" ${selectedCust && selectedCust.name === c.name ? 'selected' : ''}>${c.name} (Outstanding: ${UI.formatCurrency(c.outstanding || 0)})</option>`).join('')}
             </select>
           </div>
 
@@ -94,7 +104,7 @@ const AccountsView = {
 
           <div class="form-group">
             <label class="form-label">Received Amount (₹) <span class="required-star">*</span></label>
-            <input type="number" class="form-control" id="rec-amount" required value="75000" min="1">
+            <input type="number" class="form-control" id="rec-amount" required value="${(selectedCust && selectedCust.outstanding > 0) ? selectedCust.outstanding : 50000}" min="1">
           </div>
 
           <div class="form-group">
@@ -110,17 +120,17 @@ const AccountsView = {
 
           <div class="form-group">
             <label class="form-label">Bank Reference / UTR Number <span class="required-star">*</span></label>
-            <input type="text" class="form-control font-mono" id="rec-ref" required value="HDFC${Date.now().toString().slice(-6)}" placeholder="e.g. UTR / Cheque No">
+            <input type="text" class="form-control font-mono" id="rec-ref" required value="UTR${Date.now().toString().slice(-8)}" placeholder="e.g. UTR / Cheque No">
           </div>
 
           <div class="form-group">
             <label class="form-label">Linked Tax Invoice</label>
-            <input type="text" class="form-control font-mono" id="rec-inv" value="INV-2026-0890">
+            <input type="text" class="form-control font-mono" id="rec-inv" placeholder="e.g. INV-2026-001">
           </div>
 
           <div class="form-group col-span-2">
             <label class="form-label">Notes & Remarks</label>
-            <textarea class="form-control" id="rec-remarks">Part payment received towards July delivery invoice.</textarea>
+            <textarea class="form-control" id="rec-remarks">Payment received towards account settlement.</textarea>
           </div>
         </div>
       </form>
@@ -144,7 +154,7 @@ const AccountsView = {
 
       if (amount <= 0) return UI.showToast("Invalid Amount", "Payment amount must be greater than 0", "error");
 
-      const newRec = ERPState.recordPayment({
+      ERPState.recordPayment({
         customer: cust,
         amount,
         mode,
@@ -161,15 +171,16 @@ const AccountsView = {
   },
 
   syncReceiptCust(custName) {
-    const inv = ERPState.data.invoices.find(i => i.customer === custName);
+    const inv = (ERPState.data.invoices || []).find(i => i.customer === custName);
     if (inv) {
-      document.getElementById("rec-inv").value = inv.invoiceNo;
+      const el = document.getElementById("rec-inv");
+      if (el) el.value = inv.invoiceNo || inv.id;
     }
   },
 
   // 2. CUSTOMER OUTSTANDING REPORT WITH AGING
   renderCustomerOutstanding() {
-    const customers = ERPState.data.customers;
+    const customers = ERPState.data.customers || [];
 
     return `
       <div class="table-card">
@@ -197,18 +208,25 @@ const AccountsView = {
               </tr>
             </thead>
             <tbody>
-              ${customers.map(c => `
+              ${customers.length === 0 ? `
                 <tr>
-                  <td class="primary-cell">${c.name}</td>
-                  <td class="font-mono">${UI.formatCurrency(c.creditLimit)}</td>
-                  <td class="font-bold font-mono" style="color:var(--danger-600);">${UI.formatCurrency(c.outstanding)}</td>
-                  <td class="font-mono">${UI.formatCurrency(c.outstanding * 0.6)}</td>
-                  <td class="font-mono">${UI.formatCurrency(c.outstanding * 0.3)}</td>
-                  <td class="font-mono font-bold" style="color:var(--danger-600);">${UI.formatCurrency(c.outstanding * 0.1)}</td>
-                  <td>${c.paymentTerms}</td>
-                  <td>${UI.formatStatusBadge(c.outstanding > 0 ? 'Pending' : 'Cleared')}</td>
+                  <td colspan="8" style="text-align:center; padding:32px 20px; color:var(--slate-400);">No customer outstanding balances found.</td>
                 </tr>
-              `).join('')}
+              ` : customers.map(c => {
+                const out = Number(c.outstanding || 0);
+                return `
+                  <tr>
+                    <td class="primary-cell">${c.name}</td>
+                    <td class="font-mono">${UI.formatCurrency(c.creditLimit || 0)}</td>
+                    <td class="font-bold font-mono" style="color:${out > 0 ? 'var(--danger-600)' : 'var(--success-600)'};">${UI.formatCurrency(out)}</td>
+                    <td class="font-mono">${UI.formatCurrency(out * 0.6)}</td>
+                    <td class="font-mono">${UI.formatCurrency(out * 0.3)}</td>
+                    <td class="font-mono font-bold" style="color:var(--danger-600);">${UI.formatCurrency(out * 0.1)}</td>
+                    <td>${c.paymentTerms || '30 Days'}</td>
+                    <td>${UI.formatStatusBadge(out > 0 ? 'Pending' : 'Cleared')}</td>
+                  </tr>
+                `;
+              }).join('')}
             </tbody>
           </table>
         </div>
@@ -218,7 +236,7 @@ const AccountsView = {
 
   // 3. VENDOR OUTSTANDING REPORT
   renderVendorOutstanding() {
-    const vendors = ERPState.data.vendors;
+    const vendors = ERPState.data.vendors || [];
 
     return `
       <div class="table-card">
@@ -240,12 +258,16 @@ const AccountsView = {
               </tr>
             </thead>
             <tbody>
-              ${vendors.map(v => `
+              ${vendors.length === 0 ? `
+                <tr>
+                  <td colspan="5" style="text-align:center; padding:32px 20px; color:var(--slate-400);">No vendor outstanding payables found.</td>
+                </tr>
+              ` : vendors.map(v => `
                 <tr>
                   <td class="primary-cell">${v.name}</td>
-                  <td><span class="badge badge-slate">${v.category}</span></td>
-                  <td>${v.paymentTerms}</td>
-                  <td class="font-bold font-mono" style="color:var(--danger-600);">${UI.formatCurrency(v.outstanding)}</td>
+                  <td><span class="badge badge-slate">${v.category || 'Supplier'}</span></td>
+                  <td>${v.paymentTerms || '30 Days'}</td>
+                  <td class="font-bold font-mono" style="color:${(v.outstanding || 0) > 0 ? 'var(--danger-600)' : 'var(--success-600)'};">${UI.formatCurrency(v.outstanding || 0)}</td>
                   <td><span class="badge badge-success">Within Credit Terms</span></td>
                 </tr>
               `).join('')}
@@ -258,7 +280,7 @@ const AccountsView = {
 
   // 4. JOB WORKER OUTSTANDING REPORT
   renderJobWorkerOutstanding() {
-    const workers = ERPState.data.jobWorkers;
+    const workers = ERPState.data.jobWorkers || [];
 
     return `
       <div class="table-card">
@@ -281,14 +303,18 @@ const AccountsView = {
               </tr>
             </thead>
             <tbody>
-              ${workers.map(w => `
+              ${workers.length === 0 ? `
+                <tr>
+                  <td colspan="6" style="text-align:center; padding:32px 20px; color:var(--slate-400);">No job worker labor outstandings found.</td>
+                </tr>
+              ` : workers.map(w => `
                 <tr>
                   <td class="primary-cell">${w.name}</td>
-                  <td><span class="badge badge-purple">${w.process}</span></td>
-                  <td class="font-mono">₹${w.rate} / ${w.rateUnit || 'Pc'}</td>
-                  <td class="font-mono">${UI.formatCurrency(w.outstanding + 100000)}</td>
-                  <td class="font-mono" style="color:var(--success-700);">${UI.formatCurrency(100000)}</td>
-                  <td class="font-bold font-mono" style="color:var(--danger-600);">${UI.formatCurrency(w.outstanding)}</td>
+                  <td><span class="badge badge-purple">${w.process || 'Stitching'}</span></td>
+                  <td class="font-mono">₹${w.rate || 20} / ${w.rateUnit || 'Pc'}</td>
+                  <td class="font-mono">${UI.formatCurrency(Number(w.outstanding || 0) + 10000)}</td>
+                  <td class="font-mono" style="color:var(--success-700);">${UI.formatCurrency(10000)}</td>
+                  <td class="font-bold font-mono" style="color:${(w.outstanding || 0) > 0 ? 'var(--danger-600)' : 'var(--success-600)'};">${UI.formatCurrency(w.outstanding || 0)}</td>
                 </tr>
               `).join('')}
             </tbody>
