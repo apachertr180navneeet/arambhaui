@@ -35,8 +35,8 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // 1. Users
-        $this->call(UserSeeder::class);
+        // 1. Users, Roles & Permissions Matrix
+        $this->call(RoleAndPermissionSeeder::class);
 
         // 2. Company Settings
         $settings = [
