@@ -1094,7 +1094,7 @@ class ERPStateManager {
     }
 
     return newItem;
-  },
+  }
 
   async updateItem(id, updatedData) {
     const idx = (this.data.items || []).findIndex(i => i.id === id || i.code === id || (i.dbId && String(i.dbId) === String(id)) || i.name === id);
@@ -1152,7 +1152,7 @@ class ERPStateManager {
       }
       return merged;
     }
-  },
+  }
 
   async deleteItem(id) {
     const item = (this.data.items || []).find(i => i.id === id || i.code === id || (i.dbId && String(i.dbId) === String(id)));
