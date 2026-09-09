@@ -69,7 +69,12 @@ return new class extends Migration
             $table->id();
             $table->string('code')->unique();
             $table->string('name');
-            $table->enum('category', ['Fabric', 'Trims', 'Accessories', 'Packing', 'Finished Goods']);
+            $table->string('type', 100)->nullable();
+            $table->string('category', 100)->default('Fabric');
+            $table->string('brand', 100)->nullable();
+            $table->string('fabric', 150)->nullable();
+            $table->string('color', 100)->nullable();
+            $table->string('size', 50)->nullable();
             $table->string('unit')->default('Meters'); // Meters, Kg, Pcs, Cones, Gross, Cartons
             $table->string('hsn_code')->nullable();
             $table->decimal('unit_cost', 10, 2)->default(0.00);

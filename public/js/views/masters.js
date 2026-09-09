@@ -17,6 +17,24 @@ const MastersView = {
     activeCustomerId: null
   },
 
+  // 4. ITEM MASTER STATE
+  _itemState: {
+    search: "",
+    category: "",
+    type: "",
+    stockFilter: "",
+    status: "",
+    sortBy: "name_asc",
+    page: 1,
+    pageSize: 10
+  },
+
+  onItemFilter(key, value) {
+    this._itemState[key] = value;
+    if (key !== 'page') this._itemState.page = 1;
+    App.refreshCurrentView();
+  },
+
   renderCustomers() {
     const allCustomers = ERPState.data.customers || [];
     const stats = ERPState.getCustomerStats();
@@ -1493,75 +1511,297 @@ const MastersView = {
 
   // 4. ITEM MASTER
   renderItems() {
-    const items = ERPState.data.items;
+    const allItems = ERPState.data.items || [];
+    const stats = ERPState.getItemStats ? ERPState.getItemStats() : {
+      total: allItems.length,
+      active: allItems.filter(i => (i.status || 'Active') === 'Active').length,
+      totalStock: allItems.reduce((s, i) => s + (Number(i.currentStock) || 0), 0),
+      totalValuation: allItems.reduce((s, i) => s + ((Number(i.currentStock) || 0) * (Number(i.rate || i.unitCost) || 0)), 0),
+      lowStockCount: allItems.filter(i => (Number(i.currentStock) || 0) <= (Number(i.minStock || i.reorderLevel) || 100)).length,
+      categories: Array.from(new Set(allItems.map(i => i.category).filter(Boolean))),
+      types: Array.from(new Set(allItems.map(i => i.type).filter(Boolean)))
+    };
+
+    // 1. Filter Items
+    let filtered = allItems.filter(i => {
+      const q = (this._itemState.search || "").toLowerCase().trim();
+      if (q) {
+        const matchName = (i.name || "").toLowerCase().includes(q);
+        const matchCode = (i.code || i.id || "").toLowerCase().includes(q);
+        const matchCat = (i.category || "").toLowerCase().includes(q);
+        const matchType = (i.type || "").toLowerCase().includes(q);
+        const matchHsn = (i.hsn || i.hsn_code || "").toLowerCase().includes(q);
+        const matchFabric = (i.fabric || "").toLowerCase().includes(q);
+        if (!matchName && !matchCode && !matchCat && !matchType && !matchHsn && !matchFabric) {
+          return false;
+        }
+      }
+
+      if (this._itemState.category && i.category !== this._itemState.category) {
+        return false;
+      }
+
+      if (this._itemState.type && i.type !== this._itemState.type) {
+        return false;
+      }
+
+      if (this._itemState.status && (i.status || 'Active') !== this._itemState.status) {
+        return false;
+      }
+
+      if (this._itemState.stockFilter === "low") {
+        const isLow = (Number(i.currentStock) || 0) <= (Number(i.minStock || i.reorderLevel) || 100);
+        if (!isLow) return false;
+      } else if (this._itemState.stockFilter === "out") {
+        if ((Number(i.currentStock) || 0) > 0) return false;
+      } else if (this._itemState.stockFilter === "in_stock") {
+        if ((Number(i.currentStock) || 0) <= 0) return false;
+      }
+
+      return true;
+    });
+
+    // 2. Sort Items
+    filtered.sort((a, b) => {
+      switch (this._itemState.sortBy) {
+        case "name_asc":
+          return (a.name || "").localeCompare(b.name || "");
+        case "name_desc":
+          return (b.name || "").localeCompare(a.name || "");
+        case "code_asc":
+          return (a.code || a.id || "").localeCompare(b.code || b.id || "");
+        case "stock_desc":
+          return (Number(b.currentStock) || 0) - (Number(a.currentStock) || 0);
+        case "stock_asc":
+          return (Number(a.currentStock) || 0) - (Number(b.currentStock) || 0);
+        case "rate_desc":
+          return (Number(b.rate || b.unitCost) || 0) - (Number(a.rate || a.unitCost) || 0);
+        case "rate_asc":
+          return (Number(a.rate || a.unitCost) || 0) - (Number(b.rate || b.unitCost) || 0);
+        default:
+          return (a.name || "").localeCompare(b.name || "");
+      }
+    });
+
+    // 3. Paginate
+    const totalRecords = filtered.length;
+    const pageSize = this._itemState.pageSize === "all" ? totalRecords : Number(this._itemState.pageSize || 10);
+    const totalPages = Math.max(1, Math.ceil(totalRecords / (pageSize || 1)));
+    if (this._itemState.page > totalPages) this._itemState.page = totalPages;
+    if (this._itemState.page < 1) this._itemState.page = 1;
+    const startIndex = (this._itemState.page - 1) * pageSize;
+    const paginated = pageSize === totalRecords ? filtered : filtered.slice(startIndex, startIndex + pageSize);
+
+    // Collect distinct categories and types for dropdowns
+    const categoriesList = ['Fabric', 'Trims', 'Accessories', 'Packing', 'Finished Goods', ...stats.categories].filter((v, i, a) => a.indexOf(v) === i);
+    const typesList = ['Raw Material', 'Semi Finished', 'Finished Goods', 'Accessories', 'Packaging'];
 
     return `
-      <div class="table-card">
-        <div class="table-toolbar">
-          <div class="table-toolbar-left">
-            <div class="table-search-box">
-              <svg class="table-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-              <input type="text" class="table-search-input" placeholder="Search by item name, code, category..." oninput="MastersView.filterGenericTable('items-table', this.value)">
+      <div style="display:flex; flex-direction:column; gap:20px;">
+        
+        <!-- Top KPI Dynamic Metrics Row -->
+        <div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:16px;">
+          
+          <div class="kpi-card" style="background:#ffffff; border-radius:var(--radius-xl); border:1px solid var(--slate-200); padding:18px; box-shadow:var(--shadow-sm); display:flex; align-items:center; gap:16px;">
+            <div style="width:46px; height:46px; border-radius:12px; background:var(--primary-50); color:var(--primary-600); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+            </div>
+            <div>
+              <div style="font-size:0.75rem; font-weight:600; color:var(--slate-500); text-transform:uppercase; letter-spacing:0.05em;">Total Catalog SKUs</div>
+              <div style="font-size:1.4rem; font-weight:800; color:var(--slate-900); margin-top:2px;">${stats.total}</div>
+              <div style="font-size:0.75rem; color:var(--slate-500); margin-top:2px;"><span style="color:var(--success-600); font-weight:600;">${stats.active}</span> Active items</div>
             </div>
           </div>
 
-          <div class="table-toolbar-right">
-            <button class="btn btn-secondary btn-sm" onclick="MastersView.exportItems()">Export CSV</button>
-            <button class="btn btn-primary btn-sm" onclick="MastersView.openItemModal()">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              Add Item
-            </button>
+          <div class="kpi-card" style="background:#ffffff; border-radius:var(--radius-xl); border:1px solid var(--slate-200); padding:18px; box-shadow:var(--shadow-sm); display:flex; align-items:center; gap:16px;">
+            <div style="width:46px; height:46px; border-radius:12px; background:#eff6ff; color:#2563eb; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+            </div>
+            <div>
+              <div style="font-size:0.75rem; font-weight:600; color:var(--slate-500); text-transform:uppercase; letter-spacing:0.05em;">Total Stock Units</div>
+              <div style="font-size:1.4rem; font-weight:800; color:#2563eb; margin-top:2px;">${stats.totalStock.toLocaleString('en-IN')}</div>
+              <div style="font-size:0.75rem; color:var(--slate-500); margin-top:2px;">Across all units</div>
+            </div>
           </div>
+
+          <div class="kpi-card" style="background:#ffffff; border-radius:var(--radius-xl); border:1px solid var(--slate-200); padding:18px; box-shadow:var(--shadow-sm); display:flex; align-items:center; gap:16px;">
+            <div style="width:46px; height:46px; border-radius:12px; background:#f0fdf4; color:#16a34a; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            </div>
+            <div>
+              <div style="font-size:0.75rem; font-weight:600; color:var(--slate-500); text-transform:uppercase; letter-spacing:0.05em;">Inventory Valuation</div>
+              <div style="font-size:1.4rem; font-weight:800; color:#16a34a; margin-top:2px;">₹${Math.round(stats.totalValuation).toLocaleString('en-IN')}</div>
+              <div style="font-size:0.75rem; color:var(--slate-500); margin-top:2px;">Stock on hand value</div>
+            </div>
+          </div>
+
+          <div class="kpi-card" style="background:#ffffff; border-radius:var(--radius-xl); border:1px solid ${stats.lowStockCount > 0 ? '#fecaca' : 'var(--slate-200)'}; padding:18px; box-shadow:var(--shadow-sm); display:flex; align-items:center; gap:16px;">
+            <div style="width:46px; height:46px; border-radius:12px; background:${stats.lowStockCount > 0 ? '#fee2e2' : '#f8fafc'}; color:${stats.lowStockCount > 0 ? '#dc2626' : 'var(--slate-500)'}; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </div>
+            <div>
+              <div style="font-size:0.75rem; font-weight:600; color:var(--slate-500); text-transform:uppercase; letter-spacing:0.05em;">Low Stock Alerts</div>
+              <div style="font-size:1.4rem; font-weight:800; color:${stats.lowStockCount > 0 ? '#dc2626' : 'var(--slate-900)'}; margin-top:2px;">${stats.lowStockCount} SKUs</div>
+              <div style="font-size:0.75rem; color:${stats.lowStockCount > 0 ? '#dc2626' : 'var(--slate-500)'}; margin-top:2px;">Below reorder level</div>
+            </div>
+          </div>
+
         </div>
 
-        <div class="table-responsive">
-          <table class="data-table" id="items-table">
-            <thead>
-              <tr>
-                <th>Item Code</th>
-                <th>Item Name</th>
-                <th>Type</th>
-                <th>Category</th>
-                <th>Unit</th>
-                <th>HSN</th>
-                <th>Rate (₹)</th>
-                <th>Current Stock</th>
-                <th>Reorder Level</th>
-                <th>Status</th>
-                <th style="text-align:right;">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${(items || []).length === 0 ? `
+        <!-- Main Items Table Card -->
+        <div class="table-card">
+          <div class="table-toolbar" style="flex-wrap:wrap; gap:12px; align-items:center;">
+            
+            <div class="table-toolbar-left" style="display:flex; flex-wrap:wrap; gap:10px; flex:1;">
+              <!-- Search Bar -->
+              <div class="table-search-box" style="min-width:240px; flex:1; max-width:320px;">
+                <svg class="table-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <input type="text" class="table-search-input" placeholder="Search item name, code, category..." value="${this._itemState.search || ''}" oninput="MastersView.onItemFilter('search', this.value)">
+              </div>
+
+              <!-- Category Filter -->
+              <select class="table-filter-select" onchange="MastersView.onItemFilter('category', this.value)" style="min-width:130px;">
+                <option value="">All Categories</option>
+                ${categoriesList.map(c => `<option value="${c}" ${this._itemState.category === c ? 'selected' : ''}>${c}</option>`).join('')}
+              </select>
+
+              <!-- Type Filter -->
+              <select class="table-filter-select" onchange="MastersView.onItemFilter('type', this.value)" style="min-width:130px;">
+                <option value="">All Types</option>
+                ${typesList.map(t => `<option value="${t}" ${this._itemState.type === t ? 'selected' : ''}>${t}</option>`).join('')}
+              </select>
+
+              <!-- Stock Status Filter -->
+              <select class="table-filter-select" onchange="MastersView.onItemFilter('stockFilter', this.value)" style="min-width:130px;">
+                <option value="" ${this._itemState.stockFilter === '' ? 'selected' : ''}>All Stock Status</option>
+                <option value="in_stock" ${this._itemState.stockFilter === 'in_stock' ? 'selected' : ''}>In Stock</option>
+                <option value="low" ${this._itemState.stockFilter === 'low' ? 'selected' : ''}>Low Stock (Alert)</option>
+                <option value="out" ${this._itemState.stockFilter === 'out' ? 'selected' : ''}>Out of Stock (0)</option>
+              </select>
+
+              <!-- Sort Order -->
+              <select class="table-filter-select" onchange="MastersView.onItemFilter('sortBy', this.value)" style="min-width:130px;">
+                <option value="name_asc" ${this._itemState.sortBy === 'name_asc' ? 'selected' : ''}>Name (A → Z)</option>
+                <option value="name_desc" ${this._itemState.sortBy === 'name_desc' ? 'selected' : ''}>Name (Z → A)</option>
+                <option value="code_asc" ${this._itemState.sortBy === 'code_asc' ? 'selected' : ''}>Item Code</option>
+                <option value="stock_desc" ${this._itemState.sortBy === 'stock_desc' ? 'selected' : ''}>Highest Stock</option>
+                <option value="stock_asc" ${this._itemState.sortBy === 'stock_asc' ? 'selected' : ''}>Lowest Stock</option>
+                <option value="rate_desc" ${this._itemState.sortBy === 'rate_desc' ? 'selected' : ''}>Highest Rate</option>
+                <option value="rate_asc" ${this._itemState.sortBy === 'rate_asc' ? 'selected' : ''}>Lowest Rate</option>
+              </select>
+            </div>
+
+            <div class="table-toolbar-right" style="display:flex; gap:8px;">
+              <button class="btn btn-secondary btn-sm" onclick="MastersView.exportItems()" title="Export CSV file">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Export CSV
+              </button>
+              
+              <button class="btn btn-secondary btn-sm" onclick="MastersView.printItemCatalog()" title="Print Catalog">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
+                Print
+              </button>
+
+              <button class="btn btn-primary btn-sm" onclick="MastersView.openItemModal()">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Add Item
+              </button>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="data-table" id="items-table">
+              <thead>
                 <tr>
-                  <td colspan="11" style="text-align:center; padding:32px 20px; color:var(--slate-400);">
-                    <div style="font-size:1rem; font-weight:600; color:var(--slate-600); margin-bottom:4px;">No Items in Catalog</div>
-                    <div style="font-size:0.825rem;">Click the <strong>+ Add Item</strong> button above to register fabrics, trims, or garments.</div>
-                  </td>
+                  <th style="width:110px;">Item Code</th>
+                  <th>Item Name & Specifications</th>
+                  <th>Type</th>
+                  <th>Category</th>
+                  <th>Unit</th>
+                  <th>HSN</th>
+                  <th>Rate (₹)</th>
+                  <th>Current Stock</th>
+                  <th>Reorder Level</th>
+                  <th>Location</th>
+                  <th>Status</th>
+                  <th style="text-align:right; min-width:120px;">Actions</th>
                 </tr>
-              ` : items.map(i => `
-                <tr>
-                  <td class="mono-cell font-bold" style="color:var(--primary-600);">${i.code || i.id}</td>
-                  <td class="primary-cell">${i.name}</td>
-                  <td><span class="badge badge-primary">${i.type || 'Raw Material'}</span></td>
-                  <td>${i.category || 'Fabric'}</td>
-                  <td>${i.unit || 'Meters'}</td>
-                  <td class="mono-cell">${i.hsn || '5208'}</td>
-                  <td class="font-bold">₹${i.rate || i.unitCost || 0}</td>
-                  <td class="font-bold font-mono" style="color:${(i.currentStock || 0) <= (i.reorderLevel || 100) ? 'var(--danger-600)' : 'var(--slate-900)'};">
-                    ${(i.currentStock || 0).toLocaleString('en-IN')} ${i.unit || 'Meters'}
-                    ${(i.currentStock || 0) <= (i.reorderLevel || 100) ? '<span class="badge badge-danger" style="margin-left:4px;">LOW</span>' : ''}
-                  </td>
-                  <td class="font-mono text-muted">${(i.reorderLevel || 100).toLocaleString('en-IN')}</td>
-                  <td>${UI.formatStatusBadge(i.status || 'Active')}</td>
-                  <td class="table-actions">
-                    <button class="table-action-btn edit" onclick="MastersView.openItemModal('${i.id}')">Edit</button>
-                    <button class="table-action-btn delete" onclick="MastersView.confirmDeleteItem('${i.id}')">Delete</button>
-                  </td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                ${paginated.length === 0 ? `
+                  <tr>
+                    <td colspan="12" style="text-align:center; padding:36px 20px; color:var(--slate-400);">
+                      <div style="font-size:1rem; font-weight:600; color:var(--slate-600); margin-bottom:4px;">No Matching Items Found</div>
+                      <div style="font-size:0.825rem;">Try adjusting search terms or click <strong>+ Add Item</strong> to create a new item.</div>
+                    </td>
+                  </tr>
+                ` : paginated.map(i => {
+                  const stock = Number(i.currentStock) || 0;
+                  const reorder = Number(i.minStock || i.reorderLevel) || 100;
+                  const isLow = stock <= reorder;
+                  const isOut = stock <= 0;
+                  const rate = Number(i.rate || i.unitCost) || 0;
+
+                  return `
+                    <tr id="item-row-${i.id || i.code}">
+                      <td class="mono-cell font-bold" style="color:var(--primary-600);">
+                        <span style="background:var(--primary-50); padding:3px 8px; border-radius:6px; border:1px solid var(--primary-100);">${i.code || i.id}</span>
+                      </td>
+                      <td class="primary-cell">
+                        <div style="font-weight:700; color:var(--slate-900); font-size:0.9rem;">${i.name}</div>
+                        ${(i.fabric && i.fabric !== 'N/A') || i.brand ? `
+                          <div style="font-size:0.75rem; color:var(--slate-500); margin-top:2px;">
+                            ${i.fabric ? `<span>Spec: <strong>${i.fabric}</strong></span>` : ''}
+                            ${i.brand ? `<span style="margin-left:6px; color:var(--slate-400);">• ${i.brand}</span>` : ''}
+                          </div>
+                        ` : ''}
+                      </td>
+                      <td><span class="badge badge-primary">${i.type || 'Raw Material'}</span></td>
+                      <td><span class="badge" style="background:#f1f5f9; color:#475569; font-weight:600;">${i.category || 'Fabric'}</span></td>
+                      <td><span style="font-weight:600; color:var(--slate-700);">${i.unit || 'Pieces'}</span></td>
+                      <td class="mono-cell" style="font-size:0.8rem; color:var(--slate-600);">${i.hsn || i.hsn_code || '-'}</td>
+                      <td class="font-bold font-mono" style="color:var(--slate-900);">₹${rate.toLocaleString('en-IN')}</td>
+                      <td class="font-bold font-mono" style="color:${isOut ? 'var(--danger-700)' : (isLow ? 'var(--warning-700)' : 'var(--slate-900)')};">
+                        ${stock.toLocaleString('en-IN')} ${i.unit || ''}
+                        ${isOut ? '<span class="badge badge-danger" style="margin-left:4px; font-size:0.65rem;">OUT</span>' : (isLow ? '<span class="badge badge-warning" style="margin-left:4px; font-size:0.65rem;">LOW</span>' : '')}
+                      </td>
+                      <td class="font-mono text-muted" style="font-size:0.825rem;">${reorder.toLocaleString('en-IN')}</td>
+                      <td style="font-size:0.8rem; color:var(--slate-600);">${i.location || '-'}</td>
+                      <td>${UI.formatStatusBadge(i.status || 'Active')}</td>
+                      <td class="table-actions" style="text-align:right;">
+                        <button class="table-action-btn edit" onclick="MastersView.openItemModal('${i.id || i.code}')">Edit</button>
+                        <button class="table-action-btn delete" onclick="MastersView.confirmDeleteItem('${i.id || i.code}')">Delete</button>
+                      </td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination Footer -->
+          ${totalRecords > 0 ? `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:16px 20px; border-top:1px solid var(--slate-200); background:#fcfcfd; border-radius:0 0 var(--radius-xl) var(--radius-xl); flex-wrap:wrap; gap:12px;">
+              <div style="font-size:0.825rem; color:var(--slate-600);">
+                Showing <strong>${totalRecords === 0 ? 0 : startIndex + 1}</strong> to <strong>${Math.min(startIndex + pageSize, totalRecords)}</strong> of <strong>${totalRecords}</strong> items
+              </div>
+
+              <div style="display:flex; align-items:center; gap:8px;">
+                <button class="btn btn-secondary btn-sm" ${this._itemState.page <= 1 ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : ''} onclick="MastersView.onItemFilter('page', ${this._itemState.page - 1})">
+                  Previous
+                </button>
+                
+                <span style="font-size:0.825rem; font-weight:600; color:var(--slate-700); padding:0 6px;">
+                  Page ${this._itemState.page} of ${totalPages}
+                </span>
+
+                <button class="btn btn-secondary btn-sm" ${this._itemState.page >= totalPages ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : ''} onclick="MastersView.onItemFilter('page', ${this._itemState.page + 1})">
+                  Next
+                </button>
+              </div>
+            </div>
+          ` : ''}
+
         </div>
       </div>
     `;
@@ -1569,70 +1809,104 @@ const MastersView = {
 
   openItemModal(itemId = null) {
     const isEdit = !!itemId;
-    const item = isEdit ? ERPState.data.items.find(i => i.id === itemId) : {};
+    const item = isEdit ? ((ERPState.data.items || []).find(i => i.id === itemId || i.code === itemId || (i.dbId && String(i.dbId) === String(itemId))) || {}) : {};
+
+    // Generate smart item code recommendation if new
+    const nextNum = (ERPState.data.items || []).length + 1;
+    const defaultCode = isEdit ? (item.code || item.id) : `GAR-SKU-${String(nextNum).padStart(3, '0')}`;
+
+    // Available units from Unit Master
+    const registeredUnits = (ERPState.data.units || []).map(u => u.name).filter(Boolean);
+    const standardUnits = ['Meters', 'Pieces', 'Gross', 'Kgs', 'Cones', 'Cartons', 'Rolls', 'Pairs'];
+    const allUnits = Array.from(new Set([...registeredUnits, ...standardUnits]));
 
     const content = `
-      <form id="item-form">
+      <form id="item-form" onsubmit="return false;">
         <div class="form-grid">
           <div class="form-group">
-            <label class="form-label">Item Code <span class="required-star">*</span></label>
-            <input type="text" class="form-control font-mono" id="itm-code" required value="${item.code || `GAR-SKU-${Date.now().toString().slice(-4)}`}">
+            <label class="form-label">Item Code / SKU <span class="required-star">*</span></label>
+            <input type="text" class="form-control font-mono font-bold" id="itm-code" required value="${defaultCode}" placeholder="e.g. FAB-001 or GAR-SKU-001">
+            <span style="font-size:0.7rem; color:var(--slate-500); margin-top:3px; display:block;">Unique SKU identifier for inventory tracking & barcodes</span>
           </div>
 
           <div class="form-group">
             <label class="form-label">Item Name <span class="required-star">*</span></label>
-            <input type="text" class="form-control" id="itm-name" required value="${item.name || ''}" placeholder="e.g. Premium Cotton Crew Neck T-Shirt">
+            <input type="text" class="form-control" id="itm-name" required value="${item.name || ''}" placeholder="e.g. Premium 100% Cotton Poplin 60s (Navy Blue)">
           </div>
 
           <div class="form-group">
             <label class="form-label">Item Type</label>
             <select class="form-control" id="itm-type">
-              <option value="Raw Material" ${item.type === 'Raw Material' ? 'selected' : ''}>Raw Material</option>
-              <option value="Semi Finished" ${item.type === 'Semi Finished' ? 'selected' : ''}>Semi Finished</option>
-              <option value="Finished Goods" ${item.type === 'Finished Goods' || !item.type ? 'selected' : ''}>Finished Goods</option>
-              <option value="Accessories" ${item.type === 'Accessories' ? 'selected' : ''}>Accessories</option>
-              <option value="Packaging" ${item.type === 'Packaging' ? 'selected' : ''}>Packaging</option>
+              <option value="Raw Material" ${item.type === 'Raw Material' ? 'selected' : ''}>Raw Material (Fabric, Yarn, etc.)</option>
+              <option value="Accessories" ${item.type === 'Accessories' ? 'selected' : ''}>Accessories & Trims (Buttons, Zips, Labels)</option>
+              <option value="Semi Finished" ${item.type === 'Semi Finished' ? 'selected' : ''}>Semi Finished (Cut Panels, Stitched Panels)</option>
+              <option value="Finished Goods" ${item.type === 'Finished Goods' || (!item.type && !isEdit) ? 'selected' : ''}>Finished Goods (Garments / Apparel)</option>
+              <option value="Packaging" ${item.type === 'Packaging' ? 'selected' : ''}>Packaging (Cartons, Polybags)</option>
             </select>
           </div>
 
           <div class="form-group">
             <label class="form-label">Category</label>
-            <input type="text" class="form-control" id="itm-cat" value="${item.category || 'T-Shirts'}">
+            <input type="text" list="item-cat-list" class="form-control" id="itm-cat" value="${item.category || 'Fabric'}" placeholder="e.g. Fabric, Trims, T-Shirts, Shirts">
+            <datalist id="item-cat-list">
+              <option value="Fabric">
+              <option value="Trims">
+              <option value="Accessories">
+              <option value="Packing">
+              <option value="Finished Goods">
+              <option value="T-Shirts">
+              <option value="Shirts">
+              <option value="Jeans">
+              <option value="Yarn">
+            </datalist>
           </div>
 
           <div class="form-group">
-            <label class="form-label">Unit of Measure</label>
+            <label class="form-label">Unit of Measure (UOM)</label>
             <select class="form-control" id="itm-unit">
-              <option value="Pieces" ${item.unit === 'Pieces' || !item.unit ? 'selected' : ''}>Pieces</option>
-              <option value="Meters" ${item.unit === 'Meters' ? 'selected' : ''}>Meters</option>
-              <option value="Gross" ${item.unit === 'Gross' ? 'selected' : ''}>Gross (144 pcs)</option>
-              <option value="Kgs" ${item.unit === 'Kgs' ? 'selected' : ''}>Kgs</option>
+              ${allUnits.map(u => `
+                <option value="${u}" ${(item.unit === u || (!item.unit && u === 'Meters')) ? 'selected' : ''}>${u}</option>
+              `).join('')}
             </select>
           </div>
 
           <div class="form-group">
-            <label class="form-label">Standard Rate (₹)</label>
-            <input type="number" class="form-control" id="itm-rate" value="${item.rate || 350}">
+            <label class="form-label">Standard Unit Cost / Rate (₹)</label>
+            <input type="number" step="0.01" class="form-control" id="itm-rate" value="${item.rate !== undefined ? item.rate : (item.unitCost || 150)}" placeholder="0.00">
           </div>
 
           <div class="form-group">
-            <label class="form-label">Opening Stock</label>
-            <input type="number" class="form-control" id="itm-opening" value="${item.openingStock || 0}">
+            <label class="form-label">Opening / Current Stock</label>
+            <input type="number" step="0.01" class="form-control" id="itm-opening" value="${item.currentStock !== undefined ? item.currentStock : (item.openingStock || 0)}" placeholder="0.00">
           </div>
 
           <div class="form-group">
-            <label class="form-label">Reorder Level Alert</label>
-            <input type="number" class="form-control" id="itm-reorder" value="${item.reorderLevel || 500}">
+            <label class="form-label">Reorder Level Alert (Min Stock)</label>
+            <input type="number" step="1" class="form-control" id="itm-reorder" value="${item.minStock !== undefined ? item.minStock : (item.reorderLevel || 100)}" placeholder="100">
+            <span style="font-size:0.7rem; color:var(--slate-500); margin-top:3px; display:block;">Triggers low stock warnings when inventory dips below this level</span>
           </div>
 
           <div class="form-group">
-            <label class="form-label">HSN Code</label>
-            <input type="text" class="form-control font-mono" id="itm-hsn" value="${item.hsn || '6109'}">
+            <label class="form-label">HSN / SAC Code</label>
+            <input type="text" class="form-control font-mono" id="itm-hsn" value="${item.hsn || item.hsn_code || '5208'}" placeholder="e.g. 5208, 6109, 9606">
           </div>
 
           <div class="form-group">
-            <label class="form-label">Fabric / Material Spec</label>
-            <input type="text" class="form-control" id="itm-fabric" value="${item.fabric || '100% Cotton'}">
+            <label class="form-label">Fabric / Material Specification</label>
+            <input type="text" class="form-control" id="itm-fabric" value="${item.fabric || '100% Cotton'}" placeholder="e.g. 100% Combed Cotton Single Jersey 180 GSM">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Warehouse Storage Location</label>
+            <input type="text" class="form-control" id="itm-loc" value="${item.location || 'Zone A - Rack 1'}" placeholder="e.g. Zone A - Rack 3, Bin 12">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Item Status</label>
+            <select class="form-control" id="itm-status">
+              <option value="Active" ${(item.status || 'Active') === 'Active' ? 'selected' : ''}>Active (Available for Orders & POs)</option>
+              <option value="Inactive" ${item.status === 'Inactive' ? 'selected' : ''}>Inactive (Archived)</option>
+            </select>
           </div>
         </div>
       </form>
@@ -1640,63 +1914,161 @@ const MastersView = {
 
     const footer = `
       <button class="btn btn-secondary" onclick="UI.closeModal()">Cancel</button>
-      <button class="btn btn-primary" id="btn-save-itm">${isEdit ? 'Update Item' : 'Save Item'}</button>
+      <button class="btn btn-primary" id="btn-save-itm">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        ${isEdit ? 'Update Item' : 'Save Item'}
+      </button>
     `;
 
-    UI.openModal({ title: isEdit ? `Edit Item - ${item.name}` : "Add New Item", content, footer, size: "modal-lg" });
+    UI.openModal({ title: isEdit ? `Edit Item Master - ${item.name}` : "Add New Item Master", content, footer, size: "modal-lg" });
 
-    document.getElementById("btn-save-itm").onclick = () => {
+    const saveBtn = document.getElementById("btn-save-itm");
+    saveBtn.onclick = async () => {
       const name = document.getElementById("itm-name").value.trim();
       const code = document.getElementById("itm-code").value.trim();
-      if (!name || !code) return UI.showToast("Required Field", "Item Code and Name are required", "error");
+      if (!name || !code) {
+        return UI.showToast("Required Field", "Item Code and Name are required", "error");
+      }
+
+      saveBtn.disabled = true;
+      saveBtn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...`;
 
       const payload = {
         code,
         name,
         type: document.getElementById("itm-type").value,
-        category: document.getElementById("itm-cat").value.trim(),
+        category: document.getElementById("itm-cat").value.trim() || 'Fabric',
         unit: document.getElementById("itm-unit").value,
-        rate: Number(document.getElementById("itm-rate").value),
-        openingStock: Number(document.getElementById("itm-opening").value),
-        reorderLevel: Number(document.getElementById("itm-reorder").value),
+        rate: Number(document.getElementById("itm-rate").value) || 0,
+        unitCost: Number(document.getElementById("itm-rate").value) || 0,
+        currentStock: Number(document.getElementById("itm-opening").value) || 0,
+        openingStock: Number(document.getElementById("itm-opening").value) || 0,
+        reorderLevel: Number(document.getElementById("itm-reorder").value) || 100,
+        minStock: Number(document.getElementById("itm-reorder").value) || 100,
         hsn: document.getElementById("itm-hsn").value.trim(),
-        fabric: document.getElementById("itm-fabric").value.trim()
+        fabric: document.getElementById("itm-fabric").value.trim(),
+        location: document.getElementById("itm-loc").value.trim() || 'Zone A',
+        status: document.getElementById("itm-status").value || 'Active'
       };
 
-      if (isEdit) {
-        ERPState.updateItem(itemId, payload);
-        UI.showToast("Item Updated", `${name} updated successfully`, "success");
-      } else {
-        ERPState.addItem(payload);
-        UI.showToast("Item Created", `${name} added to inventory catalog`, "success");
+      try {
+        if (isEdit) {
+          await ERPState.updateItem(itemId, payload);
+          UI.showToast("Item Updated", `${name} updated successfully`, "success");
+        } else {
+          await ERPState.addItem(payload);
+          UI.showToast("Item Created", `${name} added to inventory catalog`, "success");
+        }
+        UI.closeModal();
+        App.refreshCurrentView();
+      } catch (err) {
+        console.error("Item save error:", err);
+        UI.showToast("Error", "Could not save item details.", "error");
+        saveBtn.disabled = false;
+        saveBtn.textContent = isEdit ? 'Update Item' : 'Save Item';
       }
-
-      UI.closeModal();
-      App.refreshCurrentView();
     };
   },
 
   confirmDeleteItem(id) {
-    const itm = ERPState.data.items.find(i => i.id === id);
+    const itm = (ERPState.data.items || []).find(i => i.id === id || i.code === id || (i.dbId && String(i.dbId) === String(id)));
     if (!itm) return;
 
     UI.showConfirm({
-      title: "Delete Item?",
-      message: `Are you sure you want to delete <strong>${itm.name}</strong> from catalog?`,
-      confirmText: "Delete",
+      title: "Delete Item from Catalog?",
+      message: `Are you sure you want to delete <strong>${itm.name}</strong> (${itm.code || itm.id})?<br><span style="font-size:0.8rem; color:var(--slate-500); margin-top:4px; display:block;">This item will be removed from the master catalog.</span>`,
+      confirmText: "Delete Item",
       isDanger: true,
-      onConfirm: () => {
-        ERPState.deleteItem(id);
-        UI.showToast("Item Deleted", `${itm.name} deleted`, "warning");
+      onConfirm: async () => {
+        await ERPState.deleteItem(id);
+        UI.showToast("Item Deleted", `${itm.name} deleted from catalog`, "warning");
         App.refreshCurrentView();
       }
     });
   },
 
   exportItems() {
-    const headers = ["Item Code", "Item Name", "Type", "Category", "Unit", "HSN", "Rate", "Stock", "Reorder Level", "Status"];
-    const rows = ERPState.data.items.map(i => [i.code, i.name, i.type, i.category, i.unit, i.hsn, i.rate, i.currentStock, i.reorderLevel, i.status]);
-    UI.exportToCSV("Item_Master_Report", headers, rows);
+    const headers = ["Item Code", "Item Name", "Type", "Category", "Unit", "HSN", "Rate", "Stock", "Reorder Level", "Location", "Status"];
+    const rows = (ERPState.data.items || []).map(i => [
+      i.code || i.id,
+      i.name,
+      i.type || 'Raw Material',
+      i.category || 'Fabric',
+      i.unit || 'Pieces',
+      i.hsn || i.hsn_code || '',
+      i.rate || i.unitCost || 0,
+      i.currentStock || 0,
+      i.minStock || i.reorderLevel || 100,
+      i.location || '',
+      i.status || 'Active'
+    ]);
+    UI.exportToCSV("Item_Master_Catalog", headers, rows);
+  },
+
+  printItemCatalog() {
+    const items = ERPState.data.items || [];
+    const printWin = window.open('', '', 'width=1000,height=700');
+    printWin.document.write(`
+      <html>
+        <head>
+          <title>Item Master Catalog - GarmentERP</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 25px; font-size: 12px; color: #1e293b; }
+            h2 { margin-bottom: 4px; color: #0f172a; }
+            p { font-size: 11px; color: #64748b; margin-top: 2px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 11px; }
+            th, td { border: 1px solid #cbd5e1; padding: 6px 8px; text-align: left; }
+            th { background: #f1f5f9; font-weight: bold; color: #334155; }
+            .font-mono { font-family: monospace; }
+            .font-bold { font-weight: bold; }
+          </style>
+        </head>
+        <body>
+          <h2>FashionWorks Pvt. Ltd. - Item Master Catalog</h2>
+          <p>Generated on ${new Date().toLocaleString()} | Total SKUs: ${items.length}</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Item Name</th>
+                <th>Type</th>
+                <th>Category</th>
+                <th>Unit</th>
+                <th>HSN</th>
+                <th>Rate (₹)</th>
+                <th>Current Stock</th>
+                <th>Min Stock</th>
+                <th>Location</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${items.map(i => `
+                <tr>
+                  <td class="font-mono font-bold">${i.code || i.id}</td>
+                  <td><strong>${i.name}</strong></td>
+                  <td>${i.type || 'Raw Material'}</td>
+                  <td>${i.category || 'Fabric'}</td>
+                  <td>${i.unit || 'Meters'}</td>
+                  <td class="font-mono">${i.hsn || i.hsn_code || '-'}</td>
+                  <td class="font-bold font-mono">₹${(i.rate || i.unitCost || 0).toLocaleString('en-IN')}</td>
+                  <td class="font-mono font-bold">${(i.currentStock || 0).toLocaleString('en-IN')} ${i.unit || ''}</td>
+                  <td class="font-mono">${(i.minStock || i.reorderLevel || 100).toLocaleString('en-IN')}</td>
+                  <td>${i.location || '-'}</td>
+                  <td>${i.status || 'Active'}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `);
+    printWin.document.close();
+    printWin.focus();
+    setTimeout(() => {
+      printWin.print();
+      printWin.close();
+    }, 300);
   },
 
   // 5. UNIT MASTER (UOM) MANAGEMENT - HIERARCHICAL CONVERSION LOGIC

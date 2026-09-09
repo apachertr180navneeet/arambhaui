@@ -218,17 +218,18 @@ class ERPStateManager {
           dbId: i.id,
           code: i.code || `ITM-${String(i.id).padStart(3, '0')}`,
           name: i.name,
-          type: i.category === 'Fabric' ? 'Raw Material' : (i.category === 'Trims' ? 'Accessories' : 'Finished Goods'),
+          type: i.type || (i.category === 'Fabric' ? 'Raw Material' : (i.category === 'Trims' ? 'Accessories' : (i.category === 'Packing' ? 'Packaging' : 'Finished Goods'))),
           category: i.category || "Fabric",
           unit: i.unit || "Meters",
-          brand: "FashionWorks Raw",
-          fabric: i.category === 'Fabric' ? 'Cotton' : 'N/A',
-          color: "Assorted",
-          size: "Standard",
+          brand: i.brand || "FashionWorks",
+          fabric: i.fabric || (i.category === 'Fabric' ? 'Cotton' : 'N/A'),
+          color: i.color || "Assorted",
+          size: i.size || "Standard",
           hsn: i.hsn_code || "5208",
-          rate: Number(i.unit_cost || 100),
-          unitCost: Number(i.unit_cost || 100),
+          rate: Number(i.unit_cost || 0),
+          unitCost: Number(i.unit_cost || 0),
           currentStock: Number(i.current_stock || 0),
+          openingStock: Number(i.current_stock || 0),
           minStock: Number(i.min_stock || 100),
           reorderLevel: Number(i.min_stock || 100),
           location: i.location || "Zone A",
@@ -538,6 +539,27 @@ class ERPStateManager {
       creditUtilization,
       highRisk,
       cities
+    };
+  }
+
+  getItemStats() {
+    const items = this.data.items || [];
+    const total = items.length;
+    const active = items.filter(i => (i.status || 'Active') === 'Active').length;
+    const totalStock = items.reduce((sum, i) => sum + (Number(i.currentStock) || 0), 0);
+    const totalValuation = items.reduce((sum, i) => sum + ((Number(i.currentStock) || 0) * (Number(i.rate || i.unitCost) || 0)), 0);
+    const lowStockCount = items.filter(i => (Number(i.currentStock) || 0) <= (Number(i.minStock || i.reorderLevel) || 100)).length;
+    const categories = Array.from(new Set(items.map(i => i.category).filter(Boolean)));
+    const types = Array.from(new Set(items.map(i => i.type).filter(Boolean)));
+
+    return {
+      total,
+      active,
+      totalStock,
+      totalValuation,
+      lowStockCount,
+      categories,
+      types
     };
   }
 
@@ -996,26 +1018,32 @@ class ERPStateManager {
   // =========================================================================
   // 4. ITEM MASTER CRUD
   // =========================================================================
-  addItem(item) {
+  async addItem(item) {
     const nextNum = (this.data.items || []).length + 1;
-    const id = item.id || `ITM-${String(nextNum).padStart(3, '0')}`;
+    const code = (item.code || `ITM-${String(nextNum).padStart(3, '0')}`).trim();
+    const rate = Number(item.rate !== undefined ? item.rate : (item.unitCost !== undefined ? item.unitCost : 0));
+    const currentStock = Number(item.currentStock !== undefined ? item.currentStock : (item.openingStock !== undefined ? item.openingStock : 0));
+    const minStock = Number(item.minStock !== undefined ? item.minStock : (item.reorderLevel !== undefined ? item.reorderLevel : 100));
+
     const newItem = {
-      id,
-      code: item.code || id,
-      name: item.name || "",
+      id: code,
+      dbId: null,
+      code: code,
+      name: (item.name || "").trim(),
       type: item.type || "Raw Material",
       category: item.category || "Fabric",
-      unit: item.unit || "Meters",
+      unit: item.unit || "Pieces",
       brand: item.brand || "FashionWorks",
-      fabric: item.fabric || "Cotton",
+      fabric: item.fabric || "100% Cotton",
       color: item.color || "Standard",
       size: item.size || "Free",
-      hsn: item.hsn || "5208",
-      rate: Number(item.rate || item.unitCost || 100),
-      unitCost: Number(item.unitCost || item.rate || 100),
-      currentStock: Number(item.currentStock || item.openingStock || 0),
-      minStock: Number(item.minStock || item.reorderLevel || 100),
-      reorderLevel: Number(item.reorderLevel || item.minStock || 100),
+      hsn: item.hsn || item.hsn_code || "5208",
+      rate: rate,
+      unitCost: rate,
+      currentStock: currentStock,
+      openingStock: currentStock,
+      minStock: minStock,
+      reorderLevel: minStock,
       location: item.location || "Zone A",
       status: item.status || "Active"
     };
@@ -1025,70 +1053,128 @@ class ERPStateManager {
     this.logActivity(`Added item: ${newItem.name} (${newItem.code})`, "Item Master", newItem.code);
     this.saveState();
 
-    fetch('/masters/items', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'X-CSRF-TOKEN': this.getCsrfToken(),
-        'X-Requested-With': 'XMLHttpRequest'
-      },
-      body: JSON.stringify({
-        name: newItem.name,
-        category: newItem.category,
-        unit: newItem.unit,
-        unit_cost: newItem.unitCost,
-        current_stock: newItem.currentStock,
-        min_stock: newItem.minStock,
-        hsn_code: newItem.hsn,
-        location: newItem.location
-      })
-    }).then(r => r.json()).then(res => {
-      if (res && res.item && res.item.id) newItem.dbId = res.item.id;
-    }).catch(e => console.warn("Item sync note:", e));
+    try {
+      const response = await fetch('/masters/items', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-CSRF-TOKEN': this.getCsrfToken(),
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+          code: newItem.code,
+          name: newItem.name,
+          type: newItem.type,
+          category: newItem.category,
+          brand: newItem.brand,
+          fabric: newItem.fabric,
+          color: newItem.color,
+          size: newItem.size,
+          unit: newItem.unit,
+          unit_cost: newItem.unitCost,
+          current_stock: newItem.currentStock,
+          min_stock: newItem.minStock,
+          hsn_code: newItem.hsn,
+          location: newItem.location,
+          status: newItem.status
+        })
+      });
+      const res = await response.json();
+      if (res && res.item && res.item.id) {
+        newItem.dbId = res.item.id;
+        if (res.item.code) {
+          newItem.code = res.item.code;
+          newItem.id = res.item.code;
+        }
+        this.saveState();
+      }
+    } catch (e) {
+      console.warn("Item sync note:", e);
+    }
 
     return newItem;
-  }
+  },
 
-  updateItem(id, updatedData) {
-    const idx = (this.data.items || []).findIndex(i => i.id === id || i.code === id || i.name === id);
+  async updateItem(id, updatedData) {
+    const idx = (this.data.items || []).findIndex(i => i.id === id || i.code === id || (i.dbId && String(i.dbId) === String(id)) || i.name === id);
     if (idx !== -1) {
       const current = this.data.items[idx];
-      this.data.items[idx] = { ...current, ...updatedData };
-      this.logActivity(`Updated item: ${this.data.items[idx].name}`, "Item Master", id);
+      const rate = updatedData.rate !== undefined ? Number(updatedData.rate) : (updatedData.unitCost !== undefined ? Number(updatedData.unitCost) : current.rate);
+      const minStock = updatedData.reorderLevel !== undefined ? Number(updatedData.reorderLevel) : (updatedData.minStock !== undefined ? Number(updatedData.minStock) : current.minStock);
+      const currentStock = updatedData.currentStock !== undefined ? Number(updatedData.currentStock) : (updatedData.openingStock !== undefined ? Number(updatedData.openingStock) : current.currentStock);
+
+      const merged = {
+        ...current,
+        ...updatedData,
+        rate: rate,
+        unitCost: rate,
+        minStock: minStock,
+        reorderLevel: minStock,
+        currentStock: currentStock
+      };
+      this.data.items[idx] = merged;
+      this.logActivity(`Updated item: ${merged.name}`, "Item Master", merged.code || id);
       this.saveState();
 
-      if (current.dbId) {
-        fetch(`/masters/items/${current.dbId}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'X-CSRF-TOKEN': this.getCsrfToken(),
-            'X-Requested-With': 'XMLHttpRequest'
-          },
-          body: JSON.stringify(updatedData)
-        }).catch(e => console.warn("Item update note:", e));
+      const dbId = current.dbId || (typeof id === 'number' ? id : null);
+      if (dbId) {
+        try {
+          await fetch(`/masters/items/${dbId}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'X-CSRF-TOKEN': this.getCsrfToken(),
+              'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({
+              code: merged.code,
+              name: merged.name,
+              type: merged.type,
+              category: merged.category,
+              brand: merged.brand,
+              fabric: merged.fabric,
+              color: merged.color,
+              size: merged.size,
+              unit: merged.unit,
+              unit_cost: merged.unitCost,
+              current_stock: merged.currentStock,
+              min_stock: merged.minStock,
+              hsn_code: merged.hsn || merged.hsn_code,
+              location: merged.location,
+              status: merged.status
+            })
+          });
+        } catch (e) {
+          console.warn("Item update note:", e);
+        }
       }
+      return merged;
     }
-  }
+  },
 
-  deleteItem(id) {
-    const item = (this.data.items || []).find(i => i.id === id || i.code === id);
+  async deleteItem(id) {
+    const item = (this.data.items || []).find(i => i.id === id || i.code === id || (i.dbId && String(i.dbId) === String(id)));
     if (item) {
-      this.data.items = this.data.items.filter(i => i.id !== id && i.code !== id);
-      this.logActivity(`Deleted item: ${item.name}`, "Item Master", id);
+      const dbId = item.dbId || (typeof id === 'number' ? id : null);
+      this.data.items = this.data.items.filter(i => i.id !== item.id && i.code !== item.code && (dbId ? i.dbId !== dbId : true));
+      this.logActivity(`Deleted item: ${item.name}`, "Item Master", item.code || id);
       this.saveState();
 
-      if (item.dbId) {
-        fetch(`/masters/items/${item.dbId}`, {
-          method: 'DELETE',
-          headers: {
-            'Accept': 'application/json',
-            'X-CSRF-TOKEN': this.getCsrfToken(),
-            'X-Requested-With': 'XMLHttpRequest'
-          }
-        }).catch(e => console.warn("Item delete note:", e));
+      if (dbId) {
+        try {
+          await fetch(`/masters/items/${dbId}`, {
+            method: 'DELETE',
+            headers: {
+              'Accept': 'application/json',
+              'X-CSRF-TOKEN': this.getCsrfToken(),
+              'X-Requested-With': 'XMLHttpRequest'
+            }
+          });
+        } catch (e) {
+          console.warn("Item delete note:", e);
+        }
       }
     }
   }
