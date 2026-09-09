@@ -1780,7 +1780,7 @@ const MastersView = {
               onmouseout="this.style.background='#059669'; this.style.transform='translateY(0)';"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              + Add Unit
+              Add Unit
             </button>
           </div>
         </div>
@@ -1803,7 +1803,7 @@ const MastersView = {
                 <tr>
                   <td colspan="6" style="text-align:center; padding:40px; color:#9ca3af;">
                     <div style="font-weight:700; font-size:1rem; margin-bottom:4px;">No Units Registered</div>
-                    <div style="font-size:0.85rem;">Click "+ Add Unit" above to configure your base and sub-units.</div>
+                    <div style="font-size:0.85rem;">Click "Add Unit" above to configure your base and sub-units.</div>
                   </td>
                 </tr>
               ` : orderedList.map(item => `
