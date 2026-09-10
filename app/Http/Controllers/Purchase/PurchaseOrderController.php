@@ -15,35 +15,39 @@ class PurchaseOrderController extends Controller
 {
     public function index(Request $request)
     {
+        $orders = PurchaseOrder::with(['items', 'vendor'])->latest()->get();
+
         if ($request->wantsJson() || $request->ajax()) {
-            return response()->json(PurchaseOrder::with(['items', 'vendor'])->latest()->get());
+            return response()->json($orders);
         }
 
-        return view('dashboard', [
-            'user' => Auth::user(),
-            'module' => 'purchase',
-            'submodule' => 'orders'
-        ]);
+        $stats = [
+            'totalOrders' => PurchaseOrder::count(),
+            'totalAmount' => PurchaseOrder::sum('grand_total'),
+            'approvedCount' => PurchaseOrder::where('status', 'Approved')->count(),
+            'pendingPayment' => PurchaseOrder::where('payment_status', 'Pending')->count()
+        ];
+
+        return view('purchase.orders.index', compact('orders', 'stats'));
     }
 
     public function create()
     {
-        return view('dashboard', [
-            'user' => Auth::user(),
-            'module' => 'purchase',
-            'submodule' => 'create'
-        ]);
+        $vendors = Vendor::all();
+        $items = Item::all();
+        $count = PurchaseOrder::count() + 1;
+        $nextPoNumber = 'PO-2026-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+
+        return view('purchase.orders.create', compact('vendors', 'items', 'nextPoNumber'));
     }
 
     public function edit(PurchaseOrder $order)
     {
-        return view('dashboard', [
-            'user' => Auth::user(),
-            'module' => 'purchase',
-            'submodule' => 'edit',
-            'targetId' => $order->po_number ?? $order->id,
-            'targetDbId' => $order->id
-        ]);
+        $vendors = Vendor::all();
+        $items = Item::all();
+        $order->load(['items', 'vendor']);
+
+        return view('purchase.orders.edit', compact('order', 'vendors', 'items'));
     }
 
     public function store(Request $request)
@@ -204,8 +208,13 @@ class PurchaseOrderController extends Controller
     public function destroy(PurchaseOrder $order)
     {
         $poNumber = $order->po_number;
+        $order->items()->delete();
         $order->delete();
 
-        return response()->json(['success' => true, 'message' => "Purchase Order {$poNumber} deleted successfully."]);
+        if (request()->wantsJson() || request()->ajax()) {
+            return response()->json(['success' => true, 'message' => "Purchase Order {$poNumber} deleted successfully."]);
+        }
+
+        return redirect()->route('purchase.orders.index')->with('success', "Purchase Order {$poNumber} deleted successfully.");
     }
 }

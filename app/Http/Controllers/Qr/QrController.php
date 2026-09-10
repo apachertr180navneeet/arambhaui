@@ -12,37 +12,39 @@ class QrController extends Controller
 {
     public function generator(Request $request)
     {
+        $vouchers = QrVoucher::where('status', 'Active')->latest()->get();
+
         if ($request->wantsJson() || $request->ajax()) {
-            return response()->json(QrVoucher::where('status', 'Active')->get());
+            return response()->json($vouchers);
         }
 
-        return view('dashboard', [
-            'user' => Auth::user(),
-            'module' => 'qr',
-            'submodule' => 'generator'
-        ]);
+        $customers = Customer::all();
+
+        return view('qr.generator', compact('vouchers', 'customers'));
     }
 
     public function scanner(Request $request)
     {
-        return view('dashboard', [
-            'user' => Auth::user(),
-            'module' => 'qr',
-            'submodule' => 'scanner'
-        ]);
+        $code = $request->query('code', '');
+        return view('qr.scanner', compact('code'));
     }
 
     public function history(Request $request)
     {
+        $vouchers = QrVoucher::latest()->get();
+
         if ($request->wantsJson() || $request->ajax()) {
-            return response()->json(QrVoucher::latest()->get());
+            return response()->json($vouchers);
         }
 
-        return view('dashboard', [
-            'user' => Auth::user(),
-            'module' => 'qr',
-            'submodule' => 'history'
-        ]);
+        $stats = [
+            'total' => QrVoucher::count(),
+            'active' => QrVoucher::where('status', 'Active')->count(),
+            'redeemed' => QrVoucher::where('status', 'Redeemed')->count(),
+            'expired' => QrVoucher::where('status', 'Expired')->count()
+        ];
+
+        return view('qr.history', compact('vouchers', 'stats'));
     }
 
     public function store(Request $request)
@@ -100,7 +102,7 @@ class QrController extends Controller
             return response()->json(['success' => true, 'voucher' => $voucher], 201);
         }
 
-        return redirect()->route('qr.generator')->with('success', "Voucher {$voucherCode} generated successfully.");
+        return redirect()->route('qr.history')->with('success', "Single-use discount QR Voucher {$voucherCode} generated successfully.");
     }
 
     public function validateVoucher(Request $request)
@@ -220,7 +222,11 @@ class QrController extends Controller
         $voucher->status = 'Expired';
         $voucher->save();
 
-        return response()->json(['success' => true, 'message' => "Voucher {$voucher->voucher_code} marked as Expired."]);
+        if (request()->wantsJson() || request()->ajax()) {
+            return response()->json(['success' => true, 'message' => "Voucher {$voucher->voucher_code} marked as Expired."]);
+        }
+
+        return redirect()->route('qr.history')->with('success', "Voucher {$voucher->voucher_code} marked as Expired.");
     }
 
     public function reactivateVoucher($id)
@@ -231,15 +237,23 @@ class QrController extends Controller
         $voucher->redeemed_at = null;
         $voucher->save();
 
-        return response()->json(['success' => true, 'message' => "Voucher {$voucher->voucher_code} reactivated."]);
+        if (request()->wantsJson() || request()->ajax()) {
+            return response()->json(['success' => true, 'message' => "Voucher {$voucher->voucher_code} reactivated."]);
+        }
+
+        return redirect()->route('qr.history')->with('success', "Voucher {$voucher->voucher_code} reactivated.");
     }
 
     public function destroy($id)
     {
         $voucher = QrVoucher::findOrFail($id);
+        $code = $voucher->voucher_code;
         $voucher->delete();
 
-        return response()->json(['success' => true, 'message' => 'Voucher deleted successfully.']);
+        if (request()->wantsJson() || request()->ajax()) {
+            return response()->json(['success' => true, 'message' => "Voucher {$code} deleted successfully."]);
+        }
+
+        return redirect()->route('qr.history')->with('success', "Voucher {$code} deleted successfully.");
     }
 }
-

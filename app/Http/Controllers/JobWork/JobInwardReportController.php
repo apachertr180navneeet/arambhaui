@@ -11,14 +11,20 @@ class JobInwardReportController extends Controller
 {
     public function index(Request $request)
     {
+        $assignments = JobAssignment::with('items')->latest()->get();
+
         if ($request->wantsJson() || $request->ajax()) {
-            return response()->json(JobAssignment::with('items')->get());
+            return response()->json($assignments);
         }
 
-        return view('dashboard', [
-            'user' => Auth::user(),
-            'module' => 'jobwork',
-            'submodule' => 'inward-report'
-        ]);
+        $totalIssued = JobAssignment::sum('issued_qty');
+
+        $stats = [
+            'totalLots' => JobAssignment::count(),
+            'totalIssued' => $totalIssued,
+            'completedLots' => JobAssignment::where('status', 'Completed')->count()
+        ];
+
+        return view('jobwork.inward-report.index', compact('assignments', 'stats'));
     }
 }

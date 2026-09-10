@@ -16,54 +16,67 @@ class AccountsController extends Controller
 {
     public function customerAccounts(Request $request)
     {
+        $customers = Customer::with('payments')->latest()->get();
+
         if ($request->wantsJson() || $request->ajax()) {
-            return response()->json(Customer::all());
+            return response()->json($customers);
         }
 
-        return view('dashboard', [
-            'user' => Auth::user(),
-            'module' => 'accounts',
-            'submodule' => 'customer-accounts'
-        ]);
+        $recentPayments = CustomerPayment::latest()->take(10)->get();
+        $totalOutstanding = Customer::sum('outstanding');
+        $totalCollected = CustomerPayment::sum('amount');
+
+        $stats = [
+            'totalCustomers' => $customers->count(),
+            'totalOutstanding' => $totalOutstanding,
+            'totalCollected' => $totalCollected
+        ];
+
+        return view('accounts.customer-accounts', compact('customers', 'recentPayments', 'stats'));
     }
 
     public function customerOutstanding(Request $request)
     {
+        $customers = Customer::where('outstanding', '>', 0)->latest()->get();
+
         if ($request->wantsJson() || $request->ajax()) {
-            return response()->json(Customer::where('outstanding', '>', 0)->get());
+            return response()->json($customers);
         }
 
-        return view('dashboard', [
-            'user' => Auth::user(),
-            'module' => 'accounts',
-            'submodule' => 'customer-outstanding'
-        ]);
+        $totalOutstanding = $customers->sum('outstanding');
+        $highRiskCount = $customers->filter(function($c) {
+            return $c->credit_limit > 0 && ($c->outstanding / $c->credit_limit) >= 0.8;
+        })->count();
+
+        $stats = [
+            'dueAccounts' => $customers->count(),
+            'totalOutstanding' => $totalOutstanding,
+            'highRiskCount' => $highRiskCount
+        ];
+
+        return view('accounts.customer-outstanding', compact('customers', 'stats'));
     }
 
     public function vendorOutstanding(Request $request)
     {
+        $vendors = Vendor::latest()->get();
+
         if ($request->wantsJson() || $request->ajax()) {
-            return response()->json(Vendor::all());
+            return response()->json($vendors);
         }
 
-        return view('dashboard', [
-            'user' => Auth::user(),
-            'module' => 'accounts',
-            'submodule' => 'vendor-outstanding'
-        ]);
+        return view('accounts.vendor-outstanding', compact('vendors'));
     }
 
     public function jobWorkerOutstanding(Request $request)
     {
+        $jobworkers = JobWorker::latest()->get();
+
         if ($request->wantsJson() || $request->ajax()) {
-            return response()->json(JobWorker::all());
+            return response()->json($jobworkers);
         }
 
-        return view('dashboard', [
-            'user' => Auth::user(),
-            'module' => 'accounts',
-            'submodule' => 'jobworker-outstanding'
-        ]);
+        return view('accounts.jobworker-outstanding', compact('jobworkers'));
     }
 
     public function storeReceipt(Request $request)
@@ -83,10 +96,14 @@ class AccountsController extends Controller
             $receiptNo = 'REC-2026-' . str_pad($count, 3, '0', STR_PAD_LEFT);
             $validated['receipt_no'] = $receiptNo;
 
+            $cust = Customer::where('name', $validated['customer_name'])->first();
+            if ($cust) {
+                $validated['customer_id'] = $cust->id;
+            }
+
             $payment = CustomerPayment::create($validated);
 
             // Deduct outstanding
-            $cust = Customer::where('name', $validated['customer_name'])->first();
             if ($cust) {
                 $cust->decrement('outstanding', min($cust->outstanding, $validated['amount']));
             }
@@ -95,7 +112,7 @@ class AccountsController extends Controller
                 return response()->json(['success' => true, 'payment' => $payment]);
             }
 
-            return redirect()->route('accounts.customer-accounts')->with('success', "Payment receipt {$receiptNo} recorded.");
+            return redirect()->route('accounts.customer-accounts')->with('success', "Payment receipt {$receiptNo} recorded successfully.");
         });
     }
 }

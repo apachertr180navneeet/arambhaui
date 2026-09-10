@@ -11,30 +11,43 @@ class CustomerController extends Controller
 {
     public function index(Request $request)
     {
-        if ($request->wantsJson() || $request->ajax()) {
-            $query = Customer::withCount(['payments']);
-            if ($request->has('search') && !empty($request->search)) {
-                $search = $request->search;
-                $query->where(function ($q) use ($search) {
-                    $q->where('name', 'like', "%{$search}%")
-                      ->orWhere('company_name', 'like', "%{$search}%")
-                      ->orWhere('phone', 'like', "%{$search}%")
-                      ->orWhere('email', 'like', "%{$search}%")
-                      ->orWhere('gstin', 'like', "%{$search}%")
-                      ->orWhere('city', 'like', "%{$search}%");
-                });
-            }
-            if ($request->has('status') && !empty($request->status)) {
-                $query->where('status', $request->status);
-            }
-            return response()->json($query->latest()->get());
+        $query = Customer::withCount(['payments']);
+
+        if ($request->has('search') && !empty($request->search)) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('company_name', 'like', "%{$search}%")
+                  ->orWhere('phone', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%")
+                  ->orWhere('gstin', 'like', "%{$search}%")
+                  ->orWhere('city', 'like', "%{$search}%");
+            });
         }
 
-        return view('dashboard', [
-            'user' => Auth::user(),
-            'module' => 'masters',
-            'submodule' => 'customers'
-        ]);
+        if ($request->has('status') && !empty($request->status)) {
+            $query->where('status', $request->status);
+        }
+
+        $customers = $query->latest()->get();
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json($customers);
+        }
+
+        $totalCount = Customer::count();
+        $activeCount = Customer::where('status', 'Active')->count();
+        $totalOutstanding = Customer::sum('outstanding');
+        $totalCreditLimit = Customer::sum('credit_limit');
+
+        $stats = [
+            'total' => $totalCount,
+            'active' => $activeCount,
+            'totalOutstanding' => $totalOutstanding,
+            'totalCreditLimit' => $totalCreditLimit
+        ];
+
+        return view('masters.customers.index', compact('customers', 'stats'));
     }
 
     public function store(Request $request)
@@ -67,7 +80,7 @@ class CustomerController extends Controller
             return response()->json(['success' => true, 'customer' => $customer, 'message' => 'Customer created successfully.']);
         }
 
-        return redirect()->route('masters.customers.index')->with('success', 'Customer created successfully.');
+        return redirect()->route('masters.customers.index')->with('success', "Customer {$customer->name} created successfully.");
     }
 
     public function show(Customer $customer)
@@ -102,7 +115,7 @@ class CustomerController extends Controller
             return response()->json(['success' => true, 'customer' => $customer, 'message' => 'Customer updated successfully.']);
         }
 
-        return redirect()->route('masters.customers.index')->with('success', 'Customer updated successfully.');
+        return redirect()->route('masters.customers.index')->with('success', "Customer {$customer->name} updated successfully.");
     }
 
     public function destroy(Customer $customer)
@@ -110,10 +123,14 @@ class CustomerController extends Controller
         $name = $customer->name;
         $customer->delete();
 
-        return response()->json([
-            'success' => true,
-            'message' => "Customer {$name} deleted successfully."
-        ]);
+        if (request()->wantsJson() || request()->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => "Customer {$name} deleted successfully."
+            ]);
+        }
+
+        return redirect()->route('masters.customers.index')->with('success', "Customer {$name} deleted successfully.");
     }
 
     public function statement(Customer $customer)
@@ -129,4 +146,3 @@ class CustomerController extends Controller
         ]);
     }
 }
-

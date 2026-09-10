@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\JobAssignment;
 use App\Models\JobAssignmentItem;
 use App\Models\JobWorker;
+use App\Models\Item;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -14,15 +15,23 @@ class JobAssignController extends Controller
 {
     public function index(Request $request)
     {
+        $assignments = JobAssignment::with('items')->latest()->get();
+
         if ($request->wantsJson() || $request->ajax()) {
-            return response()->json(JobAssignment::with('items')->latest()->get());
+            return response()->json($assignments);
         }
 
-        return view('dashboard', [
-            'user' => Auth::user(),
-            'module' => 'jobwork',
-            'submodule' => 'assign'
-        ]);
+        $jobworkers = JobWorker::where('status', 'Active')->get();
+        $items = Item::all();
+
+        $stats = [
+            'totalOrders' => JobAssignment::count(),
+            'totalIssuedQty' => JobAssignment::sum('issued_qty'),
+            'totalProcessValue' => JobAssignment::sum('total_amount'),
+            'activeWorkers' => $jobworkers->count()
+        ];
+
+        return view('jobwork.assign.index', compact('assignments', 'jobworkers', 'items', 'stats'));
     }
 
     public function store(Request $request)
@@ -87,8 +96,14 @@ class JobAssignController extends Controller
 
     public function destroy(JobAssignment $assign)
     {
+        $no = $assign->job_order_no;
         $assign->items()->delete();
         $assign->delete();
-        return response()->json(['success' => true, 'message' => 'Job order removed.']);
+
+        if (request()->wantsJson() || request()->ajax()) {
+            return response()->json(['success' => true, 'message' => "Job order {$no} removed."]);
+        }
+
+        return redirect()->route('jobwork.assign.index')->with('success', "Job order {$no} removed.");
     }
 }

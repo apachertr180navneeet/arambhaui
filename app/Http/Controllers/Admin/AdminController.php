@@ -14,50 +14,46 @@ class AdminController extends Controller
 {
     public function users(Request $request)
     {
+        $users = User::latest()->get();
+
         if ($request->wantsJson() || $request->ajax()) {
-            return response()->json(User::latest()->get());
+            return response()->json($users);
         }
 
-        return view('dashboard', [
-            'user' => Auth::user(),
-            'module' => 'admin',
-            'submodule' => 'users'
-        ]);
+        $stats = [
+            'totalUsers' => $users->count(),
+            'activeUsers' => $users->where('status', 'Active')->count(),
+            'admins' => $users->where('role', 'Administrator')->count()
+        ];
+
+        return view('admin.users', compact('users', 'stats'));
     }
 
     public function roles(Request $request)
     {
-        return view('dashboard', [
-            'user' => Auth::user(),
-            'module' => 'admin',
-            'submodule' => 'roles'
-        ]);
+        return view('admin.roles');
     }
 
     public function activity(Request $request)
     {
+        $activities = ActivityLog::latest()->take(50)->get();
+
         if ($request->wantsJson() || $request->ajax()) {
-            return response()->json(ActivityLog::latest()->get());
+            return response()->json($activities);
         }
 
-        return view('dashboard', [
-            'user' => Auth::user(),
-            'module' => 'admin',
-            'submodule' => 'activity'
-        ]);
+        return view('admin.activity', compact('activities'));
     }
 
     public function settings(Request $request)
     {
+        $settings = CompanySetting::all()->pluck('value', 'key');
+
         if ($request->wantsJson() || $request->ajax()) {
-            return response()->json(CompanySetting::all()->pluck('value', 'key'));
+            return response()->json($settings);
         }
 
-        return view('dashboard', [
-            'user' => Auth::user(),
-            'module' => 'admin',
-            'submodule' => 'settings'
-        ]);
+        return view('admin.settings', compact('settings'));
     }
 
     public function storeUser(Request $request)
@@ -81,7 +77,7 @@ class AdminController extends Controller
             return response()->json(['success' => true, 'user' => $user]);
         }
 
-        return redirect()->route('admin.users.index')->with('success', 'User created successfully.');
+        return redirect()->route('admin.users.index')->with('success', "User {$user->name} created successfully.");
     }
 
     public function updateSettings(Request $request)
@@ -96,6 +92,6 @@ class AdminController extends Controller
             return response()->json(['success' => true, 'message' => 'Company settings saved.']);
         }
 
-        return redirect()->route('admin.settings')->with('success', 'Settings updated.');
+        return redirect()->route('admin.settings')->with('success', 'Company settings updated successfully.');
     }
 }

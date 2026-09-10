@@ -10,39 +10,41 @@ use Illuminate\Support\Facades\Auth;
 class UnitController extends Controller
 {
     /**
-     * Display a listing of Units (or return JSON).
+     * Display a listing of Units.
      */
     public function index(Request $request)
     {
-        if ($request->wantsJson() || $request->ajax()) {
-            $query = Unit::with('parent');
+        $query = Unit::with('parent');
 
-            if ($request->has('search') && !empty($request->search)) {
-                $search = $request->search;
-                $query->where(function ($q) use ($search) {
-                    $q->where('name', 'like', "%{$search}%")
-                      ->orWhere('code', 'like', "%{$search}%")
-                      ->orWhere('symbol', 'like', "%{$search}%");
-                });
-            }
-
-            if ($request->has('status') && !empty($request->status)) {
-                $query->where('status', $request->status);
-            }
-
-            return response()->json($query->orderByRaw('parent_id IS NOT NULL, parent_id, id')->get());
+        if ($request->has('search') && !empty($request->search)) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('code', 'like', "%{$search}%")
+                  ->orWhere('symbol', 'like', "%{$search}%");
+            });
         }
 
-        return view('dashboard', [
-            'user' => Auth::user(),
-            'module' => 'masters',
-            'submodule' => 'units'
-        ]);
+        if ($request->has('status') && !empty($request->status)) {
+            $query->where('status', $request->status);
+        }
+
+        $units = $query->orderByRaw('parent_id IS NOT NULL, parent_id, id')->get();
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json($units);
+        }
+
+        $parentUnits = Unit::whereNull('parent_id')->get();
+        $stats = [
+            'total' => Unit::count(),
+            'baseUnits' => Unit::whereNull('parent_id')->count(),
+            'derivedUnits' => Unit::whereNotNull('parent_id')->count()
+        ];
+
+        return view('masters.units.index', compact('units', 'parentUnits', 'stats'));
     }
 
-    /**
-     * Store a newly created Unit.
-     */
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -61,7 +63,6 @@ class UnitController extends Controller
         $name = trim($validated['name']);
         $validated['code'] = !empty($validated['code']) ? strtoupper(trim($validated['code'])) : strtoupper(substr($name, 0, 10));
 
-        // If parent_id is empty/0, set to null
         if (empty($validated['parent_id'])) {
             $validated['parent_id'] = null;
             $validated['conversion_factor'] = null;
@@ -70,16 +71,17 @@ class UnitController extends Controller
         $unit = Unit::create($validated);
         $unit->load('parent');
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Unit created successfully!',
-            'unit' => $unit
-        ]);
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Unit created successfully!',
+                'unit' => $unit
+            ]);
+        }
+
+        return redirect()->route('masters.units.index')->with('success', "Unit {$unit->name} created.");
     }
 
-    /**
-     * Update the specified Unit.
-     */
     public function update(Request $request, Unit $unit)
     {
         $validated = $request->validate([
@@ -104,28 +106,33 @@ class UnitController extends Controller
         $unit->update($validated);
         $unit->load('parent');
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Unit updated successfully!',
-            'unit' => $unit
-        ]);
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Unit updated successfully!',
+                'unit' => $unit
+            ]);
+        }
+
+        return redirect()->route('masters.units.index')->with('success', "Unit {$unit->name} updated.");
     }
 
-    /**
-     * Remove the specified Unit.
-     */
     public function destroy(Unit $unit)
     {
-        // Check if there are sub-units
+        $name = $unit->name;
         if ($unit->subUnits()->count() > 0) {
             $unit->subUnits()->update(['parent_id' => null, 'conversion_factor' => null]);
         }
 
         $unit->delete();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Unit deleted successfully!'
-        ]);
+        if (request()->wantsJson() || request()->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Unit deleted successfully!'
+            ]);
+        }
+
+        return redirect()->route('masters.units.index')->with('success', "Unit {$name} deleted.");
     }
 }

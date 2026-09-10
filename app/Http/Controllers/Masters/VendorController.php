@@ -11,15 +11,19 @@ class VendorController extends Controller
 {
     public function index(Request $request)
     {
+        $vendors = Vendor::latest()->get();
+
         if ($request->wantsJson() || $request->ajax()) {
-            return response()->json(Vendor::latest()->get());
+            return response()->json($vendors);
         }
 
-        return view('dashboard', [
-            'user' => Auth::user(),
-            'module' => 'masters',
-            'submodule' => 'vendors'
-        ]);
+        $stats = [
+            'total' => Vendor::count(),
+            'fabricVendors' => Vendor::where('category', 'Fabric')->count(),
+            'trimVendors' => Vendor::where('category', 'Trims & Accessories')->count()
+        ];
+
+        return view('masters.vendors.index', compact('vendors', 'stats'));
     }
 
     public function store(Request $request)
@@ -43,7 +47,7 @@ class VendorController extends Controller
             return response()->json(['success' => true, 'vendor' => $vendor]);
         }
 
-        return redirect()->route('masters.vendors.index')->with('success', 'Vendor created successfully.');
+        return redirect()->route('masters.vendors.index')->with('success', "Vendor {$vendor->name} created successfully.");
     }
 
     public function show(Vendor $vendor)
@@ -57,17 +61,32 @@ class VendorController extends Controller
             'name' => 'sometimes|required|string|max:255',
             'phone' => 'sometimes|required|string|max:20',
             'category' => 'nullable|string',
+            'company_name' => 'nullable|string|max:255',
+            'email' => 'nullable|email|max:255',
+            'gstin' => 'nullable|string|max:50',
+            'address' => 'nullable|string',
             'credit_days' => 'nullable|integer',
             'status' => 'nullable|string'
         ]);
 
         $vendor->update($validated);
-        return response()->json(['success' => true, 'vendor' => $vendor]);
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json(['success' => true, 'vendor' => $vendor]);
+        }
+
+        return redirect()->route('masters.vendors.index')->with('success', "Vendor {$vendor->name} updated successfully.");
     }
 
     public function destroy(Vendor $vendor)
     {
+        $name = $vendor->name;
         $vendor->delete();
-        return response()->json(['success' => true, 'message' => 'Vendor deleted.']);
+
+        if (request()->wantsJson() || request()->ajax()) {
+            return response()->json(['success' => true, 'message' => "Vendor {$name} deleted."]);
+        }
+
+        return redirect()->route('masters.vendors.index')->with('success', "Vendor {$name} deleted successfully.");
     }
 }

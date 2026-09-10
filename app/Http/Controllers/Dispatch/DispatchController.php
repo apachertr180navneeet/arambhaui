@@ -5,7 +5,8 @@ namespace App\Http\Controllers\Dispatch;
 use App\Http\Controllers\Controller;
 use App\Models\DispatchChallan;
 use App\Models\DispatchItem;
-use App\Models\ProductionOrder;
+use App\Models\Customer;
+use App\Models\JobAssignment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -14,28 +15,32 @@ class DispatchController extends Controller
 {
     public function index(Request $request)
     {
+        $challans = DispatchChallan::with('items')->latest()->get();
+
         if ($request->wantsJson() || $request->ajax()) {
-            return response()->json(DispatchChallan::with('items')->latest()->get());
+            return response()->json($challans);
         }
 
-        return view('dashboard', [
-            'user' => Auth::user(),
-            'module' => 'dispatch',
-            'submodule' => 'dispatch'
-        ]);
+        $customers = Customer::all();
+        $stats = [
+            'totalChallans' => DispatchChallan::count(),
+            'totalDispatchedQty' => DispatchChallan::sum('total_qty'),
+            'inTransit' => DispatchChallan::where('status', 'In Transit')->count(),
+            'delivered' => DispatchChallan::where('status', 'Delivered')->count()
+        ];
+
+        return view('dispatch.challans.index', compact('challans', 'customers', 'stats'));
     }
 
     public function readyList(Request $request)
     {
+        $readyAssignments = JobAssignment::where('status', 'Completed')->orWhere('status', 'Issued')->latest()->get();
+
         if ($request->wantsJson() || $request->ajax()) {
-            return response()->json(ProductionOrder::where('status', 'Ready for Dispatch')->get());
+            return response()->json($readyAssignments);
         }
 
-        return view('dashboard', [
-            'user' => Auth::user(),
-            'module' => 'dispatch',
-            'submodule' => 'ready'
-        ]);
+        return view('dispatch.ready', compact('readyAssignments'));
     }
 
     public function store(Request $request)
@@ -61,24 +66,20 @@ class DispatchController extends Controller
 
             $challan = DispatchChallan::create($validated);
 
-            // Create sample dispatch lines
             DispatchItem::create([
                 'dispatch_challan_id' => $challan->id,
-                'style_name' => 'Garment Lot Line',
+                'style_name' => 'Finished Garment Lot Line',
                 'size' => 'All Sizes (M/L/XL)',
                 'color' => 'Assorted',
                 'qty' => $validated['total_qty'],
                 'carton_barcode' => 'CTN-' . rand(10000, 99999)
             ]);
 
-            // Update order status if exists
-            ProductionOrder::where('order_no', $validated['order_no'])->update(['status' => 'Completed']);
-
             if ($request->wantsJson() || $request->ajax()) {
                 return response()->json(['success' => true, 'challan' => $challan->load('items')]);
             }
 
-            return redirect()->route('dispatch.challans.index')->with('success', "Dispatch Challan {$challanNo} generated.");
+            return redirect()->route('dispatch.dispatch')->with('success', "Dispatch Challan {$challanNo} generated.");
         });
     }
 
@@ -89,8 +90,14 @@ class DispatchController extends Controller
 
     public function destroy(DispatchChallan $challan)
     {
+        $no = $challan->challan_no;
         $challan->items()->delete();
         $challan->delete();
-        return response()->json(['success' => true, 'message' => 'Dispatch challan removed.']);
+
+        if (request()->wantsJson() || request()->ajax()) {
+            return response()->json(['success' => true, 'message' => "Dispatch challan {$no} removed."]);
+        }
+
+        return redirect()->route('dispatch.dispatch')->with('success', "Dispatch challan {$no} removed.");
     }
 }

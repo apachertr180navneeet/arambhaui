@@ -8,6 +8,31 @@ use Tests\TestCase;
 
 class AdminAuthTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        User::firstOrCreate(
+            ['email' => 'admin@garmenterp.com'],
+            [
+                'name' => 'Admin User',
+                'password' => 'admin123',
+                'role' => 'Administrator',
+                'status' => 'Active'
+            ]
+        );
+
+        User::firstOrCreate(
+            ['email' => 'supervisor@garmenterp.com'],
+            [
+                'name' => 'Supervisor User',
+                'password' => 'admin123',
+                'role' => 'Production Manager',
+                'status' => 'Active'
+            ]
+        );
+    }
+
     /**
      * Test unauthenticated users are redirected to login.
      */

@@ -11,20 +11,24 @@ class ItemController extends Controller
 {
     public function index(Request $request)
     {
+        $items = Item::latest()->get();
+
         if ($request->wantsJson() || $request->ajax()) {
-            return response()->json(Item::latest()->get());
+            return response()->json($items);
         }
 
-        return view('dashboard', [
-            'user' => Auth::user(),
-            'module' => 'masters',
-            'submodule' => 'items'
-        ]);
+        $stats = [
+            'total' => Item::count(),
+            'fabricCount' => Item::where('category', 'Fabric')->count(),
+            'trimsCount' => Item::where('category', 'Trims')->count(),
+            'lowStockCount' => Item::whereRaw('current_stock <= min_stock')->count()
+        ];
+
+        return view('masters.items.index', compact('items', 'stats'));
     }
 
     public function store(Request $request)
     {
-        // Support frontend aliases
         $data = $request->all();
         if (!isset($data['unit_cost']) && isset($data['rate'])) {
             $data['unit_cost'] = $data['rate'];
@@ -75,14 +79,6 @@ class ItemController extends Controller
                 $code = $prefix . '-' . str_pad($count, 3, '0', STR_PAD_LEFT);
             }
             $validated['code'] = $code;
-        } else {
-            // Check uniqueness or append suffix if duplicate
-            $origCode = $validated['code'];
-            $attempt = 1;
-            while (Item::where('code', $validated['code'])->exists()) {
-                $validated['code'] = $origCode . '-' . $attempt;
-                $attempt++;
-            }
         }
 
         $item = Item::create($validated);
@@ -91,7 +87,7 @@ class ItemController extends Controller
             return response()->json(['success' => true, 'item' => $item]);
         }
 
-        return redirect()->route('masters.items.index')->with('success', 'Item master registered.');
+        return redirect()->route('masters.items.index')->with('success', "Item {$item->name} registered.");
     }
 
     public function show(Item $item)
@@ -134,12 +130,23 @@ class ItemController extends Controller
         ])->validate();
 
         $item->update($validated);
-        return response()->json(['success' => true, 'item' => $item]);
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json(['success' => true, 'item' => $item]);
+        }
+
+        return redirect()->route('masters.items.index')->with('success', "Item {$item->name} updated.");
     }
 
     public function destroy(Item $item)
     {
+        $name = $item->name;
         $item->delete();
-        return response()->json(['success' => true, 'message' => 'Item deleted.']);
+
+        if (request()->wantsJson() || request()->ajax()) {
+            return response()->json(['success' => true, 'message' => "Item {$name} deleted."]);
+        }
+
+        return redirect()->route('masters.items.index')->with('success', "Item {$name} deleted.");
     }
 }
