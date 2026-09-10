@@ -89,6 +89,52 @@ class JobAssignController extends Controller
         });
     }
 
+    public function create()
+    {
+        $jobworkers = JobWorker::where('status', 'Active')->get();
+        $items = Item::all();
+        $count = JobAssignment::count() + 1;
+        $nextJobOrderNo = 'JA-2026-' . str_pad($count, 3, '0', STR_PAD_LEFT);
+
+        return view('jobwork.assign.create', compact('jobworkers', 'items', 'nextJobOrderNo'));
+    }
+
+    public function edit(JobAssignment $assign)
+    {
+        $jobworkers = JobWorker::where('status', 'Active')->get();
+        $items = Item::all();
+        $assign->load('items');
+
+        return view('jobwork.assign.edit', compact('assign', 'jobworkers', 'items'));
+    }
+
+    public function update(Request $request, JobAssignment $assign)
+    {
+        $validated = $request->validate([
+            'job_worker_name' => 'required|string|max:255',
+            'process_name' => 'required|string',
+            'lot_number' => 'required|string',
+            'style_name' => 'required|string',
+            'issue_date' => 'required|date',
+            'due_date' => 'nullable|date',
+            'issued_qty' => 'required|integer|min:0',
+            'rate_per_piece' => 'required|numeric|min:0',
+            'status' => 'nullable|string',
+            'instructions' => 'nullable|string'
+        ]);
+
+        $totalAmount = $validated['issued_qty'] * $validated['rate_per_piece'];
+        $validated['total_amount'] = $totalAmount;
+
+        $assign->update($validated);
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json(['success' => true, 'job_assignment' => $assign]);
+        }
+
+        return redirect()->route('jobwork.assign.index')->with('success', "Job Order {$assign->job_order_no} updated successfully.");
+    }
+
     public function show(JobAssignment $assign)
     {
         return response()->json($assign->load('items'));

@@ -83,6 +83,53 @@ class DispatchController extends Controller
         });
     }
 
+    public function create()
+    {
+        $customers = Customer::all();
+        $count = DispatchChallan::count() + 1;
+        $nextChallanNo = 'DC-2026-' . str_pad($count, 3, '0', STR_PAD_LEFT);
+
+        return view('dispatch.challans.create', compact('customers', 'nextChallanNo'));
+    }
+
+    public function edit(DispatchChallan $challan)
+    {
+        $customers = Customer::all();
+        $challan->load('items');
+
+        return view('dispatch.challans.edit', compact('challan', 'customers'));
+    }
+
+    public function update(Request $request, DispatchChallan $challan)
+    {
+        $validated = $request->validate([
+            'order_no' => 'required|string',
+            'customer_name' => 'required|string|max:255',
+            'dispatch_date' => 'required|date',
+            'transporter_name' => 'required|string',
+            'lr_number' => 'nullable|string',
+            'vehicle_number' => 'nullable|string',
+            'destination_city' => 'nullable|string',
+            'total_cartons' => 'required|integer|min:0',
+            'total_qty' => 'required|integer|min:0',
+            'status' => 'nullable|string'
+        ]);
+
+        $challan->update($validated);
+
+        if ($challan->items()->exists()) {
+            $challan->items()->first()->update([
+                'qty' => $validated['total_qty']
+            ]);
+        }
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json(['success' => true, 'challan' => $challan->load('items')]);
+        }
+
+        return redirect()->route('dispatch.challans.index')->with('success', "Dispatch Challan {$challan->challan_no} updated successfully.");
+    }
+
     public function show(DispatchChallan $challan)
     {
         return response()->json($challan->load('items'));
@@ -98,6 +145,6 @@ class DispatchController extends Controller
             return response()->json(['success' => true, 'message' => "Dispatch challan {$no} removed."]);
         }
 
-        return redirect()->route('dispatch.dispatch')->with('success', "Dispatch challan {$no} removed.");
+        return redirect()->route('dispatch.challans.index')->with('success', "Dispatch challan {$no} removed.");
     }
 }
