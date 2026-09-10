@@ -168,8 +168,8 @@ const UI = {
 
   // --- Formatters ---
   formatCurrency(num) {
-    if (num === null || num === undefined) return "₹0";
-    return "₹" + Number(num).toLocaleString('en-IN');
+    if (num === null || num === undefined || isNaN(Number(num))) return "₹0";
+    return "₹" + Number(num).toLocaleString('en-IN', { maximumFractionDigits: 2 });
   },
 
   formatDate(dateStr) {
@@ -184,14 +184,15 @@ const UI = {
   },
 
   formatStatusBadge(status) {
+    if (!status) return `<span class="badge badge-slate"><span class="badge-dot"></span>-</span>`;
     const s = String(status).toLowerCase();
-    if (s.includes("active") || s.includes("received") || s.includes("completed") || s.includes("paid") || s.includes("passed") || s.includes("approved")) {
+    if (s.includes("active") || s.includes("received") || s.includes("completed") || s.includes("paid") || s.includes("passed") || s.includes("approved") || s.includes("settled")) {
       return `<span class="badge badge-success"><span class="badge-dot"></span>${status}</span>`;
     }
-    if (s.includes("in production") || s.includes("in progress") || s.includes("pending") || s.includes("partially") || s.includes("in transit") || s.includes("material")) {
+    if (s.includes("in production") || s.includes("in progress") || s.includes("pending") || s.includes("partially") || s.includes("in transit") || s.includes("material") || s.includes("due")) {
       return `<span class="badge badge-warning"><span class="badge-dot"></span>${status}</span>`;
     }
-    if (s.includes("cancel") || s.includes("reject") || s.includes("unpaid") || s.includes("failed") || s.includes("overdue") || s.includes("damage")) {
+    if (s.includes("cancel") || s.includes("reject") || s.includes("unpaid") || s.includes("failed") || s.includes("overdue") || s.includes("damage") || s.includes("inactive")) {
       return `<span class="badge badge-danger"><span class="badge-dot"></span>${status}</span>`;
     }
     if (s.includes("ready") || s.includes("dispatched") || s.includes("assigned")) {
@@ -200,10 +201,50 @@ const UI = {
     return `<span class="badge badge-slate"><span class="badge-dot"></span>${status}</span>`;
   },
 
-  // --- CSV Export Helper ---
+  // --- Universal Table Filter Tool ---
+  filterGenericTable(tableId, query) {
+    const q = (query || "").toLowerCase().trim();
+    const table = document.getElementById(tableId) || document.querySelector(`table.${tableId}`);
+    if (!table) return;
+    const tbody = table.querySelector("tbody");
+    if (!tbody) return;
+    const rows = tbody.querySelectorAll("tr");
+    let visibleCount = 0;
+    
+    rows.forEach(r => {
+      if (r.classList.contains("filter-no-results")) return;
+      if (r.classList.contains("empty-state-row")) return;
+      
+      const match = !q || r.innerText.toLowerCase().includes(q);
+      r.style.display = match ? "" : "none";
+      if (match) visibleCount++;
+    });
+
+    let noResultsRow = tbody.querySelector(".filter-no-results");
+    if (visibleCount === 0 && q) {
+      if (!noResultsRow) {
+        noResultsRow = document.createElement("tr");
+        noResultsRow.className = "filter-no-results";
+        const thCount = table.querySelectorAll("thead th").length || 8;
+        noResultsRow.innerHTML = `<td colspan="${thCount}" style="text-align:center; padding:28px 16px; color:var(--slate-500); font-style:italic;">No matching records found for "<strong>${escapeHtml(query)}</strong>"</td>`;
+        tbody.appendChild(noResultsRow);
+      } else {
+        noResultsRow.style.display = "";
+        noResultsRow.querySelector("td").innerHTML = `No matching records found for "<strong>${escapeHtml(query)}</strong>"`;
+      }
+    } else if (noResultsRow) {
+      noResultsRow.style.display = "none";
+    }
+
+    function escapeHtml(text) {
+      return String(text).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+    }
+  },
+
+  // --- CSV Export Helpers ---
   exportToCSV(filename, headers, rows) {
-    let csvContent = "data:text/csv;charset=utf-8,";
-    csvContent += headers.map(h => `"${h}"`).join(",") + "\r\n";
+    let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+    csvContent += headers.map(h => `"${String(h).replace(/"/g, '""')}"`).join(",") + "\r\n";
     rows.forEach(row => {
       csvContent += row.map(cell => `"${String(cell || '').replace(/"/g, '""')}"`).join(",") + "\r\n";
     });
@@ -216,5 +257,140 @@ const UI = {
     link.click();
     link.remove();
     UI.showToast("Export Successful", `Downloaded ${filename}.csv`, "success");
+  },
+
+  exportTableToCSV(tableId, filename = "data_export") {
+    const table = document.getElementById(tableId) || document.querySelector(`table.${tableId}`);
+    if (!table) return UI.showToast("Export Error", "Table not found", "error");
+
+    const headers = [];
+    table.querySelectorAll("thead th").forEach(th => {
+      // Exclude action column headers
+      const txt = th.innerText.trim();
+      if (txt && !txt.toLowerCase().includes("action")) {
+        headers.push(txt);
+      }
+    });
+
+    const rows = [];
+    table.querySelectorAll("tbody tr").forEach(tr => {
+      if (tr.classList.contains("filter-no-results") || tr.style.display === "none") return;
+      const row = [];
+      const cells = tr.querySelectorAll("td");
+      if (cells.length === 0) return;
+      // Skip if action row
+      cells.forEach((td, idx) => {
+        if (idx < headers.length) {
+          row.push(td.innerText.trim().replace(/\n+/g, ' '));
+        }
+      });
+      if (row.length > 0) rows.push(row);
+    });
+
+    if (rows.length === 0) {
+      return UI.showToast("Export Notice", "No data rows available to export", "warning");
+    }
+
+    this.exportToCSV(filename, headers, rows);
+  },
+
+  // --- Copy to Clipboard Tool ---
+  copyToClipboard(text, successMessage = "Copied to clipboard") {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(() => {
+        UI.showToast("Copied", successMessage, "info");
+      }).catch(() => {
+        fallbackCopy(text, successMessage);
+      });
+    } else {
+      fallbackCopy(text, successMessage);
+    }
+
+    function fallbackCopy(val, msg) {
+      const ta = document.createElement("textarea");
+      ta.value = val;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      try {
+        document.execCommand("copy");
+        UI.showToast("Copied", msg, "info");
+      } catch (e) {
+        UI.showToast("Copy Failed", "Please manually copy the text", "error");
+      }
+      ta.remove();
+    }
+  },
+
+  // --- Form Button Loading Helper ---
+  setButtonLoading(button, isLoading, loadingText = "Saving...") {
+    if (!button) return;
+    if (isLoading) {
+      button.dataset.originalHtml = button.innerHTML;
+      button.disabled = true;
+      button.innerHTML = `
+        <svg class="animate-spin" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="animation:spin 1s linear infinite; display:inline-block; vertical-align:middle; margin-right:6px;">
+          <circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle>
+          <path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"></path>
+        </svg>
+        <span>${loadingText}</span>
+      `;
+    } else {
+      button.disabled = false;
+      if (button.dataset.originalHtml) {
+        button.innerHTML = button.dataset.originalHtml;
+        delete button.dataset.originalHtml;
+      }
+    }
+  },
+
+  // --- Print Section Tool ---
+  printSection(elementId, title = "GarmentERP Document") {
+    const el = document.getElementById(elementId);
+    if (!el) {
+      window.print();
+      return;
+    }
+    const printWindow = window.open('', '_blank', 'width=900,height=700');
+    if (!printWindow) {
+      window.print();
+      return;
+    }
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>${title}</title>
+        <link rel="stylesheet" href="/css/main.css">
+        <link rel="stylesheet" href="/css/print.css">
+        <style>
+          body { padding: 24px; font-family: 'Plus Jakarta Sans', -apple-system, sans-serif; background: #fff; }
+          .no-print, .table-actions, .table-toolbar { display: none !important; }
+          table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+          th, td { border: 1px solid #cbd5e1; padding: 8px 12px; text-align: left; font-size: 12px; }
+          th { background: #f8fafc; font-weight: 700; }
+        </style>
+      </head>
+      <body>
+        <div style="margin-bottom:20px; border-bottom:2px solid #0f172a; padding-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <h2 style="margin:0; font-size:18px; color:#0f172a;">FashionWorks Pvt. Ltd. - GarmentERP</h2>
+            <p style="margin:4px 0 0 0; font-size:12px; color:#64748b;">Generated on ${new Date().toLocaleString()}</p>
+          </div>
+          <div style="font-size:14px; font-weight:700; color:#2563eb;">${title}</div>
+        </div>
+        ${el.innerHTML}
+        <script>
+          window.onload = function() {
+            window.print();
+            window.onafterprint = function() { window.close(); };
+          };
+        </script>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
   }
 };
