@@ -15,9 +15,4 @@ class Vendor extends Model
     {
         return $this->hasMany(PurchaseOrder::class);
     }
-
-    public function purchaseInwards()
-    {
-        return $this->hasMany(PurchaseInward::class);
-    }
 }

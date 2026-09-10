@@ -166,7 +166,6 @@ const App = {
       units: "Unit Master",
       sizes: "Unit Master",
       orders: "Purchase Orders (PO)",
-      inward: "Goods Inward (GRN)",
       assign: "Job Assign Orders",
       "inward-report": "Job Inward & Ready Report",
       ready: "Ready for Dispatch",
@@ -227,8 +226,7 @@ const App = {
     } else if (m === "jobwork") {
       html = JobWorkView.render(s);
     } else if (m === "purchase") {
-      if (s === "inward") html = PurchaseView.renderInward();
-      else html = PurchaseView.renderOrders();
+      html = PurchaseView.renderOrders();
     } else if (m === "qr") {
       if (s === "scanner") QRView.activeTab = "customer-portal";
       else if (s === "generator") QRView.activeTab = "discount";

@@ -114,7 +114,6 @@ class ERPStateManager {
         items,
         units,
         purchaseOrders,
-        purchaseInwards,
         jobAssignments,
         productionOrders,
         qualityChecks,
@@ -132,7 +131,6 @@ class ERPStateManager {
         fetchSafe('/masters/items'),
         fetchSafe('/masters/units'),
         fetchSafe('/purchase/orders'),
-        fetchSafe('/purchase/inward'),
         fetchSafe('/jobwork/assign'),
         fetchSafe('/production/orders'),
         fetchSafe('/production/qc'),
@@ -280,25 +278,6 @@ class ERPStateManager {
             totalPrice: Number(it.total_price || 0),
             receivedQty: Number(it.received_qty || 0)
           }))
-        }));
-      }
-
-      if (Array.isArray(purchaseInwards)) {
-        this.data.purchaseInwards = purchaseInwards.map(pi => ({
-          id: pi.grn_number || `GRN-${pi.id}`,
-          dbId: pi.id,
-          grnNumber: pi.grn_number,
-          poId: pi.purchase_order_id,
-          poNumber: pi.purchase_order ? pi.purchase_order.po_number : (pi.purchase_order_no || ""),
-          vendorName: pi.vendor ? pi.vendor.name : (pi.vendor_name || ""),
-          inwardDate: pi.inward_date,
-          supplierInvoiceNo: pi.supplier_invoice_no || "",
-          warehouse: pi.warehouse || "Main Raw Material Store - Unit 1",
-          receivedBy: pi.received_by || "Store Manager",
-          receivedQty: Number(pi.received_qty || 0),
-          acceptedQty: Number(pi.accepted_qty || 0),
-          rejectedQty: Number(pi.rejected_qty || 0),
-          remarks: pi.remarks || ""
         }));
       }
 

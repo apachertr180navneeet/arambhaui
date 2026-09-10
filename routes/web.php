@@ -11,7 +11,6 @@ use App\Http\Controllers\Masters\UnitController;
 use App\Http\Controllers\JobWork\JobAssignController;
 use App\Http\Controllers\JobWork\JobInwardReportController;
 use App\Http\Controllers\Purchase\PurchaseOrderController;
-use App\Http\Controllers\Purchase\PurchaseInwardController;
 use App\Http\Controllers\Qr\QrController;
 use App\Http\Controllers\Dispatch\DispatchController;
 use App\Http\Controllers\Accounts\AccountsController;
@@ -66,11 +65,10 @@ Route::middleware('auth')->group(function () {
     });
 
     // ==========================================
-    // 3. PURCHASE & INWARDS (GRN)
+    // 3. PURCHASE ORDERS
     // ==========================================
     Route::prefix('purchase')->name('purchase.')->group(function () {
         Route::resource('orders', PurchaseOrderController::class);
-        Route::resource('inward', PurchaseInwardController::class);
     });
 
     // ==========================================

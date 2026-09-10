@@ -1246,23 +1246,6 @@ const INITIAL_DATA = {
         }
       ]
     }
-  ],
-  purchaseInwards: [
-    {
-      id: "GRN-2026-0001",
-      grnNumber: "GRN-2026-0001",
-      poId: "PO-2026-0002",
-      poNumber: "PO-2026-0002",
-      vendorName: "Apex Trims & Accessories",
-      inwardDate: "2026-09-05",
-      supplierInvoiceNo: "INV-APEX-8891",
-      warehouse: "Main Raw Material Store - Unit 1",
-      receivedBy: "Ramesh Thorat",
-      receivedQty: 10000,
-      acceptedQty: 10000,
-      rejectedQty: 0,
-      remarks: "Quality checked and verified."
-    }
   ]
 };
 
