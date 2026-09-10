@@ -37,11 +37,6 @@ class DashboardController extends Controller
         return view('dashboard', ['user' => Auth::user(), 'module' => 'jobwork', 'submodule' => $submodule]);
     }
 
-    public function production($submodule = 'orders')
-    {
-        return view('dashboard', ['user' => Auth::user(), 'module' => 'production', 'submodule' => $submodule]);
-    }
-
     public function qr($submodule = 'generator')
     {
         return view('dashboard', ['user' => Auth::user(), 'module' => 'qr', 'submodule' => $submodule]);

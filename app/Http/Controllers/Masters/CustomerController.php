@@ -12,7 +12,7 @@ class CustomerController extends Controller
     public function index(Request $request)
     {
         if ($request->wantsJson() || $request->ajax()) {
-            $query = Customer::withCount(['payments', 'productionOrders']);
+            $query = Customer::withCount(['payments']);
             if ($request->has('search') && !empty($request->search)) {
                 $search = $request->search;
                 $query->where(function ($q) use ($search) {
@@ -74,7 +74,7 @@ class CustomerController extends Controller
     {
         return response()->json([
             'success' => true,
-            'customer' => $customer->load(['payments', 'productionOrders'])
+            'customer' => $customer->load(['payments'])
         ]);
     }
 

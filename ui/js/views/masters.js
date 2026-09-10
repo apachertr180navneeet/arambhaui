@@ -264,39 +264,10 @@ const MastersView = {
           </div>
         </div>
 
-        <!-- Recent Sales Orders -->
-        <div>
-          <h4 style="font-size:0.9rem; margin-bottom:8px; color:var(--slate-900);">Active Sales Orders (${orders.length})</h4>
-          ${orders.length > 0 ? `
-            <table class="data-table" style="font-size:0.8rem;">
-              <thead>
-                <tr>
-                  <th>Order No</th>
-                  <th>Product</th>
-                  <th>Qty</th>
-                  <th>Amount</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${orders.map(o => `
-                  <tr>
-                    <td class="mono-cell font-bold">${o.id}</td>
-                    <td>${o.product}</td>
-                    <td class="font-mono">${o.quantity.toLocaleString('en-IN')} pcs</td>
-                    <td>${UI.formatCurrency(o.amount)}</td>
-                    <td>${UI.formatStatusBadge(o.status)}</td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          ` : `<p style="font-size:0.825rem; color:var(--slate-500);">No active orders for this customer.</p>`}
-        </div>
-
         <!-- Action Shortcuts -->
         <div style="display:flex; gap:10px; justify-content:flex-end;">
           <button class="btn btn-secondary btn-sm" onclick="MastersView.openCustomerModal('${cust.id}')">Edit Profile</button>
-          <button class="btn btn-primary btn-sm" onclick="App.navigate('accounts', 'receipts'); setTimeout(() => AccountsView.openReceiptModal('${cust.name}'), 100); UI.closeDrawer();">
+          <button class="btn btn-primary btn-sm" onclick="App.navigate('accounts', 'customer-accounts'); setTimeout(() => AccountsView.openReceiptModal('${cust.name}'), 100); UI.closeDrawer();">
             Receive Payment
           </button>
         </div>
@@ -306,7 +277,7 @@ const MastersView = {
     UI.openDrawer({
       title: cust.name,
       subtitle: `${cust.id} • ${cust.companyName}`,
-      tabs: [{ id: "overview", label: "Overview" }, { id: "orders", label: "Orders" }],
+      tabs: [{ id: "overview", label: "Overview" }],
       content,
       size: "drawer-lg"
     });

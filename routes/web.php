@@ -10,9 +10,6 @@ use App\Http\Controllers\Masters\ItemController;
 use App\Http\Controllers\Masters\UnitController;
 use App\Http\Controllers\JobWork\JobAssignController;
 use App\Http\Controllers\JobWork\JobInwardReportController;
-use App\Http\Controllers\Production\ProductionOrderController;
-use App\Http\Controllers\Production\QualityCheckController;
-use App\Http\Controllers\Production\LotTrackingController;
 use App\Http\Controllers\Qr\QrController;
 use App\Http\Controllers\Dispatch\DispatchController;
 use App\Http\Controllers\Accounts\AccountsController;
@@ -64,16 +61,6 @@ Route::middleware('auth')->group(function () {
     Route::prefix('jobwork')->name('jobwork.')->group(function () {
         Route::resource('assign', JobAssignController::class);
         Route::get('inward-report', [JobInwardReportController::class, 'index'])->name('inward-report');
-    });
-
-    // ==========================================
-    // 4. MANUFACTURING & PRODUCTION
-    // ==========================================
-    Route::prefix('production')->name('production.')->group(function () {
-        Route::resource('orders', ProductionOrderController::class);
-        Route::resource('qc', QualityCheckController::class);
-        Route::get('jobwork', [ProductionOrderController::class, 'index'])->name('jobwork');
-        Route::get('tracking/{lot?}', [LotTrackingController::class, 'index'])->name('tracking');
     });
 
     // ==========================================

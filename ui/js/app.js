@@ -128,7 +128,6 @@ const App = {
       dashboard: "Dashboard",
       masters: "Masters Management",
       jobwork: "Job Work & Assign",
-      production: "Production Management",
       qr: "QR Management",
       dispatch: "Dispatch Management",
       accounts: "Accounts & Settlements",
@@ -145,10 +144,6 @@ const App = {
       sizes: "Size & Color Master",
       assign: "Job Assign Orders",
       "inward-report": "Job Inward & Ready Report",
-      orders: "Sales Orders",
-      jobwork: "Job Work Assignment",
-      qc: "Quality Check (QC)",
-      tracking: "Lot Tracking",
       inward: "Purchase Inward (GRN)",
       ready: "Ready for Dispatch",
       dispatch: "Dispatch Challans",
@@ -207,12 +202,6 @@ const App = {
       else html = MastersView.renderCustomers();
     } else if (m === "jobwork") {
       html = JobWorkView.render(s);
-    } else if (m === "production") {
-      if (s === "orders") html = ProductionView.renderOrders();
-      else if (s === "jobwork") html = ProductionView.renderJobWork();
-      else if (s === "qc") html = ProductionView.renderQC();
-      else if (s === "tracking") html = ProductionView.renderTracking();
-      else html = ProductionView.renderOrders();
     } else if (m === "qr") {
       if (s === "scanner") QRView.activeTab = "customer-portal";
       else if (s === "generator") QRView.activeTab = "discount";
@@ -322,9 +311,7 @@ const App = {
         const val = searchInput.value.trim().toLowerCase();
         if (!val) return;
 
-        if (val.includes("so-") || val.includes("order")) App.navigate("production", "orders");
-        else if (val.includes("inv-") || val.includes("invoice") || val.includes("bill")) App.navigate("invoices", "invoices");
-        else if (val.includes("jw-") || val.includes("job")) App.navigate("production", "jobwork");
+        if (val.includes("jw-") || val.includes("job")) App.navigate("jobwork", "assign");
         else if (val.includes("lot") || val.includes("qr")) App.navigate("qr", "scanner");
         else if (val.includes("cust") || val.includes("client")) App.navigate("masters", "customers");
         else if (val.includes("stock") || val.includes("fab") || val.includes("item")) App.navigate("masters", "items");
@@ -356,10 +343,11 @@ const App = {
         <div style="background:var(--slate-50); border:1px solid var(--slate-200); border-radius:var(--radius-lg); padding:16px;">
           <h4 style="font-size:0.95rem; margin-bottom:8px;">Manufacturing Core Lifecycle:</h4>
           <ol style="padding-left:20px; line-height:1.7;">
-            <li><strong>Customer Order:</strong> Book sales order & auto-generate QR Lot tag.</li>
-            <li><strong>Job Work Issue:</strong> Dispatch cutting bundles to job workers (Challan Rule 55).</li>
-            <li><strong>Job Work Inward & QC:</strong> Reconcile good vs defective pieces & pass into finished goods.</li>
-            <li><strong>Dispatch & Settlement:</strong> Generate Lorry Receipt, create Tax Invoice, and record payment.</li>
+            <li><strong>Masters Setup:</strong> Register Customers, Vendors, Job Workers, and Raw Fabrics / Items.</li>
+            <li><strong>Job Work Issue:</strong> Assign processes (Cutting, Stitching, Finishing) to external Job Workers.</li>
+            <li><strong>QR Code Generator & Verification:</strong> Create instant discount vouchers and bundle label tracking.</li>
+            <li><strong>Logistics & Dispatch:</strong> Generate Lorry Receipts (LR) and dispatch challans.</li>
+            <li><strong>Accounts & Ledgers:</strong> Reconcile customer and vendor payment balances.</li>
           </ol>
         </div>
 

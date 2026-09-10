@@ -634,13 +634,9 @@ const MastersView = {
         </div>
 
         <!-- Quick Summary Metrics -->
-        <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:10px;">
+        <div style="display:grid; grid-template-columns:1fr; gap:10px;">
           <div style="background:#ffffff; border:1px solid var(--slate-200); border-radius:var(--radius-md); padding:12px; text-align:center;">
-            <div style="font-size:0.75rem; color:var(--slate-500);">Sales Orders</div>
-            <div style="font-size:1.25rem; font-weight:800; color:var(--slate-900); margin-top:2px;">${orders.length}</div>
-          </div>
-          <div style="background:#ffffff; border:1px solid var(--slate-200); border-radius:var(--radius-md); padding:12px; text-align:center;">
-            <div style="font-size:0.75rem; color:var(--slate-500);">Payment Receipts</div>
+            <div style="font-size:0.75rem; color:var(--slate-500);">Payment Receipts & Settlements</div>
             <div style="font-size:1.25rem; font-weight:800; color:var(--slate-900); margin-top:2px;">${payments.length}</div>
           </div>
         </div>
@@ -660,45 +656,6 @@ const MastersView = {
             Record Payment
           </button>
         </div>
-      </div>
-    `;
-
-    const renderOrdersTab = () => `
-      <div>
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-          <h4 style="font-size:0.9rem; color:var(--slate-900); margin:0;">Active & Historical Customer Orders (${orders.length})</h4>
-          <button class="btn btn-primary btn-sm" onclick="UI.closeDrawer(); App.navigate('production', 'orders');">
-            + New Production Order
-          </button>
-        </div>
-        ${orders.length > 0 ? `
-          <div class="table-responsive">
-            <table class="data-table" style="font-size:0.8rem;">
-              <thead>
-                <tr>
-                  <th>Order No</th>
-                  <th>Style / Product</th>
-                  <th>Quantity</th>
-                  <th>Total Amount</th>
-                  <th>Delivery</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${orders.map(o => `
-                  <tr>
-                    <td class="mono-cell font-bold" style="color:var(--primary-600);">${o.id}</td>
-                    <td><strong>${o.product || o.style || '-'}</strong></td>
-                    <td class="font-mono">${(o.quantity || 0).toLocaleString('en-IN')} pcs</td>
-                    <td class="font-bold font-mono">${UI.formatCurrency(o.amount || 0)}</td>
-                    <td style="font-size:0.75rem;">${o.deliveryDate || o.targetDate || '-'}</td>
-                    <td>${UI.formatStatusBadge(o.status || 'Active')}</td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>
-        ` : `<div style="text-align:center; padding:30px; color:var(--slate-400); font-size:0.85rem;">No sales orders recorded for this customer yet.</div>`}
       </div>
     `;
 
@@ -744,7 +701,6 @@ const MastersView = {
     const drawerBodyContent = `
       <div id="cust-drawer-tab-content">
         ${initialTab === 'overview' ? renderOverviewTab() : 
-          initialTab === 'orders' ? renderOrdersTab() : 
           renderPaymentsTab()}
       </div>
     `;
@@ -754,7 +710,6 @@ const MastersView = {
       subtitle: `${cust.id} • ${cust.companyName || cust.name} • ${cust.city || 'Mumbai'}`,
       tabs: [
         { id: "overview", label: "Overview & Profile" },
-        { id: "orders", label: `Orders (${orders.length})` },
         { id: "payments", label: `Receipts (${payments.length})` }
       ],
       content: drawerBodyContent,
@@ -771,7 +726,6 @@ const MastersView = {
           const tabContentContainer = document.getElementById("cust-drawer-tab-content");
           if (tabContentContainer) {
             if (tabId === "overview") tabContentContainer.innerHTML = renderOverviewTab();
-            else if (tabId === "orders") tabContentContainer.innerHTML = renderOrdersTab();
             else if (tabId === "payments") tabContentContainer.innerHTML = renderPaymentsTab();
           }
         };

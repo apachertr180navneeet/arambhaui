@@ -15,9 +15,4 @@ class Customer extends Model
     {
         return $this->hasMany(CustomerPayment::class);
     }
-
-    public function productionOrders()
-    {
-        return $this->hasMany(ProductionOrder::class);
-    }
 }

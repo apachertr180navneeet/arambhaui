@@ -7,7 +7,7 @@ const DashboardView = {
   render() {
     const stats = ERPState.getDashboardStats();
     const activity = ERPState.data.activityLogs.slice(0, 6);
-    const productionOrders = ERPState.data.productionOrders || [];
+    const jobAssignments = ERPState.data.jobAssignments || ERPState.data.jobWorks || [];
     const items = ERPState.data.items || [];
     const customers = ERPState.data.customers || [];
     const vendors = ERPState.data.vendors || [];
@@ -74,18 +74,18 @@ const DashboardView = {
           </div>
         </div>
 
-        <!-- 3. Production Orders -->
-        <div class="kpi-card amber" onclick="App.navigate('production', 'orders')">
+        <!-- 3. Job Work Assignments -->
+        <div class="kpi-card amber" onclick="App.navigate('jobwork', 'assign')">
           <div class="kpi-top">
-            <span class="kpi-title">Production Orders</span>
+            <span class="kpi-title">Job Work Orders</span>
             <div class="kpi-icon-wrap amber">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
             </div>
           </div>
-          <div class="kpi-value">${productionOrders.length} Orders</div>
+          <div class="kpi-value">${jobAssignments.length} Assignments</div>
           <div class="kpi-bottom">
-            <span class="kpi-trend up">Live Queue</span>
-            <span class="kpi-period">Floor Progress</span>
+            <span class="kpi-trend up">External Vendors</span>
+            <span class="kpi-period">Active</span>
           </div>
         </div>
 
@@ -177,8 +177,8 @@ const DashboardView = {
               Live stage-by-stage quantity reconciliation for Order SO-2026-1045 (LOT-2026-00145)
             </p>
           </div>
-          <button class="btn btn-secondary btn-sm" onclick="ProductionView.openLotDetailDrawer('LOT-2026-00145')">
-            View Lot Timeline
+          <button class="btn btn-secondary btn-sm" onclick="App.navigate('jobwork', 'assign')">
+            View Job Work
           </button>
         </div>
 

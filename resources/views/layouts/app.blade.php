@@ -99,26 +99,6 @@
           </div>
         </div>
 
-        <!-- 5. MANUFACTURING & PRODUCTION -->
-        <div class="nav-section">
-          <div class="nav-section-title">Manufacturing</div>
-          <div class="nav-item nav-group">
-            <a class="nav-link nav-group-toggle" data-module="production">
-              <div class="nav-link-content">
-                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                <span class="nav-title">Production Mgmt</span>
-              </div>
-              <svg class="nav-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-            </a>
-            <div class="nav-submenu">
-              <a class="submenu-link" data-route="production/orders" data-module="production" data-submodule="orders">Customer Orders</a>
-              <a class="submenu-link" data-route="production/jobwork" data-module="production" data-submodule="jobwork">Job Worker Outward/Inward</a>
-              <a class="submenu-link" data-route="production/qc" data-module="production" data-submodule="qc">Quality Check (QC)</a>
-              <a class="submenu-link" data-route="production/tracking" data-module="production" data-submodule="tracking">Lot Tracking</a>
-            </div>
-          </div>
-        </div>
-
         <!-- 6. QR CODE MANAGEMENT -->
         <div class="nav-section">
           <div class="nav-section-title">Barcodes & QR</div>
@@ -355,7 +335,6 @@
   <script src="{{ asset('js/views/dashboard.js') }}?v={{ time() }}"></script>
   <script src="{{ asset('js/views/masters.js') }}?v={{ time() }}"></script>
   <script src="{{ asset('js/views/jobwork-view.js') }}?v={{ time() }}"></script>
-  <script src="{{ asset('js/views/production.js') }}?v={{ time() }}"></script>
   <script src="{{ asset('js/views/qr-view.js') }}?v={{ time() }}"></script>
   <script src="{{ asset('js/views/dispatch.js') }}?v={{ time() }}"></script>
   <script src="{{ asset('js/views/accounts.js') }}?v={{ time() }}"></script>
