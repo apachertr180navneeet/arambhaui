@@ -199,24 +199,216 @@ const PurchaseView = {
     `;
   },
 
-  // 2. CREATE / EDIT PO MODAL
-  openCreatePOModal() {
-    this.openPOFormModal(null);
-  },
-
-  openEditPOModal(poId) {
-    const po = (ERPState.data.purchaseOrders || []).find(o => (o.po_number || o.id) === poId);
-    this.openPOFormModal(po);
-  },
-
-  openPOFormModal(existingPo) {
-    const isEdit = !!existingPo;
+  // 2. CREATE PURCHASE ORDER (FULL PAGE VIEW)
+  renderCreatePage() {
     const vendors = ERPState.data.vendors || [];
     const items = ERPState.data.items || [];
+    const todayStr = new Date().toISOString().split("T")[0];
 
-    // Initialize line items
-    if (isEdit && existingPo.items && existingPo.items.length > 0) {
-      this.tempPoItems = JSON.parse(JSON.stringify(existingPo.items));
+    this.tempPoItems = [
+      {
+        item_name: items[0] ? items[0].name : "100% Combed Cotton Fabric 180 GSM",
+        item_code: items[0] ? (items[0].code || items[0].id) : "FAB-COT-180",
+        ordered_qty: 1000,
+        unit: items[0] ? (items[0].unit || "Meters") : "Meters",
+        rate: items[0] ? (items[0].rate || 145) : 145,
+        tax_percent: 5,
+        total_amount: 152250
+      }
+    ];
+
+    return `
+      <!-- Top Navigation & Action Header -->
+      <div class="dashboard-top-bar" style="margin-bottom:20px;">
+        <div class="dashboard-title-wrap">
+          <div style="display:flex; align-items:center; gap:12px; margin-bottom:6px;">
+            <button class="btn btn-secondary btn-sm" onclick="App.navigate('purchase', 'orders')" title="Back to PO List">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+              Back to PO List
+            </button>
+            <h1 style="margin:0;">
+              Create Purchase Order
+              <span style="font-size:0.75rem; font-weight:600; padding:2px 8px; background:var(--primary-100); color:var(--primary-700); border-radius:var(--radius-full); vertical-align:middle;">NEW PO</span>
+            </h1>
+          </div>
+          <p class="dashboard-subtitle">Fill in the supplier procurement contract, select fabrics/trims, and issue a formal purchase order.</p>
+        </div>
+
+        <div class="dashboard-controls">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="App.navigate('purchase', 'orders')">Cancel</button>
+          <button type="button" class="btn btn-primary btn-sm" onclick="PurchaseView.submitPOForm(null, null)">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            Generate & Issue PO
+          </button>
+        </div>
+      </div>
+
+      <form id="po-full-form" onsubmit="event.preventDefault();">
+        <!-- 1. General PO Information Card -->
+        <div class="card mb-6" style="padding:24px;">
+          <h3 style="font-size:1.05rem; font-weight:700; color:var(--slate-800); margin-bottom:16px; border-bottom:1px solid var(--slate-100); padding-bottom:10px;">
+            1. Supplier & Procurement Terms
+          </h3>
+
+          <div class="form-grid-3">
+            <div class="form-group">
+              <label class="form-label">Vendor / Mill Supplier <span class="required-star">*</span></label>
+              <select class="form-control" id="po-vendor" required>
+                ${vendors.length === 0 ? '<option value="">No vendors found (Add in Masters)</option>' : vendors.map(v => `<option value="${v.name}">${v.name} (${v.code || v.id})</option>`).join('')}
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">PO Issue Date <span class="required-star">*</span></label>
+              <input type="date" class="form-control" id="po-date" required value="${todayStr}">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Expected Delivery Date</label>
+              <input type="date" class="form-control" id="po-exp-date">
+            </div>
+          </div>
+
+          <div class="form-grid-3" style="margin-top:16px;">
+            <div class="form-group">
+              <label class="form-label">Warehouse Receiving Location</label>
+              <select class="form-control" id="po-warehouse">
+                <option value="Main Store - Unit 1">Main Store - Unit 1</option>
+                <option value="Dyeing & Trims Store - Unit 2">Dyeing & Trims Store - Unit 2</option>
+                <option value="Secondary Processing Hub">Secondary Processing Hub</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Payment Terms</label>
+              <select class="form-control" id="po-pay-terms">
+                <option value="Pending">Payment on Delivery (Net 30)</option>
+                <option value="Advance">100% Advance Payment</option>
+                <option value="Partially Paid">50% Advance, 50% on Delivery</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">PO Status</label>
+              <select class="form-control" id="po-status">
+                <option value="Draft">Draft (Internal Review)</option>
+                <option value="Approved" selected>Approved & Issued</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. Ordered Line Items Card -->
+        <div class="card mb-6" style="padding:24px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid var(--slate-100); padding-bottom:10px;">
+            <h3 style="font-size:1.05rem; font-weight:700; color:var(--slate-800); margin:0;">
+              2. Ordered Raw Materials & Line Items
+            </h3>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="PurchaseView.addTempItem()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              + Add Material Row
+            </button>
+          </div>
+
+          <div class="table-responsive">
+            <table class="data-table" id="po-items-table">
+              <thead>
+                <tr>
+                  <th style="width:36%;">RAW MATERIAL / ITEM</th>
+                  <th style="width:14%;">QUANTITY</th>
+                  <th style="width:12%;">UNIT</th>
+                  <th style="width:14%;">RATE (₹)</th>
+                  <th style="width:10%;">GST %</th>
+                  <th style="width:14%;">TOTAL (₹)</th>
+                  <th style="width:4%;"></th>
+                </tr>
+              </thead>
+              <tbody id="po-items-body">
+                ${this.renderTempPoRows(items)}
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Total Calculation Box -->
+          <div style="display:flex; justify-content:flex-end; margin-top:20px;">
+            <div style="width:320px; background:var(--slate-50); border:1px solid var(--slate-200); border-radius:var(--radius-lg); padding:16px; font-size:0.9rem; line-height:2;">
+              <div style="display:flex; justify-content:space-between; color:var(--slate-600);">
+                <span>Taxable Subtotal:</span> <strong class="font-mono" id="po-subtotal-val">₹0</strong>
+              </div>
+              <div style="display:flex; justify-content:space-between; color:var(--slate-600);">
+                <span>GST Tax Total:</span> <strong class="font-mono" id="po-tax-val">₹0</strong>
+              </div>
+              <div style="display:flex; justify-content:space-between; font-size:1.15rem; font-weight:800; color:var(--primary-700); border-top:2px solid var(--slate-300); padding-top:6px; margin-top:6px;">
+                <span>Grand Total:</span> <strong class="font-mono" id="po-grand-val">₹0</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. Instructions & Notes Card -->
+        <div class="card mb-6" style="padding:24px;">
+          <h3 style="font-size:1.05rem; font-weight:700; color:var(--slate-800); margin-bottom:16px; border-bottom:1px solid var(--slate-100); padding-bottom:10px;">
+            3. Purchase Order Notes & Delivery Guidelines
+          </h3>
+          <div class="form-group">
+            <textarea class="form-control" id="po-notes" rows="3" placeholder="Specify roll width (e.g. 58 inches), lab dip color shade approvals, test certificates required with delivery..."></textarea>
+          </div>
+        </div>
+
+        <!-- Bottom Action Bar -->
+        <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:24px; padding-bottom:32px;">
+          <button type="button" class="btn btn-secondary btn-lg" onclick="App.navigate('purchase', 'orders')">Cancel & Discard</button>
+          <button type="button" class="btn btn-primary btn-lg" onclick="PurchaseView.submitPOForm(null, null)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            Generate & Issue Purchase Order
+          </button>
+        </div>
+      </form>
+    `;
+  },
+
+  postRenderCreate() {
+    this.recalcPOTotals();
+  },
+
+  // 3. EDIT PURCHASE ORDER (FULL PAGE VIEW)
+  renderEditPage(poId) {
+    const orders = ERPState.data.purchaseOrders || [];
+    const targetId = poId || PurchaseView.currentEditPoId || window.INITIAL_ROUTE?.targetId;
+    const po = orders.find(o => (o.po_number || o.poNumber || o.id) === targetId || String(o.dbId || o.id) === String(targetId));
+
+    if (!po) {
+      return `
+        <div class="card" style="padding:48px; text-align:center;">
+          <h3>Purchase Order Not Found</h3>
+          <p class="text-muted">The requested purchase order could not be located in state.</p>
+          <button class="btn btn-primary btn-sm mt-4" onclick="App.navigate('purchase', 'orders')">Return to Purchase Orders</button>
+        </div>
+      `;
+    }
+
+    const vendors = ERPState.data.vendors || [];
+    const items = ERPState.data.items || [];
+    const poNumber = po.po_number || po.poNumber || po.id;
+    const poDbId = po.dbId || po.id;
+    const poDateVal = po.po_date || po.poDate || '';
+    const expDateVal = po.expected_delivery_date || po.delivery_date || po.deliveryDate || po.expectedDate || '';
+    const vendorVal = po.vendor_name || po.vendorName || (po.vendor ? po.vendor.name : '');
+    const warehouseVal = po.warehouse_location || po.warehouse || 'Main Store - Unit 1';
+    const payTermsVal = po.payment_status || 'Pending';
+    const statusVal = po.status || 'Approved';
+    const notesVal = po.notes || '';
+
+    if (po.items && Array.isArray(po.items) && po.items.length > 0) {
+      this.tempPoItems = JSON.parse(JSON.stringify(po.items)).map(it => ({
+        item_name: it.item_name || it.item || (items[0] ? items[0].name : "Cotton Fabric"),
+        item_code: it.item_code || it.code || "FAB-01",
+        ordered_qty: Number(it.ordered_qty || it.qty || 1),
+        unit: it.unit || "Meters",
+        rate: Number(it.rate || it.unit_price || 100),
+        tax_percent: Number(it.tax_percent !== undefined ? it.tax_percent : (it.tax || 5)),
+        total_amount: Number(it.total_amount || it.total_price || 0)
+      }));
     } else {
       this.tempPoItems = [
         {
@@ -231,72 +423,114 @@ const PurchaseView = {
       ];
     }
 
-    const todayStr = new Date().toISOString().split("T")[0];
-    const poDateVal = isEdit ? (existingPo.po_date || existingPo.poDate || todayStr) : todayStr;
-    const expDateVal = isEdit ? (existingPo.expected_delivery_date || existingPo.expectedDate || '') : '';
-    const vendorVal = isEdit ? (existingPo.vendor_name || existingPo.vendor || '') : (vendors[0] ? vendors[0].name : '');
-    const notesVal = isEdit ? (existingPo.notes || '') : '';
-    const warehouseVal = isEdit ? (existingPo.warehouse_location || existingPo.warehouse || 'Main Store - Unit 1') : 'Main Store - Unit 1';
+    return `
+      <!-- Top Navigation & Action Header -->
+      <div class="dashboard-top-bar" style="margin-bottom:20px;">
+        <div class="dashboard-title-wrap">
+          <div style="display:flex; align-items:center; gap:12px; margin-bottom:6px;">
+            <button class="btn btn-secondary btn-sm" onclick="App.navigate('purchase', 'orders')" title="Back to PO List">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+              Back to PO List
+            </button>
+            <h1 style="margin:0;">
+              Edit Purchase Order (${poNumber})
+              <span style="font-size:0.75rem; font-weight:600; padding:2px 8px; background:var(--primary-100); color:var(--primary-700); border-radius:var(--radius-full); vertical-align:middle;">EDITING</span>
+            </h1>
+          </div>
+          <p class="dashboard-subtitle">Update vendor order specifications, delivery date, quantities, or rate terms.</p>
+        </div>
 
-    const content = `
-      <form id="po-form" class="space-y-4" onsubmit="event.preventDefault();">
-        <div class="form-grid-3">
-          <div class="form-group">
-            <label class="form-label">Vendor / Mill Supplier <span class="required-star">*</span></label>
-            <select class="form-control" id="po-vendor" required>
-              ${vendors.map(v => `<option value="${v.name}" ${v.name === vendorVal ? 'selected' : ''}>${v.name} (${v.code || v.id})</option>`).join('')}
-            </select>
+        <div class="dashboard-controls">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="App.navigate('purchase', 'orders')">Cancel</button>
+          <button type="button" class="btn btn-primary btn-sm" onclick="PurchaseView.submitPOForm('${poNumber}', ${poDbId})">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            Save Changes
+          </button>
+        </div>
+      </div>
+
+      <form id="po-full-form" onsubmit="event.preventDefault();">
+        <!-- 1. General PO Information Card -->
+        <div class="card mb-6" style="padding:24px;">
+          <h3 style="font-size:1.05rem; font-weight:700; color:var(--slate-800); margin-bottom:16px; border-bottom:1px solid var(--slate-100); padding-bottom:10px;">
+            1. Supplier & Procurement Terms
+          </h3>
+
+          <div class="form-grid-3">
+            <div class="form-group">
+              <label class="form-label">Vendor / Mill Supplier <span class="required-star">*</span></label>
+              <select class="form-control" id="po-vendor" required>
+                ${vendors.map(v => `<option value="${v.name}" ${v.name === vendorVal ? 'selected' : ''}>${v.name} (${v.code || v.id})</option>`).join('')}
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">PO Issue Date <span class="required-star">*</span></label>
+              <input type="date" class="form-control" id="po-date" required value="${poDateVal}">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Expected Delivery Date</label>
+              <input type="date" class="form-control" id="po-exp-date" value="${expDateVal}">
+            </div>
           </div>
 
-          <div class="form-group">
-            <label class="form-label">PO Issue Date <span class="required-star">*</span></label>
-            <input type="date" class="form-control" id="po-date" required value="${poDateVal}">
-          </div>
+          <div class="form-grid-3" style="margin-top:16px;">
+            <div class="form-group">
+              <label class="form-label">Warehouse Receiving Location</label>
+              <select class="form-control" id="po-warehouse">
+                <option value="Main Store - Unit 1" ${warehouseVal.includes('Unit 1') ? 'selected' : ''}>Main Store - Unit 1</option>
+                <option value="Dyeing & Trims Store - Unit 2" ${warehouseVal.includes('Unit 2') ? 'selected' : ''}>Dyeing & Trims Store - Unit 2</option>
+                <option value="Secondary Processing Hub" ${warehouseVal.includes('Secondary') ? 'selected' : ''}>Secondary Processing Hub</option>
+              </select>
+            </div>
 
-          <div class="form-group">
-            <label class="form-label">Expected Delivery Date</label>
-            <input type="date" class="form-control" id="po-exp-date" value="${expDateVal}">
+            <div class="form-group">
+              <label class="form-label">Payment Terms</label>
+              <select class="form-control" id="po-pay-terms">
+                <option value="Pending" ${payTermsVal === 'Pending' ? 'selected' : ''}>Payment on Delivery (Net 30)</option>
+                <option value="Advance" ${payTermsVal === 'Advance' ? 'selected' : ''}>100% Advance Payment</option>
+                <option value="Partially Paid" ${payTermsVal === 'Partially Paid' ? 'selected' : ''}>50% Advance, 50% on Delivery</option>
+                <option value="Paid" ${payTermsVal === 'Paid' ? 'selected' : ''}>Paid in Full</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">PO Status</label>
+              <select class="form-control" id="po-status">
+                <option value="Draft" ${statusVal === 'Draft' ? 'selected' : ''}>Draft (Internal Review)</option>
+                <option value="Approved" ${statusVal === 'Approved' ? 'selected' : ''}>Approved & Issued</option>
+                <option value="Partially Received" ${statusVal === 'Partially Received' ? 'selected' : ''}>Partially Received</option>
+                <option value="Received" ${statusVal === 'Received' ? 'selected' : ''}>Received / Fulfilled</option>
+                <option value="Cancelled" ${statusVal === 'Cancelled' ? 'selected' : ''}>Cancelled</option>
+              </select>
+            </div>
           </div>
         </div>
 
-        <div class="form-grid-2">
-          <div class="form-group">
-            <label class="form-label">Warehouse Receiving Location</label>
-            <select class="form-control" id="po-warehouse">
-              <option value="Main Store - Unit 1" ${warehouseVal.includes('Unit 1') ? 'selected' : ''}>Main Store - Unit 1</option>
-              <option value="Dyeing & Trims Store - Unit 2" ${warehouseVal.includes('Unit 2') ? 'selected' : ''}>Dyeing & Trims Store - Unit 2</option>
-              <option value="Secondary Processing Hub" ${warehouseVal.includes('Secondary') ? 'selected' : ''}>Secondary Processing Hub</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">Payment Terms</label>
-            <select class="form-control" id="po-pay-terms">
-              <option value="Pending">Payment on Delivery (Net 30)</option>
-              <option value="Advance">100% Advance</option>
-              <option value="Partially Paid">50% Advance, 50% on Delivery</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- Line Items Section -->
-        <div style="background:var(--slate-50); border:1px solid var(--slate-200); border-radius:var(--radius-lg); padding:16px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-            <h4 style="font-size:0.925rem; font-weight:700; color:var(--slate-800); margin:0;">Ordered Line Items & Materials</h4>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="PurchaseView.addTempItem()">+ Add Line Item</button>
+        <!-- 2. Ordered Line Items Card -->
+        <div class="card mb-6" style="padding:24px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid var(--slate-100); padding-bottom:10px;">
+            <h3 style="font-size:1.05rem; font-weight:700; color:var(--slate-800); margin:0;">
+              2. Ordered Raw Materials & Line Items
+            </h3>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="PurchaseView.addTempItem()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              + Add Material Row
+            </button>
           </div>
 
           <div class="table-responsive">
-            <table class="data-table" id="po-items-table" style="font-size:0.825rem;">
+            <table class="data-table" id="po-items-table">
               <thead>
                 <tr>
-                  <th style="width:35%;">Material / Item</th>
-                  <th style="width:15%;">Quantity</th>
-                  <th style="width:12%;">Unit</th>
-                  <th style="width:15%;">Rate (₹)</th>
+                  <th style="width:36%;">RAW MATERIAL / ITEM</th>
+                  <th style="width:14%;">QUANTITY</th>
+                  <th style="width:12%;">UNIT</th>
+                  <th style="width:14%;">RATE (₹)</th>
                   <th style="width:10%;">GST %</th>
-                  <th style="width:13%;">Total (₹)</th>
-                  <th></th>
+                  <th style="width:14%;">TOTAL (₹)</th>
+                  <th style="width:4%;"></th>
                 </tr>
               </thead>
               <tbody id="po-items-body">
@@ -305,43 +539,57 @@ const PurchaseView = {
             </table>
           </div>
 
-          <div style="display:flex; justify-content:flex-end; margin-top:12px;">
-            <div style="width:260px; font-size:0.85rem; line-height:1.8;">
+          <!-- Total Calculation Box -->
+          <div style="display:flex; justify-content:flex-end; margin-top:20px;">
+            <div style="width:320px; background:var(--slate-50); border:1px solid var(--slate-200); border-radius:var(--radius-lg); padding:16px; font-size:0.9rem; line-height:2;">
               <div style="display:flex; justify-content:space-between; color:var(--slate-600);">
-                <span>Subtotal:</span> <strong class="font-mono" id="po-subtotal-val">₹0</strong>
+                <span>Taxable Subtotal:</span> <strong class="font-mono" id="po-subtotal-val">₹0</strong>
               </div>
               <div style="display:flex; justify-content:space-between; color:var(--slate-600);">
                 <span>GST Tax Total:</span> <strong class="font-mono" id="po-tax-val">₹0</strong>
               </div>
-              <div style="display:flex; justify-content:space-between; font-size:1.05rem; font-weight:800; color:var(--primary-700); border-top:1px solid var(--slate-200); padding-top:4px; margin-top:4px;">
+              <div style="display:flex; justify-content:space-between; font-size:1.15rem; font-weight:800; color:var(--primary-700); border-top:2px solid var(--slate-300); padding-top:6px; margin-top:6px;">
                 <span>Grand Total:</span> <strong class="font-mono" id="po-grand-val">₹0</strong>
               </div>
             </div>
           </div>
         </div>
 
-        <div class="form-group">
-          <label class="form-label">Purchase Order Notes & Delivery Instructions</label>
-          <textarea class="form-control" id="po-notes" rows="2" placeholder="Special packaging, roll width requirements, test reports required on delivery...">${notesVal}</textarea>
+        <!-- 3. Instructions & Notes Card -->
+        <div class="card mb-6" style="padding:24px;">
+          <h3 style="font-size:1.05rem; font-weight:700; color:var(--slate-800); margin-bottom:16px; border-bottom:1px solid var(--slate-100); padding-bottom:10px;">
+            3. Purchase Order Notes & Delivery Guidelines
+          </h3>
+          <div class="form-group">
+            <textarea class="form-control" id="po-notes" rows="3" placeholder="Specify roll width (e.g. 58 inches), lab dip color shade approvals, test certificates required with delivery...">${notesVal}</textarea>
+          </div>
+        </div>
+
+        <!-- Bottom Action Bar -->
+        <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:24px; padding-bottom:32px;">
+          <button type="button" class="btn btn-secondary btn-lg" onclick="App.navigate('purchase', 'orders')">Cancel & Discard</button>
+          <button type="button" class="btn btn-primary btn-lg" onclick="PurchaseView.submitPOForm('${poNumber}', ${poDbId})">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            Save Purchase Order Changes
+          </button>
         </div>
       </form>
     `;
+  },
 
-    const footer = `
-      <button class="btn btn-secondary" onclick="UI.closeModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="PurchaseView.savePO(${isEdit ? `'${existingPo.po_number || existingPo.id}'` : 'null'}, ${isEdit ? (existingPo.dbId || existingPo.id) : 'null'})">
-        ${isEdit ? 'Save Changes' : 'Generate & Issue PO'}
-      </button>
-    `;
-
-    UI.openModal({
-      title: isEdit ? `Edit Purchase Order (${existingPo.po_number || existingPo.id})` : "Create New Purchase Order (PO)",
-      content,
-      footer,
-      size: "modal-xl"
-    });
-
+  postRenderEdit() {
     this.recalcPOTotals();
+  },
+
+  openCreatePOModal() {
+    App.navigate("purchase", "create");
+  },
+
+  openEditPOModal(poId) {
+    const po = (ERPState.data.purchaseOrders || []).find(o => (o.po_number || o.poNumber || o.id) === poId);
+    PurchaseView.currentEditPoId = poId;
+    PurchaseView.currentEditDbId = po ? (po.dbId || po.id) : null;
+    App.navigate("purchase", "edit");
   },
 
   renderTempPoRows(masterItems) {
@@ -365,16 +613,16 @@ const PurchaseView = {
           </td>
           <td>
             <select class="form-control form-control-sm" onchange="PurchaseView.updateItemField(${idx}, 'tax', this.value)">
-              <option value="5" ${Number(item.tax_percent || item.tax) === 5 ? 'selected' : ''}>5%</option>
-              <option value="12" ${Number(item.tax_percent || item.tax) === 12 ? 'selected' : ''}>12%</option>
-              <option value="18" ${Number(item.tax_percent || item.tax) === 18 ? 'selected' : ''}>18%</option>
-              <option value="0" ${Number(item.tax_percent || item.tax) === 0 ? 'selected' : ''}>0%</option>
+              <option value="5" ${Number(item.tax_percent !== undefined ? item.tax_percent : item.tax) === 5 ? 'selected' : ''}>5%</option>
+              <option value="12" ${Number(item.tax_percent !== undefined ? item.tax_percent : item.tax) === 12 ? 'selected' : ''}>12%</option>
+              <option value="18" ${Number(item.tax_percent !== undefined ? item.tax_percent : item.tax) === 18 ? 'selected' : ''}>18%</option>
+              <option value="0" ${Number(item.tax_percent !== undefined ? item.tax_percent : item.tax) === 0 ? 'selected' : ''}>0%</option>
             </select>
           </td>
           <td class="font-bold font-mono" id="po-line-total-${idx}">
             ${UI.formatCurrency(item.total_amount || item.amount || 0)}
           </td>
-          <td>
+          <td style="text-align:center;">
             ${this.tempPoItems.length > 1 ? `
               <button type="button" class="table-action-btn delete" onclick="PurchaseView.removeTempItem(${idx})" title="Remove">✕</button>
             ` : ''}
@@ -386,12 +634,12 @@ const PurchaseView = {
 
   addTempItem() {
     const items = ERPState.data.items || [];
-    const first = items[0] || { name: "100% Combed Cotton Fabric 180 GSM", code: "FAB-COT-180", rate: 145 };
+    const first = items[0] || { name: "100% Combed Cotton Fabric 180 GSM", code: "FAB-COT-180", rate: 145, unit: "Meters" };
     this.tempPoItems.push({
       item_name: first.name,
       item_code: first.code || first.id || "FAB-01",
       ordered_qty: 500,
-      unit: "Meters",
+      unit: first.unit || "Meters",
       rate: first.rate || 145,
       tax_percent: 5,
       total_amount: (500 * (first.rate || 145)) * 1.05
@@ -462,21 +710,25 @@ const PurchaseView = {
     if (grandEl) grandEl.textContent = UI.formatCurrency(grand);
   },
 
-  savePO(poId, dbId) {
+  submitPOForm(poId, dbId) {
     const vendorName = document.getElementById("po-vendor").value;
     const poDate = document.getElementById("po-date").value;
     const expectedDate = document.getElementById("po-exp-date").value;
     const warehouse = document.getElementById("po-warehouse").value;
+    const payTerms = document.getElementById("po-pay-terms") ? document.getElementById("po-pay-terms").value : "Pending";
+    const status = document.getElementById("po-status") ? document.getElementById("po-status").value : "Approved";
     const notes = document.getElementById("po-notes").value;
 
-    if (!vendorName) return UI.showToast("Required Field", "Please select a vendor", "error");
-    if (!poDate) return UI.showToast("Required Field", "Please enter PO date", "error");
+    if (!vendorName) return UI.showToast("Required Field", "Please select a vendor supplier", "error");
+    if (!poDate) return UI.showToast("Required Field", "Please select the PO date", "error");
 
     const payload = {
       vendor_name: vendorName,
       po_date: poDate,
       expected_delivery_date: expectedDate || null,
       warehouse_location: warehouse,
+      payment_status: payTerms,
+      status: status,
       notes,
       items: this.tempPoItems.map(item => ({
         item_name: item.item_name || item.item,
@@ -489,11 +741,12 @@ const PurchaseView = {
     };
 
     if (poId && dbId) {
-      // Edit existing PO via API
+      // Update PO
       fetch(`/purchase/orders/${dbId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
+          "Accept": "application/json",
           "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || ""
         },
         body: JSON.stringify(payload)
@@ -501,22 +754,22 @@ const PurchaseView = {
       .then(res => res.json())
       .then(data => {
         UI.showToast("PO Updated", `Purchase Order ${poId} successfully updated!`, "success");
-        UI.closeModal();
-        ERPState.init().then(() => App.refreshCurrentView());
+        ERPState.syncWithBackend().then(() => {
+          App.navigate("purchase", "orders");
+        });
       })
       .catch(err => {
-        // Fallback local update
         ERPState.updatePurchaseOrder(poId, payload);
         UI.showToast("PO Updated", `Purchase Order ${poId} updated.`, "success");
-        UI.closeModal();
-        App.refreshCurrentView();
+        App.navigate("purchase", "orders");
       });
     } else {
-      // Create new PO
+      // Create PO
       fetch("/purchase/orders", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Accept": "application/json",
           "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || ""
         },
         body: JSON.stringify(payload)
@@ -524,15 +777,14 @@ const PurchaseView = {
       .then(res => res.json())
       .then(data => {
         UI.showToast("PO Issued", `Purchase Order created successfully!`, "success");
-        UI.closeModal();
-        ERPState.init().then(() => App.refreshCurrentView());
+        ERPState.syncWithBackend().then(() => {
+          App.navigate("purchase", "orders");
+        });
       })
       .catch(err => {
-        // Fallback local creation
         ERPState.createPurchaseOrder(payload);
         UI.showToast("PO Issued", "Purchase order created locally.", "success");
-        UI.closeModal();
-        App.refreshCurrentView();
+        App.navigate("purchase", "orders");
       });
     }
   },
@@ -547,12 +799,13 @@ const PurchaseView = {
         fetch(`/purchase/orders/${dbId || poId}`, {
           method: "DELETE",
           headers: {
+            "Accept": "application/json",
             "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || ""
           }
         })
         .then(() => {
           UI.showToast("PO Deleted", `${poId} removed.`, "info");
-          ERPState.init().then(() => App.refreshCurrentView());
+          ERPState.syncWithBackend().then(() => App.refreshCurrentView());
         })
         .catch(() => {
           ERPState.deletePurchaseOrder(poId);
@@ -564,7 +817,7 @@ const PurchaseView = {
   },
 
   printPO(poId) {
-    const po = (ERPState.data.purchaseOrders || []).find(o => (o.po_number || o.id) === poId);
+    const po = (ERPState.data.purchaseOrders || []).find(o => (o.po_number || o.poNumber || o.id) === poId);
     if (!po) return;
 
     const items = po.items || [
@@ -581,7 +834,7 @@ const PurchaseView = {
           </div>
           <div style="text-align:right;">
             <h3 style="margin:0; font-size:1.3rem; color:#0f172a;">PURCHASE ORDER</h3>
-            <p style="margin:4px 0 0 0; font-weight:700; font-size:1.1rem; color:#2563eb;">${po.po_number || po.id}</p>
+            <p style="margin:4px 0 0 0; font-weight:700; font-size:1.1rem; color:#2563eb;">${po.po_number || po.poNumber || po.id}</p>
             <p style="margin:0; font-size:0.85rem; color:#64748b;">Date: ${UI.formatDate(po.po_date || po.poDate)}</p>
           </div>
         </div>
@@ -589,12 +842,12 @@ const PurchaseView = {
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:24px; font-size:0.875rem;">
           <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px;">
             <strong style="color:#64748b; font-size:0.75rem; text-transform:uppercase;">Vendor Details:</strong>
-            <h4 style="margin:6px 0 4px 0; color:#0f172a;">${po.vendor_name || po.vendor}</h4>
+            <h4 style="margin:6px 0 4px 0; color:#0f172a;">${po.vendor_name || po.vendorName || (po.vendor ? po.vendor.name : 'Vendor')}</h4>
             <p style="margin:0; color:#475569;">Delivery Location: ${po.warehouse_location || po.warehouse || 'Main Store - Unit 1'}</p>
           </div>
           <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px;">
             <strong style="color:#64748b; font-size:0.75rem; text-transform:uppercase;">Delivery Terms:</strong>
-            <p style="margin:6px 0 2px 0;">Expected Date: <strong>${UI.formatDate(po.expected_delivery_date || po.expectedDate)}</strong></p>
+            <p style="margin:6px 0 2px 0;">Expected Date: <strong>${UI.formatDate(po.expected_delivery_date || po.delivery_date || po.expectedDate)}</strong></p>
             <p style="margin:0; color:#475569;">Payment: <strong>${po.payment_status || 'Pending'}</strong></p>
           </div>
         </div>
@@ -617,7 +870,7 @@ const PurchaseView = {
                 <td style="padding:10px;"><strong>${it.item_name || it.item}</strong> (${it.item_code || it.code || 'N/A'})</td>
                 <td style="padding:10px; text-align:right; font-family:monospace;">${Number(it.ordered_qty || it.qty || 0).toLocaleString('en-IN')} ${it.unit || 'M'}</td>
                 <td style="padding:10px; text-align:right; font-family:monospace;">₹${Number(it.rate || 0).toFixed(2)}</td>
-                <td style="padding:10px; text-align:right;">${it.tax_percent || it.tax || 5}%</td>
+                <td style="padding:10px; text-align:right;">${it.tax_percent !== undefined ? it.tax_percent : (it.tax || 5)}%</td>
                 <td style="padding:10px; text-align:right; font-family:monospace; font-weight:700;">₹${Number(it.total_amount || it.amount || 0).toLocaleString('en-IN', {minimumFractionDigits:2})}</td>
               </tr>
             `).join('')}
@@ -627,7 +880,7 @@ const PurchaseView = {
         <div style="display:flex; justify-content:flex-end; margin-bottom:30px;">
           <div style="width:280px; font-size:0.9rem; line-height:1.8;">
             <div style="display:flex; justify-content:space-between;"><span>Subtotal:</span> <strong style="font-family:monospace;">₹${Number(po.subtotal || 0).toLocaleString('en-IN', {minimumFractionDigits:2})}</strong></div>
-            <div style="display:flex; justify-content:space-between;"><span>Total Tax:</span> <strong style="font-family:monospace;">₹${Number(po.tax_total || 0).toLocaleString('en-IN', {minimumFractionDigits:2})}</strong></div>
+            <div style="display:flex; justify-content:space-between;"><span>Total Tax:</span> <strong style="font-family:monospace;">₹${Number(po.tax_total || po.tax_amount || 0).toLocaleString('en-IN', {minimumFractionDigits:2})}</strong></div>
             <div style="display:flex; justify-content:space-between; font-size:1.15rem; font-weight:800; color:#2563eb; border-top:2px solid #cbd5e1; padding-top:6px; margin-top:6px;">
               <span>Grand Total:</span> <strong style="font-family:monospace;">₹${Number(po.grand_total || po.grandTotal || 0).toLocaleString('en-IN', {minimumFractionDigits:2})}</strong>
             </div>

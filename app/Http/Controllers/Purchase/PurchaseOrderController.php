@@ -26,6 +26,26 @@ class PurchaseOrderController extends Controller
         ]);
     }
 
+    public function create()
+    {
+        return view('dashboard', [
+            'user' => Auth::user(),
+            'module' => 'purchase',
+            'submodule' => 'create'
+        ]);
+    }
+
+    public function edit(PurchaseOrder $order)
+    {
+        return view('dashboard', [
+            'user' => Auth::user(),
+            'module' => 'purchase',
+            'submodule' => 'edit',
+            'targetId' => $order->po_number ?? $order->id,
+            'targetDbId' => $order->id
+        ]);
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([

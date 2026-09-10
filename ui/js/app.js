@@ -16,7 +16,11 @@ const App = {
     // Subscribe to state updates to refresh active view automatically
     ERPState.subscribe(() => {
       this.updateHeaderBadges();
+      this.refreshCurrentView();
     });
+
+    // Sync live backend data from database
+    ERPState.syncWithBackend();
 
     // Listen to browser popstate (back/forward history navigation)
     window.addEventListener("popstate", (e) => {
@@ -24,11 +28,17 @@ const App = {
       this.navigate(target.module, target.submodule, false);
     });
 
+    // Listen for any legacy hashchange just in case, and clean it up
+    window.addEventListener("hashchange", () => {
+      const target = this.getRouteFromLocation();
+      this.navigate(target.module, target.submodule, true);
+    });
+
     // Initial navigation
     const initial = this.getRouteFromLocation();
     this.navigate(initial.module, initial.submodule, false);
 
-    // If URL had a '#' in it, remove it cleanly
+    // If URL had a '#' in it, remove it cleanly without page reload
     if (window.location.hash) {
       const cleanPath = this.getPathForRoute(initial.module, initial.submodule);
       window.history.replaceState({ module: initial.module, submodule: initial.submodule }, "", cleanPath);
@@ -39,10 +49,16 @@ const App = {
     if (module === "dashboard" && (!submodule || submodule === "overview")) {
       return "/dashboard";
     }
+    if (module === "purchase") {
+      if (submodule === "create") return "/purchase/orders/create";
+      if (submodule === "edit" && PurchaseView.currentEditDbId) return `/purchase/orders/${PurchaseView.currentEditDbId}/edit`;
+      return "/purchase/orders";
+    }
     return `/${module}/${submodule}`;
   },
 
   getRouteFromLocation() {
+    // 1. Check if URL has a legacy hash: #/masters/sizes or #masters/sizes
     if (window.location.hash) {
       const cleanHash = window.location.hash.replace(/^#\/?/, "");
       if (cleanHash) {
@@ -53,6 +69,16 @@ const App = {
       }
     }
 
+    // 2. Check window.INITIAL_ROUTE provided by server
+    if (window.INITIAL_ROUTE && window.INITIAL_ROUTE.module && window.INITIAL_ROUTE.module !== "dashboard") {
+      return {
+        module: window.INITIAL_ROUTE.module,
+        submodule: window.INITIAL_ROUTE.submodule || "overview",
+        targetId: window.INITIAL_ROUTE.targetId || null
+      };
+    }
+
+    // 3. Parse pathname: e.g. /masters/sizes or /purchase/orders/create
     const pathname = window.location.pathname.replace(/^\/+|\/+$/g, "");
     if (pathname) {
       let parts = pathname.split("/").filter(Boolean);
@@ -61,6 +87,15 @@ const App = {
       }
       if (parts.length === 1 && parts[0] === "dashboard") {
         return { module: "dashboard", submodule: "overview" };
+      }
+      if (parts[0] === "purchase") {
+        if (parts[1] === "orders" && parts[2] === "create") {
+          return { module: "purchase", submodule: "create" };
+        }
+        if (parts[1] === "orders" && parts[3] === "edit") {
+          return { module: "purchase", submodule: "edit", targetId: parts[2] };
+        }
+        return { module: "purchase", submodule: "orders" };
       }
       if (parts.length > 0) {
         return { module: parts[0], submodule: parts[1] || "overview" };
@@ -91,8 +126,9 @@ const App = {
     // Scroll to top
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
-    // Close mobile sidebar if open
+    // Close mobile sidebar and backdrop if open
     document.querySelector(".app-sidebar")?.classList.remove("mobile-open");
+    document.getElementById("sidebar-backdrop")?.classList.remove("active");
   },
 
   updateSidebarUI(module, submodule) {
@@ -142,8 +178,11 @@ const App = {
       vendors: "Vendor Master",
       jobworkers: "Job Worker Master",
       items: "Item Master",
-      sizes: "Size & Color Master",
+      units: "Unit Master",
+      sizes: "Unit Master",
       orders: "Purchase Orders (PO)",
+      create: "Create Purchase Order",
+      edit: "Edit Purchase Order",
       assign: "Job Assign Orders",
       "inward-report": "Job Inward & Ready Report",
       ready: "Ready for Dispatch",
@@ -199,12 +238,20 @@ const App = {
       else if (s === "vendors") html = MastersView.renderVendors();
       else if (s === "jobworkers") html = MastersView.renderJobWorkers();
       else if (s === "items") html = MastersView.renderItems();
-      else if (s === "sizes") html = MastersView.renderSizesAndColors();
+      else if (s === "units" || s === "sizes") html = MastersView.renderUnits();
       else html = MastersView.renderCustomers();
     } else if (m === "jobwork") {
       html = JobWorkView.render(s);
     } else if (m === "purchase") {
-      html = PurchaseView.renderOrders();
+      if (s === "create") {
+        html = PurchaseView.renderCreatePage();
+        postRenderFn = () => PurchaseView.postRenderCreate();
+      } else if (s === "edit") {
+        html = PurchaseView.renderEditPage(PurchaseView.currentEditPoId || window.INITIAL_ROUTE?.targetId);
+        postRenderFn = () => PurchaseView.postRenderEdit();
+      } else {
+        html = PurchaseView.renderOrders();
+      }
     } else if (m === "qr") {
       if (s === "scanner") QRView.activeTab = "customer-portal";
       else if (s === "generator") QRView.activeTab = "discount";
@@ -272,18 +319,36 @@ const App = {
       }
     });
 
-    // Sidebar Collapse Toggle
+    // Sidebar Collapse Toggle (Desktop & Mobile)
     const sidebarToggleBtn = document.getElementById("sidebar-toggle");
-    if (sidebarToggleBtn) {
+    const sidebar = document.querySelector(".app-sidebar");
+    const backdrop = document.getElementById("sidebar-backdrop");
+    const closeBtn = document.getElementById("sidebar-close-btn");
+    const wrapper = document.querySelector(".main-wrapper");
+
+    if (sidebarToggleBtn && sidebar) {
       sidebarToggleBtn.onclick = () => {
-        const sidebar = document.querySelector(".app-sidebar");
-        const wrapper = document.querySelector(".main-wrapper");
         if (window.innerWidth <= 1024) {
           sidebar.classList.toggle("mobile-open");
+          if (backdrop) backdrop.classList.toggle("active", sidebar.classList.contains("mobile-open"));
         } else {
           sidebar.classList.toggle("collapsed");
-          wrapper.classList.toggle("sidebar-collapsed");
+          if (wrapper) wrapper.classList.toggle("sidebar-collapsed");
         }
+      };
+    }
+
+    if (backdrop && sidebar) {
+      backdrop.onclick = () => {
+        sidebar.classList.remove("mobile-open");
+        backdrop.classList.remove("active");
+      };
+    }
+
+    if (closeBtn && sidebar) {
+      closeBtn.onclick = () => {
+        sidebar.classList.remove("mobile-open");
+        if (backdrop) backdrop.classList.remove("active");
       };
     }
 

@@ -363,7 +363,9 @@
   <script>
     window.INITIAL_ROUTE = {
       module: "{{ $module ?? '' }}",
-      submodule: "{{ $submodule ?? '' }}"
+      submodule: "{{ $submodule ?? '' }}",
+      targetId: "{{ $targetId ?? '' }}",
+      targetDbId: "{{ $targetDbId ?? '' }}"
     };
 
     // Initialize Application on DOM Ready

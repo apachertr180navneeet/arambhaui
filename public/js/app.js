@@ -49,6 +49,11 @@ const App = {
     if (module === "dashboard" && (!submodule || submodule === "overview")) {
       return "/dashboard";
     }
+    if (module === "purchase") {
+      if (submodule === "create") return "/purchase/orders/create";
+      if (submodule === "edit" && PurchaseView.currentEditDbId) return `/purchase/orders/${PurchaseView.currentEditDbId}/edit`;
+      return "/purchase/orders";
+    }
     return `/${module}/${submodule}`;
   },
 
@@ -68,11 +73,12 @@ const App = {
     if (window.INITIAL_ROUTE && window.INITIAL_ROUTE.module && window.INITIAL_ROUTE.module !== "dashboard") {
       return {
         module: window.INITIAL_ROUTE.module,
-        submodule: window.INITIAL_ROUTE.submodule || "overview"
+        submodule: window.INITIAL_ROUTE.submodule || "overview",
+        targetId: window.INITIAL_ROUTE.targetId || null
       };
     }
 
-    // 3. Parse pathname: e.g. /masters/sizes or /dashboard/masters/sizes
+    // 3. Parse pathname: e.g. /masters/sizes or /purchase/orders/create
     const pathname = window.location.pathname.replace(/^\/+|\/+$/g, "");
     if (pathname) {
       let parts = pathname.split("/").filter(Boolean);
@@ -81,6 +87,15 @@ const App = {
       }
       if (parts.length === 1 && parts[0] === "dashboard") {
         return { module: "dashboard", submodule: "overview" };
+      }
+      if (parts[0] === "purchase") {
+        if (parts[1] === "orders" && parts[2] === "create") {
+          return { module: "purchase", submodule: "create" };
+        }
+        if (parts[1] === "orders" && parts[3] === "edit") {
+          return { module: "purchase", submodule: "edit", targetId: parts[2] };
+        }
+        return { module: "purchase", submodule: "orders" };
       }
       if (parts.length > 0) {
         return { module: parts[0], submodule: parts[1] || "overview" };
@@ -166,6 +181,8 @@ const App = {
       units: "Unit Master",
       sizes: "Unit Master",
       orders: "Purchase Orders (PO)",
+      create: "Create Purchase Order",
+      edit: "Edit Purchase Order",
       assign: "Job Assign Orders",
       "inward-report": "Job Inward & Ready Report",
       ready: "Ready for Dispatch",
@@ -226,7 +243,15 @@ const App = {
     } else if (m === "jobwork") {
       html = JobWorkView.render(s);
     } else if (m === "purchase") {
-      html = PurchaseView.renderOrders();
+      if (s === "create") {
+        html = PurchaseView.renderCreatePage();
+        postRenderFn = () => PurchaseView.postRenderCreate();
+      } else if (s === "edit") {
+        html = PurchaseView.renderEditPage(PurchaseView.currentEditPoId || window.INITIAL_ROUTE?.targetId);
+        postRenderFn = () => PurchaseView.postRenderEdit();
+      } else {
+        html = PurchaseView.renderOrders();
+      }
     } else if (m === "qr") {
       if (s === "scanner") QRView.activeTab = "customer-portal";
       else if (s === "generator") QRView.activeTab = "discount";
