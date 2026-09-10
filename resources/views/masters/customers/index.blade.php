@@ -238,50 +238,47 @@
     letter-spacing: 0.5px;
   }
 
-  .cm-status-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 3px 10px;
-    border-radius: 12px;
+  /* Interactive Status Select Dropdown inside table */
+  .cm-status-select {
+    appearance: none;
+    -webkit-appearance: none;
+    padding: 4px 22px 4px 10px;
+    border-radius: 14px;
     font-size: 0.75rem;
     font-weight: 700;
+    border: 1px solid transparent;
+    cursor: pointer;
+    outline: none;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    background-repeat: no-repeat;
+    background-position: right 6px center;
+    background-size: 11px;
+    display: inline-block;
   }
 
-  .cm-status-pill.active {
-    background: #ecfdf5;
+  .cm-status-select:focus {
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+  }
+
+  .cm-status-select.active {
+    background-color: #ecfdf5;
     color: #059669;
-    border: 1px solid #a7f3d0;
+    border-color: #a7f3d0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23059669' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
   }
 
-  .cm-status-pill.blocked {
-    background: #fef2f2;
+  .cm-status-select.blocked {
+    background-color: #fef2f2;
     color: #dc2626;
-    border: 1px solid #fecaca;
+    border-color: #fecaca;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23dc2626' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
   }
 
-  .cm-status-pill.inactive {
-    background: #f1f5f9;
+  .cm-status-select.inactive {
+    background-color: #f1f5f9;
     color: #64748b;
-    border: 1px solid #cbd5e1;
-  }
-
-  .cm-status-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: currentColor;
-  }
-
-  .cm-status-pill.active .cm-status-dot {
-    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3);
-    animation: cm-pulse 2s infinite;
-  }
-
-  @keyframes cm-pulse {
-    0% { transform: scale(0.95); opacity: 0.8; }
-    50% { transform: scale(1.2); opacity: 1; }
-    100% { transform: scale(0.95); opacity: 0.8; }
+    border-color: #cbd5e1;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
   }
 
   /* Modal Styling */
@@ -337,6 +334,10 @@
     height: 1px;
     background: var(--slate-200);
   }
+
+  .cm-row-transition {
+    transition: all 0.3s ease;
+  }
 </style>
 @endpush
 
@@ -359,9 +360,9 @@
       <div class="cm-stat-info">
         <div class="cm-stat-label">Total Customers</div>
         <div class="cm-stat-value">
-          <span>{{ $stats['total'] }}</span>
-          <span style="font-size:0.75rem; font-weight:700; color:#059669; background:#ecfdf5; padding:2px 8px; border-radius:12px; border:1px solid #a7f3d0;">
-            {{ $stats['active'] }} Active
+          <span id="stat-total-count">{{ $stats['total'] }}</span>
+          <span id="stat-active-badge" style="font-size:0.75rem; font-weight:700; color:#059669; background:#ecfdf5; padding:2px 8px; border-radius:12px; border:1px solid #a7f3d0;">
+            <span id="stat-active-count">{{ $stats['active'] }}</span> Active
           </span>
         </div>
       </div>
@@ -378,7 +379,7 @@
       <div class="cm-stat-info">
         <div class="cm-stat-label">Account Health</div>
         <div class="cm-stat-value">
-          <span>{{ $stats['total'] > 0 ? round(($stats['active'] / $stats['total']) * 100) : 100 }}%</span>
+          <span id="stat-health-percent">{{ $stats['total'] > 0 ? round(($stats['active'] / $stats['total']) * 100) : 100 }}%</span>
           <span style="font-size:0.75rem; font-weight:600; color:var(--slate-500);">Operational</span>
         </div>
       </div>
@@ -394,7 +395,7 @@
       </div>
       <div class="cm-stat-info">
         <div class="cm-stat-label">Total Outstanding</div>
-        <div class="cm-stat-value" style="color:{{ $stats['totalOutstanding'] > 0 ? '#dc2626' : '#059669' }};">
+        <div class="cm-stat-value" id="stat-total-outstanding" style="color:{{ $stats['totalOutstanding'] > 0 ? '#dc2626' : '#059669' }};">
           ₹{{ number_format($stats['totalOutstanding'], 2) }}
         </div>
       </div>
@@ -410,7 +411,7 @@
       </div>
       <div class="cm-stat-info">
         <div class="cm-stat-label">Approved Credit Facility</div>
-        <div class="cm-stat-value" style="color:var(--slate-800);">
+        <div class="cm-stat-value" id="stat-total-credit" style="color:var(--slate-800);">
           ₹{{ number_format($stats['totalCreditLimit'], 2) }}
         </div>
       </div>
@@ -435,7 +436,7 @@
         <div>
           <h3 style="margin:0; font-size:1.15rem; font-weight:800; color:var(--slate-900); display:flex; align-items:center; gap:8px;">
             Customer Directory
-            <span class="badge badge-primary" style="font-size:0.75rem; padding:2px 8px; border-radius:12px;">{{ count($customers) }} Records</span>
+            <span class="badge badge-primary" id="customer-badge-count" style="font-size:0.75rem; padding:2px 8px; border-radius:12px;">{{ count($customers) }} Records</span>
           </h3>
           <p style="margin:3px 0 0; font-size:0.8rem; color:var(--slate-500);">Commercial buyers, retail distributors, export clients & billing terms</p>
         </div>
@@ -472,153 +473,150 @@
       </div>
 
       <div class="cm-filter-pills">
-        <button type="button" class="cm-filter-pill active" onclick="applyCustomerFilter('all', this)">All ({{ $stats['total'] }})</button>
-        <button type="button" class="cm-filter-pill" onclick="applyCustomerFilter('active', this)">Active ({{ $stats['active'] }})</button>
+        <button type="button" class="cm-filter-pill active" id="pill-all" onclick="applyCustomerFilter('all', this)">All (<span id="pill-count-all">{{ $stats['total'] }}</span>)</button>
+        <button type="button" class="cm-filter-pill" id="pill-active" onclick="applyCustomerFilter('active', this)">Active (<span id="pill-count-active">{{ $stats['active'] }}</span>)</button>
         <button type="button" class="cm-filter-pill" onclick="applyCustomerFilter('blocked', this)">Blocked</button>
         <button type="button" class="cm-filter-pill" onclick="applyCustomerFilter('balance', this)">With Balance</button>
       </div>
     </div>
 
-    <!-- Empty State or Data Table -->
-    @if($customers->isEmpty())
-      <!-- Rich Empty State -->
-      <div class="cm-empty-box">
-        <div class="cm-empty-icon-ring">
-          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
-            <circle cx="9" cy="7" r="4"/>
-            <line x1="19" y1="8" x2="19" y2="14"/>
-            <line x1="22" y1="11" x2="16" y2="11"/>
-          </svg>
+    <!-- Empty State Box (Toggled if 0 records) -->
+    <div id="customers-empty-state" class="cm-empty-box" style="{{ $customers->isEmpty() ? 'display:flex;' : 'display:none;' }}">
+      <div class="cm-empty-icon-ring">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+          <line x1="19" y1="8" x2="19" y2="14"/>
+          <line x1="22" y1="11" x2="16" y2="11"/>
+        </svg>
+      </div>
+
+      <h3 style="margin:0 0 8px; font-size:1.25rem; font-weight:800; color:var(--slate-900);">No Customers in Directory Yet</h3>
+      <p style="margin:0 0 20px; font-size:0.875rem; color:var(--slate-500); max-width:480px; line-height:1.5;">
+        Create customer profiles to manage billing addresses, GSTIN tax credentials, credit ceilings, and issue sales invoices seamlessly.
+      </p>
+
+      <button type="button" class="btn btn-primary" onclick="openCustomerModal()" style="display:inline-flex; align-items:center; gap:8px; padding:10px 22px; font-size:0.9rem; font-weight:700; border-radius:10px; background:linear-gradient(135deg, #2563eb, #1d4ed8); box-shadow:0 6px 16px rgba(37,99,235,0.25); cursor:pointer;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"/>
+          <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        Add Your First Customer
+      </button>
+
+      <!-- Feature cards -->
+      <div class="cm-empty-features">
+        <div class="cm-feature-card">
+          <div style="width:34px; height:34px; border-radius:8px; background:#eff6ff; color:#2563eb; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          </div>
+          <div>
+            <div style="font-weight:700; font-size:0.825rem; color:var(--slate-800);">GSTIN & State Compliance</div>
+            <div style="font-size:0.75rem; color:var(--slate-500); margin-top:2px;">Multi-state tax filing and GSTIN structure verification</div>
+          </div>
         </div>
 
-        <h3 style="margin:0 0 8px; font-size:1.25rem; font-weight:800; color:var(--slate-900);">No Customers in Directory Yet</h3>
-        <p style="margin:0 0 20px; font-size:0.875rem; color:var(--slate-500); max-width:480px; line-height:1.5;">
-          Create customer profiles to manage billing addresses, GSTIN tax credentials, credit ceilings, and issue sales invoices seamlessly.
-        </p>
-
-        <button type="button" class="btn btn-primary" onclick="openCustomerModal()" style="display:inline-flex; align-items:center; gap:8px; padding:10px 22px; font-size:0.9rem; font-weight:700; border-radius:10px; background:linear-gradient(135deg, #2563eb, #1d4ed8); box-shadow:0 6px 16px rgba(37,99,235,0.25); cursor:pointer;">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19"/>
-            <line x1="5" y1="12" x2="19" y2="12"/>
-          </svg>
-          Add Your First Customer
-        </button>
-
-        <!-- Feature cards -->
-        <div class="cm-empty-features">
-          <div class="cm-feature-card">
-            <div style="width:34px; height:34px; border-radius:8px; background:#eff6ff; color:#2563eb; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-            </div>
-            <div>
-              <div style="font-weight:700; font-size:0.825rem; color:var(--slate-800);">GSTIN & State Compliance</div>
-              <div style="font-size:0.75rem; color:var(--slate-500); margin-top:2px;">Multi-state tax filing and GSTIN structure verification</div>
-            </div>
+        <div class="cm-feature-card">
+          <div style="width:34px; height:34px; border-radius:8px; background:#fef2f2; color:#dc2626; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
           </div>
-
-          <div class="cm-feature-card">
-            <div style="width:34px; height:34px; border-radius:8px; background:#fef2f2; color:#dc2626; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
-            </div>
-            <div>
-              <div style="font-weight:700; font-size:0.825rem; color:var(--slate-800);">Credit Limits & Balance Alerts</div>
-              <div style="font-size:0.75rem; color:var(--slate-500); margin-top:2px;">Automated block rules when outstanding exceeds credit limits</div>
-            </div>
+          <div>
+            <div style="font-weight:700; font-size:0.825rem; color:var(--slate-800);">Credit Limits & Balance Alerts</div>
+            <div style="font-size:0.75rem; color:var(--slate-500); margin-top:2px;">Automated block rules when outstanding exceeds credit limits</div>
           </div>
         </div>
       </div>
-    @else
-      <div class="table-responsive">
-        <table class="data-table" id="customers-table">
-          <thead>
-            <tr>
-              <th style="width: 50px; text-align: center;">#</th>
-              <th>Customer Name & Code</th>
-              <th>Contact Person</th>
-              <th>Location & State</th>
-              <th>Tax Info (GSTIN)</th>
-              <th style="text-align: right;">Credit Limit</th>
-              <th style="text-align: right;">Outstanding</th>
-              <th style="text-align: center;">Status</th>
-              <th style="text-align: center; width: 100px;">Actions</th>
+    </div>
+
+    <!-- Data Table Container -->
+    <div class="table-responsive" id="customers-table-container" style="{{ $customers->isEmpty() ? 'display:none;' : '' }}">
+      <table class="data-table" id="customers-table">
+        <thead>
+          <tr>
+            <th style="width: 50px; text-align: center;">#</th>
+            <th>Customer Name & Code</th>
+            <th>Contact Person</th>
+            <th>Location & State</th>
+            <th>Tax Info (GSTIN)</th>
+            <th style="text-align: right;">Credit Limit</th>
+            <th style="text-align: right;">Outstanding</th>
+            <th style="text-align: center; width: 130px;">Status</th>
+            <th style="text-align: center; width: 100px;">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="customers-table-body">
+          @foreach($customers as $index => $customer)
+            <tr class="cm-row cm-row-transition" id="customer-row-{{ $customer->id }}" data-id="{{ $customer->id }}" data-status="{{ strtolower($customer->status ?? 'active') }}" data-balance="{{ $customer->outstanding ?? $customer->outstanding_balance ?? 0 }}">
+              <td class="row-index" style="text-align: center; font-weight: 600; color: var(--slate-400);">{{ $index + 1 }}</td>
+              <td>
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <div class="cm-avatar" id="avatar-{{ $customer->id }}">
+                    {{ strtoupper(substr($customer->name, 0, 2)) }}
+                  </div>
+                  <div>
+                    <div class="cust-name-val" style="font-weight:700; color:var(--slate-900); font-size:0.9rem;">{{ $customer->name }}</div>
+                    <div class="cust-code-val" style="font-size:0.75rem; color:var(--slate-500); font-family:monospace;">{{ $customer->code ?? ('CUST-'.str_pad($customer->id, 4, '0', STR_PAD_LEFT)) }}</div>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div class="cust-contact-val" style="font-weight:600; color:var(--slate-800); font-size:0.85rem;">{{ $customer->contact_person ?? '—' }}</div>
+                <div class="cust-phone-val" style="font-size:0.75rem; color:var(--slate-500);">{{ $customer->phone ?? $customer->mobile ?? '—' }}</div>
+              </td>
+              <td>
+                <div class="cust-city-val" style="font-weight:600; color:var(--slate-700); font-size:0.85rem;">{{ $customer->city ?? '—' }}</div>
+                <div class="cust-state-val" style="font-size:0.75rem; color:var(--slate-500);">{{ $customer->state ?? '—' }}</div>
+              </td>
+              <td class="cust-gst-cell">
+                @if(!empty($customer->gst_number ?? $customer->gstin))
+                  <span class="badge" style="background:#f1f5f9; color:#1e293b; font-family:monospace; font-size:0.75rem; font-weight:600; border:1px solid #e2e8f0;">
+                    {{ $customer->gst_number ?? $customer->gstin }}
+                  </span>
+                @else
+                  <span style="font-size:0.75rem; color:var(--slate-400);">Unregistered</span>
+                @endif
+              </td>
+              <td class="cust-credit-val" style="text-align: right; font-weight: 600; color: var(--slate-700);">
+                ₹{{ number_format($customer->credit_limit ?? 0, 2) }}
+              </td>
+              <td class="cust-outstanding-val" style="text-align: right; font-weight: 700; color: {{ ($customer->outstanding ?? $customer->outstanding_balance ?? 0) > 0 ? '#dc2626' : '#059669' }};">
+                ₹{{ number_format($customer->outstanding ?? $customer->outstanding_balance ?? 0, 2) }}
+              </td>
+              <td style="text-align: center;">
+                <!-- Direct Table Status Changer -->
+                <select class="cm-status-select {{ strtolower($customer->status ?? 'active') }}" onchange="changeCustomerStatus({{ $customer->id }}, this.value, this)" title="Click to change status">
+                  <option value="Active" {{ strtolower($customer->status ?? 'active') === 'active' ? 'selected' : '' }}>Active</option>
+                  <option value="Inactive" {{ strtolower($customer->status ?? '') === 'inactive' ? 'selected' : '' }}>Inactive</option>
+                  <option value="Blocked" {{ strtolower($customer->status ?? '') === 'blocked' ? 'selected' : '' }}>Blocked</option>
+                </select>
+              </td>
+              <td style="text-align: center;">
+                <div style="display:inline-flex; align-items:center; gap:6px;">
+                  <button type="button" class="btn btn-secondary btn-icon" onclick='editCustomer(@json($customer))' title="Edit Customer" style="width:30px; height:30px; padding:0; display:inline-flex; align-items:center; justify-content:center;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                  </button>
+                  <button type="button" class="btn btn-danger btn-icon" onclick="confirmDeleteCustomer({{ $customer->id }}, '{{ addslashes($customer->name) }}')" title="Delete Customer" style="width:30px; height:30px; padding:0; display:inline-flex; align-items:center; justify-content:center;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="3 6 5 6 21 6"/>
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                    </svg>
+                  </button>
+                </div>
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            @foreach($customers as $index => $customer)
-              <tr class="cm-row" data-status="{{ strtolower($customer->status ?? 'active') }}" data-balance="{{ $customer->outstanding_balance ?? 0 }}">
-                <td style="text-align: center; font-weight: 600; color: var(--slate-400);">{{ $index + 1 }}</td>
-                <td>
-                  <div style="display:flex; align-items:center; gap:10px;">
-                    <div class="cm-avatar">
-                      {{ strtoupper(substr($customer->name, 0, 2)) }}
-                    </div>
-                    <div>
-                      <div style="font-weight:700; color:var(--slate-900); font-size:0.9rem;">{{ $customer->name }}</div>
-                      <div style="font-size:0.75rem; color:var(--slate-500); font-family:monospace;">{{ $customer->code ?? ('CUST-'.str_pad($customer->id, 4, '0', STR_PAD_LEFT)) }}</div>
-                    </div>
-                  </div>
-                </td>
-                <td>
-                  <div style="font-weight:600; color:var(--slate-800); font-size:0.85rem;">{{ $customer->contact_person ?? '—' }}</div>
-                  <div style="font-size:0.75rem; color:var(--slate-500);">{{ $customer->phone ?? $customer->mobile ?? '—' }}</div>
-                </td>
-                <td>
-                  <div style="font-weight:600; color:var(--slate-700); font-size:0.85rem;">{{ $customer->city ?? '—' }}</div>
-                  <div style="font-size:0.75rem; color:var(--slate-500);">{{ $customer->state ?? '—' }}</div>
-                </td>
-                <td>
-                  @if(!empty($customer->gst_number ?? $customer->gstin))
-                    <span class="badge" style="background:#f1f5f9; color:#1e293b; font-family:monospace; font-size:0.75rem; font-weight:600; border:1px solid #e2e8f0;">
-                      {{ $customer->gst_number ?? $customer->gstin }}
-                    </span>
-                  @else
-                    <span style="font-size:0.75rem; color:var(--slate-400);">Unregistered</span>
-                  @endif
-                </td>
-                <td style="text-align: right; font-weight: 600; color: var(--slate-700);">
-                  ₹{{ number_format($customer->credit_limit ?? 0, 2) }}
-                </td>
-                <td style="text-align: right; font-weight: 700; color: {{ ($customer->outstanding_balance ?? 0) > 0 ? '#dc2626' : '#059669' }};">
-                  ₹{{ number_format($customer->outstanding_balance ?? 0, 2) }}
-                </td>
-                <td style="text-align: center;">
-                  @if(($customer->status ?? 'active') === 'active')
-                    <span class="cm-status-pill active"><span class="cm-status-dot"></span> Active</span>
-                  @elseif(($customer->status ?? '') === 'blocked')
-                    <span class="cm-status-pill blocked"><span class="cm-status-dot"></span> Blocked</span>
-                  @else
-                    <span class="cm-status-pill inactive"><span class="cm-status-dot"></span> {{ ucfirst($customer->status ?? 'inactive') }}</span>
-                  @endif
-                </td>
-                <td style="text-align: center;">
-                  <div style="display:inline-flex; align-items:center; gap:6px;">
-                    <button type="button" class="btn btn-secondary btn-icon" onclick='editCustomer(@json($customer))' title="Edit Customer" style="width:30px; height:30px; padding:0; display:inline-flex; align-items:center; justify-content:center;">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                      </svg>
-                    </button>
-                    <button type="button" class="btn btn-danger btn-icon" onclick="confirmDeleteCustomer({{ $customer->id }}, '{{ addslashes($customer->name) }}')" title="Delete Customer" style="width:30px; height:30px; padding:0; display:inline-flex; align-items:center; justify-content:center;">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="3 6 5 6 21 6"/>
-                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                      </svg>
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            @endforeach
-          </tbody>
-        </table>
-      </div>
-    @endif
+          @endforeach
+        </tbody>
+      </table>
+    </div>
 
   </div>
 
 </div>
 
-<!-- Customer Modal (Add & Edit) -->
+<!-- Customer Modal (Add & Edit Form via AJAX) -->
 <div id="customer-modal" style="display:none;">
   <div class="cm-modal-box">
     <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--slate-100); padding-bottom:16px; margin-bottom:18px;">
@@ -639,9 +637,8 @@
       </button>
     </div>
 
-    <form id="customer-form" method="POST" action="{{ route('masters.customers.store') }}">
+    <form id="customer-form" onsubmit="saveCustomerAjax(event)">
       @csrf
-      <input type="hidden" name="_method" id="form-method" value="POST">
       <input type="hidden" name="id" id="customer-id" value="">
 
       <!-- Basic Details -->
@@ -720,7 +717,7 @@
   </div>
 </div>
 
-<!-- Delete Confirmation Modal -->
+<!-- Delete Confirmation Modal (via AJAX) -->
 <div id="delete-customer-modal" style="display:none;">
   <div class="cm-modal-box" style="max-width:440px; text-align:center;">
     <div style="width:52px; height:52px; border-radius:50%; background:#fef2f2; color:#dc2626; display:flex; align-items:center; justify-content:center; margin:0 auto 16px;">
@@ -735,14 +732,11 @@
       Are you sure you want to delete <strong id="delete-cust-name" style="color:var(--slate-800);">this customer</strong>? This action cannot be undone.
     </p>
 
-    <form id="delete-customer-form" method="POST" action="">
-      @csrf
-      @method('DELETE')
-      <div style="display:flex; justify-content:center; gap:10px;">
-        <button type="button" class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button>
-        <button type="submit" class="btn btn-danger" style="font-weight:700;">Yes, Delete Customer</button>
-      </div>
-    </form>
+    <input type="hidden" id="delete-cust-id" value="">
+    <div style="display:flex; justify-content:center; gap:10px;">
+      <button type="button" class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button>
+      <button type="button" id="confirm-delete-btn" class="btn btn-danger" onclick="deleteCustomerAjax()" style="font-weight:700;">Yes, Delete Customer</button>
+    </div>
   </div>
 </div>
 
@@ -750,17 +744,18 @@
 
 @push('scripts')
 <script>
+  const CSRF_TOKEN = '{{ csrf_token() }}';
+
+  // --- Modal Open / Close ---
   function openCustomerModal() {
     const modal = document.getElementById('customer-modal');
     if (!modal) return;
     
-    // Reset form
     document.getElementById('customer-form').reset();
     document.getElementById('customer-id').value = '';
-    document.getElementById('form-method').value = 'POST';
-    document.getElementById('customer-form').action = "{{ route('masters.customers.store') }}";
     document.getElementById('modal-title').textContent = 'Add New Customer';
     document.getElementById('save-cust-btn').textContent = 'Save Customer';
+    document.getElementById('save-cust-btn').disabled = false;
     
     modal.style.display = 'flex';
   }
@@ -776,9 +771,8 @@
 
     document.getElementById('modal-title').textContent = 'Edit Customer';
     document.getElementById('save-cust-btn').textContent = 'Update Customer';
+    document.getElementById('save-cust-btn').disabled = false;
     document.getElementById('customer-id').value = customer.id;
-    document.getElementById('form-method').value = 'PUT';
-    document.getElementById('customer-form').action = "/masters/customers/" + customer.id;
 
     document.getElementById('cust-name').value = customer.name || '';
     document.getElementById('cust-code').value = customer.code || '';
@@ -801,7 +795,9 @@
     if (!modal) return;
     
     document.getElementById('delete-cust-name').textContent = name;
-    document.getElementById('delete-customer-form').action = "/masters/customers/" + id;
+    document.getElementById('delete-cust-id').value = id;
+    document.getElementById('confirm-delete-btn').textContent = 'Yes, Delete Customer';
+    document.getElementById('confirm-delete-btn').disabled = false;
     modal.style.display = 'flex';
   }
 
@@ -810,22 +806,350 @@
     if (modal) modal.style.display = 'none';
   }
 
-  // Live filter table search
+  // --- 1. STATUS CHANGE THROUGH TABLE VIA AJAX ---
+  function changeCustomerStatus(id, newStatus, selectEl) {
+    const prevClass = selectEl.className;
+    selectEl.style.opacity = '0.5';
+
+    fetch('/masters/customers/' + id, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-CSRF-TOKEN': CSRF_TOKEN
+      },
+      body: JSON.stringify({ status: newStatus })
+    })
+    .then(res => res.json())
+    .then(data => {
+      selectEl.style.opacity = '1';
+      if (data.success) {
+        // Update select styles
+        selectEl.className = 'cm-status-select ' + newStatus.toLowerCase();
+        
+        // Update row data-status
+        const row = document.getElementById('customer-row-' + id);
+        if (row) row.setAttribute('data-status', newStatus.toLowerCase());
+
+        // Update stats if returned
+        if (data.stats) updateKpiStats(data.stats);
+
+        UI.showToast('Status Updated', 'Customer status set to ' + newStatus, 'success');
+      } else {
+        selectEl.className = prevClass;
+        UI.showToast('Error', data.message || 'Could not update status', 'error');
+      }
+    })
+    .catch(err => {
+      selectEl.style.opacity = '1';
+      selectEl.className = prevClass;
+      UI.showToast('Error', 'Network error occurred while updating status', 'error');
+    });
+  }
+
+  // --- 2. FORM SAVE USING AJAX (ADD & EDIT) ---
+  function saveCustomerAjax(e) {
+    e.preventDefault();
+
+    const saveBtn = document.getElementById('save-cust-btn');
+    const custId = document.getElementById('customer-id').value;
+    const isEdit = Boolean(custId);
+
+    const payload = {
+      name: document.getElementById('cust-name').value.trim(),
+      code: document.getElementById('cust-code').value.trim(),
+      contact_person: document.getElementById('cust-contact-person').value.trim(),
+      phone: document.getElementById('cust-phone').value.trim(),
+      email: document.getElementById('cust-email').value.trim(),
+      gstin: document.getElementById('cust-gst').value.trim(),
+      gst_number: document.getElementById('cust-gst').value.trim(),
+      pan_number: document.getElementById('cust-pan').value.trim(),
+      credit_limit: parseFloat(document.getElementById('cust-credit-limit').value) || 0,
+      address: document.getElementById('cust-address').value.trim(),
+      billing_address: document.getElementById('cust-address').value.trim(),
+      city: document.getElementById('cust-city').value.trim(),
+      state: document.getElementById('cust-state').value.trim(),
+      pincode: document.getElementById('cust-pincode').value.trim()
+    };
+
+    if (!payload.name) {
+      UI.showToast('Validation Error', 'Customer Name is required', 'error');
+      return;
+    }
+    if (!payload.phone) {
+      UI.showToast('Validation Error', 'Phone Number is required', 'error');
+      return;
+    }
+
+    saveBtn.disabled = true;
+    saveBtn.textContent = isEdit ? 'Updating...' : 'Saving...';
+
+    const url = isEdit ? ('/masters/customers/' + custId) : "{{ route('masters.customers.store') }}";
+    const method = isEdit ? 'PUT' : 'POST';
+
+    fetch(url, {
+      method: method,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-CSRF-TOKEN': CSRF_TOKEN
+      },
+      body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(data => {
+      saveBtn.disabled = false;
+      saveBtn.textContent = isEdit ? 'Update Customer' : 'Save Customer';
+
+      if (data.success && data.customer) {
+        closeCustomerModal();
+        UI.showToast(isEdit ? 'Customer Updated' : 'Customer Created', data.message, 'success');
+
+        if (isEdit) {
+          updateTableRow(data.customer);
+        } else {
+          prependTableRow(data.customer);
+        }
+
+        if (data.stats) updateKpiStats(data.stats);
+      } else {
+        const msg = data.errors ? Object.values(data.errors).flat().join('<br>') : (data.message || 'Validation error');
+        UI.showToast('Error', msg, 'error');
+      }
+    })
+    .catch(err => {
+      saveBtn.disabled = false;
+      saveBtn.textContent = isEdit ? 'Update Customer' : 'Save Customer';
+      UI.showToast('Error', 'Failed to save customer details', 'error');
+    });
+  }
+
+  // --- 3. DELETE USING AJAX ---
+  function deleteCustomerAjax() {
+    const id = document.getElementById('delete-cust-id').value;
+    if (!id) return;
+
+    const delBtn = document.getElementById('confirm-delete-btn');
+    delBtn.disabled = true;
+    delBtn.textContent = 'Deleting...';
+
+    fetch('/masters/customers/' + id, {
+      method: 'DELETE',
+      headers: {
+        'Accept': 'application/json',
+        'X-CSRF-TOKEN': CSRF_TOKEN
+      }
+    })
+    .then(res => res.json())
+    .then(data => {
+      delBtn.disabled = false;
+      delBtn.textContent = 'Yes, Delete Customer';
+      closeDeleteModal();
+
+      if (data.success) {
+        UI.showToast('Customer Deleted', data.message || 'Customer removed successfully', 'warning');
+        
+        // Animate row removal
+        const row = document.getElementById('customer-row-' + id);
+        if (row) {
+          row.style.opacity = '0';
+          row.style.transform = 'scale(0.95)';
+          setTimeout(() => {
+            row.remove();
+            reindexRows();
+            checkEmptyState();
+          }, 250);
+        }
+
+        if (data.stats) updateKpiStats(data.stats);
+      } else {
+        UI.showToast('Error', data.message || 'Could not delete customer', 'error');
+      }
+    })
+    .catch(err => {
+      delBtn.disabled = false;
+      delBtn.textContent = 'Yes, Delete Customer';
+      UI.showToast('Error', 'Failed to delete customer', 'error');
+    });
+  }
+
+  // --- Dynamic Table DOM Manipulation ---
+  function prependTableRow(c) {
+    const tbody = document.getElementById('customers-table-body');
+    const tableContainer = document.getElementById('customers-table-container');
+    const emptyState = document.getElementById('customers-empty-state');
+
+    if (emptyState) emptyState.style.display = 'none';
+    if (tableContainer) tableContainer.style.display = '';
+
+    const tr = document.createElement('tr');
+    tr.className = 'cm-row cm-row-transition';
+    tr.id = 'customer-row-' + c.id;
+    tr.setAttribute('data-id', c.id);
+    tr.setAttribute('data-status', (c.status || 'active').toLowerCase());
+    tr.setAttribute('data-balance', c.outstanding || 0);
+
+    const initials = (c.name || 'CU').substring(0, 2).toUpperCase();
+    const gstinBadge = (c.gstin || c.gst_number)
+      ? `<span class="badge" style="background:#f1f5f9; color:#1e293b; font-family:monospace; font-size:0.75rem; font-weight:600; border:1px solid #e2e8f0;">${c.gstin || c.gst_number}</span>`
+      : `<span style="font-size:0.75rem; color:var(--slate-400);">Unregistered</span>`;
+
+    const statusVal = (c.status || 'Active');
+    const statusLower = statusVal.toLowerCase();
+
+    tr.innerHTML = `
+      <td class="row-index" style="text-align: center; font-weight: 600; color: var(--slate-400);">1</td>
+      <td>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div class="cm-avatar" id="avatar-${c.id}">${initials}</div>
+          <div>
+            <div class="cust-name-val" style="font-weight:700; color:var(--slate-900); font-size:0.9rem;">${c.name}</div>
+            <div class="cust-code-val" style="font-size:0.75rem; color:var(--slate-500); font-family:monospace;">${c.code || ('CUST-' + String(c.id).padStart(4, '0'))}</div>
+          </div>
+        </div>
+      </td>
+      <td>
+        <div class="cust-contact-val" style="font-weight:600; color:var(--slate-800); font-size:0.85rem;">${c.contact_person || '—'}</div>
+        <div class="cust-phone-val" style="font-size:0.75rem; color:var(--slate-500);">${c.phone || c.mobile || '—'}</div>
+      </td>
+      <td>
+        <div class="cust-city-val" style="font-weight:600; color:var(--slate-700); font-size:0.85rem;">${c.city || '—'}</div>
+        <div class="cust-state-val" style="font-size:0.75rem; color:var(--slate-500);">${c.state || '—'}</div>
+      </td>
+      <td class="cust-gst-cell">${gstinBadge}</td>
+      <td class="cust-credit-val" style="text-align: right; font-weight: 600; color: var(--slate-700);">₹${Number(c.credit_limit || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+      <td class="cust-outstanding-val" style="text-align: right; font-weight: 700; color: #059669;">₹0.00</td>
+      <td style="text-align: center;">
+        <select class="cm-status-select ${statusLower}" onchange="changeCustomerStatus(${c.id}, this.value, this)" title="Click to change status">
+          <option value="Active" ${statusLower === 'active' ? 'selected' : ''}>Active</option>
+          <option value="Inactive" ${statusLower === 'inactive' ? 'selected' : ''}>Inactive</option>
+          <option value="Blocked" ${statusLower === 'blocked' ? 'selected' : ''}>Blocked</option>
+        </select>
+      </td>
+      <td style="text-align: center;">
+        <div style="display:inline-flex; align-items:center; gap:6px;">
+          <button type="button" class="btn btn-secondary btn-icon edit-btn-${c.id}" title="Edit Customer" style="width:30px; height:30px; padding:0; display:inline-flex; align-items:center; justify-content:center;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            </svg>
+          </button>
+          <button type="button" class="btn btn-danger btn-icon" onclick="confirmDeleteCustomer(${c.id}, '${c.name.replace(/'/g, "\\'")}')" title="Delete Customer" style="width:30px; height:30px; padding:0; display:inline-flex; align-items:center; justify-content:center;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"/>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+            </svg>
+          </button>
+        </div>
+      </td>
+    `;
+
+    // Attach edit onclick handler
+    const editBtn = tr.querySelector(`.edit-btn-${c.id}`);
+    if (editBtn) {
+      editBtn.onclick = () => editCustomer(c);
+    }
+
+    tbody.insertBefore(tr, tbody.firstChild);
+    reindexRows();
+  }
+
+  function updateTableRow(c) {
+    const row = document.getElementById('customer-row-' + c.id);
+    if (!row) return;
+
+    row.querySelector('.cust-name-val').textContent = c.name;
+    row.querySelector('.cust-code-val').textContent = c.code || ('CUST-' + String(c.id).padStart(4, '0'));
+    row.querySelector('.cust-contact-val').textContent = c.contact_person || '—';
+    row.querySelector('.cust-phone-val').textContent = c.phone || c.mobile || '—';
+    row.querySelector('.cust-city-val').textContent = c.city || '—';
+    row.querySelector('.cust-state-val').textContent = c.state || '—';
+    
+    const initials = (c.name || 'CU').substring(0, 2).toUpperCase();
+    const avatar = document.getElementById('avatar-' + c.id);
+    if (avatar) avatar.textContent = initials;
+
+    const gstinCell = row.querySelector('.cust-gst-cell');
+    if (gstinCell) {
+      gstinCell.innerHTML = (c.gstin || c.gst_number)
+        ? `<span class="badge" style="background:#f1f5f9; color:#1e293b; font-family:monospace; font-size:0.75rem; font-weight:600; border:1px solid #e2e8f0;">${c.gstin || c.gst_number}</span>`
+        : `<span style="font-size:0.75rem; color:var(--slate-400);">Unregistered</span>`;
+    }
+
+    const creditCell = row.querySelector('.cust-credit-val');
+    if (creditCell) {
+      creditCell.textContent = '₹' + Number(c.credit_limit || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    }
+
+    // Update edit button handler with fresh data
+    const editBtn = row.querySelector('.btn-secondary');
+    if (editBtn) {
+      editBtn.onclick = () => editCustomer(c);
+    }
+  }
+
+  function reindexRows() {
+    const rows = document.querySelectorAll('#customers-table-body tr');
+    rows.forEach((row, i) => {
+      const idxCell = row.querySelector('.row-index');
+      if (idxCell) idxCell.textContent = i + 1;
+    });
+  }
+
+  function checkEmptyState() {
+    const rows = document.querySelectorAll('#customers-table-body tr');
+    const emptyState = document.getElementById('customers-empty-state');
+    const tableContainer = document.getElementById('customers-table-container');
+
+    if (rows.length === 0) {
+      if (emptyState) emptyState.style.display = 'flex';
+      if (tableContainer) tableContainer.style.display = 'none';
+    } else {
+      if (emptyState) emptyState.style.display = 'none';
+      if (tableContainer) tableContainer.style.display = '';
+    }
+  }
+
+  function updateKpiStats(stats) {
+    if (!stats) return;
+
+    if (document.getElementById('stat-total-count')) document.getElementById('stat-total-count').textContent = stats.total;
+    if (document.getElementById('stat-active-count')) document.getElementById('stat-active-count').textContent = stats.active;
+    if (document.getElementById('pill-count-all')) document.getElementById('pill-count-all').textContent = stats.total;
+    if (document.getElementById('pill-count-active')) document.getElementById('pill-count-active').textContent = stats.active;
+    if (document.getElementById('customer-badge-count')) document.getElementById('customer-badge-count').textContent = stats.total + ' Records';
+
+    if (document.getElementById('stat-health-percent')) {
+      const pct = stats.total > 0 ? Math.round((stats.active / stats.total) * 100) : 100;
+      document.getElementById('stat-health-percent').textContent = pct + '%';
+    }
+
+    if (document.getElementById('stat-total-outstanding') && stats.totalOutstanding !== undefined) {
+      const val = Number(stats.totalOutstanding);
+      document.getElementById('stat-total-outstanding').textContent = '₹' + val.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+      document.getElementById('stat-total-outstanding').style.color = val > 0 ? '#dc2626' : '#059669';
+    }
+
+    if (document.getElementById('stat-total-credit') && stats.totalCreditLimit !== undefined) {
+      document.getElementById('stat-total-credit').textContent = '₹' + Number(stats.totalCreditLimit).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    }
+  }
+
+  // --- Live Table Filter & Pills ---
   function filterCustomerTable(query) {
     query = (query || '').toLowerCase().trim();
-    const rows = document.querySelectorAll('#customers-table tbody tr');
+    const rows = document.querySelectorAll('#customers-table-body tr');
     rows.forEach(row => {
       const text = row.innerText.toLowerCase();
       row.style.display = text.includes(query) ? '' : 'none';
     });
   }
 
-  // Pill filter
   function applyCustomerFilter(type, btn) {
     document.querySelectorAll('.cm-filter-pill').forEach(el => el.classList.remove('active'));
     if (btn) btn.classList.add('active');
 
-    const rows = document.querySelectorAll('#customers-table tbody tr.cm-row');
+    const rows = document.querySelectorAll('#customers-table-body tr.cm-row');
     rows.forEach(row => {
       const status = row.getAttribute('data-status');
       const balance = parseFloat(row.getAttribute('data-balance') || 0);
