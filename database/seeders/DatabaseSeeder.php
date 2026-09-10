@@ -19,8 +19,6 @@ use App\Models\LotTracking;
 use App\Models\QrVoucher;
 use App\Models\DispatchChallan;
 use App\Models\DispatchItem;
-use App\Models\Invoice;
-use App\Models\InvoiceItem;
 use App\Models\CustomerPayment;
 use App\Models\CompanySetting;
 use App\Models\ActivityLog;

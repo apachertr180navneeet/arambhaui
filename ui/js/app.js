@@ -131,7 +131,6 @@ const App = {
       production: "Production Management",
       qr: "QR Management",
       dispatch: "Dispatch Management",
-      invoices: "Sales Invoices",
       accounts: "Accounts & Settlements",
       reports: "Reports Hub",
       admin: "Administration"
@@ -153,8 +152,6 @@ const App = {
       inward: "Purchase Inward (GRN)",
       ready: "Ready for Dispatch",
       dispatch: "Dispatch Challans",
-      list: "Customer Invoices",
-      create: "Create Sales Invoice",
       "customer-accounts": "Customer Settlements",
       "customer-outstanding": "Customer Outstanding",
       "vendor-outstanding": "Vendor Outstanding",
@@ -226,8 +223,6 @@ const App = {
     } else if (m === "dispatch") {
       if (s === "ready") html = DispatchView.renderReady();
       else html = DispatchView.renderDispatch();
-    } else if (m === "invoices") {
-      html = InvoicesView.render(s);
     } else if (m === "accounts") {
       if (s === "customer-outstanding") html = AccountsView.renderCustomerOutstanding();
       else if (s === "vendor-outstanding") html = AccountsView.renderVendorOutstanding();

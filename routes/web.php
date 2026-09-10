@@ -15,7 +15,6 @@ use App\Http\Controllers\Production\QualityCheckController;
 use App\Http\Controllers\Production\LotTrackingController;
 use App\Http\Controllers\Qr\QrController;
 use App\Http\Controllers\Dispatch\DispatchController;
-use App\Http\Controllers\Invoices\InvoiceController;
 use App\Http\Controllers\Accounts\AccountsController;
 use App\Http\Controllers\Reports\ReportsController;
 use App\Http\Controllers\Admin\AdminController;
@@ -95,15 +94,6 @@ Route::middleware('auth')->group(function () {
         Route::get('ready', [DispatchController::class, 'readyList'])->name('ready');
         Route::resource('challans', DispatchController::class);
         Route::get('dispatch', [DispatchController::class, 'index'])->name('dispatch');
-    });
-
-    // ==========================================
-    // 7. BILLING & INVOICES
-    // ==========================================
-    Route::prefix('invoices')->name('invoices.')->group(function () {
-        Route::resource('list', InvoiceController::class);
-        Route::get('create', [InvoiceController::class, 'create'])->name('create');
-        Route::post('store', [InvoiceController::class, 'store'])->name('store');
     });
 
     // ==========================================

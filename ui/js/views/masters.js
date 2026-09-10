@@ -233,7 +233,6 @@ const MastersView = {
     if (!cust) return;
 
     const orders = ERPState.data.salesOrders.filter(o => o.customerId === customerId || o.customer === cust.name);
-    const invoices = ERPState.data.invoices.filter(i => i.customer === cust.name);
 
     const content = `
       <div style="display:flex; flex-direction:column; gap:20px;">
@@ -307,7 +306,7 @@ const MastersView = {
     UI.openDrawer({
       title: cust.name,
       subtitle: `${cust.id} • ${cust.companyName}`,
-      tabs: [{ id: "overview", label: "Overview" }, { id: "orders", label: "Orders" }, { id: "invoices", label: "Invoices" }],
+      tabs: [{ id: "overview", label: "Overview" }, { id: "orders", label: "Orders" }],
       content,
       size: "drawer-lg"
     });

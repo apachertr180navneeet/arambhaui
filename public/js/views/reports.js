@@ -232,7 +232,7 @@ const ReportsView = {
 
   // 5. LOT-WISE SALES REPORT
   renderLotSales() {
-    const invoices = ERPState.data.invoices || [];
+    const dispatches = ERPState.data.dispatchChallans || [];
 
     return `
       <div class="table-card">
@@ -246,29 +246,27 @@ const ReportsView = {
           <table class="data-table">
             <thead>
               <tr>
-                <th>Invoice / Lot</th>
+                <th>Challan / Lot</th>
                 <th>Customer</th>
-                <th>Sales Order Ref</th>
-                <th>Invoice Date</th>
-                <th>Invoice Amount</th>
-                <th>Paid Amount</th>
+                <th>Transporter</th>
+                <th>Dispatch Date</th>
+                <th>Total Packages</th>
                 <th>Status</th>
               </tr>
             </thead>
             <tbody>
-              ${invoices.length === 0 ? `
+              ${dispatches.length === 0 ? `
                 <tr>
-                  <td colspan="7" style="text-align:center; padding:32px 20px; color:var(--slate-400);">No sales delivery fulfillment records found.</td>
+                  <td colspan="6" style="text-align:center; padding:32px 20px; color:var(--slate-400);">No sales delivery fulfillment records found.</td>
                 </tr>
-              ` : invoices.map(inv => `
+              ` : dispatches.map(d => `
                 <tr>
-                  <td class="mono-cell font-bold" style="color:var(--primary-600);">${inv.invoiceNo || inv.id}</td>
-                  <td class="primary-cell">${inv.customer}</td>
-                  <td class="mono-cell">${inv.orderNo || '-'}</td>
-                  <td>${UI.formatDate(inv.invoiceDate || inv.date)}</td>
-                  <td class="font-bold font-mono">${UI.formatCurrency(inv.amount || inv.grandTotal || 0)}</td>
-                  <td class="font-bold font-mono" style="color:var(--success-700);">${UI.formatCurrency(inv.paidAmount || 0)}</td>
-                  <td>${UI.formatStatusBadge(inv.status || 'Sent')}</td>
+                  <td class="mono-cell font-bold" style="color:var(--primary-600);">${d.challan_no || d.id}</td>
+                  <td class="primary-cell">${d.customer_name || d.customer}</td>
+                  <td class="mono-cell">${d.transporter_name || d.transporter || '-'}</td>
+                  <td>${UI.formatDate(d.dispatch_date || d.date)}</td>
+                  <td class="font-bold font-mono">${d.total_packages || 1}</td>
+                  <td>${UI.formatStatusBadge(d.status || 'Dispatched')}</td>
                 </tr>
               `).join('')}
             </tbody>

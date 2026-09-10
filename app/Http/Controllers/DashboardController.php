@@ -52,11 +52,6 @@ class DashboardController extends Controller
         return view('dashboard', ['user' => Auth::user(), 'module' => 'dispatch', 'submodule' => $submodule]);
     }
 
-    public function invoices($submodule = 'list')
-    {
-        return view('dashboard', ['user' => Auth::user(), 'module' => 'invoices', 'submodule' => $submodule]);
-    }
-
     public function accounts($submodule = 'customer-accounts')
     {
         return view('dashboard', ['user' => Auth::user(), 'module' => 'accounts', 'submodule' => $submodule]);

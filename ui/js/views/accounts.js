@@ -156,10 +156,6 @@ const AccountsView = {
   },
 
   syncReceiptCust(custName) {
-    const inv = ERPState.data.invoices.find(i => i.customer === custName);
-    if (inv) {
-      document.getElementById("rec-inv").value = inv.invoiceNo;
-    }
   },
 
   // 2. CUSTOMER OUTSTANDING REPORT WITH AGING

@@ -634,14 +634,10 @@ const MastersView = {
         </div>
 
         <!-- Quick Summary Metrics -->
-        <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:10px;">
+        <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:10px;">
           <div style="background:#ffffff; border:1px solid var(--slate-200); border-radius:var(--radius-md); padding:12px; text-align:center;">
             <div style="font-size:0.75rem; color:var(--slate-500);">Sales Orders</div>
             <div style="font-size:1.25rem; font-weight:800; color:var(--slate-900); margin-top:2px;">${orders.length}</div>
-          </div>
-          <div style="background:#ffffff; border:1px solid var(--slate-200); border-radius:var(--radius-md); padding:12px; text-align:center;">
-            <div style="font-size:0.75rem; color:var(--slate-500);">Tax Invoices</div>
-            <div style="font-size:1.25rem; font-weight:800; color:var(--slate-900); margin-top:2px;">${invoices.length}</div>
           </div>
           <div style="background:#ffffff; border:1px solid var(--slate-200); border-radius:var(--radius-md); padding:12px; text-align:center;">
             <div style="font-size:0.75rem; color:var(--slate-500);">Payment Receipts</div>
@@ -662,9 +658,6 @@ const MastersView = {
           <button class="btn btn-success btn-sm" onclick="MastersView.openCustomerReceiptModal('${cust.id}')">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
             Record Payment
-          </button>
-          <button class="btn btn-secondary btn-sm" onclick="UI.closeDrawer(); App.navigate('invoices', 'create'); setTimeout(() => { if(window.InvoicesView) InvoicesView.onCustomerSelect('${cust.name}'); }, 150);">
-            + Create Invoice
           </button>
         </div>
       </div>
@@ -706,51 +699,6 @@ const MastersView = {
             </table>
           </div>
         ` : `<div style="text-align:center; padding:30px; color:var(--slate-400); font-size:0.85rem;">No sales orders recorded for this customer yet.</div>`}
-      </div>
-    `;
-
-    const renderInvoicesTab = () => `
-      <div>
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-          <h4 style="font-size:0.9rem; color:var(--slate-900); margin:0;">GST Tax Invoices (${invoices.length})</h4>
-          <button class="btn btn-primary btn-sm" onclick="UI.closeDrawer(); App.navigate('invoices', 'create');">
-            + New Sales Invoice
-          </button>
-        </div>
-        ${invoices.length > 0 ? `
-          <div class="table-responsive">
-            <table class="data-table" style="font-size:0.8rem;">
-              <thead>
-                <tr>
-                  <th>Invoice No</th>
-                  <th>Date</th>
-                  <th>Amount</th>
-                  <th>Paid</th>
-                  <th>Balance</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${invoices.map(i => `
-                  <tr>
-                    <td class="mono-cell font-bold" style="color:var(--primary-600);">${i.invoiceNo}</td>
-                    <td>${i.date}</td>
-                    <td class="font-bold font-mono">${UI.formatCurrency(i.amount)}</td>
-                    <td class="font-mono" style="color:var(--success-700);">${UI.formatCurrency(i.paidAmount || 0)}</td>
-                    <td class="font-bold font-mono" style="color:${(i.balanceAmount || 0) > 0 ? 'var(--danger-600)' : 'var(--success-600)'};">
-                      ${UI.formatCurrency(i.balanceAmount !== undefined ? i.balanceAmount : (i.amount - (i.paidAmount || 0)))}
-                    </td>
-                    <td>${UI.formatStatusBadge(i.status)}</td>
-                    <td>
-                      <button class="table-action-btn view" onclick="UI.closeDrawer(); App.navigate('invoices', 'list'); setTimeout(() => { if(window.InvoicesView) InvoicesView.openInvoiceModal('${i.invoiceNo}'); }, 150);">View</button>
-                    </td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>
-        ` : `<div style="text-align:center; padding:30px; color:var(--slate-400); font-size:0.85rem;">No invoices generated for this customer yet.</div>`}
       </div>
     `;
 
@@ -797,7 +745,6 @@ const MastersView = {
       <div id="cust-drawer-tab-content">
         ${initialTab === 'overview' ? renderOverviewTab() : 
           initialTab === 'orders' ? renderOrdersTab() : 
-          initialTab === 'invoices' ? renderInvoicesTab() : 
           renderPaymentsTab()}
       </div>
     `;
@@ -808,7 +755,6 @@ const MastersView = {
       tabs: [
         { id: "overview", label: "Overview & Profile" },
         { id: "orders", label: `Orders (${orders.length})` },
-        { id: "invoices", label: `Invoices (${invoices.length})` },
         { id: "payments", label: `Receipts (${payments.length})` }
       ],
       content: drawerBodyContent,
@@ -826,7 +772,6 @@ const MastersView = {
           if (tabContentContainer) {
             if (tabId === "overview") tabContentContainer.innerHTML = renderOverviewTab();
             else if (tabId === "orders") tabContentContainer.innerHTML = renderOrdersTab();
-            else if (tabId === "invoices") tabContentContainer.innerHTML = renderInvoicesTab();
             else if (tabId === "payments") tabContentContainer.innerHTML = renderPaymentsTab();
           }
         };

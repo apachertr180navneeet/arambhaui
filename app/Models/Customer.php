@@ -11,11 +11,6 @@ class Customer extends Model
 
     protected $guarded = [];
 
-    public function invoices()
-    {
-        return $this->hasMany(Invoice::class);
-    }
-
     public function payments()
     {
         return $this->hasMany(CustomerPayment::class);

@@ -7,7 +7,7 @@ const DashboardView = {
   render() {
     const stats = ERPState.getDashboardStats();
     const activity = ERPState.data.activityLogs.slice(0, 6);
-    const invoices = ERPState.data.invoices || [];
+    const productionOrders = ERPState.data.productionOrders || [];
     const items = ERPState.data.items || [];
     const customers = ERPState.data.customers || [];
     const vendors = ERPState.data.vendors || [];
@@ -74,18 +74,18 @@ const DashboardView = {
           </div>
         </div>
 
-        <!-- 3. Sales Invoices -->
-        <div class="kpi-card amber" onclick="App.navigate('invoices', 'invoices')">
+        <!-- 3. Production Orders -->
+        <div class="kpi-card amber" onclick="App.navigate('production', 'orders')">
           <div class="kpi-top">
-            <span class="kpi-title">Sales Invoices</span>
+            <span class="kpi-title">Production Orders</span>
             <div class="kpi-icon-wrap amber">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
             </div>
           </div>
-          <div class="kpi-value">${invoices.length} Invoices</div>
+          <div class="kpi-value">${productionOrders.length} Orders</div>
           <div class="kpi-bottom">
-            <span class="kpi-trend up">Billing & Tax</span>
-            <span class="kpi-period">Generated</span>
+            <span class="kpi-trend up">Live Queue</span>
+            <span class="kpi-period">Floor Progress</span>
           </div>
         </div>
 

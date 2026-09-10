@@ -156,24 +156,6 @@
           </div>
         </div>
 
-        <!-- 8. SALES INVOICES -->
-        <div class="nav-section">
-          <div class="nav-section-title">Sales & Billing</div>
-          <div class="nav-item nav-group">
-            <a class="nav-link nav-group-toggle" data-module="invoices">
-              <div class="nav-link-content">
-                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-                <span class="nav-title">Sales Invoices</span>
-              </div>
-              <svg class="nav-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-            </a>
-            <div class="nav-submenu">
-              <a class="submenu-link" data-route="invoices/list" data-module="invoices" data-submodule="list">Customer Invoices</a>
-              <a class="submenu-link" data-route="invoices/create" data-module="invoices" data-submodule="create">+ Create Sales Invoice</a>
-            </div>
-          </div>
-        </div>
-
         <!-- 9. ACCOUNTS & SETTLEMENTS -->
         <div class="nav-section">
           <div class="nav-section-title">Financials</div>
@@ -376,7 +358,6 @@
   <script src="{{ asset('js/views/production.js') }}?v={{ time() }}"></script>
   <script src="{{ asset('js/views/qr-view.js') }}?v={{ time() }}"></script>
   <script src="{{ asset('js/views/dispatch.js') }}?v={{ time() }}"></script>
-  <script src="{{ asset('js/views/invoices.js') }}?v={{ time() }}"></script>
   <script src="{{ asset('js/views/accounts.js') }}?v={{ time() }}"></script>
   <script src="{{ asset('js/views/reports.js') }}?v={{ time() }}"></script>
   <script src="{{ asset('js/views/admin.js') }}?v={{ time() }}"></script>

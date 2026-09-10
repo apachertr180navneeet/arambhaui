@@ -130,8 +130,8 @@ const AccountsView = {
           </div>
 
           <div class="form-group">
-            <label class="form-label">Linked Tax Invoice</label>
-            <input type="text" class="form-control font-mono" id="rec-inv" placeholder="e.g. INV-2026-001">
+            <label class="form-label">Bill / Account Reference</label>
+            <input type="text" class="form-control font-mono" id="rec-inv" placeholder="e.g. BILL-2026-001">
           </div>
 
           <div class="form-group col-span-2">
@@ -177,11 +177,6 @@ const AccountsView = {
   },
 
   syncReceiptCust(custName) {
-    const inv = (ERPState.data.invoices || []).find(i => i.customer === custName);
-    if (inv) {
-      const el = document.getElementById("rec-inv");
-      if (el) el.value = inv.invoiceNo || inv.id;
-    }
   },
 
   // 2. CUSTOMER OUTSTANDING REPORT WITH AGING

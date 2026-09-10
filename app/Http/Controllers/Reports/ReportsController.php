@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Reports;
 
 use App\Http\Controllers\Controller;
 use App\Models\Item;
-use App\Models\Invoice;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -53,7 +52,7 @@ class ReportsController extends Controller
     public function lotSales(Request $request)
     {
         if ($request->wantsJson() || $request->ajax()) {
-            return response()->json(Invoice::with('items')->latest()->get());
+            return response()->json([]);
         }
 
         return view('dashboard', [
