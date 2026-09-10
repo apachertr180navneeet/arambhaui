@@ -129,6 +129,8 @@ class AdminAuthTest extends TestCase
      */
     public function test_inactive_user_cannot_authenticate(): void
     {
+        User::withTrashed()->where('email', 'inactive@garmenterp.com')->forceDelete();
+
         $inactiveUser = User::create([
             'name' => 'Inactive Worker',
             'email' => 'inactive@garmenterp.com',
@@ -146,6 +148,6 @@ class AdminAuthTest extends TestCase
         $response->assertRedirect('/login');
         $response->assertSessionHasErrors('email');
 
-        $inactiveUser->delete();
+        $inactiveUser->forceDelete();
     }
 }
