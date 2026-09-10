@@ -24,6 +24,9 @@
   <!-- jsQR library for browser camera/file QR decoding -->
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 
+  <!-- SweetAlert2 library -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
   @stack('styles')
 </head>
 <body>
@@ -393,6 +396,35 @@
   <script src="{{ asset('js/charts.js') }}?v={{ time() }}"></script>
   <script src="{{ asset('js/qr.js') }}?v={{ time() }}"></script>
   <script src="{{ asset('js/blade-shell.js') }}?v={{ time() }}"></script>
+
+  <script>
+    // Global SweetAlert Toast Configuration
+    window.Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true,
+      didOpen: (toast) => {
+        toast.addEventListener('mouseenter', Swal.stopTimer);
+        toast.addEventListener('mouseleave', Swal.resumeTimer);
+      }
+    });
+
+    @if (session('success'))
+      Toast.fire({
+        icon: 'success',
+        title: {!! json_encode(session('success')) !!}
+      });
+    @endif
+
+    @if (session('error'))
+      Toast.fire({
+        icon: 'error',
+        title: {!! json_encode(session('error')) !!}
+      });
+    @endif
+  </script>
 
   @stack('scripts')
 </body>

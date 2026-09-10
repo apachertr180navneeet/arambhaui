@@ -624,57 +624,82 @@ a:hover { color: var(--primary-700); }
   border-radius: var(--radius-lg);
 }
 
-.btn-primary {
+.btn-primary,
+a.btn-primary {
   background-color: var(--primary-600);
-  color: #ffffff;
+  color: #ffffff !important;
   box-shadow: 0 1px 3px rgba(37, 99, 235, 0.3);
 }
 
-.btn-primary:hover {
+.btn-primary:hover,
+a.btn-primary:hover {
   background-color: var(--primary-700);
+  color: #ffffff !important;
   box-shadow: 0 3px 10px rgba(37, 99, 235, 0.4);
 }
 
-.btn-secondary {
+.btn-secondary,
+a.btn-secondary {
   background-color: #ffffff;
   border-color: var(--slate-300);
-  color: var(--slate-700);
+  color: var(--slate-700) !important;
 }
 
-.btn-secondary:hover {
+.btn-secondary:hover,
+a.btn-secondary:hover {
   background-color: var(--slate-50);
   border-color: var(--slate-400);
-  color: var(--slate-900);
+  color: var(--slate-900) !important;
 }
 
-.btn-success {
+.btn-success,
+a.btn-success {
   background-color: var(--success-600);
-  color: #ffffff;
+  color: #ffffff !important;
   box-shadow: 0 1px 3px rgba(16, 185, 129, 0.3);
 }
 
-.btn-success:hover {
+.btn-success:hover,
+a.btn-success:hover {
   background-color: var(--success-700);
+  color: #ffffff !important;
   box-shadow: 0 3px 10px rgba(16, 185, 129, 0.4);
 }
 
-.btn-danger {
+.btn-danger,
+a.btn-danger {
   background-color: var(--danger-600);
-  color: #ffffff;
+  color: #ffffff !important;
 }
 
-.btn-danger:hover {
+.btn-danger:hover,
+a.btn-danger:hover {
   background-color: var(--danger-700);
+  color: #ffffff !important;
 }
 
-.btn-ghost {
+.btn-warning,
+a.btn-warning {
+  background-color: var(--warning-500, #f59e0b);
+  color: #ffffff !important;
+}
+
+.btn-warning:hover,
+a.btn-warning:hover {
+  background-color: var(--warning-600, #d97706);
+  color: #ffffff !important;
+}
+
+.btn-ghost,
+a.btn-ghost {
   background: transparent;
-  color: var(--slate-600);
+  color: var(--slate-600) !important;
 }
 
-.btn-ghost:hover {
+.btn-ghost:hover,
+a.btn-ghost:hover {
   background-color: var(--slate-100);
-  color: var(--slate-900);
+  color: var(--slate-900) !important;
 }
 
 /* Status Badges */
