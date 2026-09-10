@@ -46,6 +46,7 @@ Route::middleware('auth')->group(function () {
     Route::prefix('masters')->name('masters.')->group(function () {
         Route::get('customers/{customer}/statement', [CustomerController::class, 'statement'])->name('customers.statement');
         Route::resource('customers', CustomerController::class);
+        Route::get('vendors/{vendor}/statement', [VendorController::class, 'statement'])->name('vendors.statement');
         Route::resource('vendors', VendorController::class);
         Route::resource('jobworkers', JobWorkerController::class);
         Route::resource('items', ItemController::class);
