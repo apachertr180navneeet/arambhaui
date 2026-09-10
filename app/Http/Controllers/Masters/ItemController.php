@@ -11,20 +11,64 @@ class ItemController extends Controller
 {
     public function index(Request $request)
     {
-        $items = Item::latest()->get();
+        $query = Item::query();
+
+        if ($request->has('search') && !empty($request->search)) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('code', 'like', "%{$search}%")
+                  ->orWhere('category', 'like', "%{$search}%")
+                  ->orWhere('brand', 'like', "%{$search}%")
+                  ->orWhere('fabric', 'like', "%{$search}%")
+                  ->orWhere('color', 'like', "%{$search}%")
+                  ->orWhere('size', 'like', "%{$search}%")
+                  ->orWhere('hsn_code', 'like', "%{$search}%")
+                  ->orWhere('location', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->has('category') && !empty($request->category)) {
+            $query->where('category', $request->category);
+        }
+
+        if ($request->has('status') && !empty($request->status)) {
+            $query->where('status', $request->status);
+        }
+
+        $items = $query->latest()->get();
 
         if ($request->wantsJson() || $request->ajax()) {
             return response()->json($items);
         }
 
-        $stats = [
-            'total' => Item::count(),
-            'fabricCount' => Item::where('category', 'Fabric')->count(),
-            'trimsCount' => Item::where('category', 'Trims')->count(),
-            'lowStockCount' => Item::whereRaw('current_stock <= min_stock')->count()
-        ];
-
+        $stats = $this->getStats();
         return view('masters.items.index', compact('items', 'stats'));
+    }
+
+    private function getStats()
+    {
+        $total = Item::count();
+        $fabricCount = Item::where(function ($q) {
+            $q->where('category', 'like', '%fabric%')
+              ->orWhere('category', 'like', '%yarn%');
+        })->count();
+        $trimsCount = Item::where(function ($q) {
+            $q->where('category', 'like', '%trim%')
+              ->orWhere('category', 'like', '%packaging%');
+        })->count();
+        $lowStockCount = Item::whereRaw('current_stock <= min_stock')->count();
+        $active = Item::whereRaw('LOWER(status) = ?', ['active'])->count();
+        $totalStockValue = (float) Item::selectRaw('SUM(current_stock * unit_cost) as total_val')->value('total_val');
+
+        return [
+            'total' => $total,
+            'active' => $active,
+            'fabricCount' => $fabricCount,
+            'trimsCount' => $trimsCount,
+            'lowStockCount' => $lowStockCount,
+            'totalStockValue' => $totalStockValue
+        ];
     }
 
     public function store(Request $request)
@@ -53,9 +97,9 @@ class ItemController extends Controller
             'color' => 'nullable|string|max:100',
             'size' => 'nullable|string|max:50',
             'unit' => 'nullable|string|max:50',
-            'unit_cost' => 'nullable|numeric',
-            'current_stock' => 'nullable|numeric',
-            'min_stock' => 'nullable|numeric',
+            'unit_cost' => 'nullable|numeric|min:0',
+            'current_stock' => 'nullable|numeric|min:0',
+            'min_stock' => 'nullable|numeric|min:0',
             'hsn_code' => 'nullable|string|max:50',
             'location' => 'nullable|string|max:150',
             'status' => 'nullable|string|max:50'
@@ -63,11 +107,11 @@ class ItemController extends Controller
 
         $category = !empty($validated['category']) ? $validated['category'] : 'Fabric';
         $validated['category'] = $category;
-        $validated['unit'] = !empty($validated['unit']) ? $validated['unit'] : 'Pieces';
+        $validated['unit'] = !empty($validated['unit']) ? $validated['unit'] : 'Meters';
         $validated['unit_cost'] = isset($validated['unit_cost']) ? floatval($validated['unit_cost']) : 0.00;
         $validated['current_stock'] = isset($validated['current_stock']) ? floatval($validated['current_stock']) : 0.00;
         $validated['min_stock'] = isset($validated['min_stock']) ? floatval($validated['min_stock']) : 100.00;
-        $validated['status'] = !empty($validated['status']) ? $validated['status'] : 'Active';
+        $validated['status'] = !empty($validated['status']) ? ucfirst(strtolower($validated['status'])) : 'Active';
 
         if (empty($validated['code'])) {
             $prefix = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $category), 0, 3));
@@ -84,15 +128,23 @@ class ItemController extends Controller
         $item = Item::create($validated);
 
         if ($request->wantsJson() || $request->ajax()) {
-            return response()->json(['success' => true, 'item' => $item]);
+            return response()->json([
+                'success' => true,
+                'item' => $item,
+                'stats' => $this->getStats(),
+                'message' => "Item SKU {$item->name} registered successfully."
+            ]);
         }
 
-        return redirect()->route('masters.items.index')->with('success', "Item {$item->name} registered.");
+        return redirect()->route('masters.items.index')->with('success', "Item SKU {$item->name} registered successfully.");
     }
 
     public function show(Item $item)
     {
-        return response()->json($item);
+        return response()->json([
+            'success' => true,
+            'item' => $item
+        ]);
     }
 
     public function update(Request $request, Item $item)
@@ -121,21 +173,30 @@ class ItemController extends Controller
             'color' => 'nullable|string|max:100',
             'size' => 'nullable|string|max:50',
             'unit' => 'sometimes|nullable|string|max:50',
-            'unit_cost' => 'sometimes|nullable|numeric',
-            'current_stock' => 'sometimes|nullable|numeric',
-            'min_stock' => 'sometimes|nullable|numeric',
+            'unit_cost' => 'sometimes|nullable|numeric|min:0',
+            'current_stock' => 'sometimes|nullable|numeric|min:0',
+            'min_stock' => 'sometimes|nullable|numeric|min:0',
             'hsn_code' => 'nullable|string|max:50',
             'location' => 'nullable|string|max:150',
             'status' => 'nullable|string|max:50'
         ])->validate();
 
+        if (isset($validated['status'])) {
+            $validated['status'] = ucfirst(strtolower($validated['status']));
+        }
+
         $item->update($validated);
 
         if ($request->wantsJson() || $request->ajax()) {
-            return response()->json(['success' => true, 'item' => $item]);
+            return response()->json([
+                'success' => true,
+                'item' => $item,
+                'stats' => $this->getStats(),
+                'message' => "Item SKU {$item->name} updated successfully."
+            ]);
         }
 
-        return redirect()->route('masters.items.index')->with('success', "Item {$item->name} updated.");
+        return redirect()->route('masters.items.index')->with('success', "Item SKU {$item->name} updated successfully.");
     }
 
     public function destroy(Item $item)
@@ -144,9 +205,13 @@ class ItemController extends Controller
         $item->delete();
 
         if (request()->wantsJson() || request()->ajax()) {
-            return response()->json(['success' => true, 'message' => "Item {$name} deleted."]);
+            return response()->json([
+                'success' => true,
+                'stats' => $this->getStats(),
+                'message' => "Item SKU {$name} deleted successfully."
+            ]);
         }
 
-        return redirect()->route('masters.items.index')->with('success', "Item {$name} deleted.");
+        return redirect()->route('masters.items.index')->with('success', "Item SKU {$name} deleted successfully.");
     }
 }
