@@ -86,20 +86,20 @@
           </div>
         </div>
 
-        <!-- 3. JOB WORK & ASSIGN -->
+        <!-- 3. QR CODE MANAGEMENT -->
         <div class="nav-section">
-          <div class="nav-section-title">Job Assignment</div>
-          <div class="nav-item nav-group {{ request()->is('jobwork*') ? 'expanded' : '' }}">
-            <a href="javascript:void(0)" class="nav-link nav-group-toggle {{ request()->is('jobwork*') ? 'active' : '' }}">
+          <div class="nav-section-title">Barcodes & QR</div>
+          <div class="nav-item nav-group {{ request()->is('qr*') ? 'expanded' : '' }}">
+            <a href="javascript:void(0)" class="nav-link nav-group-toggle {{ request()->is('qr*') ? 'active' : '' }}">
               <div class="nav-link-content">
-                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
-                <span class="nav-title">Job Work & Assign</span>
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/><path d="M3 12h.01"/><path d="M12 3h.01"/><path d="M12 16v.01"/><path d="M16 12h1"/><path d="M21 12v.01"/><path d="M12 21v-1"/></svg>
+                <span class="nav-title">QR Management</span>
               </div>
               <svg class="nav-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
             </a>
             <div class="nav-submenu">
-              <a href="{{ route('jobwork.assign.index') }}" class="submenu-link {{ request()->routeIs('jobwork.assign.*') ? 'active' : '' }}">Job Assign Orders</a>
-              <a href="{{ route('jobwork.inward-report') }}" class="submenu-link {{ request()->routeIs('jobwork.inward-report') ? 'active' : '' }}">Job Inward & Ready Report</a>
+              <a href="{{ route('qr.history') }}" class="submenu-link {{ request()->routeIs('qr.history') ? 'active' : '' }}">Admin QR & Expiry Ledger</a>
+              <a href="{{ route('qr.generator') }}" class="submenu-link {{ request()->routeIs('qr.generator') ? 'active' : '' }}">+ Generate Single-Use QR</a>
             </div>
           </div>
         </div>
@@ -122,21 +122,20 @@
           </div>
         </div>
 
-        <!-- 5. QR CODE MANAGEMENT -->
+        <!-- 5. JOB WORK & ASSIGN -->
         <div class="nav-section">
-          <div class="nav-section-title">Barcodes & QR</div>
-          <div class="nav-item nav-group {{ request()->is('qr*') ? 'expanded' : '' }}">
-            <a href="javascript:void(0)" class="nav-link nav-group-toggle {{ request()->is('qr*') ? 'active' : '' }}">
+          <div class="nav-section-title">Job Assignment</div>
+          <div class="nav-item nav-group {{ request()->is('jobwork*') ? 'expanded' : '' }}">
+            <a href="javascript:void(0)" class="nav-link nav-group-toggle {{ request()->is('jobwork*') ? 'active' : '' }}">
               <div class="nav-link-content">
-                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/><path d="M3 12h.01"/><path d="M12 3h.01"/><path d="M12 16v.01"/><path d="M16 12h1"/><path d="M21 12v.01"/><path d="M12 21v-1"/></svg>
-                <span class="nav-title">QR Management</span>
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                <span class="nav-title">Job Work & Assign</span>
               </div>
               <svg class="nav-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
             </a>
             <div class="nav-submenu">
-              <a href="{{ route('qr.scanner') }}" class="submenu-link {{ request()->routeIs('qr.scanner') ? 'active' : '' }}">Customer Claim Portal</a>
-              <a href="{{ route('qr.history') }}" class="submenu-link {{ request()->routeIs('qr.history') ? 'active' : '' }}">Admin QR & Expiry Ledger</a>
-              <a href="{{ route('qr.generator') }}" class="submenu-link {{ request()->routeIs('qr.generator') ? 'active' : '' }}">+ Generate Single-Use QR</a>
+              <a href="{{ route('jobwork.assign.index') }}" class="submenu-link {{ request()->routeIs('jobwork.assign.*') ? 'active' : '' }}">Job Assign Orders</a>
+              <a href="{{ route('jobwork.inward-report') }}" class="submenu-link {{ request()->routeIs('jobwork.inward-report') ? 'active' : '' }}">Job Inward & Ready Report</a>
             </div>
           </div>
         </div>
