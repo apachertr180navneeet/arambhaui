@@ -285,7 +285,7 @@
   }
 
   /* Modal Styling */
-  #customer-modal {
+  #customer-modal, #delete-customer-modal {
     position: fixed;
     top: 0;
     left: 0;
@@ -526,125 +526,85 @@
               <div style="font-size:0.75rem; color:var(--slate-500); margin-top:2px;">Automated block rules when outstanding exceeds credit limits</div>
             </div>
           </div>
-
-          <div class="cm-feature-card">
-            <div style="width:34px; height:34px; border-radius:8px; background:#faf5ff; color:#7c3aed; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
-            </div>
-            <div>
-              <div style="font-weight:700; font-size:0.825rem; color:var(--slate-800);">Direct Order & Dispatch Link</div>
-              <div style="font-size:0.75rem; color:var(--slate-500); margin-top:2px;">Generate delivery challans, finished goods invoices & settlements</div>
-            </div>
-          </div>
         </div>
       </div>
     @else
-      <!-- Customer Data Table -->
       <div class="table-responsive">
-        <table class="data-table" id="customers-table" style="width:100%; font-size:0.85rem;">
+        <table class="data-table" id="customers-table">
           <thead>
             <tr>
-              <th>Code</th>
-              <th>Customer / Firm</th>
+              <th style="width: 50px; text-align: center;">#</th>
+              <th>Customer Name & Code</th>
               <th>Contact Person</th>
-              <th>Phone / Email</th>
-              <th>GSTIN</th>
-              <th>City / State</th>
-              <th>Credit Limit</th>
-              <th>Outstanding</th>
-              <th>Status</th>
-              <th style="text-align:right;">Actions</th>
+              <th>Location & State</th>
+              <th>Tax Info (GSTIN)</th>
+              <th style="text-align: right;">Credit Limit</th>
+              <th style="text-align: right;">Outstanding</th>
+              <th style="text-align: center;">Status</th>
+              <th style="text-align: center; width: 100px;">Actions</th>
             </tr>
           </thead>
           <tbody>
-            @foreach ($customers as $c)
-              @php
-                $initials = strtoupper(substr($c->name, 0, 2));
-              @endphp
-              <tr data-status="{{ strtolower($c->status) }}" data-outstanding="{{ $c->outstanding }}">
-                <td style="font-family:var(--font-mono); font-weight:700;">
-                  <span style="background:var(--primary-50); color:var(--primary-700); padding:3px 8px; border-radius:6px; border:1px solid var(--primary-200); font-size:0.8rem;">
-                    {{ $c->code }}
-                  </span>
-                </td>
+            @foreach($customers as $index => $customer)
+              <tr class="cm-row" data-status="{{ strtolower($customer->status ?? 'active') }}" data-balance="{{ $customer->outstanding_balance ?? 0 }}">
+                <td style="text-align: center; font-weight: 600; color: var(--slate-400);">{{ $index + 1 }}</td>
                 <td>
                   <div style="display:flex; align-items:center; gap:10px;">
-                    <div class="cm-avatar">{{ $initials }}</div>
+                    <div class="cm-avatar">
+                      {{ strtoupper(substr($customer->name, 0, 2)) }}
+                    </div>
                     <div>
-                      <div style="font-weight:700; color:var(--slate-900);">{{ $c->name }}</div>
-                      @if($c->company_name)
-                        <div style="font-size:0.75rem; color:var(--slate-500);">{{ $c->company_name }}</div>
-                      @endif
+                      <div style="font-weight:700; color:var(--slate-900); font-size:0.9rem;">{{ $customer->name }}</div>
+                      <div style="font-size:0.75rem; color:var(--slate-500); font-family:monospace;">{{ $customer->code ?? ('CUST-'.str_pad($customer->id, 4, '0', STR_PAD_LEFT)) }}</div>
                     </div>
                   </div>
                 </td>
                 <td>
-                  @if($c->contact_person)
-                    <div style="display:flex; align-items:center; gap:6px; color:var(--slate-700);">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--slate-400);"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                      <span>{{ $c->contact_person }}</span>
-                    </div>
+                  <div style="font-weight:600; color:var(--slate-800); font-size:0.85rem;">{{ $customer->contact_person ?? '—' }}</div>
+                  <div style="font-size:0.75rem; color:var(--slate-500);">{{ $customer->phone ?? $customer->mobile ?? '—' }}</div>
+                </td>
+                <td>
+                  <div style="font-weight:600; color:var(--slate-700); font-size:0.85rem;">{{ $customer->city ?? '—' }}</div>
+                  <div style="font-size:0.75rem; color:var(--slate-500);">{{ $customer->state ?? '—' }}</div>
+                </td>
+                <td>
+                  @if(!empty($customer->gst_number ?? $customer->gstin))
+                    <span class="badge" style="background:#f1f5f9; color:#1e293b; font-family:monospace; font-size:0.75rem; font-weight:600; border:1px solid #e2e8f0;">
+                      {{ $customer->gst_number ?? $customer->gstin }}
+                    </span>
                   @else
-                    <span style="color:var(--slate-400);">—</span>
+                    <span style="font-size:0.75rem; color:var(--slate-400);">Unregistered</span>
                   @endif
                 </td>
-                <td>
-                  <div style="font-weight:600; font-family:var(--font-mono); font-size:0.8rem;">
-                    <a href="tel:{{ $c->phone }}" style="color:inherit; text-decoration:none;">{{ $c->phone }}</a>
-                  </div>
-                  @if($c->email)
-                    <div style="font-size:0.75rem; color:var(--slate-500); margin-top:2px;">
-                      <a href="mailto:{{ $c->email }}" style="color:var(--primary-600); text-decoration:none;">{{ $c->email }}</a>
-                    </div>
-                  @endif
+                <td style="text-align: right; font-weight: 600; color: var(--slate-700);">
+                  ₹{{ number_format($customer->credit_limit ?? 0, 2) }}
                 </td>
-                <td style="font-family:var(--font-mono); font-size:0.8rem;">
-                  @if($c->gstin)
-                    <span style="background:#f1f5f9; padding:2px 6px; border-radius:4px; border:1px solid #e2e8f0; color:var(--slate-800);">{{ $c->gstin }}</span>
-                  @else
-                    <span style="color:var(--slate-400);">—</span>
-                  @endif
+                <td style="text-align: right; font-weight: 700; color: {{ ($customer->outstanding_balance ?? 0) > 0 ? '#dc2626' : '#059669' }};">
+                  ₹{{ number_format($customer->outstanding_balance ?? 0, 2) }}
                 </td>
-                <td>
-                  @if($c->city || $c->state)
-                    <div style="font-weight:600; color:var(--slate-800);">{{ $c->city ?: '—' }}</div>
-                    @if($c->state)
-                      <div style="font-size:0.75rem; color:var(--slate-500);">{{ $c->state }}</div>
-                    @endif
-                  @else
-                    <span style="color:var(--slate-400);">—</span>
-                  @endif
-                </td>
-                <td style="font-weight:600; font-family:var(--font-mono); color:var(--slate-800);">
-                  ₹{{ number_format($c->credit_limit, 2) }}
-                </td>
-                <td>
-                  <span style="font-weight:700; font-family:var(--font-mono); color:{{ $c->outstanding > 0 ? '#dc2626' : '#059669' }}; background:{{ $c->outstanding > 0 ? '#fef2f2' : '#ecfdf5' }}; padding:3px 8px; border-radius:6px; border:1px solid {{ $c->outstanding > 0 ? '#fecaca' : '#a7f3d0' }}; display:inline-block;">
-                    ₹{{ number_format($c->outstanding, 2) }}
-                  </span>
-                </td>
-                <td>
-                  @if($c->status === 'Active')
+                <td style="text-align: center;">
+                  @if(($customer->status ?? 'active') === 'active')
                     <span class="cm-status-pill active"><span class="cm-status-dot"></span> Active</span>
-                  @elseif($c->status === 'Blocked')
+                  @elseif(($customer->status ?? '') === 'blocked')
                     <span class="cm-status-pill blocked"><span class="cm-status-dot"></span> Blocked</span>
                   @else
-                    <span class="cm-status-pill inactive"><span class="cm-status-dot"></span> {{ $c->status }}</span>
+                    <span class="cm-status-pill inactive"><span class="cm-status-dot"></span> {{ ucfirst($customer->status ?? 'inactive') }}</span>
                   @endif
                 </td>
-                <td style="text-align:right;">
-                  <div style="display:inline-flex; gap:6px;">
-                    <button class="btn btn-secondary btn-xs" onclick='openCustomerModal(@json($c))' title="Edit Customer" style="display:inline-flex; align-items:center; gap:4px; font-weight:600; cursor:pointer;">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                      Edit
+                <td style="text-align: center;">
+                  <div style="display:inline-flex; align-items:center; gap:6px;">
+                    <button type="button" class="btn btn-secondary btn-icon" onclick='editCustomer(@json($customer))' title="Edit Customer" style="width:30px; height:30px; padding:0; display:inline-flex; align-items:center; justify-content:center;">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                      </svg>
                     </button>
-                    <form action="{{ route('masters.customers.destroy', $c->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete customer {{ $c->name }}?')" style="display:inline;">
-                      @csrf
-                      @method('DELETE')
-                      <button type="submit" class="btn btn-danger btn-xs" title="Delete" style="padding:4px 8px; cursor:pointer;">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                      </button>
-                    </form>
+                    <button type="button" class="btn btn-danger btn-icon" onclick="confirmDeleteCustomer({{ $customer->id }}, '{{ addslashes($customer->name) }}')" title="Delete Customer" style="width:30px; height:30px; padding:0; display:inline-flex; align-items:center; justify-content:center;">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="3 6 5 6 21 6"/>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                      </svg>
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -658,226 +618,247 @@
 
 </div>
 
-<!-- Add / Edit Customer Modal -->
+<!-- Customer Modal (Add & Edit) -->
 <div id="customer-modal" style="display:none;">
   <div class="cm-modal-box">
-    
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; border-bottom:1px solid var(--slate-200); padding-bottom:14px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--slate-100); padding-bottom:16px; margin-bottom:18px;">
       <div style="display:flex; align-items:center; gap:10px;">
-        <div style="width:36px; height:36px; border-radius:10px; background:#eff6ff; color:#2563eb; display:flex; align-items:center; justify-content:center;">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <div style="width:38px; height:38px; border-radius:10px; background:#eff6ff; color:#2563eb; display:flex; align-items:center; justify-content:center;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+          </svg>
         </div>
         <div>
-          <h3 id="modal-title" style="margin:0; font-size:1.15rem; font-weight:800; color:var(--slate-900);">Add New Customer</h3>
-          <p style="margin:2px 0 0; font-size:0.775rem; color:var(--slate-500);">Configure client commercial credentials and limits</p>
+          <h3 id="modal-title" style="margin:0; font-size:1.1rem; font-weight:800; color:var(--slate-900);">Add New Customer</h3>
+          <p style="margin:2px 0 0; font-size:0.75rem; color:var(--slate-500);">Complete customer master profile for invoicing & billing</p>
         </div>
       </div>
-      <button type="button" onclick="closeCustomerModal()" style="background:none; border:none; width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--slate-400); transition:all 0.15s ease;" onmouseover="this.style.background='#f1f5f9'; this.style.color='#0f172a'" onmouseout="this.style.background='none'; this.style.color='var(--slate-400)'">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      <button type="button" onclick="closeCustomerModal()" style="background:none; border:none; color:var(--slate-400); cursor:pointer; font-size:1.4rem; line-height:1; padding:4px;">
+        &times;
       </button>
     </div>
 
     <form id="customer-form" method="POST" action="{{ route('masters.customers.store') }}">
       @csrf
       <input type="hidden" name="_method" id="form-method" value="POST">
+      <input type="hidden" name="id" id="customer-id" value="">
 
-      <div class="cm-modal-section-title">1. Identity & Business Details</div>
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
-        <div class="form-group">
-          <label class="form-label" style="font-weight:700;">Customer / Trading Name <span style="color:red;">*</span></label>
-          <input type="text" name="name" id="cust_name" class="form-control" required placeholder="e.g. Zara Apparels Ltd.">
+      <!-- Basic Details -->
+      <div class="cm-modal-section-title">General Information</div>
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:14px; margin-bottom:12px;">
+        <div class="form-group" style="margin:0;">
+          <label class="form-label required">Customer Name</label>
+          <input type="text" name="name" id="cust-name" class="form-control" required placeholder="e.g. Royal Apparels Ltd">
         </div>
-
-        <div class="form-group">
-          <label class="form-label" style="font-weight:700;">Company / Legal Name</label>
-          <input type="text" name="company_name" id="cust_company" class="form-control" placeholder="e.g. Zara Retail Pvt. Ltd.">
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" style="font-weight:700;">Contact Person</label>
-          <input type="text" name="contact_person" id="cust_contact" class="form-control" placeholder="e.g. Rajesh Mehta">
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" style="font-weight:700;">Phone / Mobile <span style="color:red;">*</span></label>
-          <input type="text" name="phone" id="cust_phone" class="form-control" required placeholder="e.g. +91 98765 43210">
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">Customer Code</label>
+          <input type="text" name="code" id="cust-code" class="form-control" placeholder="Auto-generated if empty">
         </div>
       </div>
 
-      <div class="cm-modal-section-title">2. Tax & Location</div>
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
-        <div class="form-group">
-          <label class="form-label" style="font-weight:700;">Email Address</label>
-          <input type="email" name="email" id="cust_email" class="form-control" placeholder="e.g. contact@zara.com">
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:14px; margin-bottom:12px;">
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">Contact Person</label>
+          <input type="text" name="contact_person" id="cust-contact-person" class="form-control" placeholder="e.g. Rahul Sharma">
         </div>
-
-        <div class="form-group">
-          <label class="form-label" style="font-weight:700;">GSTIN / Tax ID</label>
-          <input type="text" name="gstin" id="cust_gstin" class="form-control" placeholder="e.g. 27AAAAA0000A1Z5" style="text-transform:uppercase;">
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" style="font-weight:700;">City</label>
-          <input type="text" name="city" id="cust_city" class="form-control" placeholder="e.g. Mumbai">
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" style="font-weight:700;">State</label>
-          <input type="text" name="state" id="cust_state" class="form-control" placeholder="e.g. Maharashtra">
+        <div class="form-group" style="margin:0;">
+          <label class="form-label required">Phone / Mobile</label>
+          <input type="text" name="phone" id="cust-phone" class="form-control" required placeholder="e.g. 9876543210">
         </div>
       </div>
 
-      <div class="cm-modal-section-title">3. Commercial Terms & Address</div>
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
-        <div class="form-group">
-          <label class="form-label" style="font-weight:700;">Approved Credit Limit (₹)</label>
-          <input type="number" step="0.01" name="credit_limit" id="cust_credit" class="form-control" value="100000.00">
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:14px; margin-bottom:12px;">
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">Email Address</label>
+          <input type="email" name="email" id="cust-email" class="form-control" placeholder="e.g. accounts@royalapparel.com">
         </div>
-
-        <div class="form-group">
-          <label class="form-label" style="font-weight:700;">Status</label>
-          <select name="status" id="cust_status" class="form-control">
-            <option value="Active">Active</option>
-            <option value="Inactive">Inactive</option>
-            <option value="Blocked">Blocked</option>
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">Status</label>
+          <select name="status" id="cust-status" class="form-control">
+            <option value="active" selected>Active</option>
+            <option value="inactive">Inactive</option>
+            <option value="blocked">Blocked</option>
           </select>
         </div>
       </div>
 
-      <div class="form-group" style="margin-top:14px;">
-        <label class="form-label" style="font-weight:700;">Billing & Shipping Address</label>
-        <textarea name="address" id="cust_address" class="form-control" rows="2" placeholder="Street address, industrial area, PIN..."></textarea>
+      <!-- Financial & Tax Details -->
+      <div class="cm-modal-section-title">Tax & Financial Credentials</div>
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:14px; margin-bottom:12px;">
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">GSTIN Number</label>
+          <input type="text" name="gst_number" id="cust-gst" class="form-control" placeholder="22AAAAA0000A1Z5" style="text-transform:uppercase;">
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">PAN Number</label>
+          <input type="text" name="pan_number" id="cust-pan" class="form-control" placeholder="AAAAA0000A" style="text-transform:uppercase;">
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">Credit Limit (₹)</label>
+          <input type="number" step="0.01" name="credit_limit" id="cust-credit-limit" class="form-control" placeholder="0.00">
+        </div>
       </div>
 
-      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:24px; border-top:1px solid var(--slate-200); padding-top:16px;">
-        <button type="button" class="btn btn-secondary" onclick="closeCustomerModal()" style="font-weight:600; cursor:pointer;">Cancel</button>
-        <button type="submit" class="btn btn-primary" id="submit-btn" style="display:inline-flex; align-items:center; gap:6px; font-weight:700; background:linear-gradient(135deg, #2563eb, #1d4ed8); cursor:pointer;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-          Save Customer
-        </button>
+      <!-- Address Details -->
+      <div class="cm-modal-section-title">Address & Billing Details</div>
+      <div class="form-group" style="margin-bottom:12px;">
+        <label class="form-label">Billing Address</label>
+        <textarea name="billing_address" id="cust-address" class="form-control" rows="2" placeholder="Street name, industrial area, landmark..."></textarea>
+      </div>
+
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:14px; margin-bottom:20px;">
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">City</label>
+          <input type="text" name="city" id="cust-city" class="form-control" placeholder="e.g. Mumbai">
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">State</label>
+          <input type="text" name="state" id="cust-state" class="form-control" placeholder="e.g. Maharashtra">
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">Pincode</label>
+          <input type="text" name="pincode" id="cust-pincode" class="form-control" placeholder="e.g. 400001">
+        </div>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:10px; border-top:1px solid var(--slate-100); padding-top:16px;">
+        <button type="button" class="btn btn-secondary" onclick="closeCustomerModal()">Cancel</button>
+        <button type="submit" id="save-cust-btn" class="btn btn-primary" style="background:linear-gradient(135deg, #2563eb, #1d4ed8); font-weight:700;">Save Customer</button>
       </div>
     </form>
-
   </div>
 </div>
 
+<!-- Delete Confirmation Modal -->
+<div id="delete-customer-modal" style="display:none;">
+  <div class="cm-modal-box" style="max-width:440px; text-align:center;">
+    <div style="width:52px; height:52px; border-radius:50%; background:#fef2f2; color:#dc2626; display:flex; align-items:center; justify-content:center; margin:0 auto 16px;">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="8" x2="12" y2="12"/>
+        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+    </div>
+    <h3 style="margin:0 0 8px; font-size:1.15rem; font-weight:800; color:var(--slate-900);">Delete Customer</h3>
+    <p style="margin:0 0 20px; font-size:0.875rem; color:var(--slate-500); line-height:1.4;">
+      Are you sure you want to delete <strong id="delete-cust-name" style="color:var(--slate-800);">this customer</strong>? This action cannot be undone.
+    </p>
+
+    <form id="delete-customer-form" method="POST" action="">
+      @csrf
+      @method('DELETE')
+      <div style="display:flex; justify-content:center; gap:10px;">
+        <button type="button" class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button>
+        <button type="submit" class="btn btn-danger" style="font-weight:700;">Yes, Delete Customer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+@endsection
+
 @push('scripts')
 <script>
-  let activeFilterTab = 'all';
-
-  function filterCustomerTable(query) {
-    const q = (query || '').toLowerCase().trim();
-    const table = document.getElementById('customers-table');
-    if (!table) return;
-
-    const rows = table.querySelectorAll('tbody tr');
-    rows.forEach(row => {
-      if (row.classList.contains('filter-no-results')) return;
-      
-      const textMatch = !q || row.innerText.toLowerCase().includes(q);
-      const statusMatch = checkStatusFilter(row);
-
-      row.style.display = (textMatch && statusMatch) ? '' : 'none';
-    });
-  }
-
-  function checkStatusFilter(row) {
-    if (activeFilterTab === 'all') return true;
-    const rowStatus = row.getAttribute('data-status') || '';
-    const rowOutstanding = parseFloat(row.getAttribute('data-outstanding') || 0);
-
-    if (activeFilterTab === 'active') return rowStatus === 'active';
-    if (activeFilterTab === 'blocked') return rowStatus === 'blocked';
-    if (activeFilterTab === 'balance') return rowOutstanding > 0;
-    return true;
-  }
-
-  function applyCustomerFilter(tab, btn) {
-    activeFilterTab = tab;
-    document.querySelectorAll('.cm-filter-pill').forEach(b => b.classList.remove('active'));
-    if (btn) btn.classList.add('active');
-
-    const searchInput = document.getElementById('cust-filter-input');
-    filterCustomerTable(searchInput ? searchInput.value : '');
-  }
-
-  function openCustomerModal(c = null) {
+  function openCustomerModal() {
     const modal = document.getElementById('customer-modal');
-    const form = document.getElementById('customer-form');
-    const methodInput = document.getElementById('form-method');
-    const title = document.getElementById('modal-title');
-
-    if (!modal) {
-      console.error("Modal element #customer-modal not found");
-      return;
-    }
-
-    if (c && typeof c === 'object' && c.id) {
-      if (title) title.innerText = 'Edit Customer: ' + (c.code || c.name);
-      if (form) form.action = `/masters/customers/${c.id}`;
-      if (methodInput) methodInput.value = 'PUT';
-
-      const setVal = (id, val) => {
-        const el = document.getElementById(id);
-        if (el) el.value = val !== undefined && val !== null ? val : '';
-      };
-
-      setVal('cust_name', c.name);
-      setVal('cust_phone', c.phone);
-      setVal('cust_company', c.company_name);
-      setVal('cust_contact', c.contact_person);
-      setVal('cust_email', c.email);
-      setVal('cust_gstin', c.gstin);
-      setVal('cust_city', c.city);
-      setVal('cust_state', c.state);
-      setVal('cust_credit', c.credit_limit || 0);
-      setVal('cust_status', c.status || 'Active');
-      setVal('cust_address', c.address);
-      
-      const submitBtn = document.getElementById('submit-btn');
-      if (submitBtn) {
-        submitBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Update Customer';
-      }
-    } else {
-      if (title) title.innerText = 'Add New Customer';
-      if (form) {
-        form.action = '{{ route('masters.customers.store') }}';
-        form.reset();
-      }
-      if (methodInput) methodInput.value = 'POST';
-      
-      const creditEl = document.getElementById('cust_credit');
-      if (creditEl) creditEl.value = '100000.00';
-      const statusEl = document.getElementById('cust_status');
-      if (statusEl) statusEl.value = 'Active';
-      
-      const submitBtn = document.getElementById('submit-btn');
-      if (submitBtn) {
-        submitBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Save Customer';
-      }
-    }
-
+    if (!modal) return;
+    
+    // Reset form
+    document.getElementById('customer-form').reset();
+    document.getElementById('customer-id').value = '';
+    document.getElementById('form-method').value = 'POST';
+    document.getElementById('customer-form').action = "{{ route('masters.customers.store') }}";
+    document.getElementById('modal-title').textContent = 'Add New Customer';
+    document.getElementById('save-cust-btn').textContent = 'Save Customer';
+    
     modal.style.display = 'flex';
-    document.body.style.overflow = 'hidden';
   }
 
   function closeCustomerModal() {
     const modal = document.getElementById('customer-modal');
-    if (modal) {
-      modal.style.display = 'none';
-      document.body.style.overflow = '';
-    }
+    if (modal) modal.style.display = 'none';
   }
 
-  // Close modal when clicking outside box
-  document.getElementById('customer-modal')?.addEventListener('click', function(e) {
-    if (e.target === this) closeCustomerModal();
-  });
+  function editCustomer(customer) {
+    const modal = document.getElementById('customer-modal');
+    if (!modal) return;
 
-  // Close modal on Escape key
-  document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') closeCustomerModal();
+    document.getElementById('modal-title').textContent = 'Edit Customer';
+    document.getElementById('save-cust-btn').textContent = 'Update Customer';
+    document.getElementById('customer-id').value = customer.id;
+    document.getElementById('form-method').value = 'PUT';
+    document.getElementById('customer-form').action = "/masters/customers/" + customer.id;
+
+    document.getElementById('cust-name').value = customer.name || '';
+    document.getElementById('cust-code').value = customer.code || '';
+    document.getElementById('cust-contact-person').value = customer.contact_person || '';
+    document.getElementById('cust-phone').value = customer.phone || customer.mobile || '';
+    document.getElementById('cust-email').value = customer.email || '';
+    document.getElementById('cust-status').value = customer.status || 'active';
+    document.getElementById('cust-gst').value = customer.gst_number || customer.gstin || '';
+    document.getElementById('cust-pan').value = customer.pan_number || '';
+    document.getElementById('cust-credit-limit').value = customer.credit_limit || '';
+    document.getElementById('cust-address').value = customer.billing_address || customer.address || '';
+    document.getElementById('cust-city').value = customer.city || '';
+    document.getElementById('cust-state').value = customer.state || '';
+    document.getElementById('cust-pincode').value = customer.pincode || '';
+
+    modal.style.display = 'flex';
+  }
+
+  function confirmDeleteCustomer(id, name) {
+    const modal = document.getElementById('delete-customer-modal');
+    if (!modal) return;
+    
+    document.getElementById('delete-cust-name').textContent = name;
+    document.getElementById('delete-customer-form').action = "/masters/customers/" + id;
+    modal.style.display = 'flex';
+  }
+
+  function closeDeleteModal() {
+    const modal = document.getElementById('delete-customer-modal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  // Live filter table search
+  function filterCustomerTable(query) {
+    query = (query || '').toLowerCase().trim();
+    const rows = document.querySelectorAll('#customers-table tbody tr');
+    rows.forEach(row => {
+      const text = row.innerText.toLowerCase();
+      row.style.display = text.includes(query) ? '' : 'none';
+    });
+  }
+
+  // Pill filter
+  function applyCustomerFilter(type, btn) {
+    document.querySelectorAll('.cm-filter-pill').forEach(el => el.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+
+    const rows = document.querySelectorAll('#customers-table tbody tr.cm-row');
+    rows.forEach(row => {
+      const status = row.getAttribute('data-status');
+      const balance = parseFloat(row.getAttribute('data-balance') || 0);
+
+      if (type === 'all') {
+        row.style.display = '';
+      } else if (type === 'active') {
+        row.style.display = (status === 'active') ? '' : 'none';
+      } else if (type === 'blocked') {
+        row.style.display = (status === 'blocked') ? '' : 'none';
+      } else if (type === 'balance') {
+        row.style.display = (balance > 0) ? '' : 'none';
+      }
+    });
+  }
+
+  // Close modals on clicking backdrop
+  window.addEventListener('click', function(e) {
+    const custModal = document.getElementById('customer-modal');
+    const delModal = document.getElementById('delete-customer-modal');
+    if (e.target === custModal) closeCustomerModal();
+    if (e.target === delModal) closeDeleteModal();
   });
 </script>
 @endpush
-@endsection
