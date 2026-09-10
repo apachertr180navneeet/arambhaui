@@ -34,10 +34,42 @@ class AuthController extends Controller
         $remember = $request->boolean('remember');
 
         if (Auth::attempt($credentials, $remember)) {
+            $user = Auth::user();
+
+            if ($user->status && strtolower($user->status) !== 'active') {
+                Auth::logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+
+                throw ValidationException::withMessages([
+                    'email' => __('Your account has been deactivated. Please contact the administrator.'),
+                ]);
+            }
+
             $request->session()->regenerate();
 
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'redirect' => route('dashboard'),
+                    'user' => [
+                        'id' => $user->id,
+                        'name' => $user->name,
+                        'email' => $user->email,
+                        'role' => $user->role,
+                    ],
+                ]);
+            }
+
             return redirect()->intended(route('dashboard'))
-                ->with('success', 'Welcome back, ' . Auth::user()->name . '! Logged in successfully.');
+                ->with('success', 'Welcome back, ' . $user->name . '! Logged in successfully.');
+        }
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => false,
+                'message' => __('The provided credentials do not match our records.')
+            ], 422);
         }
 
         throw ValidationException::withMessages([
@@ -55,7 +87,16 @@ class AuthController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'redirect' => route('login'),
+                'message' => 'Logged out securely.'
+            ]);
+        }
+
         return redirect()->route('login')
             ->with('info', 'You have been logged out securely.');
     }
 }
+

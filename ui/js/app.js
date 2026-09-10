@@ -429,27 +429,39 @@ const App = {
   },
 
   openUserModal() {
-    const u = ERPState.data.currentUser;
+    const u = ERPState.data.currentUser || (typeof window !== 'undefined' && window.CURRENT_AUTH_USER) || {
+      name: "Admin User",
+      email: "admin@garmenterp.com",
+      role: "Administrator",
+      avatar: "AU"
+    };
+
+    const avatarText = u.avatar || (u.name ? u.name.substring(0, 2).toUpperCase() : 'AU');
+    const roleText = u.role || 'Administrator';
+
     const content = `
       <div style="display:flex; flex-direction:column; align-items:center; text-align:center; gap:12px;">
-        <div class="user-avatar" style="width:64px; height:64px; font-size:1.5rem;">${u.avatar}</div>
+        <div class="user-avatar" style="width:64px; height:64px; font-size:1.5rem; display:flex; align-items:center; justify-content:center; border-radius:50%; background:var(--primary-600); color:#fff; font-weight:700;">${avatarText}</div>
         <div>
-          <h3 style="margin:0;">${u.name}</h3>
-          <p style="color:var(--slate-500); font-size:0.825rem;">${u.email}</p>
-          <span class="badge badge-purple" style="margin-top:6px;">${u.role}</span>
+          <h3 style="margin:0; font-size:1.1rem; color:var(--slate-800);">${u.name}</h3>
+          <p style="color:var(--slate-500); font-size:0.825rem; margin-top:2px;">${u.email}</p>
+          <span class="badge badge-purple" style="margin-top:6px; display:inline-block; padding:4px 10px; border-radius:12px; font-size:0.75rem; font-weight:600;">${roleText}</span>
         </div>
 
-        <div style="width:100%; border-top:1px solid var(--slate-200); padding-top:14px; margin-top:10px; text-align:left; font-size:0.85rem;">
+        <div style="width:100%; border-top:1px solid var(--slate-200); padding-top:14px; margin-top:10px; text-align:left; font-size:0.85rem; color:var(--slate-600);">
           <div style="margin-bottom:6px;"><strong>Company:</strong> FashionWorks Pvt. Ltd.</div>
           <div style="margin-bottom:6px;"><strong>Facility:</strong> Apparel Park MIDC Tiruppur / Mumbai</div>
-          <div><strong>Active Session:</strong> Logged in via SSO (Administrator)</div>
+          <div><strong>Active Session:</strong> Logged in (${roleText})</div>
         </div>
       </div>
     `;
 
     const footer = `
       <button class="btn btn-secondary btn-sm" onclick="UI.closeModal()">Close</button>
-      <button class="btn btn-danger btn-sm" onclick="App.logout()">Log Out</button>
+      <button class="btn btn-danger btn-sm" onclick="App.logout()" style="display:inline-flex; align-items:center; gap:6px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Log Out
+      </button>
     `;
 
     UI.openModal({ title: "User Profile", content, footer, size: "modal-sm" });
@@ -457,18 +469,35 @@ const App = {
 
   logout() {
     UI.closeModal();
-    const loginOverlay = document.getElementById("login-modal-overlay");
-    if (loginOverlay) {
-      loginOverlay.style.display = "flex";
+
+    try {
+      localStorage.removeItem('garment_erp_live_data_v2');
+      sessionStorage.clear();
+    } catch(e) {}
+
+    const logoutForm = document.getElementById("logout-form");
+    if (logoutForm) {
+      logoutForm.submit();
+      return;
     }
+
+    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = "/logout";
+    if (token) {
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = "_token";
+      input.value = token;
+      form.appendChild(input);
+    }
+    document.body.appendChild(form);
+    form.submit();
   },
 
   loginSubmit(e) {
     if (e) e.preventDefault();
-    const loginOverlay = document.getElementById("login-modal-overlay");
-    if (loginOverlay) {
-      loginOverlay.style.display = "none";
-    }
-    UI.showToast("Welcome Back", "Logged in as Admin User (FashionWorks Pvt. Ltd.)", "success");
+    window.location.href = "/dashboard";
   }
 };

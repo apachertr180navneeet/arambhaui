@@ -327,9 +327,9 @@
           </div>
 
           <!-- Logout Form with CSRF Protection -->
-          <form method="POST" action="{{ route('logout') }}" style="display:inline; margin-left: 6px;">
+          <form id="logout-form" method="POST" action="{{ route('logout') }}" style="display:inline; margin-left: 6px;">
             @csrf
-            <button type="submit" class="icon-btn" title="Sign Out" style="color:var(--danger-600); background: #fef2f2; border:1px solid #fee2e2;">
+            <button type="submit" class="icon-btn" title="Sign Out" aria-label="Sign Out" style="color:var(--danger-600); background: #fef2f2; border:1px solid #fee2e2; cursor:pointer;">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
             </button>
           </form>
@@ -342,6 +342,19 @@
       </main>
     </div>
   </div>
+
+  @if(Auth::check())
+  <script>
+    window.CURRENT_AUTH_USER = {
+      id: {{ Auth::id() }},
+      name: {!! json_encode(Auth::user()->name) !!},
+      email: {!! json_encode(Auth::user()->email) !!},
+      role: {!! json_encode(Auth::user()->role ?? 'Administrator') !!},
+      avatar: {!! json_encode(strtoupper(substr(Auth::user()->name ?? 'AU', 0, 2))) !!},
+      status: {!! json_encode(Auth::user()->status ?? 'active') !!}
+    };
+  </script>
+  @endif
 
   <!-- Application Logic Scripts -->
   <script src="{{ asset('js/data.js') }}?v={{ time() }}"></script>

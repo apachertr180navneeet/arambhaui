@@ -62,14 +62,65 @@ class AdminAuthTest extends TestCase
     }
 
     /**
-     * Test user can log out.
+     * Test user can log out via POST.
      */
-    public function test_user_can_logout(): void
+    public function test_user_can_logout_via_post(): void
     {
         $user = User::where('email', 'admin@garmenterp.com')->first();
         $response = $this->actingAs($user)->post('/logout');
 
         $this->assertGuest();
         $response->assertRedirect('/login');
+    }
+
+    /**
+     * Test user can log out via GET.
+     */
+    public function test_user_can_logout_via_get(): void
+    {
+        $user = User::where('email', 'admin@garmenterp.com')->first();
+        $response = $this->actingAs($user)->get('/logout');
+
+        $this->assertGuest();
+        $response->assertRedirect('/login');
+    }
+
+    /**
+     * Test supervisor user can authenticate.
+     */
+    public function test_supervisor_can_authenticate(): void
+    {
+        $response = $this->post('/login', [
+            'email' => 'supervisor@garmenterp.com',
+            'password' => 'admin123',
+        ]);
+
+        $this->assertAuthenticated();
+        $response->assertRedirect('/dashboard');
+    }
+
+    /**
+     * Test inactive user cannot authenticate.
+     */
+    public function test_inactive_user_cannot_authenticate(): void
+    {
+        $inactiveUser = User::create([
+            'name' => 'Inactive Worker',
+            'email' => 'inactive@garmenterp.com',
+            'password' => 'admin123',
+            'role' => 'worker',
+            'status' => 'inactive'
+        ]);
+
+        $response = $this->from('/login')->post('/login', [
+            'email' => 'inactive@garmenterp.com',
+            'password' => 'admin123',
+        ]);
+
+        $this->assertGuest();
+        $response->assertRedirect('/login');
+        $response->assertSessionHasErrors('email');
+
+        $inactiveUser->delete();
     }
 }

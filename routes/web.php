@@ -31,7 +31,7 @@ Route::middleware('guest')->group(function () {
 
 // Authenticated ERP Protected Routes
 Route::middleware('auth')->group(function () {
-    Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+    Route::match(['get', 'post'], '/logout', [AuthController::class, 'logout'])->name('logout');
 
     Route::get('/', function () {
         return redirect()->route('dashboard');

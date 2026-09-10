@@ -24,6 +24,10 @@ class ERPStateManager {
     } catch (e) {
       console.warn("Could not load from localStorage:", e);
     }
+
+    if (typeof window !== 'undefined' && window.CURRENT_AUTH_USER) {
+      this.data.currentUser = Object.assign({}, this.data.currentUser || {}, window.CURRENT_AUTH_USER);
+    }
   }
 
   saveState() {
