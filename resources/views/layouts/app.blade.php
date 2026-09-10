@@ -99,6 +99,24 @@
           </div>
         </div>
 
+        <!-- 3. PURCHASE MANAGEMENT -->
+        <div class="nav-section">
+          <div class="nav-section-title">Purchasing</div>
+          <div class="nav-item nav-group">
+            <a class="nav-link nav-group-toggle" data-module="purchase">
+              <div class="nav-link-content">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+                <span class="nav-title">Purchase Mgmt</span>
+              </div>
+              <svg class="nav-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+            </a>
+            <div class="nav-submenu">
+              <a class="submenu-link" data-route="purchase/orders" data-module="purchase" data-submodule="orders">Purchase Orders (PO)</a>
+              <a class="submenu-link" data-route="purchase/inward" data-module="purchase" data-submodule="inward">Goods Inward (GRN)</a>
+            </div>
+          </div>
+        </div>
+
         <!-- 6. QR CODE MANAGEMENT -->
         <div class="nav-section">
           <div class="nav-section-title">Barcodes & QR</div>
@@ -334,6 +352,7 @@
   <script src="{{ asset('js/qr.js') }}?v={{ time() }}"></script>
   <script src="{{ asset('js/views/dashboard.js') }}?v={{ time() }}"></script>
   <script src="{{ asset('js/views/masters.js') }}?v={{ time() }}"></script>
+  <script src="{{ asset('js/views/purchase.js') }}?v={{ time() }}"></script>
   <script src="{{ asset('js/views/jobwork-view.js') }}?v={{ time() }}"></script>
   <script src="{{ asset('js/views/qr-view.js') }}?v={{ time() }}"></script>
   <script src="{{ asset('js/views/dispatch.js') }}?v={{ time() }}"></script>

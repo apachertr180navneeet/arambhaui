@@ -113,6 +113,8 @@ class ERPStateManager {
         jobWorkers,
         items,
         units,
+        purchaseOrders,
+        purchaseInwards,
         jobAssignments,
         productionOrders,
         qualityChecks,
@@ -129,6 +131,8 @@ class ERPStateManager {
         fetchSafe('/masters/jobworkers'),
         fetchSafe('/masters/items'),
         fetchSafe('/masters/units'),
+        fetchSafe('/purchase/orders'),
+        fetchSafe('/purchase/inward'),
         fetchSafe('/jobwork/assign'),
         fetchSafe('/production/orders'),
         fetchSafe('/production/qc'),
@@ -246,6 +250,55 @@ class ERPStateManager {
           decimalPlaces: Number(u.decimal_places ?? 2),
           description: u.description || "",
           status: u.status || "Active"
+        }));
+      }
+
+      if (Array.isArray(purchaseOrders)) {
+        this.data.purchaseOrders = purchaseOrders.map(po => ({
+          id: po.po_number || `PO-${po.id}`,
+          dbId: po.id,
+          poNumber: po.po_number,
+          vendorId: po.vendor_id,
+          vendorName: po.vendor ? po.vendor.name : (po.vendor_name || "Vendor"),
+          poDate: po.po_date,
+          deliveryDate: po.delivery_date,
+          warehouse: po.warehouse || "Main Raw Material Store - Unit 1",
+          paymentTerms: po.payment_terms || "30 Days Credit",
+          status: po.status || "Draft",
+          notes: po.notes || "",
+          subtotal: Number(po.subtotal || 0),
+          taxAmount: Number(po.tax_amount || 0),
+          grandTotal: Number(po.grand_total || 0),
+          items: (po.items || []).map(it => ({
+            id: it.id,
+            itemId: it.item_id,
+            itemName: it.item_name,
+            color: it.color || "",
+            orderedQty: Number(it.ordered_qty || 0),
+            unit: it.unit || "Meters",
+            unitPrice: Number(it.unit_price || 0),
+            totalPrice: Number(it.total_price || 0),
+            receivedQty: Number(it.received_qty || 0)
+          }))
+        }));
+      }
+
+      if (Array.isArray(purchaseInwards)) {
+        this.data.purchaseInwards = purchaseInwards.map(pi => ({
+          id: pi.grn_number || `GRN-${pi.id}`,
+          dbId: pi.id,
+          grnNumber: pi.grn_number,
+          poId: pi.purchase_order_id,
+          poNumber: pi.purchase_order ? pi.purchase_order.po_number : (pi.purchase_order_no || ""),
+          vendorName: pi.vendor ? pi.vendor.name : (pi.vendor_name || ""),
+          inwardDate: pi.inward_date,
+          supplierInvoiceNo: pi.supplier_invoice_no || "",
+          warehouse: pi.warehouse || "Main Raw Material Store - Unit 1",
+          receivedBy: pi.received_by || "Store Manager",
+          receivedQty: Number(pi.received_qty || 0),
+          acceptedQty: Number(pi.accepted_qty || 0),
+          rejectedQty: Number(pi.rejected_qty || 0),
+          remarks: pi.remarks || ""
         }));
       }
 

@@ -5,18 +5,23 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Vendor extends Model
+class PurchaseOrder extends Model
 {
     use HasFactory;
 
     protected $guarded = [];
 
-    public function purchaseOrders()
+    public function vendor()
     {
-        return $this->hasMany(PurchaseOrder::class);
+        return $this->belongsTo(Vendor::class);
     }
 
-    public function purchaseInwards()
+    public function items()
+    {
+        return $this->hasMany(PurchaseOrderItem::class);
+    }
+
+    public function inwards()
     {
         return $this->hasMany(PurchaseInward::class);
     }

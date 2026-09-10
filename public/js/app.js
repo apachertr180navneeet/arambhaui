@@ -149,6 +149,7 @@ const App = {
       dashboard: "Dashboard",
       masters: "Masters Management",
       jobwork: "Job Work & Assign",
+      purchase: "Purchase Management",
       qr: "QR Management",
       dispatch: "Dispatch Management",
       accounts: "Accounts & Settlements",
@@ -164,6 +165,8 @@ const App = {
       items: "Item Master",
       units: "Unit Master",
       sizes: "Unit Master",
+      orders: "Purchase Orders (PO)",
+      inward: "Goods Inward (GRN)",
       assign: "Job Assign Orders",
       "inward-report": "Job Inward & Ready Report",
       ready: "Ready for Dispatch",
@@ -223,6 +226,9 @@ const App = {
       else html = MastersView.renderCustomers();
     } else if (m === "jobwork") {
       html = JobWorkView.render(s);
+    } else if (m === "purchase") {
+      if (s === "inward") html = PurchaseView.renderInward();
+      else html = PurchaseView.renderOrders();
     } else if (m === "qr") {
       if (s === "scanner") QRView.activeTab = "customer-portal";
       else if (s === "generator") QRView.activeTab = "discount";

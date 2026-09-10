@@ -1188,6 +1188,81 @@ const INITIAL_DATA = {
       redeemedAt: null,
       claimId: null
     }
+  ],
+  purchaseOrders: [
+    {
+      id: "PO-2026-0001",
+      poNumber: "PO-2026-0001",
+      vendorId: "VND-001",
+      vendorName: "Sri Krishna Textiles Ltd.",
+      poDate: "2026-09-01",
+      deliveryDate: "2026-09-15",
+      warehouse: "Main Raw Material Store - Unit 1",
+      paymentTerms: "30 Days Credit",
+      status: "Approved",
+      notes: "Urgent shipment required for festive line.",
+      subtotal: 125000,
+      taxAmount: 6250,
+      grandTotal: 131250,
+      items: [
+        {
+          id: 1,
+          itemId: "ITM-001",
+          itemName: "Premium Cotton Single Jersey 180 GSM",
+          color: "Navy Blue",
+          orderedQty: 500,
+          unit: "Meters",
+          unitPrice: 250,
+          totalPrice: 125000,
+          receivedQty: 0
+        }
+      ]
+    },
+    {
+      id: "PO-2026-0002",
+      poNumber: "PO-2026-0002",
+      vendorId: "VND-002",
+      vendorName: "Apex Trims & Accessories",
+      poDate: "2026-09-03",
+      deliveryDate: "2026-09-10",
+      warehouse: "Main Raw Material Store - Unit 1",
+      paymentTerms: "15 Days Credit",
+      status: "Received",
+      notes: "All buttons and zippers passed inspection.",
+      subtotal: 45000,
+      taxAmount: 2250,
+      grandTotal: 47250,
+      items: [
+        {
+          id: 2,
+          itemId: "ITM-002",
+          itemName: "Metallic Snap Buttons 15mm",
+          color: "Silver",
+          orderedQty: 10000,
+          unit: "PCS",
+          unitPrice: 4.5,
+          totalPrice: 45000,
+          receivedQty: 10000
+        }
+      ]
+    }
+  ],
+  purchaseInwards: [
+    {
+      id: "GRN-2026-0001",
+      grnNumber: "GRN-2026-0001",
+      poId: "PO-2026-0002",
+      poNumber: "PO-2026-0002",
+      vendorName: "Apex Trims & Accessories",
+      inwardDate: "2026-09-05",
+      supplierInvoiceNo: "INV-APEX-8891",
+      warehouse: "Main Raw Material Store - Unit 1",
+      receivedBy: "Ramesh Thorat",
+      receivedQty: 10000,
+      acceptedQty: 10000,
+      rejectedQty: 0,
+      remarks: "Quality checked and verified."
+    }
   ]
 };
 
