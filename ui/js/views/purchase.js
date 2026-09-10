@@ -1,5 +1,5 @@
 /* ==========================================================================
-   PURCHASE MANAGEMENT VIEW - PURCHASE ORDERS (PO) & GOODS INWARD (GRN)
+   PURCHASE ORDERS MANAGEMENT VIEW
    GarmentERP
    ========================================================================== */
 
@@ -10,13 +10,32 @@ const PurchaseView = {
   // 1. PURCHASE ORDERS LIST & VIEW
   renderOrders() {
     const orders = ERPState.data.purchaseOrders || [];
-    const totalOrdered = orders.reduce((sum, o) => sum + Number(o.grandTotal || o.grand_total || 0), 0);
-    const pendingCount = orders.filter(o => o.status === 'Approved' || o.status === 'Draft').length;
-    const receivedCount = orders.filter(o => o.status === 'Received' || o.status === 'Partially Received').length;
+    const vendors = ERPState.data.vendors || [];
+    const totalOrdered = orders.reduce((sum, o) => sum + Number(o.grand_total || o.grandTotal || 0), 0);
+    const pendingCount = orders.filter(o => o.status !== 'Received' && o.status !== 'Cancelled').length;
+    const receivedCount = orders.filter(o => o.status === 'Received').length;
 
     return `
-      <!-- Top Metrics Bar -->
-      <div class="kpi-grid mb-6">
+      <!-- Top Title & Action Controls -->
+      <div class="dashboard-top-bar" style="margin-bottom:20px;">
+        <div class="dashboard-title-wrap">
+          <h1>
+            Purchase Orders (PO)
+            <span style="font-size:0.75rem; font-weight:600; padding:2px 8px; background:var(--primary-100); color:var(--primary-700); border-radius:var(--radius-full); vertical-align:middle;">PROCUREMENT</span>
+          </h1>
+          <p class="dashboard-subtitle">Manage raw fabric procurement, vendor purchasing contracts, order line items, and delivery status.</p>
+        </div>
+
+        <div class="dashboard-controls">
+          <button class="btn btn-primary btn-sm" onclick="PurchaseView.openCreatePOModal()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            + Create Purchase Order
+          </button>
+        </div>
+      </div>
+
+      <!-- 4 KPI Summary Cards -->
+      <div class="kpi-grid" style="margin-bottom:24px;">
         <div class="kpi-card blue">
           <div class="kpi-top">
             <span class="kpi-title">Total PO Value</span>
@@ -27,13 +46,13 @@ const PurchaseView = {
           <div class="kpi-value">${UI.formatCurrency(totalOrdered)}</div>
           <div class="kpi-bottom">
             <span class="kpi-trend up">${orders.length} Total POs</span>
-            <span class="kpi-period">All Vendors</span>
+            <span class="kpi-period">All Suppliers</span>
           </div>
         </div>
 
         <div class="kpi-card amber">
           <div class="kpi-top">
-            <span class="kpi-title">Pending Inwards</span>
+            <span class="kpi-title">Pending Orders</span>
             <div class="kpi-icon-wrap amber">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
             </div>
@@ -41,31 +60,49 @@ const PurchaseView = {
           <div class="kpi-value">${pendingCount} Orders</div>
           <div class="kpi-bottom">
             <span class="kpi-trend down">Awaiting Delivery</span>
-            <span class="kpi-period">Raw Store</span>
+            <span class="kpi-period">In Procurement</span>
           </div>
         </div>
 
         <div class="kpi-card emerald">
           <div class="kpi-top">
-            <span class="kpi-title">Received & GRN Done</span>
+            <span class="kpi-title">Fulfilled Orders</span>
             <div class="kpi-icon-wrap emerald">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
             </div>
           </div>
           <div class="kpi-value">${receivedCount} Received</div>
           <div class="kpi-bottom">
-            <span class="kpi-trend up">Stock Added</span>
-            <span class="kpi-period">Verified</span>
+            <span class="kpi-trend up">Store Stock Added</span>
+            <span class="kpi-period">Completed</span>
+          </div>
+        </div>
+
+        <div class="kpi-card purple">
+          <div class="kpi-top">
+            <span class="kpi-title">Active Suppliers</span>
+            <div class="kpi-icon-wrap purple">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
+          </div>
+          <div class="kpi-value">${vendors.length} Vendors</div>
+          <div class="kpi-bottom">
+            <span class="kpi-trend up">Fabric & Trims</span>
+            <span class="kpi-period">Registered Mills</span>
           </div>
         </div>
       </div>
 
-      <!-- Main PO Table Card -->
+      <!-- Main Purchase Orders Table Card -->
       <div class="table-card">
         <div class="table-toolbar">
-          <div class="table-toolbar-left">
-            <input type="text" class="table-search-input" id="po-search" placeholder="Search PO #, vendor, warehouse..." oninput="PurchaseView.filterPOTable()">
-            <select class="form-control form-control-sm" id="po-status-filter" style="width:160px;" onchange="PurchaseView.filterPOTable()">
+          <div class="table-toolbar-left" style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+            <div class="table-search-box" style="min-width:280px;">
+              <svg class="table-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+              <input type="text" class="table-search-input" id="po-search" placeholder="Search PO #, vendor, warehouse..." oninput="PurchaseView.filterPOTable()">
+            </div>
+
+            <select class="form-control form-control-sm" id="po-status-filter" style="width:170px;" onchange="PurchaseView.filterPOTable()">
               <option value="">All Statuses</option>
               <option value="Draft">Draft</option>
               <option value="Approved">Approved</option>
@@ -74,9 +111,10 @@ const PurchaseView = {
               <option value="Cancelled">Cancelled</option>
             </select>
           </div>
+
           <div class="table-toolbar-right">
             <button class="btn btn-primary btn-sm" onclick="PurchaseView.openCreatePOModal()">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               + Create Purchase Order
             </button>
           </div>
@@ -86,38 +124,51 @@ const PurchaseView = {
           <table class="data-table" id="po-table">
             <thead>
               <tr>
-                <th>PO Number</th>
-                <th>Vendor</th>
-                <th>PO Date</th>
-                <th>Delivery Date</th>
-                <th>Total Items</th>
-                <th>Grand Total</th>
-                <th>Payment</th>
-                <th>Status</th>
-                <th>Actions</th>
+                <th>PO NUMBER</th>
+                <th>VENDOR / SUPPLIER</th>
+                <th>PO DATE</th>
+                <th>DELIVERY DATE</th>
+                <th>ORDERED ITEMS</th>
+                <th>GRAND TOTAL (₹)</th>
+                <th>PAYMENT</th>
+                <th>STATUS</th>
+                <th style="text-align:right;">ACTIONS</th>
               </tr>
             </thead>
             <tbody>
               ${orders.length === 0 ? `
                 <tr>
-                  <td colspan="9" style="text-align:center; padding:36px; color:var(--slate-400);">
-                    No purchase orders recorded yet. Click <strong>+ Create Purchase Order</strong> to issue your first PO.
+                  <td colspan="9" style="text-align:center; padding:48px 20px; color:var(--slate-400);">
+                    <div style="display:inline-flex; align-items:center; justify-content:center; width:52px; height:52px; background:var(--primary-50); color:var(--primary-600); border-radius:var(--radius-full); margin-bottom:12px;">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+                    </div>
+                    <div style="font-size:1.05rem; font-weight:700; color:var(--slate-700); margin-bottom:4px;">No Purchase Orders Found</div>
+                    <div style="font-size:0.85rem; color:var(--slate-500); margin-bottom:16px;">Raise your first purchase order to procure fabric rolls, threads, zippers, and trims from mill suppliers.</div>
+                    <button class="btn btn-primary btn-sm" onclick="PurchaseView.openCreatePOModal()">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                      + Create First Purchase Order
+                    </button>
                   </td>
                 </tr>
               ` : orders.map(po => {
-                const poId = po.po_number || po.id;
+                const poId = po.po_number || po.poNumber || po.id;
                 const poDbId = po.dbId || po.id;
-                const vendorName = po.vendor_name || po.vendor || 'N/A';
+                const vendorName = po.vendor_name || po.vendorName || (po.vendor ? po.vendor.name : 'N/A');
                 const itemsCount = (po.items && Array.isArray(po.items)) ? po.items.length : 1;
                 const total = Number(po.grand_total || po.grandTotal || 0);
+                const poDate = po.po_date || po.poDate;
+                const expDate = po.expected_delivery_date || po.delivery_date || po.deliveryDate || po.expectedDate;
 
                 return `
                   <tr>
-                    <td class="mono-cell font-bold" style="color:var(--primary-600);">${poId}</td>
-                    <td class="primary-cell">${vendorName}</td>
-                    <td>${UI.formatDate(po.po_date || po.poDate)}</td>
-                    <td style="font-size:0.8rem; color:var(--slate-600);">${UI.formatDate(po.expected_delivery_date || po.expectedDate)}</td>
-                    <td class="font-mono">${itemsCount} item(s)</td>
+                    <td class="mono-cell font-bold" style="color:var(--primary-600); cursor:pointer;" onclick="PurchaseView.printPO('${poId}')">${poId}</td>
+                    <td class="primary-cell">
+                      <div class="fw-bold">${vendorName}</div>
+                      <div class="text-xs text-muted">${po.warehouse_location || po.warehouse || 'Main Store - Unit 1'}</div>
+                    </td>
+                    <td>${UI.formatDate(poDate)}</td>
+                    <td style="font-size:0.825rem; color:var(--slate-600);">${expDate ? UI.formatDate(expDate) : '-'}</td>
+                    <td><span class="count-badge">${itemsCount} item(s)</span></td>
                     <td class="font-bold font-mono">${UI.formatCurrency(total)}</td>
                     <td>
                       <span class="badge ${po.payment_status === 'Paid' ? 'badge-success' : (po.payment_status === 'Partially Paid' ? 'badge-warning' : 'badge-neutral')}">
@@ -125,8 +176,8 @@ const PurchaseView = {
                       </span>
                     </td>
                     <td>${UI.formatStatusBadge(po.status || 'Approved')}</td>
-                    <td>
-                      <div class="table-actions">
+                    <td style="text-align:right;">
+                      <div class="table-actions" style="justify-content:flex-end;">
                         <button class="table-action-btn view" title="View & Print PO" onclick="PurchaseView.printPO('${poId}')">
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
                         </button>
