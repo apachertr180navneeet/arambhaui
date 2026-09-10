@@ -144,7 +144,6 @@ const App = {
       sizes: "Size & Color Master",
       assign: "Job Assign Orders",
       "inward-report": "Job Inward & Ready Report",
-      inward: "Purchase Inward (GRN)",
       ready: "Ready for Dispatch",
       dispatch: "Dispatch Challans",
       "customer-accounts": "Customer Settlements",
