@@ -742,8 +742,8 @@ class ERPStateManager {
 
   deleteDiscountCoupon(id) {
     if (!this.data.discountCoupons) return;
-    const c = this.data.discountCoupons.find(cpn => cpn.id === id);
-    this.data.discountCoupons = this.data.discountCoupons.filter(cpn => cpn.id !== id);
+    const c = this.data.discountCoupons.find(cpn => String(cpn.id) === String(id) || cpn.code === id);
+    this.data.discountCoupons = this.data.discountCoupons.filter(cpn => String(cpn.id) !== String(id) && cpn.code !== id);
     if (c) {
       this.logActivity(`Deleted Discount Voucher: ${c.code}`, "QR Discount", id);
     }
@@ -752,9 +752,10 @@ class ERPStateManager {
 
   expireCoupon(id) {
     if (!this.data.discountCoupons) return;
-    const c = this.data.discountCoupons.find(cpn => cpn.id === id);
+    const c = this.data.discountCoupons.find(cpn => String(cpn.id) === String(id) || cpn.code === id);
     if (c) {
-      c.status = "Expired";
+      c.status = "Redeemed / Expired";
+      c.isRedeemed = true;
       this.logActivity(`Manually Expired Discount Voucher: ${c.code}`, "QR Discount", id);
       this.saveState();
     }
@@ -762,9 +763,10 @@ class ERPStateManager {
 
   reactivateCoupon(id) {
     if (!this.data.discountCoupons) return;
-    const c = this.data.discountCoupons.find(cpn => cpn.id === id);
+    const c = this.data.discountCoupons.find(cpn => String(cpn.id) === String(id) || cpn.code === id);
     if (c) {
       c.status = "Active";
+      c.isRedeemed = false;
       c.timesScanned = 0;
       c.redeemedByPhone = null;
       c.redeemedAt = null;
@@ -774,7 +776,7 @@ class ERPStateManager {
     }
   }
 
-  redeemDiscountCoupon(codeOrPayload, phoneNumber = null) {
+  redeemDiscountCoupon(codeOrPayload, phoneNumber = null, orderBill = 3500) {
     if (!this.data.discountCoupons) this.data.discountCoupons = [];
     let cleanCode = String(codeOrPayload || "").trim();
     try {
@@ -784,93 +786,77 @@ class ERPStateManager {
       }
     } catch(e) {}
 
-    const coupon = this.data.discountCoupons.find(c => c.code.toLowerCase() === cleanCode.toLowerCase().trim());
+    const coupon = this.data.discountCoupons.find(c => (c.code || "").toLowerCase() === cleanCode.toLowerCase().trim());
     
     if (!coupon) {
       return {
         success: false,
         reason: "not_found",
-        message: `Voucher code "${cleanCode}" not found in system.`
+        message: `Voucher code "${cleanCode}" not found in database.`
       };
     }
 
     // Check if already redeemed / expired (Single-use auto-expiry)
-    if (coupon.status === "Redeemed / Expired" || (coupon.usageType === "single" && coupon.timesScanned >= 1)) {
+    if (coupon.isRedeemed || coupon.status === "Redeemed / Expired" || coupon.status === "Redeemed") {
       return {
         success: false,
         reason: "already_redeemed",
         coupon: coupon,
-        message: `This QR voucher (${coupon.code}) has already been redeemed by ${coupon.redeemedByPhone || 'a customer'} on ${coupon.redeemedAt || 'earlier session'} and is now expired.`
+        message: `This single-use QR voucher (${coupon.code}) has already been redeemed by ${coupon.redeemedByPhone || 'customer'} on ${coupon.redeemedAt || 'earlier transaction'} and is now permanently expired.`
       };
     }
 
     // Check if expired by date
     const todayStr = new Date().toISOString().split('T')[0];
-    if (coupon.validTill && coupon.validTill < todayStr) {
+    const expiryDate = coupon.validTill || coupon.validUntil;
+    if (expiryDate && expiryDate < todayStr) {
       coupon.status = "Expired";
       this.saveState();
       return {
         success: false,
         reason: "expired",
         coupon: coupon,
-        message: `This QR voucher (${coupon.code}) expired on ${coupon.validTill}.`
+        message: `This QR voucher (${coupon.code}) expired on ${expiryDate} and can no longer be used.`
       };
     }
 
-    if (coupon.status === "Expired") {
-      return {
-        success: false,
-        reason: "expired",
-        coupon: coupon,
-        message: `This QR voucher (${coupon.code}) has been deactivated or expired.`
-      };
-    }
+    const claimId = `CLM-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    const timestampStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
 
-    // Execute successful redemption
-    const now = new Date();
-    const formattedTimestamp = now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) + ' ' + now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
-    const claimId = `CLM-${now.getFullYear()}-${String(Math.floor(Math.random() * 9000 + 1000))}`;
-    const cleanPhone = phoneNumber ? String(phoneNumber).trim() : "+91 98201 12345";
-
+    coupon.isRedeemed = true;
+    coupon.status = "Redeemed / Expired";
     coupon.timesScanned = (coupon.timesScanned || 0) + 1;
-    coupon.redeemedByPhone = cleanPhone;
-    coupon.redeemedAt = formattedTimestamp;
+    coupon.redeemedByPhone = phoneNumber || "+91 98201 12345";
+    coupon.redeemedAt = timestampStr;
     coupon.claimId = claimId;
 
-    if (coupon.usageType === "single" || !coupon.usageType) {
-      coupon.status = "Redeemed / Expired";
-    }
-
-    this.logActivity(`Redeemed Discount Voucher ${coupon.code} by ${cleanPhone} (Claim ID: ${claimId})`, "QR Discount", coupon.id);
+    this.logActivity(`Redeemed & Expired Discount QR: ${coupon.code} for ${coupon.redeemedByPhone}`, "QR Discount", coupon.code);
     this.saveState();
 
     return {
       success: true,
       coupon: coupon,
       claimId: claimId,
-      phone: cleanPhone,
-      timestamp: formattedTimestamp,
-      message: `Discount voucher verified and redeemed successfully!`
+      timestamp: timestampStr,
+      phone: coupon.redeemedByPhone,
+      message: `Discount voucher ${coupon.code} verified & claimed! Single-use voucher is now expired.`
     };
   }
 
   getCouponAnalytics() {
     const list = this.data.discountCoupons || [];
-    const totalIssued = list.length;
-    const active = list.filter(c => c.status === "Active").length;
-    const redeemed = list.filter(c => c.status === "Redeemed / Expired" || (c.timesScanned > 0)).length;
-    const expired = list.filter(c => c.status === "Expired").length;
+    const active = list.filter(c => c.status === "Active" && !c.isRedeemed).length;
+    const redeemed = list.filter(c => c.status === "Redeemed / Expired" || c.isRedeemed).length;
+    const expired = list.filter(c => c.status === "Expired" && !c.isRedeemed).length;
     const totalSavingsDisbursed = list
-      .filter(c => c.status === "Redeemed / Expired" || (c.timesScanned > 0))
-      .reduce((sum, c) => sum + (c.type === "fixed" ? c.amount : 500), 0);
+      .filter(c => c.status === "Redeemed / Expired" || c.isRedeemed)
+      .reduce((sum, c) => sum + Number(c.amount || c.discountAmount || 500), 0);
 
     return {
-      totalIssued,
+      totalIssued: list.length,
       active,
       redeemed,
       expired,
-      totalSavingsDisbursed
-    };
   }
 
   // --- KPI & Summary Metrics Calculator ---

@@ -376,19 +376,40 @@ class ERPStateManager {
       }
 
       if (Array.isArray(qrVouchers)) {
-        this.data.qrVouchers = qrVouchers.map(q => ({
-          id: q.voucher_code,
-          dbId: q.id,
-          code: q.voucher_code,
-          customerName: q.customer_name,
-          discountPercent: Number(q.discount_percent),
-          maxDiscountCap: Number(q.max_discount_cap),
-          minOrderValue: Number(q.min_order_value),
-          validFrom: q.valid_from,
-          validUntil: q.valid_until,
-          isRedeemed: Boolean(q.is_redeemed),
-          status: q.status || "Active"
-        }));
+        this.data.qrVouchers = qrVouchers.map(q => {
+          const isRedeemed = Boolean(q.is_redeemed) || q.status === 'Redeemed';
+          const isExpired = q.status === 'Expired' || (q.valid_until && new Date(q.valid_until) < new Date(new Date().toDateString()));
+          let statusText = "Active";
+          if (isRedeemed) statusText = "Redeemed / Expired";
+          else if (isExpired) statusText = "Expired";
+
+          return {
+            id: String(q.id || q.voucher_code),
+            dbId: q.id,
+            code: q.voucher_code,
+            title: q.title || "Special Customer Discount",
+            customerName: q.customer_name || "General Promotion",
+            customerPhone: q.customer_phone || "",
+            redeemedByPhone: q.customer_phone || "",
+            discountType: q.discount_type || "Percentage",
+            type: q.discount_type === 'Flat' ? 'fixed' : 'percent',
+            amount: q.discount_type === 'Flat' ? Number(q.discount_amount || 500) : Number(q.discount_percent || 10),
+            discountPercent: Number(q.discount_percent || 10),
+            discountAmount: Number(q.discount_amount || 500),
+            maxDiscountCap: Number(q.max_discount_cap || 5000),
+            minOrderValue: Number(q.min_order_value || 1000),
+            validFrom: q.valid_from,
+            validTill: q.valid_until,
+            validUntil: q.valid_until,
+            isRedeemed: isRedeemed,
+            redeemedAt: q.redeemed_at ? new Date(q.redeemed_at).toLocaleString('en-IN') : null,
+            claimId: q.redeemed_invoice_no || null,
+            timesScanned: isRedeemed ? 1 : 0,
+            usageType: 'single',
+            color: '#0f172a',
+            status: statusText
+          };
+        });
         this.data.discountCoupons = this.data.qrVouchers;
       }
 
@@ -1572,28 +1593,54 @@ class ERPStateManager {
   }
 
   // =========================================================================
-  // 9. QR VOUCHERS
+  // 9. QR VOUCHERS & DISCOUNT COUPONS LIFECYCLE
   // =========================================================================
+  createDiscountCoupon(voucher) {
+    return this.createQrVoucher(voucher);
+  }
+
   createQrVoucher(voucher) {
-    const randomSuffix = Math.random().toString(36).substring(2, 7).toUpperCase();
-    const code = `FASHION-${voucher.discountPercent}-${randomSuffix}`;
+    const isFlat = voucher.type === "fixed" || voucher.discountType === "Flat";
+    const discAmount = Number(voucher.amount || voucher.discountAmount || 500);
+    const discPercent = Number(voucher.discountPercent || (isFlat ? 0 : voucher.amount || 10));
+    
+    let code = voucher.code;
+    if (!code) {
+      const randomSuffix = Math.random().toString(36).substring(2, 7).toUpperCase();
+      code = isFlat ? `SAVE${discAmount}-${randomSuffix}` : `FASHION-${discPercent}-${randomSuffix}`;
+    }
+
     const newVoucher = {
       id: code,
-      code,
+      code: code,
+      title: voucher.title || "Special Customer Discount",
       customerName: voucher.customerName || "General Promotion",
-      discountPercent: Number(voucher.discountPercent),
+      customerPhone: voucher.customerPhone || voucher.phone || "",
+      redeemedByPhone: voucher.customerPhone || "",
+      discountType: isFlat ? "Flat" : "Percentage",
+      type: isFlat ? "fixed" : "percent",
+      amount: isFlat ? discAmount : discPercent,
+      discountPercent: discPercent,
+      discountAmount: isFlat ? discAmount : null,
       maxDiscountCap: Number(voucher.maxDiscountCap || 5000),
-      minOrderValue: Number(voucher.minOrderValue || 25000),
-      validFrom: new Date().toISOString().split('T')[0],
-      validUntil: voucher.validUntil || new Date(Date.now() + 90 * 86400000).toISOString().split('T')[0],
+      minOrderValue: Number(voucher.minOrderValue || voucher.minBill || 1000),
+      validFrom: voucher.validFrom || new Date().toISOString().split('T')[0],
+      validTill: voucher.validTill || voucher.validUntil || new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
+      validUntil: voucher.validTill || voucher.validUntil || new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
       isRedeemed: false,
+      timesScanned: 0,
+      usageType: voucher.usageType || "single",
+      color: voucher.color || "#0f172a",
       status: "Active"
     };
 
     if (!this.data.qrVouchers) this.data.qrVouchers = [];
+    if (!this.data.discountCoupons) this.data.discountCoupons = [];
+    
     this.data.qrVouchers.unshift(newVoucher);
     this.data.discountCoupons = this.data.qrVouchers;
-    this.logActivity(`Created Discount QR Voucher: ${code} (${voucher.discountPercent}%)`, "QR Management", code);
+    
+    this.logActivity(`Created Discount QR: ${code} (${isFlat ? '₹' + discAmount : discPercent + '%'} OFF)`, "QR Management", code);
     this.saveState();
 
     fetch('/qr/generator', {
@@ -1605,17 +1652,202 @@ class ERPStateManager {
         'X-Requested-With': 'XMLHttpRequest'
       },
       body: JSON.stringify({
+        voucher_code: newVoucher.code,
         customer_name: newVoucher.customerName,
+        customer_phone: newVoucher.customerPhone,
+        title: newVoucher.title,
+        discount_type: newVoucher.discountType,
         discount_percent: newVoucher.discountPercent,
+        discount_amount: newVoucher.discountAmount,
         max_discount_cap: newVoucher.maxDiscountCap,
         min_order_value: newVoucher.minOrderValue,
         valid_until: newVoucher.validUntil
       })
     }).then(r => r.json()).then(res => {
-      if (res && res.voucher && res.voucher.id) newVoucher.dbId = res.voucher.id;
-    }).catch(e => console.warn("QR sync note:", e));
+      if (res && res.voucher && res.voucher.id) {
+        newVoucher.dbId = res.voucher.id;
+        newVoucher.id = String(res.voucher.id);
+      }
+    }).catch(e => console.warn("QR create note:", e));
 
     return newVoucher;
+  }
+
+  redeemDiscountCoupon(codeOrPayload, phoneNumber = null, orderBill = 3500) {
+    if (!this.data.discountCoupons) this.data.discountCoupons = [];
+    
+    let cleanCode = String(codeOrPayload || "").trim();
+    try {
+      if (typeof codeOrPayload === 'string' && codeOrPayload.startsWith('{')) {
+        const parsed = JSON.parse(codeOrPayload);
+        cleanCode = parsed.code || codeOrPayload;
+      }
+    } catch(e) {}
+
+    const coupon = this.data.discountCoupons.find(c => (c.code || "").toLowerCase() === cleanCode.toLowerCase().trim());
+    
+    if (!coupon) {
+      return {
+        success: false,
+        reason: "not_found",
+        message: `Voucher code "${cleanCode}" not found in database.`
+      };
+    }
+
+    // Check if already redeemed (Single-use auto-expiry)
+    if (coupon.isRedeemed || coupon.status === "Redeemed / Expired" || coupon.status === "Redeemed") {
+      return {
+        success: false,
+        reason: "already_redeemed",
+        coupon: coupon,
+        message: `This single-use QR voucher (${coupon.code}) has already been redeemed by ${coupon.redeemedByPhone || 'customer'} on ${coupon.redeemedAt || 'earlier transaction'} and is permanently expired.`
+      };
+    }
+
+    // Check if expired by date
+    const todayStr = new Date().toISOString().split('T')[0];
+    const expiryDate = coupon.validTill || coupon.validUntil;
+    if (expiryDate && expiryDate < todayStr) {
+      coupon.status = "Expired";
+      this.saveState();
+      return {
+        success: false,
+        reason: "expired",
+        coupon: coupon,
+        message: `This voucher expired on ${coupon.validTill || coupon.validUntil} and can no longer be used.`
+      };
+    }
+
+    // Execute single-use redemption
+    const claimId = `CLM-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    const timestampStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+    
+    coupon.isRedeemed = true;
+    coupon.status = "Redeemed / Expired";
+    coupon.timesScanned = (coupon.timesScanned || 0) + 1;
+    coupon.redeemedByPhone = phoneNumber || "+91 98201 12345";
+    coupon.redeemedAt = timestampStr;
+    coupon.claimId = claimId;
+
+    this.logActivity(`Redeemed & Expired Discount QR: ${coupon.code} for ${coupon.redeemedByPhone}`, "QR Management", claimId);
+    this.saveState();
+
+    // Sync with backend API
+    fetch('/qr/redeem', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-CSRF-TOKEN': this.getCsrfToken(),
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      body: JSON.stringify({
+        voucher_code: coupon.code,
+        customer_phone: coupon.redeemedByPhone,
+        order_bill: orderBill
+      })
+    }).then(r => r.json()).then(res => {
+      if (res && res.success && res.claim_id) {
+        coupon.claimId = res.claim_id;
+      }
+    }).catch(e => console.warn("QR redeem sync note:", e));
+
+    return {
+      success: true,
+      coupon: coupon,
+      claimId: claimId,
+      timestamp: timestampStr,
+      phone: coupon.redeemedByPhone,
+      message: `Discount voucher ${coupon.code} verified & applied! Expired upon single-use.`
+    };
+  }
+
+  expireCoupon(id) {
+    if (!this.data.discountCoupons) return;
+    const c = this.data.discountCoupons.find(cpn => String(cpn.id) === String(id) || cpn.code === id);
+    if (c) {
+      c.status = "Redeemed / Expired";
+      c.isRedeemed = true;
+      this.logActivity(`Manually Expired Discount QR: ${c.code}`, "QR Management", c.code);
+      this.saveState();
+
+      if (c.dbId) {
+        fetch(`/qr/expire/${c.dbId}`, {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': this.getCsrfToken(),
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        }).catch(e => console.warn("QR expire note:", e));
+      }
+    }
+  }
+
+  reactivateCoupon(id) {
+    if (!this.data.discountCoupons) return;
+    const c = this.data.discountCoupons.find(cpn => String(cpn.id) === String(id) || cpn.code === id);
+    if (c) {
+      c.status = "Active";
+      c.isRedeemed = false;
+      c.timesScanned = 0;
+      c.redeemedByPhone = null;
+      c.redeemedAt = null;
+      c.claimId = null;
+      this.logActivity(`Reactivated Discount QR: ${c.code}`, "QR Management", c.code);
+      this.saveState();
+
+      if (c.dbId) {
+        fetch(`/qr/reactivate/${c.dbId}`, {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': this.getCsrfToken(),
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        }).catch(e => console.warn("QR reactivate note:", e));
+      }
+    }
+  }
+
+  deleteDiscountCoupon(id) {
+    if (!this.data.discountCoupons) return;
+    const c = this.data.discountCoupons.find(cpn => String(cpn.id) === String(id) || cpn.code === id);
+    this.data.discountCoupons = this.data.discountCoupons.filter(cpn => String(cpn.id) !== String(id) && cpn.code !== id);
+    this.data.qrVouchers = this.data.discountCoupons;
+    
+    if (c) {
+      this.logActivity(`Deleted Discount QR: ${c.code}`, "QR Management", c.code);
+      if (c.dbId) {
+        fetch(`/qr/voucher/${c.dbId}`, {
+          method: 'DELETE',
+          headers: {
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': this.getCsrfToken(),
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        }).catch(e => console.warn("QR delete note:", e));
+      }
+    }
+    this.saveState();
+  }
+
+  getCouponAnalytics() {
+    const list = this.data.discountCoupons || [];
+    const active = list.filter(c => c.status === "Active" && !c.isRedeemed).length;
+    const redeemed = list.filter(c => c.status === "Redeemed / Expired" || c.isRedeemed).length;
+    const expired = list.filter(c => c.status === "Expired" && !c.isRedeemed).length;
+    const totalSavingsDisbursed = list
+      .filter(c => c.status === "Redeemed / Expired" || c.isRedeemed)
+      .reduce((sum, c) => sum + Number(c.amount || c.discountAmount || (3500 * (c.discountPercent || 10) / 100)), 0);
+
+    return {
+      totalIssued: list.length,
+      active,
+      redeemed,
+      expired,
+      totalSavingsDisbursed: Math.round(totalSavingsDisbursed)
+    };
   }
 
   // =========================================================================

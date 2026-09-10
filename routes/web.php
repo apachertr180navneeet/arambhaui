@@ -80,6 +80,10 @@ Route::middleware('auth')->group(function () {
         Route::get('scanner', [QrController::class, 'scanner'])->name('scanner');
         Route::get('history', [QrController::class, 'history'])->name('history');
         Route::post('validate', [QrController::class, 'validateVoucher'])->name('validate');
+        Route::post('redeem', [QrController::class, 'redeemVoucher'])->name('redeem');
+        Route::post('expire/{id}', [QrController::class, 'expireVoucher'])->name('expire');
+        Route::post('reactivate/{id}', [QrController::class, 'reactivateVoucher'])->name('reactivate');
+        Route::delete('voucher/{id}', [QrController::class, 'destroy'])->name('destroy');
     });
 
     // ==========================================
