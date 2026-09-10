@@ -7,6 +7,7 @@ use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
 use App\Models\Vendor;
 use App\Models\Item;
+use App\Models\Unit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -35,19 +36,21 @@ class PurchaseOrderController extends Controller
     {
         $vendors = Vendor::all();
         $items = Item::all();
+        $units = Unit::all();
         $count = PurchaseOrder::count() + 1;
         $nextPoNumber = 'PO-2026-' . str_pad($count, 4, '0', STR_PAD_LEFT);
 
-        return view('purchase.orders.create', compact('vendors', 'items', 'nextPoNumber'));
+        return view('purchase.orders.create', compact('vendors', 'items', 'units', 'nextPoNumber'));
     }
 
     public function edit(PurchaseOrder $order)
     {
         $vendors = Vendor::all();
         $items = Item::all();
+        $units = Unit::all();
         $order->load(['items', 'vendor']);
 
-        return view('purchase.orders.edit', compact('order', 'vendors', 'items'));
+        return view('purchase.orders.edit', compact('order', 'vendors', 'items', 'units'));
     }
 
     public function store(Request $request)
