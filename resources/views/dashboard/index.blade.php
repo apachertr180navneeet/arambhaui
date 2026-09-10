@@ -126,7 +126,7 @@
   </div>
 
   <!-- Split Data Grid: Recent Job Work & Active QR Vouchers -->
-  <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(420px, 1fr)); gap:20px;">
+  <div class="dashboard-split-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 400px), 1fr)); gap:20px;">
     
     <!-- Recent Job Work Orders -->
     <div class="card" style="background:#fff; border-radius:var(--radius-xl); border:1px solid var(--slate-200); padding:20px; box-shadow:var(--shadow-sm);">

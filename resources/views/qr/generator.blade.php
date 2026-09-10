@@ -24,7 +24,7 @@
     </div>
   </div>
 
-  <div style="display:grid; grid-template-columns:1fr 380px; gap:20px; align-items:start;">
+  <div class="qr-generator-grid" style="display:grid; grid-template-columns:1fr minmax(min(100%, 340px), 380px); gap:20px; align-items:start;">
     
     <!-- Generator Form Card -->
     <div class="card" style="background:#fff; border-radius:var(--radius-xl); border:1px solid var(--slate-200); box-shadow:var(--shadow-sm); padding:22px;">
