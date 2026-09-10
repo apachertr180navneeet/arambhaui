@@ -8,7 +8,7 @@
   inset: 0;
   background-color: rgba(15, 23, 42, 0.65);
   backdrop-filter: blur(4px);
-  z-index: 1000;
+  z-index: 99999;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -18,9 +18,15 @@
   transition: opacity 0.25s ease, visibility 0.25s ease;
 }
 
-.modal-backdrop.open {
-  opacity: 1;
-  visibility: visible;
+.modal-backdrop.open,
+.modal-backdrop.show,
+.modal-backdrop[style*="display: flex"],
+.modal-backdrop[style*="display:flex"],
+.modal-backdrop[style*="display: block"],
+.modal-backdrop[style*="display:block"] {
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
 }
 
 .modal-dialog {

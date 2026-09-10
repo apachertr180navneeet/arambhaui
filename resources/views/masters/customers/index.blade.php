@@ -10,7 +10,7 @@
 
 @push('styles')
 <style>
-  /* Customer Master Modern UI Refinements */
+  /* Customer Master Modern UI Styles */
   .cm-stats-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -284,7 +284,41 @@
     100% { transform: scale(0.95); opacity: 0.8; }
   }
 
-  /* Modal Enhancements */
+  /* Modal Styling */
+  #customer-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.65);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    z-index: 99999;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+
+  .cm-modal-box {
+    background: #ffffff;
+    border-radius: 20px;
+    width: 100%;
+    max-width: 680px;
+    padding: 26px;
+    max-height: 92vh;
+    overflow-y: auto;
+    box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.3);
+    border: 1px solid var(--slate-200);
+    position: relative;
+    animation: cmModalFade 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes cmModalFade {
+    from { opacity: 0; transform: scale(0.96) translateY(10px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
   .cm-modal-section-title {
     font-size: 0.75rem;
     font-weight: 700;
@@ -417,7 +451,7 @@
           Export CSV
         </button>
 
-        <button class="btn btn-primary btn-sm" onclick="openCustomerModal()" style="display:inline-flex; align-items:center; gap:6px; font-weight:700; background:linear-gradient(135deg, #2563eb, #1d4ed8); box-shadow:0 4px 10px rgba(37,99,235,0.25);">
+        <button class="btn btn-primary btn-sm" onclick="openCustomerModal()" style="display:inline-flex; align-items:center; gap:6px; font-weight:700; background:linear-gradient(135deg, #2563eb, #1d4ed8); box-shadow:0 4px 10px rgba(37,99,235,0.25); cursor:pointer;">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <line x1="12" y1="5" x2="12" y2="19"/>
             <line x1="5" y1="12" x2="19" y2="12"/>
@@ -463,7 +497,7 @@
           Create customer profiles to manage billing addresses, GSTIN tax credentials, credit ceilings, and issue sales invoices seamlessly.
         </p>
 
-        <button type="button" class="btn btn-primary" onclick="openCustomerModal()" style="display:inline-flex; align-items:center; gap:8px; padding:10px 22px; font-size:0.9rem; font-weight:700; border-radius:10px; background:linear-gradient(135deg, #2563eb, #1d4ed8); box-shadow:0 6px 16px rgba(37,99,235,0.25);">
+        <button type="button" class="btn btn-primary" onclick="openCustomerModal()" style="display:inline-flex; align-items:center; gap:8px; padding:10px 22px; font-size:0.9rem; font-weight:700; border-radius:10px; background:linear-gradient(135deg, #2563eb, #1d4ed8); box-shadow:0 6px 16px rgba(37,99,235,0.25); cursor:pointer;">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <line x1="12" y1="5" x2="12" y2="19"/>
             <line x1="5" y1="12" x2="19" y2="12"/>
@@ -600,14 +634,14 @@
                 </td>
                 <td style="text-align:right;">
                   <div style="display:inline-flex; gap:6px;">
-                    <button class="btn btn-secondary btn-xs" onclick='openCustomerModal(@json($c))' title="Edit Customer" style="display:inline-flex; align-items:center; gap:4px; font-weight:600;">
+                    <button class="btn btn-secondary btn-xs" onclick='openCustomerModal(@json($c))' title="Edit Customer" style="display:inline-flex; align-items:center; gap:4px; font-weight:600; cursor:pointer;">
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                       Edit
                     </button>
                     <form action="{{ route('masters.customers.destroy', $c->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete customer {{ $c->name }}?')" style="display:inline;">
                       @csrf
                       @method('DELETE')
-                      <button type="submit" class="btn btn-danger btn-xs" title="Delete" style="padding:4px 8px;">
+                      <button type="submit" class="btn btn-danger btn-xs" title="Delete" style="padding:4px 8px; cursor:pointer;">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                       </button>
                     </form>
@@ -625,8 +659,8 @@
 </div>
 
 <!-- Add / Edit Customer Modal -->
-<div id="customer-modal" class="modal-backdrop" style="display:none; position:fixed; inset:0; background:rgba(15, 23, 42, 0.6); backdrop-filter:blur(4px); z-index:9999; align-items:center; justify-content:center;">
-  <div class="modal-box" style="background:#fff; border-radius:20px; width:100%; max-width:680px; padding:28px; max-height:92vh; overflow-y:auto; box-shadow:0 25px 50px -12px rgba(15, 23, 42, 0.25); border:1px solid var(--slate-200);">
+<div id="customer-modal" style="display:none;">
+  <div class="cm-modal-box">
     
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; border-bottom:1px solid var(--slate-200); padding-bottom:14px;">
       <div style="display:flex; align-items:center; gap:10px;">
@@ -638,7 +672,7 @@
           <p style="margin:2px 0 0; font-size:0.775rem; color:var(--slate-500);">Configure client commercial credentials and limits</p>
         </div>
       </div>
-      <button onclick="closeCustomerModal()" style="background:none; border:none; width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--slate-400); transition:all 0.15s ease;" onmouseover="this.style.background='#f1f5f9'; this.style.color='#0f172a'" onmouseout="this.style.background='none'; this.style.color='var(--slate-400)'">
+      <button type="button" onclick="closeCustomerModal()" style="background:none; border:none; width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--slate-400); transition:all 0.15s ease;" onmouseover="this.style.background='#f1f5f9'; this.style.color='#0f172a'" onmouseout="this.style.background='none'; this.style.color='var(--slate-400)'">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </div>
@@ -716,8 +750,8 @@
       </div>
 
       <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:24px; border-top:1px solid var(--slate-200); padding-top:16px;">
-        <button type="button" class="btn btn-secondary" onclick="closeCustomerModal()" style="font-weight:600;">Cancel</button>
-        <button type="submit" class="btn btn-primary" id="submit-btn" style="display:inline-flex; align-items:center; gap:6px; font-weight:700; background:linear-gradient(135deg, #2563eb, #1d4ed8);">
+        <button type="button" class="btn btn-secondary" onclick="closeCustomerModal()" style="font-weight:600; cursor:pointer;">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="submit-btn" style="display:inline-flex; align-items:center; gap:6px; font-weight:700; background:linear-gradient(135deg, #2563eb, #1d4ed8); cursor:pointer;">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
           Save Customer
         </button>
@@ -773,43 +807,76 @@
     const methodInput = document.getElementById('form-method');
     const title = document.getElementById('modal-title');
 
-    if (c) {
-      title.innerText = 'Edit Customer: ' + (c.code || c.name);
-      form.action = `/masters/customers/${c.id}`;
-      methodInput.value = 'PUT';
+    if (!modal) {
+      console.error("Modal element #customer-modal not found");
+      return;
+    }
 
-      document.getElementById('cust_name').value = c.name || '';
-      document.getElementById('cust_phone').value = c.phone || '';
-      document.getElementById('cust_company').value = c.company_name || '';
-      document.getElementById('cust_contact').value = c.contact_person || '';
-      document.getElementById('cust_email').value = c.email || '';
-      document.getElementById('cust_gstin').value = c.gstin || '';
-      document.getElementById('cust_city').value = c.city || '';
-      document.getElementById('cust_state').value = c.state || '';
-      document.getElementById('cust_credit').value = c.credit_limit || 0;
-      document.getElementById('cust_status').value = c.status || 'Active';
-      document.getElementById('cust_address').value = c.address || '';
-      document.getElementById('submit-btn').innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Update Customer';
+    if (c && typeof c === 'object' && c.id) {
+      if (title) title.innerText = 'Edit Customer: ' + (c.code || c.name);
+      if (form) form.action = `/masters/customers/${c.id}`;
+      if (methodInput) methodInput.value = 'PUT';
+
+      const setVal = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.value = val !== undefined && val !== null ? val : '';
+      };
+
+      setVal('cust_name', c.name);
+      setVal('cust_phone', c.phone);
+      setVal('cust_company', c.company_name);
+      setVal('cust_contact', c.contact_person);
+      setVal('cust_email', c.email);
+      setVal('cust_gstin', c.gstin);
+      setVal('cust_city', c.city);
+      setVal('cust_state', c.state);
+      setVal('cust_credit', c.credit_limit || 0);
+      setVal('cust_status', c.status || 'Active');
+      setVal('cust_address', c.address);
+      
+      const submitBtn = document.getElementById('submit-btn');
+      if (submitBtn) {
+        submitBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Update Customer';
+      }
     } else {
-      title.innerText = 'Add New Customer';
-      form.action = '{{ route('masters.customers.store') }}';
-      methodInput.value = 'POST';
-      form.reset();
-      document.getElementById('cust_credit').value = '100000.00';
-      document.getElementById('cust_status').value = 'Active';
-      document.getElementById('submit-btn').innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Save Customer';
+      if (title) title.innerText = 'Add New Customer';
+      if (form) {
+        form.action = '{{ route('masters.customers.store') }}';
+        form.reset();
+      }
+      if (methodInput) methodInput.value = 'POST';
+      
+      const creditEl = document.getElementById('cust_credit');
+      if (creditEl) creditEl.value = '100000.00';
+      const statusEl = document.getElementById('cust_status');
+      if (statusEl) statusEl.value = 'Active';
+      
+      const submitBtn = document.getElementById('submit-btn');
+      if (submitBtn) {
+        submitBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Save Customer';
+      }
     }
 
     modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
   }
 
   function closeCustomerModal() {
-    document.getElementById('customer-modal').style.display = 'none';
+    const modal = document.getElementById('customer-modal');
+    if (modal) {
+      modal.style.display = 'none';
+      document.body.style.overflow = '';
+    }
   }
 
   // Close modal when clicking outside box
   document.getElementById('customer-modal')?.addEventListener('click', function(e) {
     if (e.target === this) closeCustomerModal();
+  });
+
+  // Close modal on Escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeCustomerModal();
   });
 </script>
 @endpush
