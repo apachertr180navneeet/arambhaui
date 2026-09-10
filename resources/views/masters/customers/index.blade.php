@@ -668,19 +668,9 @@
         </div>
       </div>
 
-      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:14px; margin-bottom:12px;">
-        <div class="form-group" style="margin:0;">
-          <label class="form-label">Email Address</label>
-          <input type="email" name="email" id="cust-email" class="form-control" placeholder="e.g. accounts@royalapparel.com">
-        </div>
-        <div class="form-group" style="margin:0;">
-          <label class="form-label">Status</label>
-          <select name="status" id="cust-status" class="form-control">
-            <option value="active" selected>Active</option>
-            <option value="inactive">Inactive</option>
-            <option value="blocked">Blocked</option>
-          </select>
-        </div>
+      <div class="form-group" style="margin-bottom:12px;">
+        <label class="form-label">Email Address</label>
+        <input type="email" name="email" id="cust-email" class="form-control" placeholder="e.g. accounts@royalapparel.com">
       </div>
 
       <!-- Financial & Tax Details -->
@@ -795,7 +785,6 @@
     document.getElementById('cust-contact-person').value = customer.contact_person || '';
     document.getElementById('cust-phone').value = customer.phone || customer.mobile || '';
     document.getElementById('cust-email').value = customer.email || '';
-    document.getElementById('cust-status').value = customer.status || 'active';
     document.getElementById('cust-gst').value = customer.gst_number || customer.gstin || '';
     document.getElementById('cust-pan').value = customer.pan_number || '';
     document.getElementById('cust-credit-limit').value = customer.credit_limit || '';
