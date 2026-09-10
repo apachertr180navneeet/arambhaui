@@ -81,25 +81,7 @@
           </div>
         </div>
 
-        <!-- 3. PURCHASE MANAGEMENT -->
-        <div class="nav-section">
-          <div class="nav-section-title">Procurement</div>
-          <div class="nav-item nav-group">
-            <a class="nav-link nav-group-toggle" data-module="purchase">
-              <div class="nav-link-content">
-                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
-                <span class="nav-title">Purchase Management</span>
-              </div>
-              <svg class="nav-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-            </a>
-            <div class="nav-submenu">
-              <a class="submenu-link" data-route="purchase/orders" data-module="purchase" data-submodule="orders">Purchase Orders</a>
-              <a class="submenu-link" data-route="purchase/inward" data-module="purchase" data-submodule="inward">Purchase Inward (GRN)</a>
-            </div>
-          </div>
-        </div>
-
-        <!-- 4. JOB WORK & ASSIGN -->
+        <!-- 3. JOB WORK & ASSIGN -->
         <div class="nav-section">
           <div class="nav-section-title">Job Assignment</div>
           <div class="nav-item nav-group">
@@ -390,7 +372,6 @@
   <script src="{{ asset('js/qr.js') }}?v={{ time() }}"></script>
   <script src="{{ asset('js/views/dashboard.js') }}?v={{ time() }}"></script>
   <script src="{{ asset('js/views/masters.js') }}?v={{ time() }}"></script>
-  <script src="{{ asset('js/views/purchase.js') }}?v={{ time() }}"></script>
   <script src="{{ asset('js/views/jobwork-view.js') }}?v={{ time() }}"></script>
   <script src="{{ asset('js/views/production.js') }}?v={{ time() }}"></script>
   <script src="{{ asset('js/views/qr-view.js') }}?v={{ time() }}"></script>

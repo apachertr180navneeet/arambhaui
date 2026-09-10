@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Reports;
 
 use App\Http\Controllers\Controller;
 use App\Models\Item;
-use App\Models\PurchaseInward;
 use App\Models\Invoice;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
@@ -41,7 +40,7 @@ class ReportsController extends Controller
     public function lotPurchase(Request $request)
     {
         if ($request->wantsJson() || $request->ajax()) {
-            return response()->json(PurchaseInward::latest()->get());
+            return response()->json([]);
         }
 
         return view('dashboard', [

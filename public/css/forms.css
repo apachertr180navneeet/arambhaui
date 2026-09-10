@@ -568,3 +568,96 @@ textarea.form-control {
   color: var(--slate-400);
   font-size: 0.825rem;
 }
+
+/* ==========================================
+   ORDER LINE ITEMS TABLE & SUMMARY
+   ========================================== */
+.line-items-wrapper {
+  border: 1px solid var(--slate-200);
+  border-radius: var(--radius-lg);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 16px;
+  background: #ffffff;
+}
+
+.line-items-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  min-width: 650px;
+}
+
+.line-items-table th {
+  background: var(--slate-50);
+  color: var(--slate-700);
+  font-weight: 600;
+  font-size: 0.775rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--slate-200);
+  text-align: left;
+}
+
+.line-items-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--slate-100);
+  vertical-align: middle;
+}
+
+.line-items-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.line-items-table .btn-remove-row {
+  background: none;
+  border: none;
+  color: var(--danger-500);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: var(--radius-md);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.line-items-table .btn-remove-row:hover {
+  background: var(--danger-50);
+  color: var(--danger-700);
+}
+
+.order-summary-box {
+  background: var(--slate-50);
+  border: 1px solid var(--slate-200);
+  border-radius: var(--radius-lg);
+  padding: 14px 18px;
+  max-width: 380px;
+  margin-left: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 0.875rem;
+}
+
+.order-summary-box .summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--slate-600);
+}
+
+.order-summary-box .summary-row strong {
+  font-family: var(--font-mono);
+  color: var(--slate-900);
+}
+
+.order-summary-box .summary-row.total {
+  border-top: 1px dashed var(--slate-300);
+  padding-top: 8px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--slate-900);
+}
+

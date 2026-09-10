@@ -127,7 +127,6 @@ const App = {
     const moduleTitles = {
       dashboard: "Dashboard",
       masters: "Masters Management",
-      purchase: "Purchase Management",
       jobwork: "Job Work & Assign",
       production: "Production Management",
       qr: "QR Management",
@@ -209,9 +208,6 @@ const App = {
       else if (s === "items") html = MastersView.renderItems();
       else if (s === "sizes") html = MastersView.renderSizesAndColors();
       else html = MastersView.renderCustomers();
-    } else if (m === "purchase") {
-      if (s === "inward") html = PurchaseView.renderInwards();
-      else html = PurchaseView.renderOrders();
     } else if (m === "jobwork") {
       html = JobWorkView.render(s);
     } else if (m === "production") {
@@ -332,7 +328,7 @@ const App = {
         if (!val) return;
 
         if (val.includes("so-") || val.includes("order")) App.navigate("production", "orders");
-        else if (val.includes("po-") || val.includes("purchase")) App.navigate("purchase", "orders");
+        else if (val.includes("inv-") || val.includes("invoice") || val.includes("bill")) App.navigate("invoices", "invoices");
         else if (val.includes("jw-") || val.includes("job")) App.navigate("production", "jobwork");
         else if (val.includes("lot") || val.includes("qr")) App.navigate("qr", "scanner");
         else if (val.includes("cust") || val.includes("client")) App.navigate("masters", "customers");
@@ -366,7 +362,6 @@ const App = {
           <h4 style="font-size:0.95rem; margin-bottom:8px;">Manufacturing Core Lifecycle:</h4>
           <ol style="padding-left:20px; line-height:1.7;">
             <li><strong>Customer Order:</strong> Book sales order & auto-generate QR Lot tag.</li>
-            <li><strong>Purchase & Inward (GRN):</strong> Receive raw fabrics from vendors & increment stock.</li>
             <li><strong>Job Work Issue:</strong> Dispatch cutting bundles to job workers (Challan Rule 55).</li>
             <li><strong>Job Work Inward & QC:</strong> Reconcile good vs defective pieces & pass into finished goods.</li>
             <li><strong>Dispatch & Settlement:</strong> Generate Lorry Receipt, create Tax Invoice, and record payment.</li>

@@ -8,8 +8,6 @@ use App\Http\Controllers\Masters\VendorController;
 use App\Http\Controllers\Masters\JobWorkerController;
 use App\Http\Controllers\Masters\ItemController;
 use App\Http\Controllers\Masters\UnitController;
-use App\Http\Controllers\Purchase\PurchaseOrderController;
-use App\Http\Controllers\Purchase\PurchaseInwardController;
 use App\Http\Controllers\JobWork\JobAssignController;
 use App\Http\Controllers\JobWork\JobInwardReportController;
 use App\Http\Controllers\Production\ProductionOrderController;
@@ -62,15 +60,7 @@ Route::middleware('auth')->group(function () {
     });
 
     // ==========================================
-    // 2. PURCHASE MANAGEMENT
-    // ==========================================
-    Route::prefix('purchase')->name('purchase.')->group(function () {
-        Route::resource('orders', PurchaseOrderController::class);
-        Route::resource('inward', PurchaseInwardController::class);
-    });
-
-    // ==========================================
-    // 3. JOB WORK & ASSIGNMENT
+    // 2. JOB WORK & ASSIGNMENT
     // ==========================================
     Route::prefix('jobwork')->name('jobwork.')->group(function () {
         Route::resource('assign', JobAssignController::class);

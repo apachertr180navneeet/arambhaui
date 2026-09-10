@@ -10,14 +10,4 @@ class Vendor extends Model
     use HasFactory;
 
     protected $guarded = [];
-
-    public function purchaseOrders()
-    {
-        return $this->hasMany(PurchaseOrder::class);
-    }
-
-    public function purchaseInwards()
-    {
-        return $this->hasMany(PurchaseInward::class);
-    }
 }

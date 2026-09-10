@@ -48,7 +48,7 @@ class VendorController extends Controller
 
     public function show(Vendor $vendor)
     {
-        return response()->json($vendor->load(['purchaseOrders', 'purchaseInwards']));
+        return response()->json($vendor);
     }
 
     public function update(Request $request, Vendor $vendor)

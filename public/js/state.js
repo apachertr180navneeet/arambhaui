@@ -113,8 +113,6 @@ class ERPStateManager {
         jobWorkers,
         items,
         units,
-        purchaseOrders,
-        purchaseInwards,
         jobAssignments,
         productionOrders,
         qualityChecks,
@@ -131,8 +129,6 @@ class ERPStateManager {
         fetchSafe('/masters/jobworkers'),
         fetchSafe('/masters/items'),
         fetchSafe('/masters/units'),
-        fetchSafe('/purchase/orders'),
-        fetchSafe('/purchase/inward'),
         fetchSafe('/jobwork/assign'),
         fetchSafe('/production/orders'),
         fetchSafe('/production/qc'),
@@ -250,51 +246,6 @@ class ERPStateManager {
           decimalPlaces: Number(u.decimal_places ?? 2),
           description: u.description || "",
           status: u.status || "Active"
-        }));
-      }
-
-      if (Array.isArray(purchaseOrders)) {
-        this.data.purchaseOrders = purchaseOrders.map(po => ({
-          id: po.po_number || `PO-2026-${String(po.id).padStart(3, '0')}`,
-          dbId: po.id,
-          vendor: po.vendor_name,
-          vendorId: po.vendor_id ? `VND-${String(po.vendor_id).padStart(3, '0')}` : '',
-          poDate: po.po_date,
-          expectedDate: po.expected_date || po.po_date,
-          warehouse: "Main Raw Material Store - Unit 1",
-          items: (po.items || []).map(it => ({
-            item: it.item_name,
-            code: it.item_name,
-            qty: Number(it.qty),
-            unit: it.unit || "Meters",
-            rate: Number(it.unit_price),
-            tax: Number(it.tax_percent || 5),
-            amount: Number(it.total_amount)
-          })),
-          subtotal: Number(po.subtotal || 0),
-          taxTotal: Number(po.tax_amount || 0),
-          grandTotal: Number(po.grand_total || 0),
-          status: po.status || "Approved",
-          paymentStatus: po.payment_status || "Pending"
-        }));
-      }
-
-      if (Array.isArray(purchaseInwards)) {
-        this.data.purchaseInwards = purchaseInwards.map(grn => ({
-          id: grn.grn_number || `GRN-2026-${String(grn.id).padStart(3, '0')}`,
-          dbId: grn.id,
-          poNumber: grn.po_number || "",
-          vendor: grn.vendor_name,
-          receivedDate: grn.inward_date,
-          warehouse: grn.warehouse_location || "Main Raw Material Store - Unit 1",
-          item: grn.item_name,
-          orderedQty: Number(grn.received_qty) + Number(grn.rejected_qty || 0),
-          receivedQty: Number(grn.received_qty),
-          rejectedQty: Number(grn.rejected_qty || 0),
-          acceptedQty: Number(grn.received_qty),
-          lotNumber: grn.lot_number || `LOT-RAW-${grn.id}`,
-          inspectedBy: "Store Manager",
-          status: grn.status || "Approved"
         }));
       }
 
@@ -1347,142 +1298,7 @@ class ERPStateManager {
   addColor(colorName, hex) { if (!this.data.colors) this.data.colors = []; this.data.colors.push({ name: colorName, hex: hex || '#000' }); }
 
   // =========================================================================
-  // 6. PURCHASE ORDERS & INWARDS
-  // =========================================================================
-  addPurchaseOrder(po) {
-    const nextNum = (this.data.purchaseOrders || []).length + 1;
-    const id = `PO-2026-${String(nextNum).padStart(3, '0')}`;
-    const subtotal = po.items.reduce((s, it) => s + (Number(it.qty) * Number(it.rate)), 0);
-    const taxTotal = po.items.reduce((s, it) => s + ((Number(it.qty) * Number(it.rate) * (Number(it.tax) || 5)) / 100), 0);
-    const grandTotal = subtotal + taxTotal;
-
-    const newPo = {
-      id,
-      vendor: po.vendor,
-      vendorId: po.vendorId || "",
-      poDate: po.poDate || new Date().toISOString().split('T')[0],
-      expectedDate: po.expectedDate || po.poDate,
-      warehouse: po.warehouse || "Main Raw Material Store - Unit 1",
-      items: po.items,
-      subtotal,
-      taxTotal,
-      grandTotal,
-      status: "Approved",
-      paymentStatus: "Pending"
-    };
-
-    if (!this.data.purchaseOrders) this.data.purchaseOrders = [];
-    this.data.purchaseOrders.unshift(newPo);
-    this.logActivity(`Created Purchase Order: ${id} for ${po.vendor}`, "Purchase", id);
-    this.saveState();
-
-    fetch('/purchase/orders', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'X-CSRF-TOKEN': this.getCsrfToken(),
-        'X-Requested-With': 'XMLHttpRequest'
-      },
-      body: JSON.stringify({
-        vendor_name: po.vendor,
-        po_date: newPo.poDate,
-        expected_date: newPo.expectedDate,
-        items: po.items.map(it => ({
-          item_name: it.item,
-          qty: it.qty,
-          unit: it.unit || "Meters",
-          unit_price: it.rate,
-          tax_percent: it.tax || 5
-        }))
-      })
-    }).then(r => r.json()).then(res => {
-      if (res && res.purchase_order && res.purchase_order.id) newPo.dbId = res.purchase_order.id;
-    }).catch(e => console.warn("PO sync note:", e));
-
-    return newPo;
-  }
-
-  deletePurchaseOrder(id) {
-    const po = (this.data.purchaseOrders || []).find(p => p.id === id);
-    if (po) {
-      this.data.purchaseOrders = this.data.purchaseOrders.filter(p => p.id !== id);
-      this.logActivity(`Deleted Purchase Order: ${id}`, "Purchase", id);
-      this.saveState();
-
-      if (po.dbId) {
-        fetch(`/purchase/orders/${po.dbId}`, {
-          method: 'DELETE',
-          headers: {
-            'Accept': 'application/json',
-            'X-CSRF-TOKEN': this.getCsrfToken(),
-            'X-Requested-With': 'XMLHttpRequest'
-          }
-        }).catch(e => console.warn("PO delete note:", e));
-      }
-    }
-  }
-
-  addPurchaseInward(inward) {
-    const nextNum = (this.data.purchaseInwards || []).length + 1;
-    const id = `GRN-2026-${String(nextNum).padStart(3, '0')}`;
-    const lotNumber = `RAW-LOT-${Date.now().toString().slice(-4)}`;
-
-    const newInward = {
-      id,
-      poNumber: inward.poNumber || "",
-      vendor: inward.vendor,
-      receivedDate: inward.receivedDate || new Date().toISOString().split('T')[0],
-      warehouse: inward.warehouse || "Main Raw Material Store - Unit 1",
-      item: inward.item,
-      orderedQty: Number(inward.orderedQty || inward.receivedQty),
-      receivedQty: Number(inward.receivedQty),
-      rejectedQty: Number(inward.rejectedQty || 0),
-      acceptedQty: Number(inward.receivedQty) - Number(inward.rejectedQty || 0),
-      lotNumber,
-      inspectedBy: inward.inspectedBy || "Store Manager",
-      status: "Approved"
-    };
-
-    if (!this.data.purchaseInwards) this.data.purchaseInwards = [];
-    this.data.purchaseInwards.unshift(newInward);
-
-    // Increment item stock
-    const itm = this.getItemById(inward.item);
-    if (itm) {
-      itm.currentStock = (Number(itm.currentStock) || 0) + newInward.acceptedQty;
-      this.updateItem(itm.id, { currentStock: itm.currentStock });
-    }
-
-    this.logActivity(`Received Inward GRN: ${id} (${newInward.acceptedQty} units)`, "Purchase", id);
-    this.saveState();
-
-    fetch('/purchase/inward', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'X-CSRF-TOKEN': this.getCsrfToken(),
-        'X-Requested-With': 'XMLHttpRequest'
-      },
-      body: JSON.stringify({
-        po_number: newInward.poNumber,
-        vendor_name: newInward.vendor,
-        item_name: newInward.item,
-        received_qty: newInward.receivedQty,
-        rejected_qty: newInward.rejectedQty,
-        inward_date: newInward.receivedDate,
-        warehouse_location: newInward.warehouse
-      })
-    }).then(r => r.json()).then(res => {
-      if (res && res.inward && res.inward.id) newInward.dbId = res.inward.id;
-    }).catch(e => console.warn("GRN sync note:", e));
-
-    return newInward;
-  }
-
-  // =========================================================================
-  // 7. JOB WORK & ASSIGNMENTS
+  // 6. JOB WORK & ASSIGNMENTS
   // =========================================================================
   addJobAssignment(job) {
     const nextNum = (this.data.jobWorks || []).length + 1;
