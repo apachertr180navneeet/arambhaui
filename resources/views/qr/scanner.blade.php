@@ -1,12 +1,6 @@
-@extends('layouts.app')
+@extends('layouts.public')
 
-@section('title', 'Customer QR Claim & Scanner Portal - GarmentERP')
-
-@section('breadcrumb')
-  <div class="breadcrumb-item"><span>Barcodes & QR</span></div>
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-  <div class="breadcrumb-item active"><span>Customer Claim Portal</span></div>
-@endsection
+@section('title', 'Customer QR Discount Claim Portal - FashionWorks')
 
 @section('content')
 <div style="max-width:920px; margin:0 auto; display:flex; flex-direction:column; gap:24px;">
