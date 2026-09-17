@@ -37,6 +37,10 @@ Route::middleware('auth')->group(function () {
         return redirect()->route('dashboard');
     });
 
+    Route::get('/home', function () {
+        return redirect()->route('dashboard');
+    })->name('home');
+
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard/{module}/{submodule?}', [DashboardController::class, 'moduleRoute'])->name('dashboard.module');
 
