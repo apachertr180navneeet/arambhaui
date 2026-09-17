@@ -80,16 +80,17 @@ const App = {
         const val = searchInput.value.trim().toLowerCase();
         if (!val) return;
 
-        if (val.includes("jw-") || val.includes("job") || val.includes("assign")) window.location.href = "/jobwork/assign";
-        else if (val.includes("po-") || val.includes("pur") || val.includes("order")) window.location.href = "/purchase/orders";
-        else if (val.includes("lot") || val.includes("qr") || val.includes("voucher")) window.location.href = "/qr/history";
-        else if (val.includes("cust") || val.includes("client")) window.location.href = "/masters/customers";
-        else if (val.includes("vend") || val.includes("supplier")) window.location.href = "/masters/vendors";
-        else if (val.includes("stock") || val.includes("fab") || val.includes("item")) window.location.href = "/masters/items";
-        else if (val.includes("disp") || val.includes("lr") || val.includes("challan")) window.location.href = "/dispatch/dispatch";
-        else if (val.includes("rep") || val.includes("ledger")) window.location.href = "/reports/ledger";
-        else if (val.includes("user") || val.includes("admin")) window.location.href = "/admin/users";
-        else window.location.href = `/masters/customers?search=${encodeURIComponent(val)}`;
+        const toUrl = (path) => (typeof window.apiUrl === 'function' ? window.apiUrl(path) : path);
+        if (val.includes("jw-") || val.includes("job") || val.includes("assign")) window.location.href = toUrl("/jobwork/assign");
+        else if (val.includes("po-") || val.includes("pur") || val.includes("order")) window.location.href = toUrl("/purchase/orders");
+        else if (val.includes("lot") || val.includes("qr") || val.includes("voucher")) window.location.href = toUrl("/qr/history");
+        else if (val.includes("cust") || val.includes("client")) window.location.href = toUrl("/masters/customers");
+        else if (val.includes("vend") || val.includes("supplier")) window.location.href = toUrl("/masters/vendors");
+        else if (val.includes("stock") || val.includes("fab") || val.includes("item")) window.location.href = toUrl("/masters/items");
+        else if (val.includes("disp") || val.includes("lr") || val.includes("challan")) window.location.href = toUrl("/dispatch/dispatch");
+        else if (val.includes("rep") || val.includes("ledger")) window.location.href = toUrl("/reports/ledger");
+        else if (val.includes("user") || val.includes("admin")) window.location.href = toUrl("/admin/users");
+        else window.location.href = toUrl(`/masters/customers?search=${encodeURIComponent(val)}`);
       }
     });
   },

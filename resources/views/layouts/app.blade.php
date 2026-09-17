@@ -6,6 +6,56 @@
   <title>@yield('title', 'GarmentERP - Manufacturing & Supply Chain Management | FashionWorks Pvt. Ltd.')</title>
   <meta name="description" content="Production-ready Garment Manufacturing ERP for customer orders, raw materials, job worker outward/inward, QR lot tracking, quality check, finished goods dispatch, and accounts settlement.">
   <meta name="csrf-token" content="{{ csrf_token() }}">
+  <meta name="base-url" content="{{ url('/') }}">
+
+  <!-- Base URL & AJAX Interceptor for dynamic subfolder / server deployment -->
+  <script>
+    window.APP_URL = "{{ rtrim(url('/'), '/') }}";
+    window.API_BASE_URL = window.APP_URL;
+
+    // Helper to resolve relative routes to the full application base URL
+    window.apiUrl = function(path) {
+      if (!path) return window.APP_URL;
+      if (/^https?:\/\//i.test(path) || path.startsWith('blob:') || path.startsWith('data:')) {
+        return path;
+      }
+      const base = window.APP_URL.replace(/\/+$/, '');
+      const cleanPath = path.toString().replace(/^\/+/, '');
+      return base + '/' + cleanPath;
+    };
+
+    // Global fetch interceptor: automatically prepends base URL to root-relative paths (/masters/...)
+    (function() {
+      const originalFetch = window.fetch;
+      window.fetch = function(resource, init) {
+        if (typeof resource === 'string') {
+          if (resource.startsWith('/') && !resource.startsWith('//')) {
+            const parser = document.createElement('a');
+            parser.href = window.APP_URL;
+            const basePath = parser.pathname.replace(/\/+$/, '');
+            if (basePath && basePath !== '/' && !resource.startsWith(basePath + '/') && resource !== basePath) {
+              resource = basePath + (resource.startsWith('/') ? resource : '/' + resource);
+            }
+          }
+        } else if (resource instanceof Request) {
+          try {
+            const urlStr = resource.url;
+            const parser = document.createElement('a');
+            parser.href = window.APP_URL;
+            const basePath = parser.pathname.replace(/\/+$/, '');
+            if (basePath && basePath !== '/') {
+              const reqUrl = new URL(urlStr, window.location.origin);
+              if (!reqUrl.pathname.startsWith(basePath + '/') && reqUrl.pathname !== basePath) {
+                const newUrl = reqUrl.origin + basePath + reqUrl.pathname + reqUrl.search;
+                resource = new Request(newUrl, resource);
+              }
+            }
+          } catch (e) {}
+        }
+        return originalFetch.call(this, resource, init);
+      };
+    })();
+  </script>
 
   <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com">

@@ -5,6 +5,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>@yield('title', 'Admin Login') - GarmentERP</title>
   <meta name="description" content="GarmentERP - Manufacturing & Supply Chain Management Portal">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <meta name="base-url" content="{{ url('/') }}">
+
+  <!-- Base URL & AJAX Configuration -->
+  <script>
+    window.APP_URL = "{{ rtrim(url('/'), '/') }}";
+    window.API_BASE_URL = window.APP_URL;
+
+    window.apiUrl = function(path) {
+      if (!path) return window.APP_URL;
+      if (/^https?:\/\//i.test(path) || path.startsWith('blob:') || path.startsWith('data:')) {
+        return path;
+      }
+      const base = window.APP_URL.replace(/\/+$/, '');
+      const cleanPath = path.toString().replace(/^\/+/, '');
+      return base + '/' + cleanPath;
+    };
+  </script>
 
   <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
