@@ -616,6 +616,11 @@
               <td style="text-align:right;">
                 <div style="display:inline-flex; gap:6px; align-items:center;">
                   
+                  <!-- Copy Frontend Claim URL -->
+                  <button type="button" class="action-icon-btn" title="Copy Customer Claim URL" onclick="navigator.clipboard.writeText('{{ url('/qr/scanner?code=' . urlencode($v->voucher_code)) }}'); alert('Copied Claim URL for {{ $v->voucher_code }}');" style="color:#4f46e5;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                  </button>
+
                   <!-- View Voucher Modal Trigger -->
                   <button type="button" class="action-icon-btn info" title="View & Print Voucher Card" onclick='openViewModal(@json($v))'>
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -741,6 +746,12 @@
             </div>
 
             <div style="margin-top:12px; font-size:0.68rem; opacity:0.8; text-align:center; display:flex; justify-content:space-between; align-items:center;">
+            <div style="margin-top:6px; font-size:0.7rem; opacity:0.85; text-align:center; word-break:break-all;">
+              <span>🔗 Frontend URL:</span>
+              <a href="javascript:void(0)" onclick="openModalClaimPortal()" id="modal-prev-url-text" style="color:#fff; text-decoration:underline; font-weight:600;">/qr/scanner?code=...</a>
+            </div>
+
+            <div style="margin-top:10px; font-size:0.68rem; opacity:0.8; text-align:center; display:flex; justify-content:space-between; align-items:center;">
               <span id="modal-view-expiry">Valid until: 30 Days</span>
               <span id="modal-view-token-type">🔒 Single-Use Token</span>
             </div>
@@ -829,15 +840,22 @@
           Copy Code
         </button>
 
+        <button type="button" class="btn btn-secondary" onclick="copyModalClaimLink()" style="display:inline-flex; align-items:center; gap:6px; color:#4f46e5; border-color:#c7d2fe;" title="Copy Customer Claim URL">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          Copy Claim URL
+        </button>
+
         <button type="button" class="btn btn-primary" onclick="printVoucherDirectly()" style="display:inline-flex; align-items:center; gap:6px;">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
-          Print Single-Page Voucher
+          Print Voucher
         </button>
 
         <button type="button" class="btn btn-secondary" id="btn-edit-from-view" onclick="transitionToEditModal()" style="display:inline-flex; align-items:center; gap:6px;">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
           Edit Voucher
         </button>
+      </div>
+    </div>
       </div>
     </div>
 
@@ -1112,6 +1130,14 @@
     document.getElementById('audit-claim-ref').innerText = v.redeemed_invoice_no || '—';
     document.getElementById('audit-redeemed-time').innerText = v.redeemed_at ? (typeof v.redeemed_at === 'string' ? v.redeemed_at : new Date(v.redeemed_at).toLocaleString('en-IN')) : '—';
 
+    // Frontend Claim URL Preview
+    const targetUrl = getQrFrontendUrl(v.voucher_code);
+    const urlElem = document.getElementById('modal-prev-url-text');
+    if (urlElem) {
+      urlElem.innerText = targetUrl.replace(/^https?:\/\//i, '');
+      urlElem.title = targetUrl;
+    }
+
     // Render QR Code
     renderModalQrCode(v.voucher_code);
 
@@ -1119,6 +1145,11 @@
     const modal = document.getElementById('viewVoucherModal');
     modal.style.display = 'flex';
     setTimeout(() => modal.classList.add('open'), 10);
+  }
+
+  function getQrFrontendUrl(code) {
+    const base = (window.APP_URL || window.location.origin).replace(/\/+$/, '');
+    return `${base}/qr/scanner?code=${encodeURIComponent(code)}`;
   }
 
   function closeViewModal() {
@@ -1139,11 +1170,12 @@
     const container = document.getElementById('modal-qr-container');
     if (!container) return;
     container.innerHTML = '';
+    const targetUrl = getQrFrontendUrl(code);
 
     if (typeof QRCode !== 'undefined') {
       try {
         new QRCode(container, {
-          text: code,
+          text: targetUrl,
           width: 130,
           height: 130,
           colorDark: "#0f172a",
@@ -1151,11 +1183,24 @@
           correctLevel: QRCode.CorrectLevel.H
         });
       } catch (e) {
-        container.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=130x130&data=${encodeURIComponent(code)}" alt="QR Code" style="width:130px; height:130px; border-radius:6px; display:block;">`;
+        container.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=130x130&data=${encodeURIComponent(targetUrl)}" alt="QR Code" style="width:130px; height:130px; border-radius:6px; display:block;">`;
       }
     } else {
-      container.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=130x130&data=${encodeURIComponent(code)}" alt="QR Code" style="width:130px; height:130px; border-radius:6px; display:block;">`;
+      container.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=130x130&data=${encodeURIComponent(targetUrl)}" alt="QR Code" style="width:130px; height:130px; border-radius:6px; display:block;">`;
     }
+  }
+
+  function copyModalClaimLink() {
+    if (!activeViewVoucher) return;
+    const url = getQrFrontendUrl(activeViewVoucher.voucher_code);
+    navigator.clipboard.writeText(url).then(() => {
+      alert(`Copied Claim URL:\n${url}`);
+    });
+  }
+
+  function openModalClaimPortal() {
+    if (!activeViewVoucher) return;
+    window.open(getQrFrontendUrl(activeViewVoucher.voucher_code), '_blank');
   }
 
   /* ==========================================================================

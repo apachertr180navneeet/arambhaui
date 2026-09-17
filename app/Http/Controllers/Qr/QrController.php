@@ -23,15 +23,18 @@ class QrController extends Controller
         return view('qr.generator', compact('vouchers', 'customers'));
     }
 
-    public function scanner(Request $request)
+    public function scanner(Request $request, $code = null)
     {
-        $code = $request->query('code', '');
+        $code = $code ?: $request->query('code', '');
         return view('qr.scanner', compact('code'));
     }
 
     public function history(Request $request)
     {
-        $vouchers = QrVoucher::latest()->get();
+        $vouchers = QrVoucher::latest()->get()->map(function ($v) {
+            $v->claim_url = url('/qr/scanner?code=' . urlencode($v->voucher_code));
+            return $v;
+        });
 
         if ($request->wantsJson() || $request->ajax()) {
             return response()->json($vouchers);
@@ -52,9 +55,11 @@ class QrController extends Controller
     public function show($id)
     {
         $voucher = QrVoucher::findOrFail($id);
+        $voucherData = $voucher->toArray();
+        $voucherData['claim_url'] = url('/qr/scanner?code=' . urlencode($voucher->voucher_code));
         return response()->json([
             'success' => true,
-            'voucher' => $voucher
+            'voucher' => $voucherData
         ]);
     }
 
@@ -99,6 +104,7 @@ class QrController extends Controller
 
         $voucher->qr_payload = json_encode([
             'code' => $voucher->voucher_code,
+            'claim_url' => url('/qr/scanner?code=' . urlencode($voucher->voucher_code)),
             'type' => $discType,
             'discount' => $discType === 'Percentage' ? $percent : $amount,
             'max' => (float)$voucher->max_discount_cap,
@@ -111,7 +117,8 @@ class QrController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => "Voucher {$voucher->voucher_code} updated successfully.",
-                'voucher' => $voucher
+                'voucher' => $voucher,
+                'claim_url' => url('/qr/scanner?code=' . urlencode($voucher->voucher_code))
             ]);
         }
 
@@ -162,6 +169,7 @@ class QrController extends Controller
             'is_redeemed' => false,
             'qr_payload' => json_encode([
                 'code' => $voucherCode,
+                'claim_url' => url('/qr/scanner?code=' . urlencode($voucherCode)),
                 'type' => $discType,
                 'discount' => $discType === 'Percentage' ? $percent : $amount,
                 'max' => (float)($validated['max_discount_cap'] ?? 5000),
@@ -170,7 +178,11 @@ class QrController extends Controller
         ]);
 
         if ($request->wantsJson() || $request->ajax()) {
-            return response()->json(['success' => true, 'voucher' => $voucher], 201);
+            return response()->json([
+                'success' => true,
+                'voucher' => $voucher,
+                'claim_url' => url('/qr/scanner?code=' . urlencode($voucherCode))
+            ], 201);
         }
 
         return redirect()->route('qr.history')->with('success', "Single-use discount QR Voucher {$voucherCode} generated successfully.");

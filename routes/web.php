@@ -29,6 +29,12 @@ Route::middleware('guest')->group(function () {
     Route::post('/login', [AuthController::class, 'login'])->name('login.submit');
 });
 
+// Public Customer QR Claim & Scanning Routes
+Route::get('/claim/{code?}', [QrController::class, 'scanner'])->name('qr.claim');
+Route::get('/qr/scanner', [QrController::class, 'scanner'])->name('qr.scanner');
+Route::post('/qr/validate', [QrController::class, 'validateVoucher'])->name('qr.validate');
+Route::post('/qr/redeem', [QrController::class, 'redeemVoucher'])->name('qr.redeem');
+
 // Authenticated ERP Protected Routes
 Route::middleware('auth')->group(function () {
     Route::match(['get', 'post'], '/logout', [AuthController::class, 'logout'])->name('logout');
@@ -77,18 +83,15 @@ Route::middleware('auth')->group(function () {
     });
 
     // ==========================================
-    // 5. QR & LOYALTY MANAGEMENT
+    // 5. QR & LOYALTY MANAGEMENT (ADMIN)
     // ==========================================
     Route::prefix('qr')->name('qr.')->group(function () {
         Route::get('generator', [QrController::class, 'generator'])->name('generator');
         Route::post('generator', [QrController::class, 'store'])->name('generator.store');
-        Route::get('scanner', [QrController::class, 'scanner'])->name('scanner');
         Route::get('history', [QrController::class, 'history'])->name('history');
         Route::get('voucher/{id}', [QrController::class, 'show'])->name('show');
         Route::put('voucher/{id}', [QrController::class, 'update'])->name('update');
         Route::post('voucher/{id}/update', [QrController::class, 'update'])->name('update.post');
-        Route::post('validate', [QrController::class, 'validateVoucher'])->name('validate');
-        Route::post('redeem', [QrController::class, 'redeemVoucher'])->name('redeem');
         Route::post('expire/{id}', [QrController::class, 'expireVoucher'])->name('expire');
         Route::post('reactivate/{id}', [QrController::class, 'reactivateVoucher'])->name('reactivate');
         Route::delete('voucher/{id}', [QrController::class, 'destroy'])->name('destroy');

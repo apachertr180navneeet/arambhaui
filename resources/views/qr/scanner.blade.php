@@ -116,14 +116,45 @@
   let videoStream = null;
   let animationFrameId = null;
 
+  function extractVoucherCode(input) {
+    if (!input) return '';
+    input = input.toString().trim();
+
+    try {
+      const parsed = JSON.parse(input);
+      if (parsed.code) return parsed.code.toUpperCase().trim();
+    } catch(ex) {}
+
+    if (input.includes('?code=') || input.includes('&code=') || input.startsWith('http://') || input.startsWith('https://')) {
+      try {
+        const url = new URL(input, window.location.origin);
+        const codeParam = url.searchParams.get('code');
+        if (codeParam) return codeParam.toUpperCase().trim();
+      } catch(ex) {}
+    }
+
+    if (input.includes('/claim/')) {
+      const parts = input.split('/claim/');
+      if (parts[1]) return parts[1].split('?')[0].split('/')[0].toUpperCase().trim();
+    }
+
+    return input.toUpperCase().trim();
+  }
+
   function onCodeInput() {
-    const code = document.getElementById('claim_code').value.trim();
-    if (code.length >= 6) {
+    const raw = document.getElementById('claim_code').value;
+    const code = extractVoucherCode(raw);
+    if (code !== raw && code.length >= 4) {
+      document.getElementById('claim_code').value = code;
+    }
+    if (code.length >= 4) {
       checkVoucherStatus(code);
     }
   }
 
-  async function checkVoucherStatus(code) {
+  async function checkVoucherStatus(rawCode) {
+    const code = extractVoucherCode(rawCode);
+    if (!code) return;
     try {
       const res = await fetch('{{ route('qr.validate') }}', {
         method: 'POST',
@@ -269,12 +300,7 @@
         if (typeof jsQR !== 'undefined') {
           const qrCode = jsQR(imgData.data, imgData.width, imgData.height);
           if (qrCode && qrCode.data) {
-            let extractedCode = qrCode.data;
-            try {
-              const parsed = JSON.parse(qrCode.data);
-              if (parsed.code) extractedCode = parsed.code;
-            } catch(ex) {}
-
+            let extractedCode = extractVoucherCode(qrCode.data);
             document.getElementById('claim_code').value = extractedCode;
             checkVoucherStatus(extractedCode);
             UI.showToast('QR Scanned', `Decoded voucher: ${extractedCode}`, 'success');
@@ -335,11 +361,7 @@
         const qrCode = jsQR(imgData.data, imgData.width, imgData.height);
         if (qrCode && qrCode.data) {
           stopCameraScanner();
-          let code = qrCode.data;
-          try {
-            const parsed = JSON.parse(qrCode.data);
-            if (parsed.code) code = parsed.code;
-          } catch(e) {}
+          let code = extractVoucherCode(qrCode.data);
           document.getElementById('claim_code').value = code;
           checkVoucherStatus(code);
           UI.showToast('QR Code Scanned', code, 'success');
@@ -351,8 +373,12 @@
   }
 
   document.addEventListener('DOMContentLoaded', () => {
-    const code = document.getElementById('claim_code').value;
-    if (code) checkVoucherStatus(code);
+    const raw = document.getElementById('claim_code').value;
+    if (raw) {
+      const code = extractVoucherCode(raw);
+      document.getElementById('claim_code').value = code;
+      checkVoucherStatus(code);
+    }
   });
 </script>
 @endpush
