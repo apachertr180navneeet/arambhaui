@@ -285,18 +285,99 @@
   }
 
   @media print {
-    body * {
-      visibility: hidden;
+    @page {
+      size: portrait;
+      margin: 10mm;
     }
-    #voucher-print-area, #voucher-print-area * {
-      visibility: visible;
+
+    html, body {
+      background: #ffffff !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      height: auto !important;
+      min-height: auto !important;
+      overflow: visible !important;
     }
+
+    .app-sidebar,
+    .app-header,
+    .app-footer,
+    .sidebar-backdrop,
+    .breadcrumb-nav,
+    .header-actions,
+    .global-search-wrapper,
+    .qr-page-header,
+    .studio-form-card,
+    .preview-actions-bar,
+    .color-dots-bar,
+    .card,
+    .table-responsive,
+    #toast-container,
+    .btn,
+    .preview-sticky-card > div:first-child {
+      display: none !important;
+    }
+
+    #app,
+    .main-wrapper,
+    .main-content,
+    .qr-studio-wrapper,
+    .qr-generator-grid,
+    .preview-sticky-card {
+      display: block !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      min-height: 0 !important;
+      height: auto !important;
+      border: none !important;
+      box-shadow: none !important;
+      background: transparent !important;
+      position: static !important;
+      top: auto !important;
+      left: auto !important;
+      transform: none !important;
+      overflow: visible !important;
+    }
+
     #voucher-print-area {
-      position: absolute;
-      left: 50%;
-      top: 50px;
-      transform: translateX(-50%);
-      width: 380px;
+      display: block !important;
+      visibility: visible !important;
+      width: 370px !important;
+      max-width: 100% !important;
+      margin: 20px auto !important;
+      position: static !important;
+      left: auto !important;
+      top: auto !important;
+      transform: none !important;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+    }
+
+    #voucher-print-area * {
+      visibility: visible !important;
+    }
+
+    .luxury-voucher-pass {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+    }
+
+    .perforation-line::before,
+    .perforation-line::after {
+      background: #ffffff !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    .ticket-qr-container {
+      background: #ffffff !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
     }
   }
 </style>
@@ -437,7 +518,7 @@
             <div class="form-group" style="margin-bottom:0;">
               <label class="form-label" style="font-weight:700; color:var(--slate-800);">Flat Discount Amount (₹) <span style="color:#ef4444;">*</span></label>
               <div style="position:relative;">
-                <input type="number" step="10" min="1" name="discount_amount" id="gen_amount" class="form-control" value="500" style="font-weight:700; font-size:1.05rem;" oninput="updateLivePreview()">
+                <input type="number" step="10" min="1" name="discount_amount" id="gen_amount" class="form-control" value="500" style="font-weight:700; font-size:1.05rem;" oninput="updateLivePreview()" disabled>
                 <span style="position:absolute; right:14px; top:50%; transform:translateY(-50%); font-weight:800; color:var(--slate-400);">₹</span>
               </div>
               <div class="preset-pills">
@@ -690,17 +771,23 @@
     const btnFlat = document.getElementById('btn_type_flat');
     const groupPercent = document.getElementById('group_percent');
     const groupAmount = document.getElementById('group_amount');
+    const inputPercent = document.getElementById('gen_percent');
+    const inputAmount = document.getElementById('gen_amount');
 
     if (type === 'Percentage') {
       btnPercent.classList.add('active');
       btnFlat.classList.remove('active');
       groupPercent.style.display = 'block';
       groupAmount.style.display = 'none';
+      if (inputPercent) inputPercent.disabled = false;
+      if (inputAmount) inputAmount.disabled = true;
     } else {
       btnFlat.classList.add('active');
       btnPercent.classList.remove('active');
       groupPercent.style.display = 'none';
       groupAmount.style.display = 'block';
+      if (inputPercent) inputPercent.disabled = true;
+      if (inputAmount) inputAmount.disabled = false;
     }
     updateLivePreview();
   }
@@ -853,7 +940,204 @@
   }
 
   function printVoucherCard() {
-    window.print();
+    const printArea = document.getElementById('voucher-print-area');
+    if (!printArea) {
+      window.print();
+      return;
+    }
+
+    // Extract QR Image (from canvas or img)
+    let qrImgSrc = '';
+    const qrCanvas = printArea.querySelector('#qrcode-canvas-container canvas');
+    const qrImg = printArea.querySelector('#qrcode-canvas-container img');
+    if (qrCanvas) {
+      try {
+        qrImgSrc = qrCanvas.toDataURL('image/png');
+      } catch (e) {
+        if (qrImg && qrImg.src) qrImgSrc = qrImg.src;
+      }
+    } else if (qrImg && qrImg.src) {
+      qrImgSrc = qrImg.src;
+    }
+
+    const title = document.getElementById('prev-title')?.innerText || 'Festive Garment Discount Voucher';
+    const cust = document.getElementById('prev-cust')?.innerText || 'Audience: Retail Customer Club';
+    const disc = document.getElementById('prev-disc')?.innerText || '15% OFF';
+    const cap = document.getElementById('prev-cap')?.innerText || 'Up to ₹2,500 on min. ₹1,500 bill';
+    const code = document.getElementById('prev-code')?.innerText || 'FASHION-15-AUTO';
+    const expiry = document.getElementById('prev-expiry')?.innerText || 'Valid until: 30 Days';
+    const themeClass = currentCardTheme || 'theme-indigo';
+
+    // Remove any existing print iframe
+    let printFrame = document.getElementById('voucher-print-iframe');
+    if (printFrame) {
+      printFrame.remove();
+    }
+
+    printFrame = document.createElement('iframe');
+    printFrame.id = 'voucher-print-iframe';
+    printFrame.style.position = 'fixed';
+    printFrame.style.top = '-9999px';
+    printFrame.style.left = '-9999px';
+    printFrame.style.width = '0';
+    printFrame.style.height = '0';
+    printFrame.style.border = '0';
+    document.body.appendChild(printFrame);
+
+    const doc = printFrame.contentWindow.document;
+    doc.open();
+    doc.write(`
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <title>${title} - ${code}</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+        <style>
+          @page {
+            size: portrait;
+            margin: 15mm auto;
+          }
+          * {
+            box-sizing: border-box;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+          }
+          html, body {
+            margin: 0;
+            padding: 0;
+            background: #ffffff;
+            font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100%;
+          }
+          .print-wrapper {
+            width: 370px;
+            margin: 10px auto;
+            page-break-inside: avoid;
+            break-inside: avoid;
+          }
+          .luxury-voucher-pass {
+            position: relative;
+            border-radius: 20px;
+            padding: 24px 20px;
+            color: #ffffff;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(15, 23, 42, 0.25);
+            page-break-inside: avoid;
+            break-inside: avoid;
+          }
+          .theme-indigo { background: linear-gradient(135deg, #312e81 0%, #4338ca 50%, #6366f1 100%) !important; }
+          .theme-emerald { background: linear-gradient(135deg, #064e3b 0%, #047857 50%, #10b981 100%) !important; }
+          .theme-crimson { background: linear-gradient(135deg, #881337 0%, #be123c 50%, #f43f5e 100%) !important; }
+          .theme-onyx { background: linear-gradient(135deg, #090d16 0%, #1e293b 50%, #334155 100%) !important; border: 1px solid rgba(255, 215, 0, 0.4) !important; }
+          .theme-amber { background: linear-gradient(135deg, #78350f 0%, #b45309 50%, #f59e0b 100%) !important; }
+
+          .perforation-line {
+            position: relative;
+            margin: 18px -20px;
+            border-top: 2px dashed rgba(255, 255, 255, 0.4);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+          }
+          .perforation-line::before,
+          .perforation-line::after {
+            content: '';
+            position: absolute;
+            width: 22px;
+            height: 22px;
+            background: #ffffff !important;
+            border-radius: 50%;
+            top: -11px;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15);
+          }
+          .perforation-line::before { left: -11px; }
+          .perforation-line::after { right: -11px; }
+
+          .ticket-qr-container {
+            background: #ffffff !important;
+            border-radius: 14px;
+            padding: 12px;
+            width: 154px;
+            height: 154px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+          }
+          .ticket-qr-container img {
+            width: 130px !important;
+            height: 130px !important;
+            display: block !important;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="print-wrapper">
+          <div class="luxury-voucher-pass ${themeClass}">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+              <div>
+                <div style="font-size:0.68rem; font-weight:800; text-transform:uppercase; letter-spacing:1.5px; opacity:0.85;">
+                  GARMENT ERP • OFFICIAL PASS
+                </div>
+                <div style="font-size:1.1rem; font-weight:800; line-height:1.25; margin-top:2px;">
+                  ${title}
+                </div>
+              </div>
+              <div style="background:rgba(255,255,255,0.2); padding:4px 8px; border-radius:6px; font-size:0.65rem; font-weight:800; letter-spacing:0.5px; text-transform:uppercase;">
+                PROMO
+              </div>
+            </div>
+
+            <div style="margin-top:8px;">
+              <span style="font-size:0.75rem; background:rgba(0,0,0,0.25); padding:3px 8px; border-radius:4px; font-weight:600; opacity:0.9;">
+                ${cust}
+              </span>
+            </div>
+
+            <div style="margin:16px 0 6px; text-align:center;">
+              <div style="font-size:2.4rem; font-weight:900; letter-spacing:-0.03em; line-height:1;">
+                ${disc}
+              </div>
+              <div style="font-size:0.75rem; opacity:0.9; margin-top:4px; font-weight:600;">
+                ${cap}
+              </div>
+            </div>
+
+            <div class="perforation-line"></div>
+
+            <div class="ticket-qr-container">
+              ${qrImgSrc ? `<img src="${qrImgSrc}" alt="QR Code">` : ''}
+            </div>
+
+            <div style="text-align:center; margin-top:12px;">
+              <div style="font-family:'JetBrains Mono', monospace; font-weight:800; font-size:1.05rem; letter-spacing:1px; background:rgba(0,0,0,0.3); padding:6px 14px; border-radius:8px; display:inline-flex; align-items:center; gap:6px;">
+                <span>${code}</span>
+              </div>
+            </div>
+
+            <div style="margin-top:12px; font-size:0.68rem; opacity:0.8; text-align:center; display:flex; justify-content:space-between; align-items:center;">
+              <span>${expiry}</span>
+              <span>🔒 Single-Use Token</span>
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `);
+    doc.close();
+
+    setTimeout(() => {
+      printFrame.contentWindow.focus();
+      printFrame.contentWindow.print();
+    }, 250);
   }
 
   document.addEventListener('DOMContentLoaded', () => {

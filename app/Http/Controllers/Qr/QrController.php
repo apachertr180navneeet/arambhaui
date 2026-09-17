@@ -44,7 +44,78 @@ class QrController extends Controller
             'expired' => QrVoucher::where('status', 'Expired')->count()
         ];
 
-        return view('qr.history', compact('vouchers', 'stats'));
+        $customers = Customer::all();
+
+        return view('qr.history', compact('vouchers', 'stats', 'customers'));
+    }
+
+    public function show($id)
+    {
+        $voucher = QrVoucher::findOrFail($id);
+        return response()->json([
+            'success' => true,
+            'voucher' => $voucher
+        ]);
+    }
+
+    public function update(Request $request, $id)
+    {
+        $voucher = QrVoucher::findOrFail($id);
+
+        $validated = $request->validate([
+            'title' => 'nullable|string|max:255',
+            'customer_name' => 'nullable|string|max:255',
+            'customer_phone' => 'nullable|string|max:25',
+            'discount_type' => 'nullable|in:Percentage,Flat,percent,fixed',
+            'discount_percent' => 'nullable|numeric|min:0|max:100',
+            'discount_amount' => 'nullable|numeric|min:0',
+            'max_discount_cap' => 'nullable|numeric|min:0',
+            'min_order_value' => 'nullable|numeric|min:0',
+            'valid_from' => 'nullable|date',
+            'valid_until' => 'nullable|date',
+            'status' => 'nullable|in:Active,Expired,Redeemed'
+        ]);
+
+        $discType = in_array(strtolower($validated['discount_type'] ?? $voucher->discount_type), ['flat', 'fixed']) ? 'Flat' : 'Percentage';
+        $percent = $discType === 'Percentage' ? (float)($validated['discount_percent'] ?? $voucher->discount_percent) : 0;
+        $amount = $discType === 'Flat' ? (float)($validated['discount_amount'] ?? $voucher->discount_amount ?? 500) : null;
+
+        $voucher->title = $validated['title'] ?? $voucher->title;
+        $voucher->customer_name = $validated['customer_name'] ?? $voucher->customer_name;
+        $voucher->customer_phone = $validated['customer_phone'] ?? $voucher->customer_phone;
+        $voucher->discount_type = $discType;
+        $voucher->discount_percent = $percent;
+        $voucher->discount_amount = $amount;
+        $voucher->max_discount_cap = $validated['max_discount_cap'] ?? $voucher->max_discount_cap;
+        $voucher->min_order_value = $validated['min_order_value'] ?? $voucher->min_order_value;
+        if (isset($validated['valid_from'])) $voucher->valid_from = $validated['valid_from'];
+        if (isset($validated['valid_until'])) $voucher->valid_until = $validated['valid_until'];
+        if (isset($validated['status'])) {
+            $voucher->status = $validated['status'];
+            if ($voucher->status === 'Active') {
+                $voucher->is_redeemed = false;
+            }
+        }
+
+        $voucher->qr_payload = json_encode([
+            'code' => $voucher->voucher_code,
+            'type' => $discType,
+            'discount' => $discType === 'Percentage' ? $percent : $amount,
+            'max' => (float)$voucher->max_discount_cap,
+            'issuer' => 'GarmentERP'
+        ]);
+
+        $voucher->save();
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => "Voucher {$voucher->voucher_code} updated successfully.",
+                'voucher' => $voucher
+            ]);
+        }
+
+        return redirect()->route('qr.history')->with('success', "Voucher {$voucher->voucher_code} updated successfully.");
     }
 
     public function store(Request $request)
