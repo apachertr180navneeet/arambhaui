@@ -241,54 +241,114 @@ const UI = {
     }
   },
 
-  // --- CSV Export Helpers ---
+  // --- CSV / Excel Export Helpers ---
   exportToCSV(filename, headers, rows) {
-    let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
-    csvContent += headers.map(h => `"${String(h).replace(/"/g, '""')}"`).join(",") + "\r\n";
+    let cleanFilename = filename || "data_export";
+    if (!cleanFilename.toLowerCase().endsWith(".csv")) {
+      cleanFilename += ".csv";
+    }
+
+    let csvContent = "";
+    csvContent += headers.map(h => `"${String(h || '').trim().replace(/"/g, '""')}"`).join(",") + "\r\n";
     rows.forEach(row => {
-      csvContent += row.map(cell => `"${String(cell || '').replace(/"/g, '""')}"`).join(",") + "\r\n";
+      csvContent += row.map(cell => `"${String(cell !== undefined && cell !== null ? cell : '').trim().replace(/"/g, '""')}"`).join(",") + "\r\n";
     });
 
-    const encodedUri = encodeURI(csvContent);
+    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `${filename}.csv`);
+    link.href = url;
+    link.setAttribute("download", cleanFilename);
     document.body.appendChild(link);
     link.click();
-    link.remove();
-    UI.showToast("Export Successful", `Downloaded ${filename}.csv`, "success");
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+    if (window.Toast) {
+      Toast.fire({ icon: "success", title: `Exported ${cleanFilename} successfully` });
+    } else if (this.showToast) {
+      this.showToast("Export Successful", `Downloaded ${cleanFilename}`, "success");
+    }
   },
 
   exportTableToCSV(tableId, filename = "data_export") {
-    const table = document.getElementById(tableId) || document.querySelector(`table.${tableId}`);
-    if (!table) return UI.showToast("Export Error", "Table not found", "error");
+    let table = null;
+    if (typeof tableId === 'string') {
+      table = document.getElementById(tableId) || document.querySelector(`table.${tableId}`) || document.querySelector(tableId);
+    } else if (tableId instanceof HTMLElement) {
+      table = tableId;
+    }
 
-    const headers = [];
-    table.querySelectorAll("thead th").forEach(th => {
-      // Exclude action column headers
-      const txt = th.innerText.trim();
-      if (txt && !txt.toLowerCase().includes("action")) {
-        headers.push(txt);
+    if (!table) {
+      if (window.Toast) {
+        Toast.fire({ icon: "error", title: "Table not found for export" });
+      } else if (this.showToast) {
+        this.showToast("Export Error", "Table not found", "error");
       }
+      return;
+    }
+
+    // Determine header cells and ignore action/checkbox columns
+    const headerRow = table.querySelector("thead tr") || table.querySelector("tr");
+    if (!headerRow) return;
+
+    const validColIndices = [];
+    const headers = [];
+
+    const thCells = headerRow.querySelectorAll("th, td");
+    thCells.forEach((th, idx) => {
+      const text = th.innerText.trim();
+      const lower = text.toLowerCase();
+      // Skip actions, buttons, or checkboxes
+      if (lower === "action" || lower === "actions" || (lower === "#" && thCells.length > 5) || th.classList.contains("no-export")) {
+        return;
+      }
+      validColIndices.push(idx);
+      headers.push(text || `Column ${idx + 1}`);
     });
 
     const rows = [];
-    table.querySelectorAll("tbody tr").forEach(tr => {
+    const trList = table.querySelectorAll("tbody tr");
+    const targetRows = trList.length > 0 ? trList : table.querySelectorAll("tr:not(:first-child)");
+
+    targetRows.forEach(tr => {
+      // Skip hidden rows, filtered rows, or empty-state placeholder rows (with colspan)
       if (tr.classList.contains("filter-no-results") || tr.style.display === "none") return;
-      const row = [];
+      if (tr.querySelector("td[colspan]")) return;
+
       const cells = tr.querySelectorAll("td");
       if (cells.length === 0) return;
-      // Skip if action row
-      cells.forEach((td, idx) => {
-        if (idx < headers.length) {
-          row.push(td.innerText.trim().replace(/\n+/g, ' '));
+
+      const rowData = [];
+      validColIndices.forEach(colIdx => {
+        if (colIdx < cells.length) {
+          const cell = cells[colIdx];
+          
+          // Clone cell to remove buttons/tooltips/scripts if any
+          const cellClone = cell.cloneNode(true);
+          cellClone.querySelectorAll("button, .btn, script, style, .modal, .dropdown-menu").forEach(el => el.remove());
+          
+          let cellText = cellClone.innerText || cellClone.textContent || "";
+          // Clean up newlines, multiple spaces, tabs
+          cellText = cellText.replace(/\r?\n|\r/g, " ").replace(/\s+/g, " ").trim();
+          rowData.push(cellText);
+        } else {
+          rowData.push("");
         }
       });
-      if (row.length > 0) rows.push(row);
+
+      if (rowData.some(val => val.length > 0)) {
+        rows.push(rowData);
+      }
     });
 
     if (rows.length === 0) {
-      return UI.showToast("Export Notice", "No data rows available to export", "warning");
+      if (window.Toast) {
+        Toast.fire({ icon: "warning", title: "No data rows available to export" });
+      } else if (this.showToast) {
+        this.showToast("Export Notice", "No data rows available to export", "warning");
+      }
+      return;
     }
 
     this.exportToCSV(filename, headers, rows);
