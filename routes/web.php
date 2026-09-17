@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Artisan;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Masters\CustomerController;
@@ -133,9 +134,161 @@ Route::middleware('auth')->group(function () {
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('users', [AdminController::class, 'users'])->name('users.index');
         Route::post('users', [AdminController::class, 'storeUser'])->name('users.store');
+        Route::put('users/{user}', [AdminController::class, 'updateUser'])->name('users.update');
+        Route::delete('users/{user}', [AdminController::class, 'deleteUser'])->name('users.destroy');
         Route::get('roles', [AdminController::class, 'roles'])->name('roles');
         Route::get('activity', [AdminController::class, 'activity'])->name('activity');
         Route::get('settings', [AdminController::class, 'settings'])->name('settings');
         Route::post('settings', [AdminController::class, 'updateSettings'])->name('settings.update');
     });
 });
+
+/*
+|--------------------------------------------------------------------------
+| Server Maintenance & Migration Execution Routes
+|--------------------------------------------------------------------------
+| Use these routes in browser or web hooks on live servers (e.g. cPanel / VPS)
+| to run migrations and cache clearing without terminal access.
+*/
+
+Route::get('/run-migration', function (\Illuminate\Http\Request $request) {
+    try {
+        // Run migration with --force flag for production environments
+        Artisan::call('migrate', ['--force' => true]);
+        $output = Artisan::output();
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Migrations executed successfully.',
+                'output' => $output
+            ]);
+        }
+
+        return "<!DOCTYPE html>
+<html lang='en'>
+<head>
+    <meta charset='UTF-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <title>Migration Status - GarmentERP</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #f8fafc; padding: 40px 20px; margin: 0; }
+        .container { max-width: 760px; margin: 0 auto; background: #1e293b; border-radius: 16px; border: 1px solid #334155; padding: 30px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); }
+        .header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+        .badge { background: #059669; color: white; padding: 4px 12px; border-radius: 20px; font-weight: 700; font-size: 0.85rem; }
+        h2 { margin: 0; font-size: 1.4rem; color: #ffffff; }
+        pre { background: #090d16; color: #34d399; padding: 20px; border-radius: 10px; font-family: 'Fira Code', Consolas, monospace; font-size: 0.9rem; overflow-x: auto; border: 1px solid #1e293b; line-height: 1.5; }
+        .actions { margin-top: 24px; display: flex; gap: 12px; flex-wrap: wrap; }
+        .btn { padding: 10px 18px; border-radius: 8px; font-weight: 600; text-decoration: none; font-size: 0.875rem; transition: all 0.2s; }
+        .btn-primary { background: #2563eb; color: white; }
+        .btn-secondary { background: #334155; color: #cbd5e1; }
+        .btn-primary:hover { background: #1d4ed8; }
+        .btn-secondary:hover { background: #475569; color: white; }
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='header'>
+            <span class='badge'>SUCCESS</span>
+            <h2>Database Migrations Executed</h2>
+        </div>
+        <p style='color:#94a3b8; margin: 0 0 16px; font-size: 0.95rem;'>Command: <code style='color:#60a5fa;'>php artisan migrate --force</code></p>
+        <pre>" . (trim($output) ?: 'Nothing to migrate. All migrations are already up to date.') . "</pre>
+        <div class='actions'>
+            <a href='" . url('/clear-cache') . "' class='btn btn-secondary'>Clear Cache / Optimize</a>
+            <a href='" . url('/dashboard') . "' class='btn btn-primary'>Go to Dashboard &rarr;</a>
+        </div>
+    </div>
+</body>
+</html>";
+
+    } catch (\Throwable $e) {
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+
+        return "<!DOCTYPE html>
+<html lang='en'>
+<head>
+    <meta charset='UTF-8'>
+    <title>Migration Error - GarmentERP</title>
+    <style>
+        body { font-family: sans-serif; background: #0f172a; color: #f8fafc; padding: 40px 20px; }
+        .container { max-width: 760px; margin: 0 auto; background: #1e293b; border-radius: 16px; border: 1px solid #ef4444; padding: 30px; }
+        .badge { background: #dc2626; color: white; padding: 4px 12px; border-radius: 20px; font-weight: 700; }
+        pre { background: #090d16; color: #f87171; padding: 20px; border-radius: 10px; font-family: monospace; overflow-x: auto; line-height: 1.5; }
+        .btn { padding: 10px 18px; border-radius: 8px; font-weight: 600; text-decoration: none; display: inline-block; margin-top: 16px; background: #2563eb; color: white; }
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <span class='badge'>MIGRATION ERROR</span>
+        <h2 style='margin-top:12px;'>Database Migration Failed</h2>
+        <pre>" . htmlspecialchars($e->getMessage()) . "\n\nFile: " . htmlspecialchars($e->getFile()) . ":" . $e->getLine() . "</pre>
+        <a href='" . url('/run-migration') . "' class='btn'>Retry Migration</a>
+    </div>
+</body>
+</html>";
+    }
+})->name('server.migrate');
+
+// Alias for convenience: /migrate
+Route::get('/migrate', function (\Illuminate\Http\Request $request) {
+    return redirect()->to('/run-migration');
+});
+
+// Clear cache & optimization route for live servers
+Route::get('/clear-cache', function (\Illuminate\Http\Request $request) {
+    try {
+        Artisan::call('optimize:clear');
+        $output = Artisan::output();
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Cache cleared and optimized successfully.',
+                'output' => $output
+            ]);
+        }
+
+        return "<!DOCTYPE html>
+<html lang='en'>
+<head>
+    <meta charset='UTF-8'>
+    <title>Cache Cleared - GarmentERP</title>
+    <style>
+        body { font-family: sans-serif; background: #0f172a; color: #f8fafc; padding: 40px 20px; }
+        .container { max-width: 760px; margin: 0 auto; background: #1e293b; border-radius: 16px; border: 1px solid #334155; padding: 30px; }
+        .badge { background: #059669; color: white; padding: 4px 12px; border-radius: 20px; font-weight: 700; }
+        pre { background: #090d16; color: #34d399; padding: 20px; border-radius: 10px; font-family: monospace; overflow-x: auto; line-height: 1.5; }
+        .btn { padding: 10px 18px; border-radius: 8px; font-weight: 600; text-decoration: none; display: inline-block; margin-top: 16px; background: #2563eb; color: white; }
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <span class='badge'>OPTIMIZED</span>
+        <h2 style='margin-top:12px;'>Framework Cache Cleared</h2>
+        <pre>" . (trim($output) ?: 'All caches cleared successfully (config, routes, views, compiled).') . "</pre>
+        <a href='" . url('/dashboard') . "' class='btn'>Back to Dashboard &rarr;</a>
+    </div>
+</body>
+</html>";
+    } catch (\Throwable $e) {
+        return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+    }
+})->name('server.clear-cache');
+
+// Storage Link helper route for live servers
+Route::get('/storage-link', function () {
+    try {
+        Artisan::call('storage:link');
+        $output = Artisan::output();
+        return "<body style='background:#0f172a;color:#34d399;font-family:monospace;padding:40px;'><h3>Storage Link:</h3><pre>" . ($output ?: 'Symlink created / already exists.') . "</pre><a href='/dashboard' style='color:#60a5fa;'>Dashboard</a></body>";
+    } catch (\Throwable $e) {
+        return "<body style='background:#0f172a;color:#ef4444;font-family:monospace;padding:40px;'><h3>Storage Link Error:</h3><pre>" . $e->getMessage() . "</pre></body>";
+    }
+})->name('server.storage-link');
+

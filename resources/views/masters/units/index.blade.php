@@ -639,7 +639,7 @@
         </div>
       </div>
 
-      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:14px; margin-bottom:12px;">
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:14px; margin-bottom:12px;">
         <div class="form-group" style="margin:0;">
           <label class="form-label">Display Symbol</label>
           <input type="text" name="symbol" id="unit_symbol" class="form-control" placeholder="e.g. m, kg, rl, pcs">
@@ -647,6 +647,13 @@
         <div class="form-group" style="margin:0;">
           <label class="form-label">Decimal Places Precision</label>
           <input type="number" name="decimal_places" id="unit_decimals" class="form-control" value="2" min="0" max="4">
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">Unit Status</label>
+          <select name="status" id="unit_status" class="form-control">
+            <option value="Active">Active</option>
+            <option value="Inactive">Inactive</option>
+          </select>
         </div>
       </div>
 
@@ -718,6 +725,15 @@
     }
   }
 
+  function getUnitApiUrl(path) {
+    if (window.apiUrl && typeof window.apiUrl === 'function') {
+      return window.apiUrl(path);
+    }
+    const base = "{{ url('/') }}".replace(/\/+$/, '');
+    const cleanPath = path.startsWith('/') ? path : '/' + path;
+    return base + cleanPath;
+  }
+
   // --- Modal Open / Close ---
   function openUnitModal() {
     const modal = document.getElementById('unit-modal');
@@ -729,6 +745,7 @@
     document.getElementById('save-uom-btn').textContent = 'Save Unit';
     document.getElementById('save-uom-btn').disabled = false;
     document.getElementById('unit_decimals').value = '2';
+    document.getElementById('unit_status').value = 'Active';
     
     modal.style.display = 'flex';
   }
@@ -751,6 +768,7 @@
     document.getElementById('unit_code').value = u.code || '';
     document.getElementById('unit_symbol').value = u.symbol || '';
     document.getElementById('unit_decimals').value = u.decimal_places ?? 2;
+    document.getElementById('unit_status').value = u.status || 'Active';
     document.getElementById('unit_parent').value = u.parent_id || '';
     document.getElementById('unit_factor').value = u.conversion_factor || '';
     document.getElementById('unit_desc').value = u.description || '';
@@ -779,7 +797,7 @@
     const prevClass = selectEl.className;
     selectEl.style.opacity = '0.5';
 
-    fetch('/masters/units/' + id, {
+    fetch(getUnitApiUrl('/masters/units/' + id), {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -799,16 +817,28 @@
 
         if (data.stats) updateKpiStats(data.stats);
 
-        UI.showToast('Status Updated', 'Unit status set to ' + newStatus, 'success');
+        if (window.Toast) {
+          window.Toast.show({ title: 'Status Updated', message: 'Unit status set to ' + newStatus, type: 'success' });
+        } else if (typeof UI !== 'undefined' && UI.showToast) {
+          UI.showToast('Status Updated', 'Unit status set to ' + newStatus, 'success');
+        }
       } else {
         selectEl.className = prevClass;
-        UI.showToast('Error', data.message || 'Could not update status', 'error');
+        if (window.Toast) {
+          window.Toast.show({ title: 'Error', message: data.message || 'Could not update status', type: 'error' });
+        } else if (typeof UI !== 'undefined' && UI.showToast) {
+          UI.showToast('Error', data.message || 'Could not update status', 'error');
+        }
       }
     })
     .catch(err => {
       selectEl.style.opacity = '1';
       selectEl.className = prevClass;
-      UI.showToast('Error', 'Network error occurred while updating status', 'error');
+      if (window.Toast) {
+        window.Toast.show({ title: 'Error', message: 'Network error occurred while updating status', type: 'error' });
+      } else if (typeof UI !== 'undefined' && UI.showToast) {
+        UI.showToast('Error', 'Network error occurred while updating status', 'error');
+      }
     });
   }
 
@@ -827,18 +857,23 @@
       decimal_places: parseInt(document.getElementById('unit_decimals').value) || 2,
       parent_id: document.getElementById('unit_parent').value || null,
       conversion_factor: parseFloat(document.getElementById('unit_factor').value) || null,
+      status: document.getElementById('unit_status').value,
       description: document.getElementById('unit_desc').value.trim()
     };
 
     if (!payload.name) {
-      UI.showToast('Validation Error', 'Unit Name is required', 'error');
+      if (window.Toast) {
+        window.Toast.show({ title: 'Validation Error', message: 'Unit Name is required', type: 'error' });
+      } else if (typeof UI !== 'undefined' && UI.showToast) {
+        UI.showToast('Validation Error', 'Unit Name is required', 'error');
+      }
       return;
     }
 
     saveBtn.disabled = true;
     saveBtn.textContent = isEdit ? 'Updating...' : 'Saving...';
 
-    const url = isEdit ? ('/masters/units/' + uId) : "{{ route('masters.units.store') }}";
+    const url = isEdit ? getUnitApiUrl('/masters/units/' + uId) : "{{ route('masters.units.store') }}";
     const method = isEdit ? 'PUT' : 'POST';
 
     fetch(url, {
@@ -857,7 +892,12 @@
 
       if (data.success && data.unit) {
         closeUnitModal();
-        UI.showToast(isEdit ? 'Unit Updated' : 'Unit Created', data.message, 'success');
+        const msg = data.message || (isEdit ? 'Unit updated successfully.' : 'Unit created successfully.');
+        if (window.Toast) {
+          window.Toast.show({ title: isEdit ? 'Unit Updated' : 'Unit Created', message: msg, type: 'success' });
+        } else if (typeof UI !== 'undefined' && UI.showToast) {
+          UI.showToast(isEdit ? 'Unit Updated' : 'Unit Created', msg, 'success');
+        }
 
         if (isEdit) {
           updateTableRow(data.unit);
@@ -869,13 +909,21 @@
         if (data.parentUnits) updateParentDropdown(data.parentUnits);
       } else {
         const msg = data.errors ? Object.values(data.errors).flat().join('<br>') : (data.message || 'Validation error');
-        UI.showToast('Error', msg, 'error');
+        if (window.Toast) {
+          window.Toast.show({ title: 'Error', message: msg, type: 'error' });
+        } else if (typeof UI !== 'undefined' && UI.showToast) {
+          UI.showToast('Error', msg, 'error');
+        }
       }
     })
     .catch(err => {
       saveBtn.disabled = false;
       saveBtn.textContent = isEdit ? 'Update Unit' : 'Save Unit';
-      UI.showToast('Error', 'Failed to save unit details', 'error');
+      if (window.Toast) {
+        window.Toast.show({ title: 'Error', message: 'Failed to save unit details', type: 'error' });
+      } else if (typeof UI !== 'undefined' && UI.showToast) {
+        UI.showToast('Error', 'Failed to save unit details', 'error');
+      }
     });
   }
 
@@ -888,7 +936,7 @@
     delBtn.disabled = true;
     delBtn.textContent = 'Deleting...';
 
-    fetch('/masters/units/' + id, {
+    fetch(getUnitApiUrl('/masters/units/' + id), {
       method: 'DELETE',
       headers: {
         'Accept': 'application/json',
@@ -902,7 +950,11 @@
       closeDeleteModal();
 
       if (data.success) {
-        UI.showToast('Unit Deleted', data.message || 'Unit removed successfully', 'warning');
+        if (window.Toast) {
+          window.Toast.show({ title: 'Unit Deleted', message: data.message || 'Unit removed successfully', type: 'warning' });
+        } else if (typeof UI !== 'undefined' && UI.showToast) {
+          UI.showToast('Unit Deleted', data.message || 'Unit removed successfully', 'warning');
+        }
         
         const row = document.getElementById('unit-row-' + id);
         if (row) {
@@ -918,13 +970,21 @@
         if (data.stats) updateKpiStats(data.stats);
         if (data.parentUnits) updateParentDropdown(data.parentUnits);
       } else {
-        UI.showToast('Error', data.message || 'Could not delete unit', 'error');
+        if (window.Toast) {
+          window.Toast.show({ title: 'Error', message: data.message || 'Could not delete unit', type: 'error' });
+        } else if (typeof UI !== 'undefined' && UI.showToast) {
+          UI.showToast('Error', data.message || 'Could not delete unit', 'error');
+        }
       }
     })
     .catch(err => {
       delBtn.disabled = false;
       delBtn.textContent = 'Yes, Delete Unit';
-      UI.showToast('Error', 'Failed to delete unit', 'error');
+      if (window.Toast) {
+        window.Toast.show({ title: 'Error', message: 'Failed to delete unit', type: 'error' });
+      } else if (typeof UI !== 'undefined' && UI.showToast) {
+        UI.showToast('Error', 'Failed to delete unit', 'error');
+      }
     });
   }
 
@@ -1032,12 +1092,13 @@
     const row = document.getElementById('unit-row-' + u.id);
     if (!row) return;
 
+    row.setAttribute('data-status', (u.status || 'active').toLowerCase());
+    const isDerived = Boolean(u.parent_id);
+    row.setAttribute('data-type', isDerived ? 'derived' : 'base');
+
     row.querySelector('.unit-name-val').textContent = u.name;
     row.querySelector('.unit-code-val').textContent = u.code;
     row.querySelector('.unit-symbol-val').textContent = u.symbol || '—';
-    
-    const isDerived = Boolean(u.parent_id);
-    row.setAttribute('data-type', isDerived ? 'derived' : 'base');
 
     const typeCell = row.querySelector('.unit-type-cell');
     if (typeCell) {
@@ -1068,6 +1129,12 @@
     const initials = (u.name || 'UN').substring(0, 2).toUpperCase();
     const avatar = document.getElementById('avatar-' + u.id);
     if (avatar) avatar.textContent = initials;
+
+    const statusSelect = row.querySelector('.uom-status-select');
+    if (statusSelect && u.status) {
+      statusSelect.value = u.status;
+      statusSelect.className = 'uom-status-select ' + u.status.toLowerCase();
+    }
 
     const editBtn = row.querySelector('.btn-secondary');
     if (editBtn) {

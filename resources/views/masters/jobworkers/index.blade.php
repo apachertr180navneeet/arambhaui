@@ -687,7 +687,7 @@
 
       <!-- Financial & Rates -->
       <div class="jw-modal-section-title">Rates & Production Capacity</div>
-      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:14px; margin-bottom:12px;">
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:14px; margin-bottom:12px;">
         <div class="form-group" style="margin:0;">
           <label class="form-label required">Default Rate / Piece (₹)</label>
           <input type="number" step="0.01" name="rate_per_piece" id="jw_rate" class="form-control" required placeholder="45.00" value="45.00">
@@ -699,6 +699,14 @@
         <div class="form-group" style="margin:0;">
           <label class="form-label">Opening Outstanding (₹)</label>
           <input type="number" step="0.01" name="outstanding" id="jw_outstanding" class="form-control" placeholder="0.00" value="0.00">
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">Account Status</label>
+          <select name="status" id="jw_status" class="form-control">
+            <option value="Active">Active</option>
+            <option value="Inactive">Inactive</option>
+            <option value="Blocked">Blocked</option>
+          </select>
         </div>
       </div>
 
@@ -771,6 +779,15 @@
     return 'badge-info';
   }
 
+  function getJobWorkerApiUrl(path) {
+    if (window.apiUrl && typeof window.apiUrl === 'function') {
+      return window.apiUrl(path);
+    }
+    const base = "{{ url('/') }}".replace(/\/+$/, '');
+    const cleanPath = path.startsWith('/') ? path : '/' + path;
+    return base + cleanPath;
+  }
+
   // --- Modal Open / Close ---
   function openJobWorkerModal() {
     const modal = document.getElementById('jobworker-modal');
@@ -784,6 +801,7 @@
     document.getElementById('jw_rate').value = '45.00';
     document.getElementById('jw_capacity').value = '500';
     document.getElementById('jw_outstanding').value = '0.00';
+    document.getElementById('jw_status').value = 'Active';
     
     modal.style.display = 'flex';
   }
@@ -811,6 +829,7 @@
     document.getElementById('jw_rate').value = jw.rate_per_piece || 45.00;
     document.getElementById('jw_capacity').value = jw.daily_capacity || 500;
     document.getElementById('jw_outstanding').value = jw.outstanding || '0.00';
+    document.getElementById('jw_status').value = jw.status || 'Active';
     document.getElementById('jw_address').value = jw.address || '';
     document.getElementById('jw_city').value = jw.city || '';
     document.getElementById('jw_state').value = jw.state || '';
@@ -840,7 +859,7 @@
     const prevClass = selectEl.className;
     selectEl.style.opacity = '0.5';
 
-    fetch('/masters/jobworkers/' + id, {
+    fetch(getJobWorkerApiUrl('/masters/jobworkers/' + id), {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -860,16 +879,28 @@
 
         if (data.stats) updateKpiStats(data.stats);
 
-        UI.showToast('Status Updated', 'Job worker status set to ' + newStatus, 'success');
+        if (window.Toast) {
+          window.Toast.show({ title: 'Status Updated', message: 'Job worker status set to ' + newStatus, type: 'success' });
+        } else if (typeof UI !== 'undefined' && UI.showToast) {
+          UI.showToast('Status Updated', 'Job worker status set to ' + newStatus, 'success');
+        }
       } else {
         selectEl.className = prevClass;
-        UI.showToast('Error', data.message || 'Could not update status', 'error');
+        if (window.Toast) {
+          window.Toast.show({ title: 'Error', message: data.message || 'Could not update status', type: 'error' });
+        } else if (typeof UI !== 'undefined' && UI.showToast) {
+          UI.showToast('Error', data.message || 'Could not update status', 'error');
+        }
       }
     })
     .catch(err => {
       selectEl.style.opacity = '1';
       selectEl.className = prevClass;
-      UI.showToast('Error', 'Network error occurred while updating status', 'error');
+      if (window.Toast) {
+        window.Toast.show({ title: 'Error', message: 'Network error occurred while updating status', type: 'error' });
+      } else if (typeof UI !== 'undefined' && UI.showToast) {
+        UI.showToast('Error', 'Network error occurred while updating status', 'error');
+      }
     });
   }
 
@@ -891,6 +922,7 @@
       rate_per_piece: parseFloat(document.getElementById('jw_rate').value) || 0,
       daily_capacity: parseInt(document.getElementById('jw_capacity').value) || 0,
       outstanding: parseFloat(document.getElementById('jw_outstanding').value) || 0,
+      status: document.getElementById('jw_status').value,
       address: document.getElementById('jw_address').value.trim(),
       city: document.getElementById('jw_city').value.trim(),
       state: document.getElementById('jw_state').value.trim(),
@@ -898,18 +930,26 @@
     };
 
     if (!payload.name) {
-      UI.showToast('Validation Error', 'Worker Name is required', 'error');
+      if (window.Toast) {
+        window.Toast.show({ title: 'Validation Error', message: 'Worker Name is required', type: 'error' });
+      } else if (typeof UI !== 'undefined' && UI.showToast) {
+        UI.showToast('Validation Error', 'Worker Name is required', 'error');
+      }
       return;
     }
     if (!payload.phone) {
-      UI.showToast('Validation Error', 'Phone Number is required', 'error');
+      if (window.Toast) {
+        window.Toast.show({ title: 'Validation Error', message: 'Phone Number is required', type: 'error' });
+      } else if (typeof UI !== 'undefined' && UI.showToast) {
+        UI.showToast('Validation Error', 'Phone Number is required', 'error');
+      }
       return;
     }
 
     saveBtn.disabled = true;
     saveBtn.textContent = isEdit ? 'Updating...' : 'Saving...';
 
-    const url = isEdit ? ('/masters/jobworkers/' + jwId) : "{{ route('masters.jobworkers.store') }}";
+    const url = isEdit ? getJobWorkerApiUrl('/masters/jobworkers/' + jwId) : "{{ route('masters.jobworkers.store') }}";
     const method = isEdit ? 'PUT' : 'POST';
 
     fetch(url, {
@@ -928,7 +968,12 @@
 
       if (data.success && data.job_worker) {
         closeJobWorkerModal();
-        UI.showToast(isEdit ? 'Job Worker Updated' : 'Job Worker Created', data.message, 'success');
+        const msg = data.message || (isEdit ? 'Job Worker updated successfully.' : 'Job Worker created successfully.');
+        if (window.Toast) {
+          window.Toast.show({ title: isEdit ? 'Job Worker Updated' : 'Job Worker Created', message: msg, type: 'success' });
+        } else if (typeof UI !== 'undefined' && UI.showToast) {
+          UI.showToast(isEdit ? 'Job Worker Updated' : 'Job Worker Created', msg, 'success');
+        }
 
         if (isEdit) {
           updateTableRow(data.job_worker);
@@ -939,13 +984,21 @@
         if (data.stats) updateKpiStats(data.stats);
       } else {
         const msg = data.errors ? Object.values(data.errors).flat().join('<br>') : (data.message || 'Validation error');
-        UI.showToast('Error', msg, 'error');
+        if (window.Toast) {
+          window.Toast.show({ title: 'Error', message: msg, type: 'error' });
+        } else if (typeof UI !== 'undefined' && UI.showToast) {
+          UI.showToast('Error', msg, 'error');
+        }
       }
     })
     .catch(err => {
       saveBtn.disabled = false;
       saveBtn.textContent = isEdit ? 'Update Job Worker' : 'Save Job Worker';
-      UI.showToast('Error', 'Failed to save job worker details', 'error');
+      if (window.Toast) {
+        window.Toast.show({ title: 'Error', message: 'Failed to save job worker details', type: 'error' });
+      } else if (typeof UI !== 'undefined' && UI.showToast) {
+        UI.showToast('Error', 'Failed to save job worker details', 'error');
+      }
     });
   }
 
@@ -958,7 +1011,7 @@
     delBtn.disabled = true;
     delBtn.textContent = 'Deleting...';
 
-    fetch('/masters/jobworkers/' + id, {
+    fetch(getJobWorkerApiUrl('/masters/jobworkers/' + id), {
       method: 'DELETE',
       headers: {
         'Accept': 'application/json',
@@ -972,7 +1025,11 @@
       closeDeleteModal();
 
       if (data.success) {
-        UI.showToast('Job Worker Deleted', data.message || 'Job Worker removed successfully', 'warning');
+        if (window.Toast) {
+          window.Toast.show({ title: 'Job Worker Deleted', message: data.message || 'Job Worker removed successfully', type: 'warning' });
+        } else if (typeof UI !== 'undefined' && UI.showToast) {
+          UI.showToast('Job Worker Deleted', data.message || 'Job Worker removed successfully', 'warning');
+        }
         
         const row = document.getElementById('jobworker-row-' + id);
         if (row) {
@@ -987,13 +1044,21 @@
 
         if (data.stats) updateKpiStats(data.stats);
       } else {
-        UI.showToast('Error', data.message || 'Could not delete job worker', 'error');
+        if (window.Toast) {
+          window.Toast.show({ title: 'Error', message: data.message || 'Could not delete job worker', type: 'error' });
+        } else if (typeof UI !== 'undefined' && UI.showToast) {
+          UI.showToast('Error', data.message || 'Could not delete job worker', 'error');
+        }
       }
     })
     .catch(err => {
       delBtn.disabled = false;
       delBtn.textContent = 'Yes, Delete Job Worker';
-      UI.showToast('Error', 'Failed to delete job worker', 'error');
+      if (window.Toast) {
+        window.Toast.show({ title: 'Error', message: 'Failed to delete job worker', type: 'error' });
+      } else if (typeof UI !== 'undefined' && UI.showToast) {
+        UI.showToast('Error', 'Failed to delete job worker', 'error');
+      }
     });
   }
 
@@ -1090,6 +1155,10 @@
     const row = document.getElementById('jobworker-row-' + jw.id);
     if (!row) return;
 
+    row.setAttribute('data-skill', (jw.skill_type || '').toLowerCase());
+    row.setAttribute('data-status', (jw.status || 'active').toLowerCase());
+    row.setAttribute('data-balance', jw.outstanding || 0);
+
     row.querySelector('.jw-name-val').textContent = jw.name;
     row.querySelector('.jw-code-val').textContent = jw.code || ('JW-' + String(jw.id).padStart(3, '0'));
     row.querySelector('.jw-contact-val').textContent = jw.contact_person || jw.name;
@@ -1122,6 +1191,12 @@
       const outVal = Number(jw.outstanding || 0);
       outCell.textContent = '₹' + outVal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
       outCell.style.color = outVal > 0 ? '#dc2626' : '#059669';
+    }
+
+    const statusSelect = row.querySelector('.jw-status-select');
+    if (statusSelect && jw.status) {
+      statusSelect.value = jw.status;
+      statusSelect.className = 'jw-status-select ' + jw.status.toLowerCase();
     }
 
     const editBtn = row.querySelector('.btn-secondary');

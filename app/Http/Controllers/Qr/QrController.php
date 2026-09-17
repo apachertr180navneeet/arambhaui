@@ -6,13 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Models\QrVoucher;
 use App\Models\Customer;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 class QrController extends Controller
 {
     public function generator(Request $request)
     {
-        $vouchers = QrVoucher::where('status', 'Active')->latest()->get();
+        $vouchers = QrVoucher::where('status', 'Active')->latest()->take(10)->get();
 
         if ($request->wantsJson() || $request->ajax()) {
             return response()->json($vouchers);
@@ -31,7 +30,7 @@ class QrController extends Controller
 
         $input = trim((string)$input);
 
-        // If JSON payload was passed (e.g. {"code":"FASHION-15-X7K"})
+        // If JSON payload was passed (e.g. {"code":"MAJ-500-X7K"})
         if (str_starts_with($input, '{') && str_ends_with($input, '}')) {
             $json = json_decode($input, true);
             if (is_array($json) && !empty($json['code'])) {
@@ -88,7 +87,7 @@ class QrController extends Controller
     public function history(Request $request)
     {
         $vouchers = QrVoucher::latest()->get()->map(function ($v) {
-            $v->claim_url = url('/qr/scanner?code=' . urlencode($v->voucher_code));
+            $v->claim_url = url('/claim/' . $v->voucher_code);
             return $v;
         });
 
@@ -112,7 +111,7 @@ class QrController extends Controller
     {
         $voucher = QrVoucher::findOrFail($id);
         $voucherData = $voucher->toArray();
-        $voucherData['claim_url'] = url('/qr/scanner?code=' . urlencode($voucher->voucher_code));
+        $voucherData['claim_url'] = url('/claim/' . $voucher->voucher_code);
         return response()->json([
             'success' => true,
             'voucher' => $voucherData
@@ -124,32 +123,32 @@ class QrController extends Controller
         $voucher = QrVoucher::findOrFail($id);
 
         $validated = $request->validate([
-            'title' => 'nullable|string|max:255',
+            'batch_name' => 'nullable|string|max:255',
+            'qr_date' => 'nullable|date',
+            'amount' => 'nullable|numeric|min:0',
             'customer_name' => 'nullable|string|max:255',
             'customer_phone' => 'nullable|string|max:25',
-            'discount_type' => 'nullable|in:Percentage,Flat,percent,fixed',
-            'discount_percent' => 'nullable|numeric|min:0|max:100',
-            'discount_amount' => 'nullable|numeric|min:0',
-            'max_discount_cap' => 'nullable|numeric|min:0',
-            'min_order_value' => 'nullable|numeric|min:0',
-            'valid_from' => 'nullable|date',
             'valid_until' => 'nullable|date',
             'status' => 'nullable|in:Active,Expired,Redeemed'
         ]);
 
-        $discType = in_array(strtolower($validated['discount_type'] ?? $voucher->discount_type), ['flat', 'fixed']) ? 'Flat' : 'Percentage';
-        $percent = $discType === 'Percentage' ? (float)($validated['discount_percent'] ?? $voucher->discount_percent) : 0;
-        $amount = $discType === 'Flat' ? (float)($validated['discount_amount'] ?? $voucher->discount_amount ?? 500) : null;
-
-        $voucher->title = $validated['title'] ?? $voucher->title;
-        $voucher->customer_name = $validated['customer_name'] ?? $voucher->customer_name;
-        $voucher->customer_phone = $validated['customer_phone'] ?? $voucher->customer_phone;
-        $voucher->discount_type = $discType;
-        $voucher->discount_percent = $percent;
-        $voucher->discount_amount = $amount;
-        $voucher->max_discount_cap = $validated['max_discount_cap'] ?? $voucher->max_discount_cap;
-        $voucher->min_order_value = $validated['min_order_value'] ?? $voucher->min_order_value;
-        if (isset($validated['valid_from'])) $voucher->valid_from = $validated['valid_from'];
+        if (isset($validated['batch_name'])) {
+            $voucher->batch_name = $validated['batch_name'];
+            $voucher->title = $validated['batch_name'];
+        }
+        if (isset($validated['qr_date'])) {
+            $voucher->qr_date = $validated['qr_date'];
+            $voucher->valid_from = $validated['qr_date'];
+        }
+        if (isset($validated['amount'])) {
+            $amt = (float)$validated['amount'];
+            $voucher->amount = $amt;
+            $voucher->discount_amount = $amt;
+            $voucher->discount_percent = $amt;
+            $voucher->max_discount_cap = $amt;
+        }
+        if (isset($validated['customer_name'])) $voucher->customer_name = $validated['customer_name'];
+        if (isset($validated['customer_phone'])) $voucher->customer_phone = $validated['customer_phone'];
         if (isset($validated['valid_until'])) $voucher->valid_until = $validated['valid_until'];
         if (isset($validated['status'])) {
             $voucher->status = $validated['status'];
@@ -158,15 +157,7 @@ class QrController extends Controller
             }
         }
 
-        $voucher->qr_payload = json_encode([
-            'code' => $voucher->voucher_code,
-            'claim_url' => url('/qr/scanner?code=' . urlencode($voucher->voucher_code)),
-            'type' => $discType,
-            'discount' => $discType === 'Percentage' ? $percent : $amount,
-            'max' => (float)$voucher->max_discount_cap,
-            'issuer' => 'GarmentERP'
-        ]);
-
+        $voucher->qr_payload = url('/claim/' . $voucher->voucher_code);
         $voucher->save();
 
         if ($request->wantsJson() || $request->ajax()) {
@@ -174,7 +165,7 @@ class QrController extends Controller
                 'success' => true,
                 'message' => "Voucher {$voucher->voucher_code} updated successfully.",
                 'voucher' => $voucher,
-                'claim_url' => url('/qr/scanner?code=' . urlencode($voucher->voucher_code))
+                'claim_url' => url('/claim/' . $voucher->voucher_code)
             ]);
         }
 
@@ -184,64 +175,68 @@ class QrController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'voucher_code' => 'nullable|string|max:50|unique:qr_vouchers,voucher_code',
-            'customer_name' => 'nullable|string|max:255',
-            'customer_phone' => 'nullable|string|max:25',
-            'title' => 'nullable|string|max:255',
-            'discount_type' => 'nullable|in:Percentage,Flat,percent,fixed',
-            'discount_percent' => 'nullable|numeric|min:0|max:100',
-            'discount_amount' => 'nullable|numeric|min:0',
-            'max_discount_cap' => 'nullable|numeric|min:0',
-            'min_order_value' => 'nullable|numeric|min:0',
-            'valid_from' => 'nullable|date',
-            'valid_until' => 'nullable|date'
+            'qr_date' => 'required|date',
+            'batch_name' => 'required|string|max:255',
+            'count' => 'required|integer|min:1|max:1000',
+            'amount' => 'required|numeric|min:1',
+            'voucher_code' => 'nullable|string|max:50'
         ]);
 
-        $discType = in_array(strtolower($validated['discount_type'] ?? ''), ['flat', 'fixed']) ? 'Flat' : 'Percentage';
-        $percent = $discType === 'Percentage' ? (float)($validated['discount_percent'] ?? 10) : 0;
-        $amount = $discType === 'Flat' ? (float)($validated['discount_amount'] ?? 500) : null;
+        $qrDate = $validated['qr_date'];
+        $batchName = trim($validated['batch_name']);
+        $count = (int)$validated['count'];
+        $amount = (float)$validated['amount'];
 
-        if (!empty($validated['voucher_code'])) {
-            $voucherCode = strtoupper(trim($validated['voucher_code']));
-        } else {
+        $createdVouchers = [];
+
+        for ($i = 1; $i <= $count; $i++) {
             $randomSuffix = strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 5));
-            $prefix = $discType === 'Percentage' ? "FASHION-{$percent}" : "SAVE-{$amount}";
-            $voucherCode = "{$prefix}-{$randomSuffix}";
-        }
+            $prefix = "MAJ-" . intval($amount);
+            $voucherCode = ($count === 1 && !empty($validated['voucher_code']))
+                ? strtoupper(trim($validated['voucher_code']))
+                : "{$prefix}-{$randomSuffix}";
 
-        $voucher = QrVoucher::create([
-            'voucher_code' => $voucherCode,
-            'customer_name' => $validated['customer_name'] ?? 'General Promotion',
-            'customer_phone' => $validated['customer_phone'] ?? null,
-            'title' => $validated['title'] ?? 'Special Customer Discount',
-            'discount_type' => $discType,
-            'discount_percent' => $percent,
-            'discount_amount' => $amount,
-            'max_discount_cap' => $validated['max_discount_cap'] ?? 5000,
-            'min_order_value' => $validated['min_order_value'] ?? 1000,
-            'valid_from' => $validated['valid_from'] ?? now()->toDateString(),
-            'valid_until' => $validated['valid_until'] ?? now()->addDays(30)->toDateString(),
-            'status' => 'Active',
-            'is_redeemed' => false,
-            'qr_payload' => json_encode([
-                'code' => $voucherCode,
-                'claim_url' => url('/qr/scanner?code=' . urlencode($voucherCode)),
-                'type' => $discType,
-                'discount' => $discType === 'Percentage' ? $percent : $amount,
-                'max' => (float)($validated['max_discount_cap'] ?? 5000),
-                'issuer' => 'GarmentERP'
-            ])
-        ]);
+            // Ensure uniqueness
+            while (QrVoucher::where('voucher_code', $voucherCode)->exists()) {
+                $randomSuffix = strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 6));
+                $voucherCode = "{$prefix}-{$randomSuffix}";
+            }
+
+            $claimUrl = url('/claim/' . $voucherCode);
+
+            $voucher = QrVoucher::create([
+                'voucher_code' => $voucherCode,
+                'batch_name' => $batchName,
+                'qr_date' => $qrDate,
+                'amount' => $amount,
+                'customer_name' => 'General Promotion',
+                'customer_phone' => null,
+                'title' => $batchName,
+                'discount_type' => 'Flat',
+                'discount_percent' => $amount,
+                'discount_amount' => $amount,
+                'max_discount_cap' => $amount,
+                'min_order_value' => 0,
+                'valid_from' => $qrDate,
+                'valid_until' => date('Y-m-d', strtotime('+365 days', strtotime($qrDate))),
+                'status' => 'Active',
+                'is_redeemed' => false,
+                'qr_payload' => $claimUrl
+            ]);
+
+            $createdVouchers[] = $voucher;
+        }
 
         if ($request->wantsJson() || $request->ajax()) {
             return response()->json([
                 'success' => true,
-                'voucher' => $voucher,
-                'claim_url' => url('/qr/scanner?code=' . urlencode($voucherCode))
+                'message' => "Successfully generated {$count} QR Voucher(s) for batch '{$batchName}' with ₹{$amount} value.",
+                'vouchers' => $createdVouchers,
+                'count' => $count
             ], 201);
         }
 
-        return redirect()->route('qr.history')->with('success', "Single-use discount QR Voucher {$voucherCode} generated successfully.");
+        return redirect()->route('qr.history')->with('success', "Batch '{$batchName}' created ({$count} QRs of ₹{$amount} generated successfully).");
     }
 
     public function validateVoucher(Request $request)
@@ -278,14 +273,18 @@ class QrController extends Controller
             ], 422);
         }
 
+        $amt = (float)($voucher->amount ?: $voucher->discount_amount ?: $voucher->discount_percent ?: 0);
+
         return response()->json([
             'success' => true,
             'voucher' => $voucher,
+            'batch_name' => $voucher->batch_name ?: $voucher->title,
+            'amount' => $amt,
             'discount_type' => $voucher->discount_type,
             'discount_percent' => $voucher->discount_percent,
-            'discount_amount' => $voucher->discount_amount,
-            'max_cap' => $voucher->max_discount_cap,
-            'min_bill' => $voucher->min_order_value
+            'discount_amount' => $amt,
+            'max_cap' => $voucher->max_discount_cap ?: $amt,
+            'min_bill' => $voucher->min_order_value ?: 0
         ]);
     }
 
@@ -338,17 +337,8 @@ class QrController extends Controller
         $voucher->redeemed_invoice_no = $claimId;
         $voucher->save();
 
-        $bill = (float)($validated['order_bill'] ?? 3500);
-        $discountValue = 0;
-        if ($voucher->discount_type === 'Percentage') {
-            $discountValue = ($bill * (float)$voucher->discount_percent) / 100;
-            if ($voucher->max_discount_cap && $discountValue > $voucher->max_discount_cap) {
-                $discountValue = (float)$voucher->max_discount_cap;
-            }
-        } else {
-            $discountValue = (float)($voucher->discount_amount ?: $voucher->discount_percent ?: 500);
-        }
-
+        $discountValue = (float)($voucher->amount ?: $voucher->discount_amount ?: $voucher->discount_percent ?: 0);
+        $bill = (float)($validated['order_bill'] ?? $discountValue);
         $finalPayable = max(0, $bill - $discountValue);
         $redeemedAtFormatted = $voucher->redeemed_at instanceof \DateTimeInterface ? $voucher->redeemed_at->format('d M Y, h:i A') : (string)$voucher->redeemed_at;
 
@@ -361,7 +351,7 @@ class QrController extends Controller
             'original_bill' => $bill,
             'final_payable' => $finalPayable,
             'redeemed_at' => $redeemedAtFormatted,
-            'message' => "Discount successfully claimed for {$phone}! Voucher is now single-use expired."
+            'message' => "Discount of ₹{$discountValue} successfully claimed for {$phone}! Voucher is now redeemed."
         ]);
     }
 

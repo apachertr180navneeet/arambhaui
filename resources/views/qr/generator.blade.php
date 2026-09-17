@@ -1,17 +1,17 @@
 @extends('layouts.app')
 
-@section('title', 'Generate Single-Use Discount QR - GarmentERP')
+@section('title', 'Generate QR Vouchers (Majasol Style) - GarmentERP')
 
 @section('breadcrumb')
   <div class="breadcrumb-item"><span>Barcodes & QR</span></div>
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-  <div class="breadcrumb-item active"><span>Generate Single-Use QR</span></div>
+  <div class="breadcrumb-item active"><span>Generate QR Batch</span></div>
 @endsection
 
 @push('styles')
 <style>
   /* ==========================================================================
-     QR GENERATOR STUDIO - MODERN ENTERPRISE STYLES
+     MAJASOL QR GENERATOR STUDIO - 4 ESSENTIAL FIELDS
      ========================================================================== */
   .qr-studio-wrapper {
     display: flex;
@@ -42,7 +42,7 @@
     right: -10%;
     width: 320px;
     height: 320px;
-    background: radial-gradient(circle, rgba(99, 102, 241, 0.18) 0%, rgba(99, 102, 241, 0) 70%);
+    background: radial-gradient(circle, rgba(99, 102, 241, 0.2) 0%, rgba(99, 102, 241, 0) 70%);
     pointer-events: none;
   }
 
@@ -62,15 +62,15 @@
     margin-bottom: 8px;
   }
 
-  /* Main 2-Column Grid */
+  /* 2-Column Layout */
   .qr-generator-grid {
     display: grid;
-    grid-template-columns: 1fr 400px;
+    grid-template-columns: 1fr 380px;
     gap: 24px;
     align-items: start;
   }
 
-  @media (max-width: 1040px) {
+  @media (max-width: 980px) {
     .qr-generator-grid {
       grid-template-columns: 1fr;
     }
@@ -94,57 +94,21 @@
     color: var(--slate-900, #0f172a);
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    margin-bottom: 16px;
-    padding-bottom: 10px;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
     border-bottom: 1px solid var(--slate-100, #f1f5f9);
   }
 
-  .form-section-title .section-step {
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    background: var(--primary-50, #eef2ff);
-    color: var(--primary-600, #4f46e5);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.75rem;
-    font-weight: 800;
-  }
-
-  /* Segmented Toggle */
-  .discount-toggle-group {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    background: var(--slate-100, #f1f5f9);
-    padding: 4px;
-    border-radius: var(--radius-lg, 12px);
-  }
-
-  .discount-toggle-btn {
+  .input-label-primary {
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 10px 14px;
-    border: none;
-    background: transparent;
-    border-radius: var(--radius-md, 8px);
-    font-size: 0.85rem;
     font-weight: 700;
-    color: var(--slate-600, #475569);
-    cursor: pointer;
-    transition: all 0.2s ease;
+    font-size: 0.9rem;
+    color: var(--slate-800, #1e293b);
+    margin-bottom: 6px;
   }
 
-  .discount-toggle-btn.active {
-    background: #ffffff;
-    color: var(--primary-700, #4338ca);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  }
-
-  /* Preset Pills */
   .preset-pills {
     display: flex;
     gap: 6px;
@@ -170,7 +134,7 @@
     color: var(--primary-700, #4338ca);
   }
 
-  /* Live Preview Sidebar */
+  /* Live 1" x 1" Majasol Preview Card */
   .preview-sticky-card {
     background: #ffffff;
     border: 1px solid var(--slate-200, #e2e8f0);
@@ -179,205 +143,144 @@
     padding: 24px;
     position: sticky;
     top: 24px;
+    text-align: center;
   }
 
-  /* Luxury Voucher Ticket Card */
-  .luxury-voucher-pass {
+  /* Majasol 1 inch by 1 inch Sticker Frame */
+  .majasol-sticker-box {
+    width: 1.25in;
+    height: 1.25in;
+    margin: 14px auto;
+    background: #ffffff;
+    border: 2px solid #0f172a;
+    border-radius: 6px;
+    padding: 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+    box-sizing: border-box;
     position: relative;
-    border-radius: 20px;
-    padding: 24px 20px;
-    color: #ffffff;
+    background-color: #fff;
+  }
+
+  .majasol-sticker-box .sticker-brand {
+    font-size: 8px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #000;
+    line-height: 1;
+    white-space: nowrap;
     overflow: hidden;
-    box-shadow: 0 15px 35px -5px rgba(30, 27, 75, 0.35);
-    transition: all 0.3s ease;
+    text-overflow: ellipsis;
+    max-width: 100%;
   }
 
-  /* Gradient Color Themes */
-  .theme-indigo { background: linear-gradient(135deg, #312e81 0%, #4338ca 50%, #6366f1 100%); }
-  .theme-emerald { background: linear-gradient(135deg, #064e3b 0%, #047857 50%, #10b981 100%); }
-  .theme-crimson { background: linear-gradient(135deg, #881337 0%, #be123c 50%, #f43f5e 100%); }
-  .theme-onyx { background: linear-gradient(135deg, #090d16 0%, #1e293b 50%, #334155 100%); border: 1px solid rgba(255, 215, 0, 0.3); }
-  .theme-amber { background: linear-gradient(135deg, #78350f 0%, #b45309 50%, #f59e0b 100%); }
+  .majasol-sticker-box .sticker-qr {
+    width: 62px;
+    height: 62px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
 
-  /* Perforation Edge Notches */
-  .perforation-line {
-    position: relative;
-    margin: 18px -20px;
-    border-top: 2px dashed rgba(255, 255, 255, 0.35);
+  .majasol-sticker-box .sticker-qr img,
+  .majasol-sticker-box .sticker-qr canvas {
+    width: 62px !important;
+    height: 62px !important;
+  }
+
+  .majasol-sticker-box .sticker-footer {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    width: 100%;
+    padding: 0 2px;
+    line-height: 1;
   }
 
-  .perforation-line::before,
-  .perforation-line::after {
-    content: '';
-    position: absolute;
-    width: 22px;
-    height: 22px;
-    background: #ffffff;
-    border-radius: 50%;
-    top: -11px;
-    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15);
+  .majasol-sticker-box .sticker-amt {
+    font-size: 9px;
+    font-weight: 900;
+    color: #000;
   }
 
-  .perforation-line::before { left: -11px; }
-  .perforation-line::after { right: -11px; }
-
-  /* QR Box Container */
-  .ticket-qr-container {
-    background: #ffffff;
-    border-radius: 14px;
-    padding: 12px;
-    width: 154px;
-    height: 154px;
-    margin: 0 auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+  .majasol-sticker-box .sticker-code {
+    font-family: var(--font-mono, monospace);
+    font-size: 6.5px;
+    font-weight: 800;
+    color: #333;
+    letter-spacing: 0.2px;
   }
 
-  /* Color Theme Switcher dots */
-  .color-dots-bar {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    margin-bottom: 16px;
-  }
-
-  .color-dot {
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    cursor: pointer;
-    border: 2px solid transparent;
-    transition: transform 0.2s, border-color 0.2s;
-  }
-
-  .color-dot:hover {
-    transform: scale(1.15);
-  }
-
-  .color-dot.active {
-    border-color: var(--slate-900, #0f172a);
-    box-shadow: 0 0 0 2px #ffffff;
-    transform: scale(1.15);
-  }
-
-  /* Quick Actions inside Live Preview */
-  .preview-actions-bar {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    margin-top: 18px;
-  }
-
-  /* Micro copy popover */
-  .copy-badge-btn {
-    cursor: pointer;
-    transition: background-color 0.2s;
-  }
-
-  .copy-badge-btn:hover {
-    background: rgba(255, 255, 255, 0.25) !important;
-  }
-
+  /* Exact 1" x 1" Print CSS */
   @media print {
     @page {
-      size: portrait;
-      margin: 10mm;
+      size: 1in 1in;
+      margin: 0;
     }
 
     html, body {
       background: #ffffff !important;
       margin: 0 !important;
       padding: 0 !important;
-      height: auto !important;
-      min-height: auto !important;
-      overflow: visible !important;
+      width: 1in !important;
+      height: 1in !important;
+      overflow: hidden !important;
     }
 
-    .app-sidebar,
-    .app-header,
-    .app-footer,
-    .sidebar-backdrop,
-    .breadcrumb-nav,
-    .header-actions,
-    .global-search-wrapper,
-    .qr-page-header,
-    .studio-form-card,
-    .preview-actions-bar,
-    .color-dots-bar,
-    .card,
-    .table-responsive,
-    #toast-container,
-    .btn,
-    .preview-sticky-card > div:first-child {
-      display: none !important;
+    body * {
+      visibility: hidden !important;
     }
 
-    #app,
-    .main-wrapper,
-    .main-content,
-    .qr-studio-wrapper,
-    .qr-generator-grid,
-    .preview-sticky-card {
-      display: block !important;
+    #single-print-wrapper,
+    #single-print-wrapper * {
+      visibility: visible !important;
+    }
+
+    #single-print-wrapper {
+      position: absolute !important;
+      left: 0 !important;
+      top: 0 !important;
+      width: 1in !important;
+      height: 1in !important;
       margin: 0 !important;
-      padding: 0 !important;
-      width: 100% !important;
-      max-width: 100% !important;
-      min-height: 0 !important;
-      height: auto !important;
-      border: none !important;
-      box-shadow: none !important;
-      background: transparent !important;
-      position: static !important;
-      top: auto !important;
-      left: auto !important;
-      transform: none !important;
-      overflow: visible !important;
+      padding: 2px !important;
+      box-sizing: border-box !important;
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      text-align: center !important;
+      background: #fff !important;
+      border: 1px solid #000 !important;
     }
 
-    #voucher-print-area {
-      display: block !important;
-      visibility: visible !important;
-      width: 370px !important;
-      max-width: 100% !important;
-      margin: 20px auto !important;
-      position: static !important;
-      left: auto !important;
-      top: auto !important;
-      transform: none !important;
-      page-break-inside: avoid !important;
-      break-inside: avoid !important;
+    #single-print-wrapper .sticker-brand {
+      font-size: 7.5pt !important;
+      font-weight: 900 !important;
+      color: #000 !important;
+      line-height: 1 !important;
     }
 
-    #voucher-print-area * {
-      visibility: visible !important;
+    #single-print-wrapper .sticker-qr img,
+    #single-print-wrapper .sticker-qr canvas {
+      width: 54px !important;
+      height: 54px !important;
     }
 
-    .luxury-voucher-pass {
-      -webkit-print-color-adjust: exact !important;
-      print-color-adjust: exact !important;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
-      page-break-inside: avoid !important;
-      break-inside: avoid !important;
+    #single-print-wrapper .sticker-amt {
+      font-size: 8pt !important;
+      font-weight: 900 !important;
+      color: #000 !important;
     }
 
-    .perforation-line::before,
-    .perforation-line::after {
-      background: #ffffff !important;
-      -webkit-print-color-adjust: exact !important;
-      print-color-adjust: exact !important;
-    }
-
-    .ticket-qr-container {
-      background: #ffffff !important;
-      -webkit-print-color-adjust: exact !important;
-      print-color-adjust: exact !important;
+    #single-print-wrapper .sticker-code {
+      font-size: 5.5pt !important;
+      font-weight: 800 !important;
+      color: #000 !important;
     }
   }
 </style>
@@ -386,324 +289,176 @@
 @section('content')
 <div class="qr-studio-wrapper">
 
-  <!-- Action Header Banner -->
+  <!-- Header Banner -->
   <div class="qr-page-header">
     <div>
       <div class="qr-badge-pill">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-        Single-Use Security Engine
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/><path d="M3 12h.01"/><path d="M12 3h.01"/></svg>
+        Majasol QR System (1" × 1" Thermal Sticker)
       </div>
-      <h2 style="margin:0; font-size:1.5rem; font-weight:800; letter-spacing:-0.02em;">Discount QR Voucher Generator</h2>
+      <h2 style="margin:0; font-size:1.5rem; font-weight:800; letter-spacing:-0.02em;">Generate QR Vouchers</h2>
       <p style="margin:4px 0 0; font-size:0.85rem; color:#cbd5e1; max-width:640px;">
-        Issue cryptographically unique single-use vouchers with real-time dynamic card rendering, optional mobile phone lock, and automated expiry policies.
+        Create bulk QR batches with 4 simple inputs: <strong>QR Date</strong>, <strong>Batch Name</strong>, <strong>Count</strong>, and <strong>QR Amount</strong>. Printed directly in 1 inch by 1 inch sticker format.
       </p>
     </div>
 
     <div style="display:flex; gap:10px; align-items:center;">
       <a href="{{ route('qr.history') }}" class="btn btn-secondary" style="background:rgba(255,255,255,0.12); color:#fff; border-color:rgba(255,255,255,0.25); display:inline-flex; align-items:center; gap:8px;">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-        Admin Expiry Ledger
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/></svg>
+        QR Listing & Ledger
       </a>
     </div>
   </div>
 
-  <!-- Studio Main Work Area (Form + Live Card Preview) -->
+  <!-- 4-FIELD GENERATOR FORM + LIVE 1"x1" STICKER PREVIEW -->
   <div class="qr-generator-grid">
-    
-    <!-- LEFT: Interactive Generator Configurator -->
+
+    <!-- LEFT: 4-Field Form -->
     <div class="studio-form-card">
-      <form action="{{ route('qr.generator.store') }}" method="POST" id="qr-gen-form">
+      <form action="{{ route('qr.generator.store') }}" method="POST" id="qr-gen-form" onsubmit="handleBatchGenerate(event)">
         @csrf
 
-        <!-- SECTION 1: Campaign & Customer Target -->
         <div class="form-section-title">
-          <span class="section-step">1</span>
-          <span>Campaign & Customer Audience</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color:var(--primary-600);"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          <span>QR Batch Specifications (4 Essential Fields)</span>
         </div>
 
-        <div style="display:flex; flex-direction:column; gap:16px; margin-bottom:24px;">
-          <!-- Campaign Title -->
+        <div style="display:flex; flex-direction:column; gap:20px;">
+          
+          <!-- FIELD 1: QR Date -->
           <div class="form-group" style="margin-bottom:0;">
-            <label class="form-label" style="font-weight:700; color:var(--slate-800);">
-              Promotion Campaign Title <span style="color:#ef4444;">*</span>
+            <label class="input-label-primary">
+              <span>1. QR Date <span style="color:#ef4444;">*</span></span>
+              <span style="font-size:0.75rem; font-weight:500; color:var(--slate-500);">Issue / Manufacturing Date</span>
             </label>
-            <input type="text" name="title" id="gen_title" class="form-control" required value="Festive Garment Discount Voucher" placeholder="e.g. VIP Summer Gala Privilege" oninput="updateLivePreview()">
+            <input type="date" name="qr_date" id="input_qr_date" class="form-control" required value="{{ date('Y-m-d') }}" oninput="updateLivePreview()" style="font-weight:700; font-size:1rem;">
+          </div>
+
+          <!-- FIELD 2: Batch Name -->
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="input-label-primary">
+              <span>2. Batch Name <span style="color:#ef4444;">*</span></span>
+              <span style="font-size:0.75rem; font-weight:500; color:var(--slate-500);">Majasol Batch Tag</span>
+            </label>
+            <input type="text" name="batch_name" id="input_batch_name" class="form-control" required value="MAJASOL BATCH #1" placeholder="e.g. MAJASOL-LOT-2026 or Festive Offer" oninput="updateLivePreview()" style="font-weight:700; font-size:1rem; text-transform:uppercase;">
             
-            <!-- Quick Title Suggestions -->
             <div class="preset-pills">
               <span style="font-size:0.75rem; color:var(--slate-500); align-self:center; margin-right:4px;">Quick:</span>
-              <button type="button" class="preset-pill-btn" onclick="setCampaignTitle('Festive Garment Discount Voucher')">Festive Offer</button>
-              <button type="button" class="preset-pill-btn" onclick="setCampaignTitle('VIP Customer Exclusive Privilege')">VIP Exclusive</button>
-              <button type="button" class="preset-pill-btn" onclick="setCampaignTitle('First Purchase Welcome Discount')">Welcome Offer</button>
-              <button type="button" class="preset-pill-btn" onclick="setCampaignTitle('End of Season Clearance Bonanza')">Clearance Sale</button>
+              <button type="button" class="preset-pill-btn" onclick="setBatch('MAJASOL BATCH #1')">MAJASOL #1</button>
+              <button type="button" class="preset-pill-btn" onclick="setBatch('MAJASOL SUMMER 2026')">Summer 2026</button>
+              <button type="button" class="preset-pill-btn" onclick="setBatch('MAJASOL FESTIVE VIP')">Festive VIP</button>
+              <button type="button" class="preset-pill-btn" onclick="setBatch('MAJASOL LOT-A')">LOT-A</button>
             </div>
           </div>
 
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
-            <!-- Customer Select / Custom -->
+          <!-- FIELD 3 & 4 (Grid): Count & QR Amount -->
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+            
+            <!-- FIELD 3: Count -->
             <div class="form-group" style="margin-bottom:0;">
-              <label class="form-label" style="font-weight:700; color:var(--slate-800);">Select Registered Customer</label>
-              <select id="registered_customer_select" class="form-control" onchange="onCustomerSelect(this)">
-                <option value="">-- General / Custom Audience --</option>
-                @foreach ($customers as $c)
-                  <option value="{{ $c->name }}" data-phone="{{ $c->mobile ?? $c->phone ?? '' }}">{{ $c->name }} ({{ $c->mobile ?? 'No Mobile' }})</option>
-                @endforeach
-              </select>
-            </div>
-
-            <!-- Customer Display Name -->
-            <div class="form-group" style="margin-bottom:0;">
-              <label class="form-label" style="font-weight:700; color:var(--slate-800);">Audience / Customer Name</label>
-              <input type="text" name="customer_name" id="gen_cust" class="form-control" placeholder="Retail Customer Club" value="Retail Customer Club" oninput="updateLivePreview()">
-            </div>
-          </div>
-
-          <!-- Customer Phone (Security Lock) -->
-          <div class="form-group" style="margin-bottom:0;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-              <label class="form-label" style="font-weight:700; color:var(--slate-800); margin:0;">
-                Target Customer Mobile Phone <span style="font-size:0.75rem; font-weight:500; color:var(--slate-500);">(Optional Security Lock)</span>
+              <label class="input-label-primary">
+                <span>3. Count (Quantity) <span style="color:#ef4444;">*</span></span>
               </label>
-              <span style="font-size:0.75rem; color:var(--primary-600); font-weight:600;">🔒 Locks voucher to phone</span>
-            </div>
-            <div style="display:flex; align-items:center; position:relative;">
-              <span style="position:absolute; left:12px; font-weight:700; color:var(--slate-400); font-size:0.9rem;">+91</span>
-              <input type="text" name="customer_phone" id="gen_phone" class="form-control" style="padding-left:46px; font-family:var(--font-mono, monospace);" placeholder="9876543210" oninput="updateLivePreview()">
-            </div>
-          </div>
-        </div>
-
-        <!-- SECTION 2: Discount & Pricing Mechanics -->
-        <div class="form-section-title">
-          <span class="section-step">2</span>
-          <span>Discount Mechanics & Value</span>
-        </div>
-
-        <div style="display:flex; flex-direction:column; gap:16px; margin-bottom:24px;">
-          <!-- Discount Type Selector Tabs -->
-          <div class="form-group" style="margin-bottom:0;">
-            <label class="form-label" style="font-weight:700; color:var(--slate-800);">Discount Calculation Type <span style="color:#ef4444;">*</span></label>
-            <input type="hidden" name="discount_type" id="gen_type" value="Percentage">
-            <div class="discount-toggle-group">
-              <button type="button" id="btn_type_percent" class="discount-toggle-btn active" onclick="switchDiscountType('Percentage')">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>
-                Percentage (% OFF)
-              </button>
-              <button type="button" id="btn_type_flat" class="discount-toggle-btn" onclick="switchDiscountType('Flat')">
-                <span style="font-size:1.1rem; font-weight:800; line-height:1;">₹</span>
-                Flat Cash Discount
-              </button>
-            </div>
-          </div>
-
-          <!-- Dynamic Discount Value Input -->
-          <div id="group_percent">
-            <div class="form-group" style="margin-bottom:0;">
-              <label class="form-label" style="font-weight:700; color:var(--slate-800);">Discount Percentage (%) <span style="color:#ef4444;">*</span></label>
               <div style="position:relative;">
-                <input type="number" step="0.5" min="1" max="100" name="discount_percent" id="gen_percent" class="form-control" value="15" style="font-weight:700; font-size:1.05rem;" oninput="updateLivePreview()">
-                <span style="position:absolute; right:14px; top:50%; transform:translateY(-50%); font-weight:800; color:var(--slate-400);">%</span>
+                <input type="number" name="count" id="input_count" class="form-control" required min="1" max="1000" value="10" placeholder="e.g. 50" oninput="updateLivePreview()" style="font-weight:800; font-size:1.1rem; color:var(--primary-700);">
+                <span style="position:absolute; right:12px; top:50%; transform:translateY(-50%); font-weight:700; color:var(--slate-400); font-size:0.8rem;">QRs</span>
               </div>
               <div class="preset-pills">
-                <button type="button" class="preset-pill-btn" onclick="setPercent(10)">10%</button>
-                <button type="button" class="preset-pill-btn" onclick="setPercent(15)">15%</button>
-                <button type="button" class="preset-pill-btn" onclick="setPercent(20)">20%</button>
-                <button type="button" class="preset-pill-btn" onclick="setPercent(25)">25%</button>
-                <button type="button" class="preset-pill-btn" onclick="setPercent(50)">50% (BOGO)</button>
+                <button type="button" class="preset-pill-btn" onclick="setCount(1)">1</button>
+                <button type="button" class="preset-pill-btn" onclick="setCount(10)">10</button>
+                <button type="button" class="preset-pill-btn" onclick="setCount(50)">50</button>
+                <button type="button" class="preset-pill-btn" onclick="setCount(100)">100</button>
+                <button type="button" class="preset-pill-btn" onclick="setCount(500)">500</button>
               </div>
             </div>
-          </div>
 
-          <div id="group_amount" style="display:none;">
+            <!-- FIELD 4: QR Amount -->
             <div class="form-group" style="margin-bottom:0;">
-              <label class="form-label" style="font-weight:700; color:var(--slate-800);">Flat Discount Amount (₹) <span style="color:#ef4444;">*</span></label>
+              <label class="input-label-primary">
+                <span>4. QR Amount (₹) <span style="color:#ef4444;">*</span></span>
+              </label>
               <div style="position:relative;">
-                <input type="number" step="10" min="1" name="discount_amount" id="gen_amount" class="form-control" value="500" style="font-weight:700; font-size:1.05rem;" oninput="updateLivePreview()" disabled>
-                <span style="position:absolute; right:14px; top:50%; transform:translateY(-50%); font-weight:800; color:var(--slate-400);">₹</span>
+                <span style="position:absolute; left:12px; top:50%; transform:translateY(-50%); font-weight:800; color:var(--slate-500); font-size:1.1rem;">₹</span>
+                <input type="number" name="amount" id="input_amount" class="form-control" required min="1" step="1" value="500" placeholder="500" oninput="updateLivePreview()" style="padding-left:30px; font-weight:800; font-size:1.1rem; color:#059669;">
               </div>
               <div class="preset-pills">
+                <button type="button" class="preset-pill-btn" onclick="setAmount(50)">₹50</button>
+                <button type="button" class="preset-pill-btn" onclick="setAmount(100)">₹100</button>
                 <button type="button" class="preset-pill-btn" onclick="setAmount(200)">₹200</button>
                 <button type="button" class="preset-pill-btn" onclick="setAmount(500)">₹500</button>
                 <button type="button" class="preset-pill-btn" onclick="setAmount(1000)">₹1,000</button>
-                <button type="button" class="preset-pill-btn" onclick="setAmount(2000)">₹2,000</button>
               </div>
             </div>
+
           </div>
 
-          <!-- Cap and Min Bill Threshold -->
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
-            <div class="form-group" style="margin-bottom:0;">
-              <label class="form-label" style="font-weight:700; color:var(--slate-800);">Max Discount Cap (₹)</label>
-              <input type="number" step="100" name="max_discount_cap" id="gen_cap" class="form-control" value="2500" oninput="updateLivePreview()">
-              <small style="color:var(--slate-500); font-size:0.725rem;">Maximum savings allowed</small>
-            </div>
-
-            <div class="form-group" style="margin-bottom:0;">
-              <label class="form-label" style="font-weight:700; color:var(--slate-800);">Min. Bill Value (₹)</label>
-              <input type="number" step="100" name="min_order_value" id="gen_min_bill" class="form-control" value="1500" oninput="updateLivePreview()">
-              <small style="color:var(--slate-500); font-size:0.725rem;">Minimum cart total required</small>
-            </div>
-          </div>
-        </div>
-
-        <!-- SECTION 3: Voucher Code & Validity Schedule -->
-        <div class="form-section-title">
-          <span class="section-step">3</span>
-          <span>Security Token & Expiry Schedule</span>
-        </div>
-
-        <div style="display:flex; flex-direction:column; gap:16px;">
-          <!-- Custom Code Input + Generator Button -->
-          <div class="form-group" style="margin-bottom:0;">
-            <label class="form-label" style="font-weight:700; color:var(--slate-800);">Voucher Code <span style="font-weight:400; color:var(--slate-500);">(Auto-assigned if left blank)</span></label>
-            <div style="display:flex; gap:8px;">
-              <input type="text" name="voucher_code" id="gen_code" class="form-control" placeholder="e.g. FESTIVE-15-X7K" style="font-family:var(--font-mono, monospace); font-weight:700; text-transform:uppercase; letter-spacing:0.05em;" oninput="updateLivePreview()">
-              <button type="button" class="btn btn-secondary" onclick="generateRandomCode()" style="white-space:nowrap; display:inline-flex; align-items:center; gap:6px;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
-                🎲 Randomize
-              </button>
-            </div>
-          </div>
-
-          <!-- Date Ranges -->
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
-            <div class="form-group" style="margin-bottom:0;">
-              <label class="form-label" style="font-weight:700; color:var(--slate-800);">Valid From</label>
-              <input type="date" name="valid_from" id="gen_from" class="form-control" value="{{ date('Y-m-d') }}">
-            </div>
-
-            <div class="form-group" style="margin-bottom:0;">
-              <label class="form-label" style="font-weight:700; color:var(--slate-800);">Valid Until (Expiry)</label>
-              <input type="date" name="valid_until" id="gen_until" class="form-control" value="{{ date('Y-m-d', strtotime('+30 days')) }}" oninput="updateLivePreview()">
-            </div>
-          </div>
-
-          <!-- Quick Expiry Buttons -->
-          <div class="preset-pills">
-            <span style="font-size:0.75rem; color:var(--slate-500); align-self:center; margin-right:4px;">Expiry:</span>
-            <button type="button" class="preset-pill-btn" onclick="addDaysToExpiry(7)">+7 Days</button>
-            <button type="button" class="preset-pill-btn" onclick="addDaysToExpiry(15)">+15 Days</button>
-            <button type="button" class="preset-pill-btn" onclick="addDaysToExpiry(30)">+30 Days</button>
-            <button type="button" class="preset-pill-btn" onclick="addDaysToExpiry(60)">+60 Days</button>
-            <button type="button" class="preset-pill-btn" onclick="addDaysToExpiry(90)">+90 Days</button>
-          </div>
         </div>
 
         <!-- Form Submit Bar -->
         <div style="display:flex; justify-content:space-between; align-items:center; margin-top:28px; padding-top:20px; border-top:1px solid var(--slate-200, #e2e8f0);">
-          <button type="reset" class="btn btn-secondary" onclick="setTimeout(updateLivePreview, 50)">
-            Reset Form
-          </button>
-          <button type="submit" class="btn btn-primary" style="padding:10px 24px; font-size:0.95rem; font-weight:800; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 14px rgba(79, 70, 229, 0.35);">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
-            Generate & Register Voucher
+          <a href="{{ route('qr.history') }}" class="btn btn-secondary">
+            View All QRs
+          </a>
+          <button type="submit" id="btn-submit-gen" class="btn btn-primary" style="padding:12px 28px; font-size:1rem; font-weight:800; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 14px rgba(79, 70, 229, 0.35);">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/></svg>
+            Generate <span id="btn-count-label">10</span> QR Stickers
           </button>
         </div>
 
       </form>
     </div>
 
-    <!-- RIGHT: Live Luxury Card Pass Studio & Actions -->
+    <!-- RIGHT: 1" x 1" Majasol Live Sticker Preview & Quick Print -->
     <div class="preview-sticky-card">
       
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
         <span style="font-size:0.8rem; font-weight:800; color:var(--slate-700); text-transform:uppercase; letter-spacing:0.06em;">
-          Live Card Preview
+          1" × 1" Majasol Sticker
         </span>
         <span style="font-size:0.75rem; background:#ecfdf5; color:#059669; font-weight:700; padding:2px 8px; border-radius:9999px; border:1px solid #a7f3d0;">
-          Realtime Sync
+          Exact 1"x1" Size
         </span>
       </div>
 
-      <!-- Color Theme Chooser -->
-      <div class="color-dots-bar">
-        <div class="color-dot theme-indigo active" title="Royal Indigo" onclick="setCardTheme('theme-indigo', this)"></div>
-        <div class="color-dot theme-emerald" title="Emerald Velvet" onclick="setCardTheme('theme-emerald', this)"></div>
-        <div class="color-dot theme-crimson" title="Crimson Ruby" onclick="setCardTheme('theme-crimson', this)"></div>
-        <div class="color-dot theme-onyx" title="Midnight Onyx & Gold" onclick="setCardTheme('theme-onyx', this)"></div>
-        <div class="color-dot theme-amber" title="Sunset Amber" onclick="setCardTheme('theme-amber', this)"></div>
+      <p style="font-size:0.75rem; color:var(--slate-500); margin:0 0 12px;">
+        Physical thermal label preview (TSC, Zebra, TVS, 25.4mm × 25.4mm)
+      </p>
+
+      <!-- 1" x 1" STICKER BOX (PRINTABLE) -->
+      <div id="single-print-wrapper" class="majasol-sticker-box">
+        <div class="sticker-brand" id="prev-brand">MAJASOL BATCH #1</div>
+        <div class="sticker-qr">
+          <div id="preview-qrcode-target"></div>
+        </div>
+        <div class="sticker-footer">
+          <span class="sticker-amt" id="prev-amt">₹500</span>
+          <span class="sticker-code" id="prev-code">MAJ-500-PREV</span>
+        </div>
       </div>
 
-      <!-- VISUAL VOUCHER PASS (PRINTABLE SECTION) -->
-      <div id="voucher-print-area">
-        <div id="voucher-preview-card" class="luxury-voucher-pass theme-indigo">
-          
-          <!-- Card Header / Brand -->
-          <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-            <div>
-              <div style="font-size:0.68rem; font-weight:800; text-transform:uppercase; letter-spacing:1.5px; opacity:0.85;">
-                GARMENT ERP • OFFICIAL PASS
-              </div>
-              <div style="font-size:1.1rem; font-weight:800; line-height:1.25; margin-top:2px;" id="prev-title">
-                Festive Garment Discount Voucher
-              </div>
-            </div>
-            <div style="background:rgba(255,255,255,0.2); padding:4px 8px; border-radius:6px; font-size:0.65rem; font-weight:800; letter-spacing:0.5px; text-transform:uppercase; backdrop-filter:blur(4px);">
-              PROMO
-            </div>
-          </div>
-
-          <!-- Customer segment pill -->
-          <div style="margin-top:8px;">
-            <span style="font-size:0.75rem; background:rgba(0,0,0,0.25); padding:3px 8px; border-radius:4px; font-weight:600; opacity:0.9;" id="prev-cust">
-              Audience: Retail Customer Club
-            </span>
-          </div>
-
-          <!-- Big Typographic Discount -->
-          <div style="margin:16px 0 6px; text-align:center;">
-            <div style="font-size:2.4rem; font-weight:900; letter-spacing:-0.03em; line-height:1;" id="prev-disc">
-              15% OFF
-            </div>
-            <div style="font-size:0.75rem; opacity:0.9; margin-top:4px; font-weight:600;" id="prev-cap">
-              Up to ₹2,500 on min. ₹1,500 bill
-            </div>
-          </div>
-
-          <!-- Perforation divider line with cutout circles -->
-          <div class="perforation-line"></div>
-
-          <!-- QR Code Canvas Frame -->
-          <div class="ticket-qr-container">
-            <div id="qrcode-canvas-container" style="display:flex; justify-content:center; align-items:center;"></div>
-          </div>
-
-          <!-- Code Display Box with Copy Tool -->
-          <div style="text-align:center; margin-top:12px;">
-            <div class="copy-badge-btn" onclick="copyVoucherCode()" style="font-family:var(--font-mono, monospace); font-weight:800; font-size:1.05rem; letter-spacing:1px; background:rgba(0,0,0,0.3); padding:6px 14px; border-radius:8px; display:inline-flex; align-items:center; gap:6px;" title="Click to copy voucher code">
-              <span id="prev-code">FASHION-15-AUTO</span>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
-            </div>
-            <div style="margin-top:6px; font-size:0.7rem; opacity:0.85; display:flex; align-items:center; justify-content:center; gap:4px; word-break:break-all;" id="prev-link-container">
-              <span>🔗 Frontend URL:</span>
-              <a href="javascript:void(0)" onclick="openClaimPortal()" id="prev-url-text" style="color:#fff; text-decoration:underline; font-weight:600;">/qr/scanner?code=...</a>
-            </div>
-          </div>
-
-          <!-- Security footer inside card -->
-          <div style="margin-top:10px; font-size:0.68rem; opacity:0.8; text-align:center; display:flex; justify-content:space-between; align-items:center;">
-            <span id="prev-expiry">Valid until: 30 Days</span>
-            <span>🔒 Single-Use Token</span>
-          </div>
-
+      <!-- Frontend Scan URL Card -->
+      <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px; margin-top:16px; text-align:left;">
+        <div style="font-size:0.75rem; font-weight:800; color:var(--slate-600); text-transform:uppercase; margin-bottom:4px; display:flex; align-items:center; gap:6px;">
+          <span>🔗 Frontend Scan URL</span>
+        </div>
+        <div style="font-size:0.75rem; font-family:var(--font-mono, monospace); color:var(--primary-700); word-break:break-all; background:#fff; padding:6px 8px; border-radius:6px; border:1px solid #cbd5e1;" id="prev-scan-url">
+          {{ url('/claim/MAJ-500-PREV') }}
+        </div>
+        <div style="font-size:0.7rem; color:var(--slate-500); margin-top:6px;">
+          📱 When scanned by phone camera, customer opens this URL directly to redeem their ₹ discount.
         </div>
       </div>
 
       <!-- Quick Action Buttons -->
-      <div class="preview-actions-bar" style="grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
-        <button type="button" class="btn btn-secondary btn-sm" onclick="printVoucherCard()" style="display:inline-flex; align-items:center; justify-content:center; gap:6px; font-weight:700; font-size:0.775rem;">
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:14px;">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="printSingleSticker()" style="font-weight:700; display:inline-flex; align-items:center; justify-content:center; gap:6px;">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
-          Print
+          Print 1"x1"
         </button>
 
-        <button type="button" class="btn btn-secondary btn-sm" onclick="copyVoucherCode()" style="display:inline-flex; align-items:center; justify-content:center; gap:6px; font-weight:700; font-size:0.775rem;">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
-          Copy Code
-        </button>
-
-        <button type="button" class="btn btn-primary btn-sm" onclick="copyClaimLink()" style="display:inline-flex; align-items:center; justify-content:center; gap:6px; font-weight:700; font-size:0.775rem; background:#4f46e5; border-color:#4f46e5; color:#fff;" title="Copy Customer Claim URL">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-          Copy Link
+        <button type="button" class="btn btn-secondary btn-sm" onclick="testScanUrl()" style="font-weight:700; display:inline-flex; align-items:center; justify-content:center; gap:6px; color:#4f46e5;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          Test Claim
         </button>
       </div>
 
@@ -711,54 +466,57 @@
 
   </div>
 
-  <!-- RECENTLY GENERATED VOUCHERS (BOTTOM SHELF) -->
+  <!-- RECENTLY GENERATED ACTIVE QRS -->
   @if(isset($vouchers) && count($vouchers) > 0)
     <div class="card" style="background:#fff; border-radius:var(--radius-xl, 16px); border:1px solid var(--slate-200, #e2e8f0); box-shadow:var(--shadow-sm); padding:22px;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
         <div>
-          <h3 style="margin:0; font-size:1.1rem; font-weight:800; color:var(--slate-900);">Active Vouchers in Circulation</h3>
-          <p style="margin:2px 0 0; font-size:0.8rem; color:var(--slate-500);">Instant glance at recently registered single-use promotional vouchers.</p>
+          <h3 style="margin:0; font-size:1.1rem; font-weight:800; color:var(--slate-900);">Recent Active QR Vouchers</h3>
+          <p style="margin:2px 0 0; font-size:0.8rem; color:var(--slate-500);">Recently created Majasol QR vouchers in circulation.</p>
         </div>
-        <a href="{{ route('qr.history') }}" class="btn btn-secondary btn-sm" style="font-weight:700;">View Full Ledger →</a>
+        <a href="{{ route('qr.history') }}" class="btn btn-secondary btn-sm" style="font-weight:700;">Open QR Listing Table →</a>
       </div>
 
       <div class="table-responsive">
         <table class="data-table" style="width:100%; font-size:0.85rem;">
           <thead>
             <tr>
+              <th style="width:70px;">QR</th>
               <th>Voucher Code</th>
-              <th>Campaign</th>
-              <th>Audience</th>
-              <th>Discount Value</th>
-              <th>Valid Until</th>
+              <th>Batch Name</th>
+              <th>Date</th>
+              <th>Amount</th>
               <th>Status</th>
-              <th style="text-align:right;">Action</th>
+              <th style="text-align:right;">Actions</th>
             </tr>
           </thead>
           <tbody>
-            @foreach($vouchers->take(5) as $v)
+            @foreach($vouchers->take(6) as $v)
               <tr>
+                <td>
+                  <div class="mini-table-qr" data-code="{{ $v->voucher_code }}" style="width:38px; height:38px; background:#fff; border:1px solid #e2e8f0; border-radius:4px; padding:2px; display:flex; align-items:center; justify-content:center;"></div>
+                </td>
                 <td style="font-family:var(--font-mono, monospace); font-weight:800; color:var(--primary-700);">
                   {{ $v->voucher_code }}
                 </td>
-                <td style="font-weight:600; color:var(--slate-800);">{{ $v->title }}</td>
-                <td style="color:var(--slate-600);">{{ $v->customer_name ?: 'General' }}</td>
-                <td style="font-weight:800; color:#059669;">
-                  {{ $v->discount_type === 'Percentage' ? ($v->discount_percent . '% OFF') : ('₹' . number_format($v->discount_amount ?: $v->discount_percent) . ' Flat') }}
+                <td style="font-weight:700; color:var(--slate-800);">
+                  {{ $v->batch_name ?: $v->title }}
                 </td>
-                <td style="color:var(--slate-600);">{{ $v->valid_until ? date('d M Y', strtotime($v->valid_until)) : 'No Expiry' }}</td>
+                <td style="color:var(--slate-600);">
+                  {{ $v->qr_date ? date('d M Y', strtotime($v->qr_date)) : ($v->valid_from ? date('d M Y', strtotime($v->valid_from)) : '—') }}
+                </td>
+                <td style="font-weight:800; color:#059669;">
+                  ₹{{ number_format($v->amount ?: $v->discount_amount ?: $v->discount_percent) }}
+                </td>
                 <td>
-                  <span class="badge" style="background:#ecfdf5; color:#059669; border:1px solid #a7f3d0; font-weight:700; padding:3px 8px; border-radius:6px;">
+                  <span class="badge" style="background:#ecfdf5; color:#059669; border:1px solid #a7f3d0; font-weight:700; padding:2px 8px; border-radius:6px;">
                     ● Active
                   </span>
                 </td>
                 <td style="text-align:right;">
                   <div style="display:inline-flex; gap:6px;">
-                    <button type="button" class="btn btn-secondary btn-sm" style="padding:2px 8px; font-size:0.75rem;" onclick="navigator.clipboard.writeText('{{ url('/qr/scanner?code=' . urlencode($v->voucher_code)) }}'); alert('Copied Claim Link for {{ $v->voucher_code }}');" title="Copy Customer Claim URL">
-                      🔗 Link
-                    </button>
-                    <a href="{{ route('qr.scanner', ['code' => $v->voucher_code]) }}" target="_blank" class="btn btn-secondary btn-sm" style="padding:2px 8px; font-size:0.75rem;" title="Open Claim Portal">
-                      Open
+                    <a href="{{ route('qr.claim', ['code' => $v->voucher_code]) }}" target="_blank" class="btn btn-secondary btn-sm" style="padding:2px 8px; font-size:0.75rem;" title="Test Customer Frontend Scan URL">
+                      Open Claim
                     </a>
                   </div>
                 </td>
@@ -772,433 +530,93 @@
 
 </div>
 
-<!-- QRCode Library CDN for crisp, instant client-side QR generation -->
+<!-- QRCode Library CDN -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
 @push('scripts')
 <script>
-  let currentCardTheme = 'theme-indigo';
+  let qrCodeGenerator = null;
+  const baseUrl = "{{ url('/claim') }}";
 
-  function switchDiscountType(type) {
-    document.getElementById('gen_type').value = type;
-    const btnPercent = document.getElementById('btn_type_percent');
-    const btnFlat = document.getElementById('btn_type_flat');
-    const groupPercent = document.getElementById('group_percent');
-    const groupAmount = document.getElementById('group_amount');
-    const inputPercent = document.getElementById('gen_percent');
-    const inputAmount = document.getElementById('gen_amount');
-
-    if (type === 'Percentage') {
-      btnPercent.classList.add('active');
-      btnFlat.classList.remove('active');
-      groupPercent.style.display = 'block';
-      groupAmount.style.display = 'none';
-      if (inputPercent) inputPercent.disabled = false;
-      if (inputAmount) inputAmount.disabled = true;
-    } else {
-      btnFlat.classList.add('active');
-      btnPercent.classList.remove('active');
-      groupPercent.style.display = 'none';
-      groupAmount.style.display = 'block';
-      if (inputPercent) inputPercent.disabled = true;
-      if (inputAmount) inputAmount.disabled = false;
-    }
+  function setBatch(name) {
+    document.getElementById('input_batch_name').value = name;
     updateLivePreview();
   }
 
-  function setPercent(val) {
-    document.getElementById('gen_percent').value = val;
+  function setCount(n) {
+    document.getElementById('input_count').value = n;
     updateLivePreview();
   }
 
-  function setAmount(val) {
-    document.getElementById('gen_amount').value = val;
+  function setAmount(a) {
+    document.getElementById('input_amount').value = a;
     updateLivePreview();
-  }
-
-  function setCampaignTitle(text) {
-    document.getElementById('gen_title').value = text;
-    updateLivePreview();
-  }
-
-  function onCustomerSelect(selectElem) {
-    const selected = selectElem.options[selectElem.selectedIndex];
-    if (selectElem.value) {
-      document.getElementById('gen_cust').value = selectElem.value;
-      const phone = selected.getAttribute('data-phone') || '';
-      document.getElementById('gen_phone').value = phone.replace('+91', '').trim();
-    }
-    updateLivePreview();
-  }
-
-  function generateRandomCode() {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    const type = document.getElementById('gen_type').value;
-    const percent = document.getElementById('gen_percent').value || '15';
-    const amount = document.getElementById('gen_amount').value || '500';
-
-    let prefix = (type === 'Percentage') ? `FASHION-${percent}` : `SAVE-${amount}`;
-    let suffix = '';
-    for (let i = 0; i < 4; i++) {
-      suffix += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    document.getElementById('gen_code').value = `${prefix}-${suffix}`;
-    updateLivePreview();
-  }
-
-  function addDaysToExpiry(days) {
-    const date = new Date();
-    date.setDate(date.getDate() + days);
-    const yyyy = date.getFullYear();
-    const mm = String(date.getMonth() + 1).padStart(2, '0');
-    const dd = String(date.getDate()).padStart(2, '0');
-    document.getElementById('gen_until').value = `${yyyy}-${mm}-${dd}`;
-    updateLivePreview();
-  }
-
-  function setCardTheme(themeClass, dotElem) {
-    currentCardTheme = themeClass;
-    const card = document.getElementById('voucher-preview-card');
-    card.className = `luxury-voucher-pass ${themeClass}`;
-    
-    document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
-    if (dotElem) dotElem.classList.add('active');
   }
 
   function updateLivePreview() {
-    const title = document.getElementById('gen_title').value || 'Special Discount Voucher';
-    const cust = document.getElementById('gen_cust').value || 'Retail Customer';
-    const type = document.getElementById('gen_type').value;
-    const percent = document.getElementById('gen_percent').value || '15';
-    const amount = document.getElementById('gen_amount').value || '500';
-    const cap = document.getElementById('gen_cap').value || '2500';
-    const minBill = document.getElementById('gen_min_bill').value || '1500';
-    const expiry = document.getElementById('gen_until').value;
+    const batchName = document.getElementById('input_batch_name').value.trim() || 'MAJASOL BATCH #1';
+    const count = parseInt(document.getElementById('input_count').value) || 1;
+    const amount = parseFloat(document.getElementById('input_amount').value) || 500;
+    
+    // Update labels
+    document.getElementById('prev-brand').innerText = batchName;
+    document.getElementById('prev-amt').innerText = '₹' + amount;
+    
+    const sampleCode = `MAJ-${Math.round(amount)}-SAMPLE`;
+    document.getElementById('prev-code').innerText = sampleCode;
+    
+    const scanUrl = `${baseUrl}/${sampleCode}`;
+    document.getElementById('prev-scan-url').innerText = scanUrl;
+    
+    const countLabel = document.getElementById('btn-count-label');
+    if (countLabel) countLabel.innerText = count;
 
-    let code = document.getElementById('gen_code').value.toUpperCase().trim();
-    if (!code) {
-      code = (type === 'Percentage') ? `FASHION-${percent}-AUTO` : `SAVE-${amount}-AUTO`;
-    }
-
-    document.getElementById('prev-title').innerText = title;
-    document.getElementById('prev-cust').innerText = 'Audience: ' + cust;
-    document.getElementById('prev-code').innerText = code;
-
-    if (type === 'Percentage') {
-      document.getElementById('prev-disc').innerText = percent + '% OFF';
-      document.getElementById('prev-cap').innerText = `Up to ₹${Number(cap).toLocaleString('en-IN')} on min. ₹${Number(minBill).toLocaleString('en-IN')} bill`;
-    } else {
-      document.getElementById('prev-disc').innerText = '₹' + Number(amount).toLocaleString('en-IN') + ' FLAT OFF';
-      document.getElementById('prev-cap').innerText = `Flat discount on min. ₹${Number(minBill).toLocaleString('en-IN')} bill`;
-    }
-
-    if (expiry) {
-      const expDate = new Date(expiry);
-      if (!isNaN(expDate)) {
-        document.getElementById('prev-expiry').innerText = 'Valid until: ' + expDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-      }
-    }
-
-    let targetClaimUrl = getQrFrontendUrl(code);
-    const urlElem = document.getElementById('prev-url-text');
-    if (urlElem) {
-      urlElem.innerText = targetClaimUrl.replace(/^https?:\/\//i, '');
-      urlElem.title = targetClaimUrl;
-    }
-
-    renderQrCode(code);
-  }
-
-  function getQrFrontendUrl(code) {
-    const base = (window.APP_URL || window.location.origin).replace(/\/+$/, '');
-    return `${base}/qr/scanner?code=${encodeURIComponent(code)}`;
-  }
-
-  function renderQrCode(code) {
-    const container = document.getElementById('qrcode-canvas-container');
-    if (!container) return;
-
-    container.innerHTML = '';
-    const targetUrl = getQrFrontendUrl(code);
-
-    if (typeof QRCode !== 'undefined') {
-      try {
-        new QRCode(container, {
-          text: targetUrl,
-          width: 130,
-          height: 130,
-          colorDark: "#0f172a",
-          colorLight: "#ffffff",
-          correctLevel: QRCode.CorrectLevel.H
-        });
-      } catch (e) {
-        fallbackQR(container, targetUrl);
-      }
-    } else {
-      fallbackQR(container, targetUrl);
+    // Render 1" x 1" QR Canvas
+    const qrContainer = document.getElementById('preview-qrcode-target');
+    if (qrContainer) {
+      qrContainer.innerHTML = '';
+      qrCodeGenerator = new QRCode(qrContainer, {
+        text: scanUrl,
+        width: 60,
+        height: 60,
+        colorDark: "#000000",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.M
+      });
     }
   }
 
-  function fallbackQR(container, targetUrl) {
-    container.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=130x130&data=${encodeURIComponent(targetUrl)}" alt="QR Code" style="width:130px; height:130px; border-radius:6px; display:block;">`;
+  function printSingleSticker() {
+    window.print();
   }
 
-  function copyVoucherCode() {
-    const code = document.getElementById('prev-code').innerText;
-    navigator.clipboard.writeText(code).then(() => {
-      if (window.Toast) {
-        Toast.fire({
-          icon: 'success',
-          title: `Voucher Code ${code} copied to clipboard!`
-        });
-      } else if (window.Swal) {
-        Swal.fire({
-          toast: true,
-          position: 'top-end',
-          icon: 'success',
-          title: `Voucher Code ${code} copied to clipboard!`,
-          showConfirmButton: false,
-          timer: 2000
-        });
-      } else {
-        alert(`Voucher Code ${code} copied!`);
-      }
-    });
+  function testScanUrl() {
+    const amount = parseFloat(document.getElementById('input_amount').value) || 500;
+    const sampleCode = `MAJ-${Math.round(amount)}-SAMPLE`;
+    window.open(`${baseUrl}/${sampleCode}`, '_blank');
   }
 
-  function copyClaimLink() {
-    const code = document.getElementById('prev-code').innerText;
-    const url = getQrFrontendUrl(code);
-    navigator.clipboard.writeText(url).then(() => {
-      if (window.Toast) {
-        Toast.fire({
-          icon: 'success',
-          title: `Customer claim URL copied!`
-        });
-      } else if (window.Swal) {
-        Swal.fire({
-          toast: true,
-          position: 'top-end',
-          icon: 'success',
-          title: `Claim URL copied!`,
-          text: url,
-          showConfirmButton: false,
-          timer: 2500
-        });
-      } else {
-        alert(`Copied claim URL: ${url}`);
-      }
-    });
-  }
-
-  function openClaimPortal() {
-    const code = document.getElementById('prev-code').innerText;
-    window.open(getQrFrontendUrl(code), '_blank');
-  }
-
-  function printVoucherCard() {
-    const printArea = document.getElementById('voucher-print-area');
-    if (!printArea) {
-      window.print();
-      return;
-    }
-
-    // Extract QR Image (from canvas or img)
-    let qrImgSrc = '';
-    const qrCanvas = printArea.querySelector('#qrcode-canvas-container canvas');
-    const qrImg = printArea.querySelector('#qrcode-canvas-container img');
-    if (qrCanvas) {
-      try {
-        qrImgSrc = qrCanvas.toDataURL('image/png');
-      } catch (e) {
-        if (qrImg && qrImg.src) qrImgSrc = qrImg.src;
-      }
-    } else if (qrImg && qrImg.src) {
-      qrImgSrc = qrImg.src;
-    }
-
-    const title = document.getElementById('prev-title')?.innerText || 'Festive Garment Discount Voucher';
-    const cust = document.getElementById('prev-cust')?.innerText || 'Audience: Retail Customer Club';
-    const disc = document.getElementById('prev-disc')?.innerText || '15% OFF';
-    const cap = document.getElementById('prev-cap')?.innerText || 'Up to ₹2,500 on min. ₹1,500 bill';
-    const code = document.getElementById('prev-code')?.innerText || 'FASHION-15-AUTO';
-    const expiry = document.getElementById('prev-expiry')?.innerText || 'Valid until: 30 Days';
-    const themeClass = currentCardTheme || 'theme-indigo';
-
-    // Remove any existing print iframe
-    let printFrame = document.getElementById('voucher-print-iframe');
-    if (printFrame) {
-      printFrame.remove();
-    }
-
-    printFrame = document.createElement('iframe');
-    printFrame.id = 'voucher-print-iframe';
-    printFrame.style.position = 'fixed';
-    printFrame.style.top = '-9999px';
-    printFrame.style.left = '-9999px';
-    printFrame.style.width = '0';
-    printFrame.style.height = '0';
-    printFrame.style.border = '0';
-    document.body.appendChild(printFrame);
-
-    const doc = printFrame.contentWindow.document;
-    doc.open();
-    doc.write(`
-      <!DOCTYPE html>
-      <html lang="en">
-      <head>
-        <meta charset="UTF-8">
-        <title>${title} - ${code}</title>
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800;900&display=swap" rel="stylesheet">
-        <style>
-          @page {
-            size: portrait;
-            margin: 15mm auto;
-          }
-          * {
-            box-sizing: border-box;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-            color-adjust: exact !important;
-          }
-          html, body {
-            margin: 0;
-            padding: 0;
-            background: #ffffff;
-            font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-            min-height: 100%;
-          }
-          .print-wrapper {
-            width: 370px;
-            margin: 10px auto;
-            page-break-inside: avoid;
-            break-inside: avoid;
-          }
-          .luxury-voucher-pass {
-            position: relative;
-            border-radius: 20px;
-            padding: 24px 20px;
-            color: #ffffff;
-            overflow: hidden;
-            box-shadow: 0 10px 25px rgba(15, 23, 42, 0.25);
-            page-break-inside: avoid;
-            break-inside: avoid;
-          }
-          .theme-indigo { background: linear-gradient(135deg, #312e81 0%, #4338ca 50%, #6366f1 100%) !important; }
-          .theme-emerald { background: linear-gradient(135deg, #064e3b 0%, #047857 50%, #10b981 100%) !important; }
-          .theme-crimson { background: linear-gradient(135deg, #881337 0%, #be123c 50%, #f43f5e 100%) !important; }
-          .theme-onyx { background: linear-gradient(135deg, #090d16 0%, #1e293b 50%, #334155 100%) !important; border: 1px solid rgba(255, 215, 0, 0.4) !important; }
-          .theme-amber { background: linear-gradient(135deg, #78350f 0%, #b45309 50%, #f59e0b 100%) !important; }
-
-          .perforation-line {
-            position: relative;
-            margin: 18px -20px;
-            border-top: 2px dashed rgba(255, 255, 255, 0.4);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-          }
-          .perforation-line::before,
-          .perforation-line::after {
-            content: '';
-            position: absolute;
-            width: 22px;
-            height: 22px;
-            background: #ffffff !important;
-            border-radius: 50%;
-            top: -11px;
-            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15);
-          }
-          .perforation-line::before { left: -11px; }
-          .perforation-line::after { right: -11px; }
-
-          .ticket-qr-container {
-            background: #ffffff !important;
-            border-radius: 14px;
-            padding: 12px;
-            width: 154px;
-            height: 154px;
-            margin: 0 auto;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-          }
-          .ticket-qr-container img {
-            width: 130px !important;
-            height: 130px !important;
-            display: block !important;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="print-wrapper">
-          <div class="luxury-voucher-pass ${themeClass}">
-            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-              <div>
-                <div style="font-size:0.68rem; font-weight:800; text-transform:uppercase; letter-spacing:1.5px; opacity:0.85;">
-                  GARMENT ERP • OFFICIAL PASS
-                </div>
-                <div style="font-size:1.1rem; font-weight:800; line-height:1.25; margin-top:2px;">
-                  ${title}
-                </div>
-              </div>
-              <div style="background:rgba(255,255,255,0.2); padding:4px 8px; border-radius:6px; font-size:0.65rem; font-weight:800; letter-spacing:0.5px; text-transform:uppercase;">
-                PROMO
-              </div>
-            </div>
-
-            <div style="margin-top:8px;">
-              <span style="font-size:0.75rem; background:rgba(0,0,0,0.25); padding:3px 8px; border-radius:4px; font-weight:600; opacity:0.9;">
-                ${cust}
-              </span>
-            </div>
-
-            <div style="margin:16px 0 6px; text-align:center;">
-              <div style="font-size:2.4rem; font-weight:900; letter-spacing:-0.03em; line-height:1;">
-                ${disc}
-              </div>
-              <div style="font-size:0.75rem; opacity:0.9; margin-top:4px; font-weight:600;">
-                ${cap}
-              </div>
-            </div>
-
-            <div class="perforation-line"></div>
-
-            <div class="ticket-qr-container">
-              ${qrImgSrc ? `<img src="${qrImgSrc}" alt="QR Code">` : ''}
-            </div>
-
-            <div style="text-align:center; margin-top:12px;">
-              <div style="font-family:'JetBrains Mono', monospace; font-weight:800; font-size:1.05rem; letter-spacing:1px; background:rgba(0,0,0,0.3); padding:6px 14px; border-radius:8px; display:inline-flex; align-items:center; gap:6px;">
-                <span>${code}</span>
-              </div>
-            </div>
-
-            <div style="margin-top:12px; font-size:0.68rem; opacity:0.8; text-align:center; display:flex; justify-content:space-between; align-items:center;">
-              <span>${expiry}</span>
-              <span>🔒 Single-Use Token</span>
-            </div>
-          </div>
-        </div>
-      </body>
-      </html>
-    `);
-    doc.close();
-
-    setTimeout(() => {
-      printFrame.contentWindow.focus();
-      printFrame.contentWindow.print();
-    }, 250);
+  async function handleBatchGenerate(e) {
+    // Form submits normally to Laravel backend or via AJAX if preferred
   }
 
   document.addEventListener('DOMContentLoaded', () => {
     updateLivePreview();
+
+    // Render table mini QRs
+    document.querySelectorAll('.mini-table-qr').forEach(el => {
+      const code = el.getAttribute('data-code');
+      if (code) {
+        new QRCode(el, {
+          text: `${baseUrl}/${code}`,
+          width: 34,
+          height: 34,
+          colorDark: "#000000",
+          colorLight: "#ffffff",
+          correctLevel: QRCode.CorrectLevel.L
+        });
+      }
+    });
   });
 </script>
 @endpush

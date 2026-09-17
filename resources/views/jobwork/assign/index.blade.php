@@ -22,7 +22,7 @@
   /* Stats Grid */
   .jw-stats-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 16px;
   }
 
@@ -145,7 +145,7 @@
     height: 38px;
   }
 
-  /* Status Filter Tabs */
+  /* Process Filter Tabs */
   .process-filter-pills {
     display: flex;
     gap: 6px;
@@ -194,11 +194,24 @@
 
   .jw-code-badge:hover {
     background: #e0e7ff;
-    border-color: #a5b4fc;
+    border-color: #a5b4fd;
     transform: translateY(-1px);
   }
 
-  /* Table Custom Row styling */
+  .lot-badge {
+    font-family: var(--font-mono, monospace);
+    font-weight: 800;
+    font-size: 0.8rem;
+    background: #fdf4ff;
+    color: #a21caf;
+    border: 1px solid #f0abfc;
+    padding: 3px 8px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
   .jw-table th {
     background: #f8fafc;
     color: var(--slate-600, #475569);
@@ -206,12 +219,12 @@
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    padding: 12px 18px;
+    padding: 12px 14px;
     border-bottom: 1px solid var(--slate-200, #e2e8f0);
   }
 
   .jw-table td {
-    padding: 14px 18px;
+    padding: 12px 14px;
     vertical-align: middle;
     border-bottom: 1px solid var(--slate-100, #f1f5f9);
     font-size: 0.85rem;
@@ -221,11 +234,10 @@
     background: #fafafa;
   }
 
-  /* Action Buttons */
   .action-icon-btn {
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
     border: 1px solid var(--slate-200, #e2e8f0);
     background: #ffffff;
     color: var(--slate-600, #475569);
@@ -240,6 +252,12 @@
     background: var(--slate-100, #f1f5f9);
     color: var(--slate-900, #0f172a);
     border-color: var(--slate-300, #cbd5e1);
+  }
+
+  .action-icon-btn.info:hover {
+    background: #eff6ff;
+    color: #2563eb;
+    border-color: #bfdbfe;
   }
 
   .action-icon-btn.danger:hover {
@@ -270,14 +288,28 @@
       </div>
     </div>
 
-    <!-- Total Issued Pieces -->
-    <div class="jw-stat-card" style="--accent-color: #2563eb;">
-      <div class="jw-stat-icon" style="background: #eff6ff; color: #2563eb;">
+    <!-- Total Than Fabric Issued -->
+    <div class="jw-stat-card" style="--accent-color: #059669;">
+      <div class="jw-stat-icon" style="background: #ecfdf5; color: #059669;">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
       </div>
       <div class="jw-stat-info">
-        <div class="jw-stat-label">Total Issued Pieces</div>
-        <div class="jw-stat-value">
+        <div class="jw-stat-label">Total Fabric Issued</div>
+        <div class="jw-stat-value" style="color:#059669;">
+          {{ number_format($stats['totalThanMeters'], 1) }}
+          <span style="font-size:0.75rem; font-weight:600; color:var(--slate-500);">Mtrs</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Total Production Pieces -->
+    <div class="jw-stat-card" style="--accent-color: #2563eb;">
+      <div class="jw-stat-icon" style="background: #eff6ff; color: #2563eb;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+      </div>
+      <div class="jw-stat-info">
+        <div class="jw-stat-label">Target Production</div>
+        <div class="jw-stat-value" style="color:#2563eb;">
           {{ number_format($stats['totalIssuedQty']) }}
           <span style="font-size:0.75rem; font-weight:600; color:var(--slate-500);">Pcs</span>
         </div>
@@ -285,13 +317,13 @@
     </div>
 
     <!-- Contract Labor Value -->
-    <div class="jw-stat-card" style="--accent-color: #10b981;">
-      <div class="jw-stat-icon" style="background: #ecfdf5; color: #059669;">
+    <div class="jw-stat-card" style="--accent-color: #7c3aed;">
+      <div class="jw-stat-icon" style="background: #f5f3ff; color: #7c3aed;">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
       </div>
       <div class="jw-stat-info">
-        <div class="jw-stat-label">Contract Labor Value</div>
-        <div class="jw-stat-value" style="color: #059669;">
+        <div class="jw-stat-label">Total Contract Value</div>
+        <div class="jw-stat-value" style="color: #7c3aed;">
           ₹{{ number_format($stats['totalProcessValue'], 2) }}
         </div>
       </div>
@@ -307,7 +339,7 @@
       <div>
         <h3 style="margin:0; font-size:1.2rem; font-weight:800; color:var(--slate-900);">Job Work Assignment Registry</h3>
         <p style="margin:4px 0 0; font-size:0.825rem; color:var(--slate-500);">
-          Outward job orders for Stitching, Fabric Cutting, Embroidery & Washing contractors.
+          Outward job orders with auto-assigned Lot References and multi-item Than fabric-to-pieces yield tracking.
         </p>
       </div>
 
@@ -318,7 +350,7 @@
         </button>
         <a href="{{ route('jobwork.assign.create') }}" class="btn btn-primary btn-sm" style="display:inline-flex; align-items:center; gap:6px; font-weight:700; box-shadow:0 2px 8px rgba(79, 70, 229, 0.3);">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
-          Issue Job Order
+          + Issue New Job Order
         </a>
       </div>
     </div>
@@ -327,7 +359,7 @@
     <div class="jw-toolbar">
       <div class="search-input-wrapper">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input type="text" id="jw-search-input" placeholder="Search order#, worker, lot#, style..." onkeyup="filterJWTable()">
+        <input type="text" id="jw-search-input" placeholder="Search order#, lot#, worker, style..." onkeyup="filterJWTable()">
       </div>
 
       <div class="process-filter-pills">
@@ -351,24 +383,28 @@
       <table class="data-table jw-table" id="job-assign-table" style="width:100%;">
         <thead>
           <tr>
-            <th style="width:160px;">Order #</th>
+            <th style="width:140px;">Order #</th>
+            <th style="width:130px;">Lot #</th>
             <th>Job Worker</th>
             <th>Process</th>
-            <th>Lot #</th>
-            <th>Style Description</th>
-            <th>Issue Date</th>
-            <th>Due Date</th>
-            <th>Issued Qty</th>
-            <th>Rate / Pc (₹)</th>
+            <th>Items / Styles</th>
+            <th>Than (Mtr)</th>
+            <th>Target Pcs</th>
+            <th>Wastage</th>
+            <th>Avg Cons</th>
             <th>Total Amount</th>
             <th>Status</th>
-            <th style="text-align:right; width:110px;">Actions</th>
+            <th style="text-align:right; width:120px;">Actions</th>
           </tr>
         </thead>
         <tbody>
           @forelse ($assignments as $ja)
             @php
               $procKey = strtolower($ja->process_name);
+              $than = (float)($ja->total_than_meters ?: 0);
+              $pcs = (int)($ja->issued_qty ?: 0);
+              $wastage = (float)($ja->total_wastage_meters ?: 0);
+              $avgCons = $pcs > 0 ? max(0, ($than - $wastage) / $pcs) : 0;
             @endphp
             <tr class="jw-row" data-process="{{ $procKey }}">
               
@@ -376,14 +412,24 @@
               <td>
                 <span class="jw-code-badge" onclick="copyJWCode('{{ $ja->job_order_no }}')" title="Click to copy Order #">
                   <span>{{ $ja->job_order_no }}</span>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                </span>
+                <div style="font-size:0.72rem; color:var(--slate-500); margin-top:2px;">
+                  {{ date('d M Y', strtotime($ja->issue_date)) }}
+                </div>
+              </td>
+
+              <!-- Lot Number Badge -->
+              <td>
+                <span class="lot-badge" title="Auto-Assigned Lot #">
+                  <span>{{ $ja->lot_number }}</span>
                 </span>
               </td>
 
               <!-- Job Worker -->
               <td>
                 <div style="font-weight:700; color:var(--slate-900);">{{ $ja->job_worker_name }}</div>
-                <div style="font-size:0.725rem; color:var(--slate-500); margin-top:2px;">Contractor / Unit</div>
+                <div style="font-size:0.725rem; color:var(--slate-500);">Contractor Unit</div>
               </td>
 
               <!-- Process -->
@@ -393,30 +439,53 @@
                 </span>
               </td>
 
-              <!-- Lot Number -->
+              <!-- Items / Style Summary -->
               <td>
-                <span style="font-family:var(--font-mono, monospace); font-weight:700; color:var(--slate-800); background:#f1f5f9; padding:2px 6px; border-radius:4px; font-size:0.75rem;">
-                  {{ $ja->lot_number }}
+                <div style="font-weight:600; color:var(--slate-800); max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="{{ $ja->style_name }}">
+                  {{ $ja->style_name }}
+                </div>
+                @if($ja->items && count($ja->items) > 1)
+                  <span style="font-size:0.72rem; color:var(--primary-700); font-weight:700;">+{{ count($ja->items) }} items</span>
+                @endif
+              </td>
+
+              <!-- Than Fabric Meters -->
+              <td>
+                <div style="font-weight:700; color:var(--slate-900);">
+                  {{ $than > 0 ? number_format($than, 1) . ' Mtr' : '—' }}
+                </div>
+              </td>
+
+              <!-- Target Output Pcs -->
+              <td>
+                <div style="font-weight:800; color:var(--primary-700); font-size:0.95rem;">
+                  {{ number_format($pcs) }} pcs
+                </div>
+              </td>
+
+              <!-- Wastage -->
+              <td>
+                <span style="font-weight:700; color:{{ $wastage > 0 ? '#dc2626' : 'var(--slate-400)' }};">
+                  {{ $wastage > 0 ? number_format($wastage, 1) . ' Mtr' : '0 Mtr' }}
                 </span>
               </td>
 
-              <!-- Style -->
+              <!-- Avg Consumption -->
               <td>
-                <div style="font-weight:600; color:var(--slate-800);">{{ $ja->style_name }}</div>
+                <span style="font-size:0.775rem; font-weight:700; background:#f1f5f9; padding:2px 6px; border-radius:4px; color:var(--slate-700);">
+                  {{ $avgCons > 0 ? number_format($avgCons, 2) . ' M/Pc' : '—' }}
+                </span>
               </td>
 
-              <!-- Dates -->
-              <td>{{ date('d M Y', strtotime($ja->issue_date)) }}</td>
-              <td>{{ $ja->due_date ? date('d M Y', strtotime($ja->due_date)) : '—' }}</td>
-
-              <!-- Qty & Rate -->
-              <td style="font-weight:700;">{{ number_format($ja->issued_qty) }} pcs</td>
-              <td>₹{{ number_format($ja->rate_per_piece, 2) }}</td>
-              <td style="font-weight:800; color:#059669;">₹{{ number_format($ja->total_amount, 2) }}</td>
+              <!-- Total Amount -->
+              <td>
+                <div style="font-weight:800; color:#059669;">₹{{ number_format($ja->total_amount, 2) }}</div>
+                <div style="font-size:0.7rem; color:var(--slate-500);">₹{{ number_format($ja->rate_per_piece, 1) }}/pc avg</div>
+              </td>
 
               <!-- Status -->
               <td>
-                <span class="badge" style="background:#ecfdf5; color:#059669; border:1px solid #a7f3d0; font-weight:700; padding:4px 10px; border-radius:9999px;">
+                <span class="badge" style="background:#ecfdf5; color:#059669; border:1px solid #a7f3d0; font-weight:700; padding:3px 8px; border-radius:9999px;">
                   ● {{ $ja->status }}
                 </span>
               </td>
@@ -424,14 +493,23 @@
               <!-- Actions -->
               <td style="text-align:right;">
                 <div style="display:inline-flex; gap:6px; align-items:center;">
+                  
+                  <!-- View Breakdown Modal -->
+                  <button type="button" class="action-icon-btn info" title="View Order & Fabric Breakdown" onclick='openJobOrderModal(@json($ja))'>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  </button>
+
+                  <!-- Edit -->
                   <a href="{{ route('jobwork.assign.edit', $ja->id) }}" class="action-icon-btn" title="Edit Job Order">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                   </a>
+
+                  <!-- Delete -->
                   <form action="{{ route('jobwork.assign.destroy', $ja->id) }}" method="POST" style="display:inline;" onsubmit="return handleDeleteJW(this, '{{ $ja->job_order_no }}', event)">
                     @csrf
                     @method('DELETE')
                     <button type="submit" class="action-icon-btn danger" title="Delete Job Order">
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                     </button>
                   </form>
                 </div>
@@ -445,7 +523,7 @@
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
                 </div>
                 <div style="font-weight:700; color:var(--slate-700); font-size:1rem; margin-bottom:4px;">No job work assignments yet</div>
-                <p style="font-size:0.85rem; color:var(--slate-500); margin:0 0 16px;">Issue your first outward job work order to external contractors.</p>
+                <p style="font-size:0.85rem; color:var(--slate-500); margin:0 0 16px;">Issue your first outward job work order with auto-lot reference and fabric yield tracking.</p>
                 <a href="{{ route('jobwork.assign.create') }}" class="btn btn-primary btn-sm">+ Issue Job Order</a>
               </td>
             </tr>
@@ -458,38 +536,120 @@
 
 </div>
 
+<!-- ==========================================================================
+     JOB ORDER DETAILS & MULTI-ITEM BREAKDOWN MODAL
+     ========================================================================== -->
+<div class="modal-backdrop" id="jobOrderModal" style="display:none;" onclick="if(event.target===this) closeJobOrderModal()">
+  <div class="modal-dialog modal-lg" style="max-width:760px;">
+    
+    <div class="modal-header">
+      <div class="modal-title">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+        <span>Job Work Order Details: <span id="m-order-no" style="color:#4f46e5; font-family:var(--font-mono, monospace);">JA-2026-001</span></span>
+      </div>
+      <button type="button" class="modal-close-btn" onclick="closeJobOrderModal()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    <div class="modal-body" style="padding:22px; display:flex; flex-direction:column; gap:18px;">
+      
+      <!-- Top Overview Grid -->
+      <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px; display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:14px; font-size:0.85rem;">
+        <div>
+          <span style="color:var(--slate-500); font-size:0.75rem; display:block;">Lot Reference #:</span>
+          <strong id="m-lot-no" class="lot-badge" style="font-size:0.9rem; margin-top:2px;">LOT-2026-001</strong>
+        </div>
+        <div>
+          <span style="color:var(--slate-500); font-size:0.75rem; display:block;">Job Worker / Contractor:</span>
+          <strong id="m-worker-name" style="color:var(--slate-900);">—</strong>
+        </div>
+        <div>
+          <span style="color:var(--slate-500); font-size:0.75rem; display:block;">Process / Operation:</span>
+          <strong id="m-process-name" style="color:#1d4ed8;">—</strong>
+        </div>
+        <div>
+          <span style="color:var(--slate-500); font-size:0.75rem; display:block;">Issue & Due Date:</span>
+          <strong id="m-dates" style="color:var(--slate-800);">—</strong>
+        </div>
+      </div>
+
+      <!-- Line Items Breakdown Table -->
+      <div>
+        <h4 style="font-size:0.85rem; font-weight:800; text-transform:uppercase; color:var(--slate-700); margin:0 0 8px;">
+          Product Items & Fabric Yield Breakdown
+        </h4>
+        <div class="table-responsive">
+          <table class="data-table" style="width:100%; font-size:0.825rem;">
+            <thead>
+              <tr style="background:#f1f5f9;">
+                <th>Item / Style</th>
+                <th>Than (Mtr)</th>
+                <th>Production (Pcs)</th>
+                <th>Wastage (Mtr)</th>
+                <th>Avg Cons</th>
+                <th>Rate (₹)</th>
+                <th style="text-align:right;">Line Total</th>
+              </tr>
+            </thead>
+            <tbody id="m-items-tbody">
+              <!-- Populated dynamically via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Order Yield & Financial Footer -->
+      <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:12px; padding:16px; display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:10px; font-size:0.85rem;">
+        <div>
+          <span style="color:#166534; font-size:0.75rem; display:block;">Total Than Fabric:</span>
+          <strong id="m-total-than" style="color:#14532d; font-size:1rem;">—</strong>
+        </div>
+        <div>
+          <span style="color:#166534; font-size:0.75rem; display:block;">Total Target Output:</span>
+          <strong id="m-total-pcs" style="color:#14532d; font-size:1rem;">—</strong>
+        </div>
+        <div>
+          <span style="color:#166534; font-size:0.75rem; display:block;">Total Wastage:</span>
+          <strong id="m-total-wastage" style="color:#dc2626; font-size:1rem;">—</strong>
+        </div>
+        <div>
+          <span style="color:#166534; font-size:0.75rem; display:block;">Overall Avg Yield:</span>
+          <strong id="m-overall-avg" style="color:#14532d; font-size:1rem;">—</strong>
+        </div>
+        <div>
+          <span style="color:#166534; font-size:0.75rem; display:block;">Contract Amount:</span>
+          <strong id="m-grand-amount" style="color:#059669; font-size:1.15rem;">₹0.00</strong>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="modal-footer" style="padding:14px 22px; border-top:1px solid #e2e8f0; display:flex; justify-content:flex-end;">
+      <button type="button" class="btn btn-secondary" onclick="closeJobOrderModal()">Close</button>
+    </div>
+
+  </div>
+</div>
+
 @push('scripts')
 <script>
   let currentProcessFilter = 'all';
 
   function copyJWCode(code) {
-    navigator.clipboard.writeText(code).then(() => {
-      if (window.Toast) {
-        Toast.fire({
-          icon: 'success',
-          title: `Job Order ${code} copied!`
-        });
-      }
-    });
+    navigator.clipboard.writeText(code);
+    if (window.UI && UI.showToast) {
+      UI.showToast('Copied', `Job Order ${code} copied!`, 'info');
+    } else {
+      alert(`Copied: ${code}`);
+    }
   }
 
   function handleDeleteJW(form, orderNo, e) {
     e.preventDefault();
-    Swal.fire({
-      title: 'Delete Job Order?',
-      html: `Are you sure you want to delete Job Order <strong>${orderNo}</strong>?`,
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#ef4444',
-      cancelButtonColor: '#94a3b8',
-      confirmButtonText: 'Yes, Delete Order',
-      cancelButtonText: 'Cancel',
-      reverseButtons: true
-    }).then((result) => {
-      if (result.isConfirmed) {
-        form.submit();
-      }
-    });
+    if (confirm(`Are you sure you want to delete Job Order ${orderNo}?`)) {
+      form.submit();
+    }
     return false;
   }
 
@@ -517,6 +677,66 @@
         row.style.display = 'none';
       }
     });
+  }
+
+  function openJobOrderModal(ja) {
+    document.getElementById('m-order-no').innerText = ja.job_order_no;
+    document.getElementById('m-lot-no').innerText = ja.lot_number;
+    document.getElementById('m-worker-name').innerText = ja.job_worker_name;
+    document.getElementById('m-process-name').innerText = ja.process_name;
+    document.getElementById('m-dates').innerText = `${ja.issue_date} &rarr; ${ja.due_date || 'N/A'}`;
+
+    const tbody = document.getElementById('m-items-tbody');
+    tbody.innerHTML = '';
+
+    const than = parseFloat(ja.total_than_meters || 0);
+    const pcs = parseInt(ja.issued_qty || 0);
+    const wastage = parseFloat(ja.total_wastage_meters || 0);
+    const net = Math.max(0, than - wastage);
+    const avg = pcs > 0 ? (net / pcs) : 0;
+
+    document.getElementById('m-total-than').innerText = than.toFixed(1) + ' Mtr';
+    document.getElementById('m-total-pcs').innerText = pcs + ' Pcs';
+    document.getElementById('m-total-wastage').innerText = wastage.toFixed(1) + ' Mtr';
+    document.getElementById('m-overall-avg').innerText = avg.toFixed(2) + ' Mtr/Pc';
+    document.getElementById('m-grand-amount').innerText = '₹' + Number(ja.total_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+
+    const items = ja.items && ja.items.length > 0 ? ja.items : [{
+      item_name: ja.style_name,
+      than_meters: than,
+      production_pcs: pcs,
+      wastage_meters: wastage,
+      avg_consumption: avg,
+      rate_per_piece: ja.rate_per_piece,
+      total_amount: ja.total_amount
+    }];
+
+    items.forEach(it => {
+      const itThan = parseFloat(it.than_meters || 0);
+      const itPcs = parseInt(it.production_pcs || it.qty || 0);
+      const itWastage = parseFloat(it.wastage_meters || 0);
+      const itAvg = parseFloat(it.avg_consumption || (itPcs > 0 ? (itThan - itWastage) / itPcs : 0));
+      const itRate = parseFloat(it.rate_per_piece || 0);
+      const itTotal = parseFloat(it.total_amount || (itPcs * itRate));
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><strong>${it.item_name || ja.style_name}</strong></td>
+        <td>${itThan.toFixed(1)} Mtr</td>
+        <td><strong>${itPcs} Pcs</strong></td>
+        <td style="color:#dc2626;">${itWastage.toFixed(1)} Mtr</td>
+        <td><span class="badge" style="background:#f1f5f9; color:#334155;">${itAvg.toFixed(2)} M/Pc</span></td>
+        <td>₹${itRate.toFixed(2)}</td>
+        <td style="text-align:right; font-weight:700; color:#059669;">₹${itTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    document.getElementById('jobOrderModal').style.display = 'flex';
+  }
+
+  function closeJobOrderModal() {
+    document.getElementById('jobOrderModal').style.display = 'none';
   }
 </script>
 @endpush

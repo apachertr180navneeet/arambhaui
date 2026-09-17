@@ -70,6 +70,9 @@ class CustomerController extends Controller
         if ($request->filled('billing_address') && !$request->filled('address')) {
             $request->merge(['address' => $request->input('billing_address')]);
         }
+        if ($request->filled('mobile') && !$request->filled('phone')) {
+            $request->merge(['phone' => $request->input('mobile')]);
+        }
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -79,9 +82,11 @@ class CustomerController extends Controller
             'contact_person' => 'nullable|string|max:255',
             'email' => 'nullable|email|max:255',
             'gstin' => 'nullable|string|max:50',
+            'pan_number' => 'nullable|string|max:50',
             'address' => 'nullable|string',
             'city' => 'nullable|string|max:100',
             'state' => 'nullable|string|max:100',
+            'pincode' => 'nullable|string|max:20',
             'credit_limit' => 'nullable|numeric',
             'outstanding' => 'nullable|numeric',
             'payment_terms' => 'nullable|string|max:100',
@@ -130,6 +135,9 @@ class CustomerController extends Controller
         if ($request->filled('billing_address') && !$request->filled('address')) {
             $request->merge(['address' => $request->input('billing_address')]);
         }
+        if ($request->filled('mobile') && !$request->filled('phone')) {
+            $request->merge(['phone' => $request->input('mobile')]);
+        }
 
         $validated = $request->validate([
             'name' => 'sometimes|required|string|max:255',
@@ -139,9 +147,11 @@ class CustomerController extends Controller
             'contact_person' => 'nullable|string|max:255',
             'email' => 'nullable|email|max:255',
             'gstin' => 'nullable|string|max:50',
+            'pan_number' => 'nullable|string|max:50',
             'address' => 'nullable|string',
             'city' => 'nullable|string|max:100',
             'state' => 'nullable|string|max:100',
+            'pincode' => 'nullable|string|max:20',
             'credit_limit' => 'nullable|numeric',
             'outstanding' => 'nullable|numeric',
             'payment_terms' => 'nullable|string|max:100',

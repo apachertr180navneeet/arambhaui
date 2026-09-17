@@ -1,17 +1,17 @@
 @extends('layouts.app')
 
-@section('title', 'Admin QR Vouchers & Expiry Ledger - GarmentERP')
+@section('title', 'QR Vouchers Listing & 1x1 Sticker Printing - GarmentERP')
 
 @section('breadcrumb')
   <div class="breadcrumb-item"><span>Barcodes & QR</span></div>
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-  <div class="breadcrumb-item active"><span>Admin QR & Expiry Ledger</span></div>
+  <div class="breadcrumb-item active"><span>QR Listing & Ledger</span></div>
 @endsection
 
 @push('styles')
 <style>
   /* ==========================================================================
-     QR HISTORY & LEDGER - MODERN ERP STYLING
+     MAJASOL QR LISTING & 1" x 1" THERMAL STICKER PRINT SUITE
      ========================================================================== */
   .ledger-wrapper {
     display: flex;
@@ -22,7 +22,7 @@
   /* Stats Grid */
   .qr-stats-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 16px;
   }
 
@@ -99,7 +99,7 @@
   }
 
   .qr-card-header {
-    padding: 22px 24px;
+    padding: 20px 24px;
     border-bottom: 1px solid var(--slate-100, #f1f5f9);
     display: flex;
     justify-content: space-between;
@@ -145,7 +145,6 @@
     height: 38px;
   }
 
-  /* Status Filter Tabs */
   .status-filter-pills {
     display: flex;
     gap: 6px;
@@ -164,9 +163,6 @@
     border-radius: 7px;
     cursor: pointer;
     transition: all 0.15s ease;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
   }
 
   .status-filter-btn.active {
@@ -175,7 +171,27 @@
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   }
 
-  /* Code Mono Badge */
+  /* QR Thumbnail inside Table */
+  .table-qr-thumb {
+    width: 44px;
+    height: 44px;
+    background: #ffffff;
+    border: 1px solid var(--slate-300, #cbd5e1);
+    border-radius: 6px;
+    padding: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+
+  .table-qr-thumb:hover {
+    transform: scale(1.15);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    border-color: var(--primary-500, #6366f1);
+  }
+
   .voucher-code-badge {
     font-family: var(--font-mono, monospace);
     font-weight: 800;
@@ -183,11 +199,11 @@
     background: #f5f3ff;
     color: #6d28d9;
     border: 1px solid #ddd6fe;
-    padding: 4px 10px;
-    border-radius: 8px;
+    padding: 4px 8px;
+    border-radius: 6px;
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
     cursor: pointer;
     transition: all 0.15s ease;
   }
@@ -198,7 +214,6 @@
     transform: translateY(-1px);
   }
 
-  /* Table Custom Row styling */
   .ledger-table th {
     background: #f8fafc;
     color: var(--slate-600, #475569);
@@ -206,12 +221,12 @@
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    padding: 12px 18px;
+    padding: 12px 14px;
     border-bottom: 1px solid var(--slate-200, #e2e8f0);
   }
 
   .ledger-table td {
-    padding: 14px 18px;
+    padding: 12px 14px;
     vertical-align: middle;
     border-bottom: 1px solid var(--slate-100, #f1f5f9);
     font-size: 0.85rem;
@@ -223,9 +238,9 @@
 
   /* Action Buttons */
   .action-icon-btn {
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
     border: 1px solid var(--slate-200, #e2e8f0);
     background: #ffffff;
     color: var(--slate-600, #475569);
@@ -240,6 +255,16 @@
     background: var(--slate-100, #f1f5f9);
     color: var(--slate-900, #0f172a);
     border-color: var(--slate-300, #cbd5e1);
+  }
+
+  .action-icon-btn.print-btn {
+    color: #0f172a;
+    font-weight: 700;
+  }
+
+  .action-icon-btn.print-btn:hover {
+    background: #f8fafc;
+    border-color: #0f172a;
   }
 
   .action-icon-btn.info:hover {
@@ -266,124 +291,148 @@
     border-color: #fde68a;
   }
 
-  /* Luxury Voucher Pass Styling for View Modal */
-  .luxury-voucher-pass {
-    position: relative;
-    border-radius: 20px;
-    padding: 24px 20px;
-    color: #ffffff;
-    overflow: hidden;
-    box-shadow: 0 15px 35px -5px rgba(30, 27, 75, 0.35);
-    transition: all 0.3s ease;
+  /* Majasol 1" x 1" Sticker Modal Design */
+  .majasol-sticker-card {
+    width: 1.25in;
+    height: 1.25in;
+    margin: 0 auto;
+    background: #ffffff;
+    border: 2px solid #000;
+    border-radius: 4px;
+    padding: 3px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    box-sizing: border-box;
+    text-align: center;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.15);
   }
 
-  .theme-indigo { background: linear-gradient(135deg, #312e81 0%, #4338ca 50%, #6366f1 100%); }
-  .theme-emerald { background: linear-gradient(135deg, #064e3b 0%, #047857 50%, #10b981 100%); }
-  .theme-crimson { background: linear-gradient(135deg, #881337 0%, #be123c 50%, #f43f5e 100%); }
-  .theme-onyx { background: linear-gradient(135deg, #090d16 0%, #1e293b 50%, #334155 100%); border: 1px solid rgba(255, 215, 0, 0.3); }
-  .theme-amber { background: linear-gradient(135deg, #78350f 0%, #b45309 50%, #f59e0b 100%); }
+  .majasol-sticker-card .sticker-brand {
+    font-size: 7.5pt;
+    font-weight: 900;
+    text-transform: uppercase;
+    color: #000;
+    line-height: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
 
-  .perforation-line {
-    position: relative;
-    margin: 18px -20px;
-    border-top: 2px dashed rgba(255, 255, 255, 0.35);
+  .majasol-sticker-card .sticker-qr {
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .majasol-sticker-card .sticker-footer {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    width: 100%;
+    padding: 0 1px;
+    line-height: 1;
   }
 
-  .perforation-line::before,
-  .perforation-line::after {
-    content: '';
-    position: absolute;
-    width: 22px;
-    height: 22px;
-    background: #ffffff;
-    border-radius: 50%;
-    top: -11px;
-    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15);
+  .majasol-sticker-card .sticker-amt {
+    font-size: 8.5pt;
+    font-weight: 900;
+    color: #000;
   }
 
-  .perforation-line::before { left: -11px; }
-  .perforation-line::after { right: -11px; }
-
-  .ticket-qr-container {
-    background: #ffffff;
-    border-radius: 14px;
-    padding: 12px;
-    width: 154px;
-    height: 154px;
-    margin: 0 auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+  .majasol-sticker-card .sticker-code {
+    font-family: var(--font-mono, monospace);
+    font-size: 6pt;
+    font-weight: 800;
+    color: #000;
   }
 
-  .copy-badge-btn {
-    cursor: pointer;
-    transition: background-color 0.2s;
-  }
+  /* ==========================================================================
+     EXACT 1" x 1" (ONE INCH BY ONE INCH) PRINT STYLES
+     ========================================================================== */
+  @media print {
+    @page {
+      size: 1in 1in;
+      margin: 0;
+    }
 
-  .copy-badge-btn:hover {
-    background: rgba(255, 255, 255, 0.25) !important;
-  }
+    html, body {
+      background: #ffffff !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      width: 1in !important;
+      height: 1in !important;
+      overflow: visible !important;
+    }
 
-  /* Segmented Toggle for Edit Modal */
-  .discount-toggle-group {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    background: var(--slate-100, #f1f5f9);
-    padding: 4px;
-    border-radius: var(--radius-lg, 12px);
-  }
+    body * {
+      visibility: hidden !important;
+    }
 
-  .discount-toggle-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 9px 14px;
-    border: none;
-    background: transparent;
-    border-radius: var(--radius-md, 8px);
-    font-size: 0.825rem;
-    font-weight: 700;
-    color: var(--slate-600, #475569);
-    cursor: pointer;
-    transition: all 0.2s ease;
-  }
+    #print-container-area,
+    #print-container-area * {
+      visibility: visible !important;
+    }
 
-  .discount-toggle-btn.active {
-    background: #ffffff;
-    color: var(--primary-700, #4338ca);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  }
+    #print-container-area {
+      position: absolute !important;
+      left: 0 !important;
+      top: 0 !important;
+      width: 1in !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      background: #fff !important;
+    }
 
-  .preset-pills {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-    margin-top: 8px;
-  }
+    .print-sticker-1x1 {
+      width: 1in !important;
+      height: 1in !important;
+      max-width: 1in !important;
+      max-height: 1in !important;
+      margin: 0 !important;
+      padding: 2px !important;
+      box-sizing: border-box !important;
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      text-align: center !important;
+      background: #fff !important;
+      border: 1px solid #000 !important;
+      page-break-after: always !important;
+      break-after: page !important;
+    }
 
-  .preset-pill-btn {
-    background: var(--slate-100, #f1f5f9);
-    border: 1px solid var(--slate-200, #e2e8f0);
-    color: var(--slate-700, #334155);
-    font-size: 0.75rem;
-    font-weight: 700;
-    padding: 4px 10px;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.15s ease;
-  }
+    .print-sticker-1x1 .sticker-brand {
+      font-size: 7pt !important;
+      font-weight: 900 !important;
+      color: #000 !important;
+      line-height: 1 !important;
+      white-space: nowrap !important;
+      overflow: hidden !important;
+    }
 
-  .preset-pill-btn:hover {
-    background: var(--primary-50, #eef2ff);
-    border-color: var(--primary-300, #a5b4fc);
-    color: var(--primary-700, #4338ca);
+    .print-sticker-1x1 .sticker-qr img,
+    .print-sticker-1x1 .sticker-qr canvas {
+      width: 54px !important;
+      height: 54px !important;
+    }
+
+    .print-sticker-1x1 .sticker-amt {
+      font-size: 8pt !important;
+      font-weight: 900 !important;
+      color: #000 !important;
+    }
+
+    .print-sticker-1x1 .sticker-code {
+      font-size: 5.5pt !important;
+      font-weight: 800 !important;
+      color: #000 !important;
+    }
   }
 </style>
 @endpush
@@ -394,13 +443,12 @@
   <!-- KPI Metrics Row -->
   <div class="qr-stats-grid">
     
-    <!-- Total Vouchers -->
     <div class="qr-stat-card" style="--accent-color: #4f46e5;">
       <div class="qr-stat-icon" style="background: #eef2ff; color: #4f46e5;">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/><path d="M3 12h.01"/><path d="M12 3h.01"/></svg>
       </div>
       <div class="qr-stat-info">
-        <div class="qr-stat-label">Total Vouchers Issued</div>
+        <div class="qr-stat-label">Total QRs Generated</div>
         <div class="qr-stat-value">
           {{ number_format($stats['total']) }}
           <span style="font-size:0.75rem; font-weight:600; color:var(--slate-500);">Tokens</span>
@@ -408,7 +456,6 @@
       </div>
     </div>
 
-    <!-- Active & Claimable -->
     <div class="qr-stat-card" style="--accent-color: #10b981;">
       <div class="qr-stat-icon" style="background: #ecfdf5; color: #059669;">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
@@ -422,21 +469,19 @@
       </div>
     </div>
 
-    <!-- Redeemed -->
     <div class="qr-stat-card" style="--accent-color: #8b5cf6;">
       <div class="qr-stat-icon" style="background: #f5f3ff; color: #7c3aed;">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>
       </div>
       <div class="qr-stat-info">
-        <div class="qr-stat-label">Claimed & Redeemed</div>
+        <div class="qr-stat-label">Redeemed / Claimed</div>
         <div class="qr-stat-value" style="color: #7c3aed;">
           {{ number_format($stats['redeemed']) }}
-          <span style="font-size:0.75rem; font-weight:600; color:var(--slate-500);">Orders</span>
+          <span style="font-size:0.75rem; font-weight:600; color:var(--slate-500);">Claims</span>
         </div>
       </div>
     </div>
 
-    <!-- Expired -->
     <div class="qr-stat-card" style="--accent-color: #f43f5e;">
       <div class="qr-stat-icon" style="background: #fff1f2; color: #e11d48;">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
@@ -458,21 +503,21 @@
     <!-- Action Header -->
     <div class="qr-card-header">
       <div>
-        <h3 style="margin:0; font-size:1.2rem; font-weight:800; color:var(--slate-900);">Admin QR Vouchers & Single-Use Ledger</h3>
+        <h3 style="margin:0; font-size:1.2rem; font-weight:800; color:var(--slate-900);">Majasol QR Vouchers & Sticker Ledger</h3>
         <p style="margin:4px 0 0; font-size:0.825rem; color:var(--slate-500);">
-          Track promotional single-use security tokens, customer telephone bindings, redemption audits, and validity controls.
+          Displaying QR codes directly in table. Print individual or batch 1" × 1" thermal sticker labels.
         </p>
       </div>
 
       <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-        <button class="btn btn-secondary btn-sm" onclick="UI.exportTableToCSV('qr-table', 'QR_Vouchers_Ledger.csv')" style="display:inline-flex; align-items:center; gap:6px; font-weight:700;">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          Export CSV
+        <button type="button" class="btn btn-secondary btn-sm" onclick="batchPrintAllStickers()" style="display:inline-flex; align-items:center; gap:6px; font-weight:700;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
+          Print All 1"x1" Stickers
         </button>
 
         <a href="{{ route('qr.generator') }}" class="btn btn-primary btn-sm" style="display:inline-flex; align-items:center; gap:6px; font-weight:700; box-shadow:0 2px 8px rgba(79, 70, 229, 0.3);">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
-          Generate Single-Use QR
+          + Generate New Batch
         </a>
       </div>
     </div>
@@ -481,7 +526,7 @@
     <div class="qr-toolbar">
       <div class="search-input-wrapper">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input type="text" id="voucher-search-input" placeholder="Search code, phone, campaign, status..." onkeyup="filterVouchersTable()">
+        <input type="text" id="voucher-search-input" placeholder="Search batch, code, date, amount..." onkeyup="filterVouchersTable()">
       </div>
 
       <div class="status-filter-pills">
@@ -500,82 +545,76 @@
       </div>
     </div>
 
-    <!-- Table -->
+    <!-- Table With Direct QR Preview Column -->
     <div class="table-responsive">
       <table class="data-table ledger-table" id="qr-table" style="width:100%;">
         <thead>
           <tr>
-            <th style="width:170px;">Voucher Code</th>
-            <th>Campaign Title</th>
-            <th>Audience / Locked Phone</th>
-            <th>Discount Value</th>
-            <th>Validity Period</th>
+            <th style="width:60px; text-align:center;">QR</th>
+            <th style="width:160px;">Voucher Code</th>
+            <th>Batch Name</th>
+            <th>QR Date</th>
+            <th>Amount (₹)</th>
             <th>Status</th>
             <th>Redemption Audit</th>
-            <th style="text-align:right; width:160px;">Actions</th>
+            <th style="text-align:right; width:170px;">Actions & 1"x1" Print</th>
           </tr>
         </thead>
         <tbody>
           @forelse ($vouchers as $v)
             @php
+              $amt = (float)($v->amount ?: $v->discount_amount ?: $v->discount_percent ?: 0);
+              $batch = $v->batch_name ?: $v->title ?: 'MAJASOL';
               $isExpired = $v->valid_until && strtotime($v->valid_until) < strtotime(date('Y-m-d'));
               $statusKey = strtolower($v->status);
+              $claimUrl = url('/claim/' . $v->voucher_code);
             @endphp
-            <tr class="voucher-row" data-status="{{ $statusKey }}">
+            <tr class="voucher-row" data-status="{{ $statusKey }}" data-code="{{ $v->voucher_code }}" data-batch="{{ $batch }}" data-amt="{{ $amt }}" data-url="{{ $claimUrl }}">
               
-              <!-- Code with copy helper -->
+              <!-- 1. LIVE QR CODE PREVIEW COLUMN -->
+              <td style="text-align:center;">
+                <div class="table-qr-thumb list-qr-canvas" data-url="{{ $claimUrl }}" data-code="{{ $v->voucher_code }}" onclick='openStickerModal(@json($v))' title="Click to view 1x1 Sticker & Scan URL">
+                </div>
+              </td>
+
+              <!-- 2. VOUCHER CODE -->
               <td>
                 <span class="voucher-code-badge" onclick="copyCode('{{ $v->voucher_code }}')" title="Click to copy code">
                   <span>{{ $v->voucher_code }}</span>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
                 </span>
+                <div style="margin-top:3px;">
+                  <a href="{{ $claimUrl }}" target="_blank" style="font-size:0.72rem; color:var(--primary-600); text-decoration:none; display:inline-flex; align-items:center; gap:3px;">
+                    <span>🔗 Claim URL</span>
+                  </a>
+                </div>
               </td>
 
-              <!-- Campaign Title -->
+              <!-- 3. BATCH NAME -->
               <td>
-                <div style="font-weight:700; color:var(--slate-900);">{{ $v->title }}</div>
-                <div style="font-size:0.725rem; color:var(--slate-500); margin-top:2px;">Single-Use Discount Promo</div>
-              </td>
-
-              <!-- Audience / Phone Lock -->
-              <td>
-                <div style="font-weight:700; color:var(--slate-800);">{{ $v->customer_name ?: 'General Promotion' }}</div>
+                <div style="font-weight:700; color:var(--slate-900);">{{ $batch }}</div>
                 @if($v->customer_phone)
-                  <div style="font-size:0.75rem; color:var(--primary-700); font-weight:600; display:inline-flex; align-items:center; gap:4px; margin-top:2px;">
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
-                    +91 {{ $v->customer_phone }} (Locked)
+                  <div style="font-size:0.725rem; color:var(--primary-700); font-weight:600;">
+                    🔒 Lock: +91 {{ $v->customer_phone }}
                   </div>
-                @else
-                  <div style="font-size:0.75rem; color:var(--slate-400);">🌐 Open / Unrestricted</div>
                 @endif
               </td>
 
-              <!-- Discount Value & Threshold -->
-              <td>
-                <div style="font-weight:800; color:#059669; font-size:0.95rem;">
-                  @if($v->discount_type === 'Percentage')
-                    {{ $v->discount_percent }}% OFF
-                  @else
-                    ₹{{ number_format($v->discount_amount ?: $v->discount_percent) }} Flat
-                  @endif
-                </div>
-                <div style="font-size:0.725rem; color:var(--slate-500); margin-top:2px;">
-                  @if($v->max_discount_cap) Max Cap: ₹{{ number_format($v->max_discount_cap) }} @endif
-                  @if($v->min_order_value) • Min Bill: ₹{{ number_format($v->min_order_value) }} @endif
-                </div>
-              </td>
-
-              <!-- Validity Date -->
+              <!-- 4. QR DATE -->
               <td>
                 <div style="font-weight:600; color:var(--slate-800);">
-                  {{ $v->valid_until ? date('d M Y', strtotime($v->valid_until)) : 'No Expiry' }}
-                </div>
-                <div style="font-size:0.725rem; color:var(--slate-500); margin-top:2px;">
-                  From: {{ $v->valid_from ? date('d M Y', strtotime($v->valid_from)) : '—' }}
+                  {{ $v->qr_date ? date('d M Y', strtotime($v->qr_date)) : ($v->valid_from ? date('d M Y', strtotime($v->valid_from)) : '—') }}
                 </div>
               </td>
 
-              <!-- Status Badge -->
+              <!-- 5. AMOUNT (₹) -->
+              <td>
+                <div style="font-weight:800; color:#059669; font-size:1rem;">
+                  ₹{{ number_format($amt) }}
+                </div>
+              </td>
+
+              <!-- 6. STATUS -->
               <td>
                 @if($v->status === 'Active')
                   <span class="badge" style="background:#ecfdf5; color:#059669; border:1px solid #a7f3d0; font-weight:700; padding:4px 10px; border-radius:9999px;">
@@ -596,54 +635,53 @@
                 @endif
               </td>
 
-              <!-- Redemption Audit Details -->
+              <!-- 7. REDEMPTION AUDIT -->
               <td>
                 @if($v->is_redeemed || $v->redeemed_at)
                   <div style="font-weight:700; color:#7c3aed; font-size:0.8rem;">
                     {{ $v->redeemed_at ? (is_string($v->redeemed_at) ? $v->redeemed_at : $v->redeemed_at->format('d M Y, h:i A')) : 'Redeemed' }}
                   </div>
-                  @if($v->redeemed_invoice_no)
-                    <div style="font-family:var(--font-mono, monospace); font-size:0.725rem; color:var(--slate-600); margin-top:2px;">
-                      Ref: {{ $v->redeemed_invoice_no }}
-                    </div>
+                  @if($v->customer_phone)
+                    <div style="font-size:0.75rem; color:var(--slate-600);">Phone: {{ $v->customer_phone }}</div>
                   @endif
                 @else
-                  <span style="font-size:0.8rem; color:var(--slate-400);">— Awaiting Claim —</span>
+                  <span style="font-size:0.8rem; color:var(--slate-400);">— Not Claimed —</span>
                 @endif
               </td>
 
-              <!-- Action Buttons (View, Edit, Expire/Reactivate, Delete) -->
+              <!-- 8. ACTIONS & 1x1 PRINT -->
               <td style="text-align:right;">
                 <div style="display:inline-flex; gap:6px; align-items:center;">
                   
-                  <!-- Copy Frontend Claim URL -->
-                  <button type="button" class="action-icon-btn" title="Copy Customer Claim URL" onclick="navigator.clipboard.writeText('{{ url('/qr/scanner?code=' . urlencode($v->voucher_code)) }}'); alert('Copied Claim URL for {{ $v->voucher_code }}');" style="color:#4f46e5;">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                  <!-- Direct 1"x1" Print Button -->
+                  <button type="button" class="btn btn-secondary btn-sm" title="Print 1 inch by 1 inch Sticker" onclick='printSingleRowSticker(@json($v))' style="font-size:0.75rem; font-weight:800; padding:3px 8px; display:inline-flex; align-items:center; gap:4px; background:#f8fafc; border-color:#0f172a; color:#0f172a;">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
+                    1"×1"
                   </button>
 
-                  <!-- View Voucher Modal Trigger -->
-                  <button type="button" class="action-icon-btn info" title="View & Print Voucher Card" onclick='openViewModal(@json($v))'>
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  <!-- View Modal Trigger -->
+                  <button type="button" class="action-icon-btn info" title="View Sticker & Details" onclick='openStickerModal(@json($v))'>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                   </button>
 
-                  <!-- Edit Voucher Modal Trigger -->
+                  <!-- Edit Modal Trigger -->
                   <button type="button" class="action-icon-btn primary" title="Edit Voucher" onclick='openEditModal(@json($v))'>
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                   </button>
 
                   <!-- Expire / Reactivate Toggle -->
                   @if($v->status === 'Active')
                     <form action="{{ route('qr.expire', $v->id) }}" method="POST" style="display:inline;" onsubmit="return handleExpireVoucher(this, '{{ $v->voucher_code }}', event)">
                       @csrf
-                      <button type="submit" class="action-icon-btn warning" title="Expire / Revoke Voucher">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                      <button type="submit" class="action-icon-btn warning" title="Expire / Deactivate Voucher">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
                       </button>
                     </form>
                   @else
                     <form action="{{ route('qr.reactivate', $v->id) }}" method="POST" style="display:inline;" onsubmit="return handleReactivateVoucher(this, '{{ $v->voucher_code }}', event)">
                       @csrf
                       <button type="submit" class="action-icon-btn" title="Reactivate Voucher">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
                       </button>
                     </form>
                   @endif
@@ -653,7 +691,7 @@
                     @csrf
                     @method('DELETE')
                     <button type="submit" class="action-icon-btn danger" title="Delete Voucher">
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                     </button>
                   </form>
 
@@ -668,8 +706,8 @@
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/></svg>
                 </div>
                 <div style="font-weight:700; color:var(--slate-700); font-size:1rem; margin-bottom:4px;">No QR vouchers found</div>
-                <p style="font-size:0.85rem; color:var(--slate-500); margin:0 0 16px;">Generate your first single-use discount QR code to begin tracking customer claims.</p>
-                <a href="{{ route('qr.generator') }}" class="btn btn-primary btn-sm">+ Generate First QR Voucher</a>
+                <p style="font-size:0.85rem; color:var(--slate-500); margin:0 0 16px;">Generate your first QR batch to print 1"x1" stickers.</p>
+                <a href="{{ route('qr.generator') }}" class="btn btn-primary btn-sm">+ Generate First QR Batch</a>
               </td>
             </tr>
           @endforelse
@@ -682,181 +720,64 @@
 </div>
 
 <!-- ==========================================================================
-     VIEW VOUCHER PASS MODAL
+     STICKER VIEW & PRINT MODAL
      ========================================================================== -->
-<div class="modal-backdrop" id="viewVoucherModal" style="display:none;" onclick="if(event.target===this) closeViewModal()">
-  <div class="modal-dialog modal-lg" style="max-width:820px;">
+<div class="modal-backdrop" id="stickerModal" style="display:none;" onclick="if(event.target===this) closeStickerModal()">
+  <div class="modal-dialog" style="max-width:560px;">
     
     <div class="modal-header">
       <div class="modal-title">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-        <span>Voucher Details & Live Pass</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/></svg>
+        <span>1" × 1" Majasol Sticker & Scan URL</span>
       </div>
-      <button type="button" class="modal-close-btn" onclick="closeViewModal()">
+      <button type="button" class="modal-close-btn" onclick="closeStickerModal()">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </div>
 
-    <div class="modal-body" style="padding:24px;">
-      <div style="display:grid; grid-template-columns:360px 1fr; gap:24px; align-items:start;">
-        
-        <!-- LEFT: Luxury Live Voucher Pass Card -->
-        <div>
-          <div id="modal-voucher-card" class="luxury-voucher-pass theme-indigo">
-            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-              <div>
-                <div style="font-size:0.68rem; font-weight:800; text-transform:uppercase; letter-spacing:1.5px; opacity:0.85;">
-                  GARMENT ERP • OFFICIAL PASS
-                </div>
-                <div style="font-size:1.05rem; font-weight:800; line-height:1.25; margin-top:2px;" id="modal-view-title">
-                  Discount Voucher
-                </div>
-              </div>
-              <div style="background:rgba(255,255,255,0.2); padding:4px 8px; border-radius:6px; font-size:0.65rem; font-weight:800; letter-spacing:0.5px; text-transform:uppercase;">
-                PROMO
-              </div>
-            </div>
-
-            <div style="margin-top:8px;">
-              <span style="font-size:0.75rem; background:rgba(0,0,0,0.25); padding:3px 8px; border-radius:4px; font-weight:600; opacity:0.9;" id="modal-view-cust">
-                Audience: General
-              </span>
-            </div>
-
-            <div style="margin:14px 0 6px; text-align:center;">
-              <div style="font-size:2.2rem; font-weight:900; letter-spacing:-0.03em; line-height:1;" id="modal-view-disc">
-                15% OFF
-              </div>
-              <div style="font-size:0.75rem; opacity:0.9; margin-top:4px; font-weight:600;" id="modal-view-cap">
-                Up to ₹2,500 on min. ₹1,500 bill
-              </div>
-            </div>
-
-            <div class="perforation-line"></div>
-
-            <div class="ticket-qr-container">
-              <div id="modal-qr-container" style="display:flex; justify-content:center; align-items:center;"></div>
-            </div>
-
-            <div style="text-align:center; margin-top:12px;">
-              <div class="copy-badge-btn" onclick="copyModalCode()" style="font-family:var(--font-mono, monospace); font-weight:800; font-size:1.05rem; letter-spacing:1px; background:rgba(0,0,0,0.3); padding:6px 14px; border-radius:8px; display:inline-flex; align-items:center; gap:6px;" title="Click to copy">
-                <span id="modal-view-code">CODE-1234</span>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
-              </div>
-            </div>
-
-            <div style="margin-top:12px; font-size:0.68rem; opacity:0.8; text-align:center; display:flex; justify-content:space-between; align-items:center;">
-            <div style="margin-top:6px; font-size:0.7rem; opacity:0.85; text-align:center; word-break:break-all;">
-              <span>🔗 Frontend URL:</span>
-              <a href="javascript:void(0)" onclick="openModalClaimPortal()" id="modal-prev-url-text" style="color:#fff; text-decoration:underline; font-weight:600;">/qr/scanner?code=...</a>
-            </div>
-
-            <div style="margin-top:10px; font-size:0.68rem; opacity:0.8; text-align:center; display:flex; justify-content:space-between; align-items:center;">
-              <span id="modal-view-expiry">Valid until: 30 Days</span>
-              <span id="modal-view-token-type">🔒 Single-Use Token</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- RIGHT: Detailed Breakdown & Audit Logs -->
-        <div style="display:flex; flex-direction:column; gap:16px;">
-          
-          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px;">
-            <div style="font-size:0.75rem; font-weight:800; color:var(--slate-500); text-transform:uppercase; margin-bottom:10px;">Security & Audience Locking</div>
-            
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:0.85rem;">
-              <div>
-                <span style="color:var(--slate-500); font-size:0.75rem; display:block;">Target Customer:</span>
-                <strong id="audit-cust-name" style="color:var(--slate-900);">—</strong>
-              </div>
-              <div>
-                <span style="color:var(--slate-500); font-size:0.75rem; display:block;">Security Mobile Lock:</span>
-                <strong id="audit-cust-phone" style="color:var(--primary-700); font-family:var(--font-mono, monospace);">+91 —</strong>
-              </div>
-              <div>
-                <span style="color:var(--slate-500); font-size:0.75rem; display:block;">Current Status:</span>
-                <span id="audit-status-badge">● Active</span>
-              </div>
-              <div>
-                <span style="color:var(--slate-500); font-size:0.75rem; display:block;">Token Type:</span>
-                <strong style="color:var(--slate-800);">Cryptographic Single-Use</strong>
-              </div>
-            </div>
-          </div>
-
-          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px;">
-            <div style="font-size:0.75rem; font-weight:800; color:var(--slate-500); text-transform:uppercase; margin-bottom:10px;">Discount Thresholds & Rules</div>
-            
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:0.85rem;">
-              <div>
-                <span style="color:var(--slate-500); font-size:0.75rem; display:block;">Discount Mechanic:</span>
-                <strong id="audit-disc-type" style="color:#059669;">—</strong>
-              </div>
-              <div>
-                <span style="color:var(--slate-500); font-size:0.75rem; display:block;">Maximum Savings Cap:</span>
-                <strong id="audit-max-cap" style="color:var(--slate-800);">₹—</strong>
-              </div>
-              <div>
-                <span style="color:var(--slate-500); font-size:0.75rem; display:block;">Minimum Order Value:</span>
-                <strong id="audit-min-bill" style="color:var(--slate-800);">₹—</strong>
-              </div>
-              <div>
-                <span style="color:var(--slate-500); font-size:0.75rem; display:block;">Validity Window:</span>
-                <strong id="audit-validity-range" style="color:var(--slate-800);">—</strong>
-              </div>
-            </div>
-          </div>
-
-          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px;">
-            <div style="font-size:0.75rem; font-weight:800; color:var(--slate-500); text-transform:uppercase; margin-bottom:10px;">Redemption Audit Trail</div>
-            
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:0.85rem;">
-              <div>
-                <span style="color:var(--slate-500); font-size:0.75rem; display:block;">Redemption State:</span>
-                <strong id="audit-redeemed-state" style="color:var(--slate-800);">Awaiting Claim</strong>
-              </div>
-              <div>
-                <span style="color:var(--slate-500); font-size:0.75rem; display:block;">Claim Reference / Invoice:</span>
-                <strong id="audit-claim-ref" style="font-family:var(--font-mono, monospace); color:var(--slate-800);">—</strong>
-              </div>
-              <div style="grid-column:span 2;">
-                <span style="color:var(--slate-500); font-size:0.75rem; display:block;">Redemption Timestamp:</span>
-                <span id="audit-redeemed-time" style="color:var(--slate-700); font-weight:600;">—</span>
-              </div>
-            </div>
-          </div>
-
-        </div>
-
-      </div>
-    </div>
-
-    <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center;">
-      <button type="button" class="btn btn-secondary" onclick="closeViewModal()">Close</button>
+    <div class="modal-body" style="padding:24px; text-align:center;">
       
-      <div style="display:flex; gap:10px; align-items:center;">
-        <button type="button" class="btn btn-secondary" onclick="copyModalCode()" style="display:inline-flex; align-items:center; gap:6px;">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
-          Copy Code
-        </button>
-
-        <button type="button" class="btn btn-secondary" onclick="copyModalClaimLink()" style="display:inline-flex; align-items:center; gap:6px; color:#4f46e5; border-color:#c7d2fe;" title="Copy Customer Claim URL">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-          Copy Claim URL
-        </button>
-
-        <button type="button" class="btn btn-primary" onclick="printVoucherDirectly()" style="display:inline-flex; align-items:center; gap:6px;">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
-          Print Voucher
-        </button>
-
-        <button type="button" class="btn btn-secondary" id="btn-edit-from-view" onclick="transitionToEditModal()" style="display:inline-flex; align-items:center; gap:6px;">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-          Edit Voucher
-        </button>
+      <!-- Exact 1"x1" Majasol Sticker Card -->
+      <div class="majasol-sticker-card" id="modal-sticker-card">
+        <div class="sticker-brand" id="m-batch-name">MAJASOL BATCH</div>
+        <div class="sticker-qr">
+          <div id="modal-qr-target"></div>
+        </div>
+        <div class="sticker-footer">
+          <span class="sticker-amt" id="m-amt">₹500</span>
+          <span class="sticker-code" id="m-code">MAJ-500-1234</span>
+        </div>
       </div>
-    </div>
+
+      <!-- Frontend Scan URL breakdown -->
+      <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:14px; margin-top:20px; text-align:left;">
+        <div style="font-size:0.75rem; font-weight:800; color:var(--slate-600); text-transform:uppercase; margin-bottom:4px; display:flex; justify-content:space-between;">
+          <span>🔗 Frontend Customer Scan URL</span>
+          <span style="color:#059669; font-weight:700;">After Scanning QR</span>
+        </div>
+        <div style="font-size:0.8rem; font-family:var(--font-mono, monospace); color:var(--primary-700); word-break:break-all; background:#fff; padding:8px 10px; border-radius:6px; border:1px solid #cbd5e1;" id="m-scan-url">
+          https://...
+        </div>
+        <div style="font-size:0.75rem; color:var(--slate-500); margin-top:6px;">
+          When customer scans the 1"x1" sticker with any phone camera, it opens this claim portal to redeem discount.
+        </div>
       </div>
+
+      <!-- Modal Action Buttons -->
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:20px;">
+        <button type="button" class="btn btn-secondary" onclick="copyModalClaimUrl()">
+          Copy Scan Link
+        </button>
+        <div style="display:flex; gap:8px;">
+          <a href="#" id="m-open-claim-btn" target="_blank" class="btn btn-secondary">
+            Open Claim Page
+          </a>
+          <button type="button" class="btn btn-primary" onclick="printModalSticker()" style="background:#0f172a; border-color:#0f172a; color:#fff; font-weight:800;">
+            Print 1"×1" Sticker
+          </button>
+        </div>
+      </div>
+
     </div>
 
   </div>
@@ -866,727 +787,363 @@
      EDIT VOUCHER MODAL
      ========================================================================== -->
 <div class="modal-backdrop" id="editVoucherModal" style="display:none;" onclick="if(event.target===this) closeEditModal()">
-  <div class="modal-dialog modal-lg" style="max-width:680px;">
+  <div class="modal-dialog" style="max-width:540px;">
     
     <div class="modal-header">
       <div class="modal-title">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-        <span>Edit Discount QR Voucher: <strong id="edit-modal-code-title" style="color:var(--primary-700); font-family:var(--font-mono, monospace);"></strong></span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        <span>Edit QR Voucher</span>
       </div>
       <button type="button" class="modal-close-btn" onclick="closeEditModal()">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </div>
 
-    <form id="edit-voucher-form" method="POST" action="">
+    <form id="edit-voucher-form" onsubmit="handleEditSubmit(event)">
       @csrf
-      @method('PUT')
       <input type="hidden" id="edit_voucher_id" name="id">
 
-      <div class="modal-body" style="padding:22px; max-height:calc(85vh - 120px); overflow-y:auto;">
+      <div class="modal-body" style="padding:22px; display:flex; flex-direction:column; gap:16px;">
         
-        <div style="display:flex; flex-direction:column; gap:16px;">
-          
-          <!-- Campaign Title -->
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label" style="font-weight:700;">Voucher Code</label>
+          <input type="text" id="edit_voucher_code" class="form-control" readonly style="background:#f1f5f9; font-family:var(--font-mono, monospace); font-weight:800;">
+        </div>
+
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label" style="font-weight:700;">Batch Name <span style="color:red;">*</span></label>
+          <input type="text" id="edit_batch_name" name="batch_name" class="form-control" required style="font-weight:700;">
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
           <div class="form-group" style="margin-bottom:0;">
-            <label class="form-label" style="font-weight:700; color:var(--slate-800);">Promotion Campaign Title <span style="color:#ef4444;">*</span></label>
-            <input type="text" name="title" id="edit_title" class="form-control" required placeholder="e.g. VIP Summer Discount">
-            <div class="preset-pills">
-              <button type="button" class="preset-pill-btn" onclick="setEditCampaignTitle('Festive Garment Discount Voucher')">Festive Offer</button>
-              <button type="button" class="preset-pill-btn" onclick="setEditCampaignTitle('VIP Customer Exclusive Privilege')">VIP Exclusive</button>
-              <button type="button" class="preset-pill-btn" onclick="setEditCampaignTitle('First Purchase Welcome Discount')">Welcome Offer</button>
-              <button type="button" class="preset-pill-btn" onclick="setEditCampaignTitle('End of Season Clearance Bonanza')">Clearance Sale</button>
-            </div>
+            <label class="form-label" style="font-weight:700;">QR Date</label>
+            <input type="date" id="edit_qr_date" name="qr_date" class="form-control">
           </div>
 
-          <!-- Customer Audience & Phone Lock -->
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
-            <div class="form-group" style="margin-bottom:0;">
-              <label class="form-label" style="font-weight:700; color:var(--slate-800);">Select Customer Master</label>
-              <select id="edit_registered_customer_select" class="form-control" onchange="onEditCustomerSelect(this)">
-                <option value="">-- General / Custom Audience --</option>
-                @if(isset($customers))
-                  @foreach ($customers as $c)
-                    <option value="{{ $c->name }}" data-phone="{{ $c->mobile ?? $c->phone ?? '' }}">{{ $c->name }} ({{ $c->mobile ?? 'No Mobile' }})</option>
-                  @endforeach
-                @endif
-              </select>
-            </div>
-
-            <div class="form-group" style="margin-bottom:0;">
-              <label class="form-label" style="font-weight:700; color:var(--slate-800);">Audience / Customer Name</label>
-              <input type="text" name="customer_name" id="edit_cust_name" class="form-control" placeholder="Retail Customer Club">
-            </div>
-          </div>
-
-          <!-- Customer Phone Security Lock -->
           <div class="form-group" style="margin-bottom:0;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-              <label class="form-label" style="font-weight:700; color:var(--slate-800); margin:0;">
-                Target Customer Mobile Phone <span style="font-size:0.75rem; font-weight:500; color:var(--slate-500);">(Security Lock)</span>
-              </label>
-              <span style="font-size:0.75rem; color:var(--primary-600); font-weight:600;">🔒 Locks voucher to phone</span>
-            </div>
-            <div style="display:flex; align-items:center; position:relative;">
-              <span style="position:absolute; left:12px; font-weight:700; color:var(--slate-400); font-size:0.9rem;">+91</span>
-              <input type="text" name="customer_phone" id="edit_cust_phone" class="form-control" style="padding-left:46px; font-family:var(--font-mono, monospace);" placeholder="9876543210">
-            </div>
+            <label class="form-label" style="font-weight:700;">Amount (₹) <span style="color:red;">*</span></label>
+            <input type="number" id="edit_amount" name="amount" class="form-control" required min="1" step="1" style="font-weight:800; color:#059669;">
           </div>
+        </div>
 
-          <!-- Discount Calculation Type -->
-          <div class="form-group" style="margin-bottom:0;">
-            <label class="form-label" style="font-weight:700; color:var(--slate-800);">Discount Calculation Type <span style="color:#ef4444;">*</span></label>
-            <input type="hidden" name="discount_type" id="edit_type" value="Percentage">
-            <div class="discount-toggle-group">
-              <button type="button" id="edit_btn_type_percent" class="discount-toggle-btn active" onclick="switchEditDiscountType('Percentage')">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>
-                Percentage (% OFF)
-              </button>
-              <button type="button" id="edit_btn_type_flat" class="discount-toggle-btn" onclick="switchEditDiscountType('Flat')">
-                <span style="font-size:1.1rem; font-weight:800; line-height:1;">₹</span>
-                Flat Cash Discount
-              </button>
-            </div>
-          </div>
-
-          <!-- Dynamic Discount Value Inputs -->
-          <div id="edit_group_percent">
-            <div class="form-group" style="margin-bottom:0;">
-              <label class="form-label" style="font-weight:700; color:var(--slate-800);">Discount Percentage (%) <span style="color:#ef4444;">*</span></label>
-              <div style="position:relative;">
-                <input type="number" step="0.5" min="1" max="100" name="discount_percent" id="edit_percent" class="form-control" value="15" style="font-weight:700; font-size:1.05rem;">
-                <span style="position:absolute; right:14px; top:50%; transform:translateY(-50%); font-weight:800; color:var(--slate-400);">%</span>
-              </div>
-              <div class="preset-pills">
-                <button type="button" class="preset-pill-btn" onclick="setEditPercent(10)">10%</button>
-                <button type="button" class="preset-pill-btn" onclick="setEditPercent(15)">15%</button>
-                <button type="button" class="preset-pill-btn" onclick="setEditPercent(20)">20%</button>
-                <button type="button" class="preset-pill-btn" onclick="setEditPercent(25)">25%</button>
-                <button type="button" class="preset-pill-btn" onclick="setEditPercent(50)">50%</button>
-              </div>
-            </div>
-          </div>
-
-          <div id="edit_group_amount" style="display:none;">
-            <div class="form-group" style="margin-bottom:0;">
-              <label class="form-label" style="font-weight:700; color:var(--slate-800);">Flat Discount Amount (₹) <span style="color:#ef4444;">*</span></label>
-              <div style="position:relative;">
-                <input type="number" step="10" min="1" name="discount_amount" id="edit_amount" class="form-control" value="500" style="font-weight:700; font-size:1.05rem;" disabled>
-                <span style="position:absolute; right:14px; top:50%; transform:translateY(-50%); font-weight:800; color:var(--slate-400);">₹</span>
-              </div>
-              <div class="preset-pills">
-                <button type="button" class="preset-pill-btn" onclick="setEditAmount(200)">₹200</button>
-                <button type="button" class="preset-pill-btn" onclick="setEditAmount(500)">₹500</button>
-                <button type="button" class="preset-pill-btn" onclick="setEditAmount(1000)">₹1,000</button>
-                <button type="button" class="preset-pill-btn" onclick="setEditAmount(2000)">₹2,000</button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Cap & Min Bill -->
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
-            <div class="form-group" style="margin-bottom:0;">
-              <label class="form-label" style="font-weight:700; color:var(--slate-800);">Max Discount Cap (₹)</label>
-              <input type="number" step="100" name="max_discount_cap" id="edit_cap" class="form-control" value="2500">
-            </div>
-
-            <div class="form-group" style="margin-bottom:0;">
-              <label class="form-label" style="font-weight:700; color:var(--slate-800);">Min. Bill Value (₹)</label>
-              <input type="number" step="100" name="min_order_value" id="edit_min_bill" class="form-control" value="1500">
-            </div>
-          </div>
-
-          <!-- Date Ranges -->
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
-            <div class="form-group" style="margin-bottom:0;">
-              <label class="form-label" style="font-weight:700; color:var(--slate-800);">Valid From</label>
-              <input type="date" name="valid_from" id="edit_valid_from" class="form-control">
-            </div>
-
-            <div class="form-group" style="margin-bottom:0;">
-              <label class="form-label" style="font-weight:700; color:var(--slate-800);">Valid Until (Expiry)</label>
-              <input type="date" name="valid_until" id="edit_valid_until" class="form-control">
-            </div>
-          </div>
-
-          <div class="preset-pills">
-            <span style="font-size:0.75rem; color:var(--slate-500); align-self:center; margin-right:4px;">Quick Extend:</span>
-            <button type="button" class="preset-pill-btn" onclick="addDaysToEditExpiry(7)">+7 Days</button>
-            <button type="button" class="preset-pill-btn" onclick="addDaysToEditExpiry(15)">+15 Days</button>
-            <button type="button" class="preset-pill-btn" onclick="addDaysToEditExpiry(30)">+30 Days</button>
-            <button type="button" class="preset-pill-btn" onclick="addDaysToEditExpiry(60)">+60 Days</button>
-          </div>
-
-          <!-- Status Selector -->
-          <div class="form-group" style="margin-bottom:0;">
-            <label class="form-label" style="font-weight:700; color:var(--slate-800);">Voucher Status <span style="color:#ef4444;">*</span></label>
-            <select name="status" id="edit_status" class="form-control" style="font-weight:700;">
-              <option value="Active">● Active (Claimable)</option>
-              <option value="Expired">✕ Expired (Revoked)</option>
-              <option value="Redeemed">✓ Redeemed (Used)</option>
-            </select>
-          </div>
-
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label" style="font-weight:700;">Status</label>
+          <select id="edit_status" name="status" class="form-control" style="font-weight:700;">
+            <option value="Active">Active</option>
+            <option value="Redeemed">Redeemed</option>
+            <option value="Expired">Expired</option>
+          </select>
         </div>
 
       </div>
 
-      <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center;">
+      <div class="modal-footer" style="padding:16px 22px; border-top:1px solid #e2e8f0; display:flex; justify-content:space-between;">
         <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
-        <button type="submit" class="btn btn-primary" style="display:inline-flex; align-items:center; gap:8px; font-weight:800; box-shadow:0 2px 10px rgba(79, 70, 229, 0.3);">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-          Save Changes
-        </button>
+        <button type="submit" id="btn-save-edit" class="btn btn-primary" style="font-weight:800;">Save Changes</button>
       </div>
 
     </form>
-
   </div>
 </div>
 
-<!-- QRCode Library CDN for crisp client-side QR generation in modal -->
+<!-- ==========================================================================
+     HIDDEN PRINT CONTAINER FOR BATCH & SINGLE 1"x1" STICKERS
+     ========================================================================== -->
+<div id="print-container-area" style="display:none;"></div>
+
+<!-- QRCode Library CDN -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
 @push('scripts')
 <script>
-  let currentStatusFilter = 'all';
-  let activeViewVoucher = null;
+  let activeModalVoucher = null;
+  const baseUrl = "{{ url('/claim') }}";
 
   function copyCode(code) {
-    navigator.clipboard.writeText(code).then(() => {
-      if (window.Toast) {
-        Toast.fire({
-          icon: 'success',
-          title: `Voucher Code ${code} copied!`
-        });
-      } else if (window.Swal) {
-        Swal.fire({
-          toast: true,
-          position: 'top-end',
-          icon: 'success',
-          title: `Voucher Code ${code} copied!`,
-          showConfirmButton: false,
-          timer: 2000
-        });
+    navigator.clipboard.writeText(code);
+    if (window.UI && UI.showToast) {
+      UI.showToast('Copied', `Voucher Code ${code} copied to clipboard`, 'info');
+    } else {
+      alert(`Copied Code: ${code}`);
+    }
+  }
+
+  function setStatusFilter(status, btn) {
+    document.querySelectorAll('.status-filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    const rows = document.querySelectorAll('.voucher-row');
+    rows.forEach(r => {
+      const rowStatus = r.getAttribute('data-status');
+      if (status === 'all' || rowStatus === status) {
+        r.style.display = '';
+      } else {
+        r.style.display = 'none';
       }
     });
-  }
-
-  function copyModalCode() {
-    if (activeViewVoucher) {
-      copyCode(activeViewVoucher.voucher_code);
-    }
-  }
-
-  /* ==========================================================================
-     VIEW VOUCHER MODAL CONTROLLER
-     ========================================================================== */
-  function openViewModal(v) {
-    activeViewVoucher = v;
-
-    document.getElementById('modal-view-title').innerText = v.title || 'Special Discount Voucher';
-    document.getElementById('modal-view-cust').innerText = 'Audience: ' + (v.customer_name || 'General Promotion');
-    document.getElementById('modal-view-code').innerText = v.voucher_code;
-
-    const isPercent = v.discount_type === 'Percentage';
-    if (isPercent) {
-      document.getElementById('modal-view-disc').innerText = (v.discount_percent || 15) + '% OFF';
-      document.getElementById('modal-view-cap').innerText = `Up to ₹${Number(v.max_discount_cap || 2500).toLocaleString('en-IN')} on min. ₹${Number(v.min_order_value || 1500).toLocaleString('en-IN')} bill`;
-    } else {
-      const amt = v.discount_amount || v.discount_percent || 500;
-      document.getElementById('modal-view-disc').innerText = '₹' + Number(amt).toLocaleString('en-IN') + ' FLAT OFF';
-      document.getElementById('modal-view-cap').innerText = `Flat discount on min. ₹${Number(v.min_order_value || 1500).toLocaleString('en-IN')} bill`;
-    }
-
-    if (v.valid_until) {
-      const expDate = new Date(v.valid_until);
-      document.getElementById('modal-view-expiry').innerText = 'Valid until: ' + expDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-    } else {
-      document.getElementById('modal-view-expiry').innerText = 'Valid indefinitely';
-    }
-
-    // Security & Audience Audit
-    document.getElementById('audit-cust-name').innerText = v.customer_name || 'General Promotion';
-    document.getElementById('audit-cust-phone').innerText = v.customer_phone ? `+91 ${v.customer_phone}` : '🌐 Unlocked (Open)';
-    
-    // Status Badge
-    const statusBadgeElem = document.getElementById('audit-status-badge');
-    if (v.status === 'Active') {
-      statusBadgeElem.innerHTML = '<span class="badge" style="background:#ecfdf5; color:#059669; border:1px solid #a7f3d0; font-weight:700; padding:3px 8px; border-radius:6px;">● Active</span>';
-    } else if (v.status === 'Redeemed') {
-      statusBadgeElem.innerHTML = '<span class="badge" style="background:#f5f3ff; color:#7c3aed; border:1px solid #ddd6fe; font-weight:700; padding:3px 8px; border-radius:6px;">✓ Redeemed</span>';
-    } else {
-      statusBadgeElem.innerHTML = '<span class="badge" style="background:#fff1f2; color:#e11d48; border:1px solid #fecdd3; font-weight:700; padding:3px 8px; border-radius:6px;">✕ ' + v.status + '</span>';
-    }
-
-    // Rules Audit
-    document.getElementById('audit-disc-type').innerText = isPercent ? `${v.discount_percent}% Percentage` : `₹${v.discount_amount || v.discount_percent} Flat Cash`;
-    document.getElementById('audit-max-cap').innerText = v.max_discount_cap ? `₹${Number(v.max_discount_cap).toLocaleString('en-IN')}` : 'No Limit';
-    document.getElementById('audit-min-bill').innerText = v.min_order_value ? `₹${Number(v.min_order_value).toLocaleString('en-IN')}` : '₹0';
-    document.getElementById('audit-validity-range').innerText = (v.valid_from ? new Date(v.valid_from).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—') + ' → ' + (v.valid_until ? new Date(v.valid_until).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Indefinite');
-
-    // Redemption Audit
-    document.getElementById('audit-redeemed-state').innerText = v.is_redeemed || v.status === 'Redeemed' ? 'Claimed & Redeemed' : 'Awaiting Claim';
-    document.getElementById('audit-claim-ref').innerText = v.redeemed_invoice_no || '—';
-    document.getElementById('audit-redeemed-time').innerText = v.redeemed_at ? (typeof v.redeemed_at === 'string' ? v.redeemed_at : new Date(v.redeemed_at).toLocaleString('en-IN')) : '—';
-
-    // Frontend Claim URL Preview
-    const targetUrl = getQrFrontendUrl(v.voucher_code);
-    const urlElem = document.getElementById('modal-prev-url-text');
-    if (urlElem) {
-      urlElem.innerText = targetUrl.replace(/^https?:\/\//i, '');
-      urlElem.title = targetUrl;
-    }
-
-    // Render QR Code
-    renderModalQrCode(v.voucher_code);
-
-    // Open Backdrop
-    const modal = document.getElementById('viewVoucherModal');
-    modal.style.display = 'flex';
-    setTimeout(() => modal.classList.add('open'), 10);
-  }
-
-  function getQrFrontendUrl(code) {
-    const base = (window.APP_URL || window.location.origin).replace(/\/+$/, '');
-    return `${base}/qr/scanner?code=${encodeURIComponent(code)}`;
-  }
-
-  function closeViewModal() {
-    const modal = document.getElementById('viewVoucherModal');
-    modal.classList.remove('open');
-    setTimeout(() => { modal.style.display = 'none'; }, 200);
-  }
-
-  function transitionToEditModal() {
-    if (activeViewVoucher) {
-      const v = activeViewVoucher;
-      closeViewModal();
-      setTimeout(() => openEditModal(v), 250);
-    }
-  }
-
-  function renderModalQrCode(code) {
-    const container = document.getElementById('modal-qr-container');
-    if (!container) return;
-    container.innerHTML = '';
-    const targetUrl = getQrFrontendUrl(code);
-
-    if (typeof QRCode !== 'undefined') {
-      try {
-        new QRCode(container, {
-          text: targetUrl,
-          width: 130,
-          height: 130,
-          colorDark: "#0f172a",
-          colorLight: "#ffffff",
-          correctLevel: QRCode.CorrectLevel.H
-        });
-      } catch (e) {
-        container.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=130x130&data=${encodeURIComponent(targetUrl)}" alt="QR Code" style="width:130px; height:130px; border-radius:6px; display:block;">`;
-      }
-    } else {
-      container.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=130x130&data=${encodeURIComponent(targetUrl)}" alt="QR Code" style="width:130px; height:130px; border-radius:6px; display:block;">`;
-    }
-  }
-
-  function copyModalClaimLink() {
-    if (!activeViewVoucher) return;
-    const url = getQrFrontendUrl(activeViewVoucher.voucher_code);
-    navigator.clipboard.writeText(url).then(() => {
-      alert(`Copied Claim URL:\n${url}`);
-    });
-  }
-
-  function openModalClaimPortal() {
-    if (!activeViewVoucher) return;
-    window.open(getQrFrontendUrl(activeViewVoucher.voucher_code), '_blank');
-  }
-
-  /* ==========================================================================
-     SINGLE-PAGE VOUCHER PASS PRINT ENGINE
-     ========================================================================== */
-  function printVoucherDirectly() {
-    if (!activeViewVoucher) return;
-    const v = activeViewVoucher;
-
-    let qrImgSrc = '';
-    const qrCanvas = document.querySelector('#modal-qr-container canvas');
-    const qrImg = document.querySelector('#modal-qr-container img');
-    if (qrCanvas) {
-      try { qrImgSrc = qrCanvas.toDataURL('image/png'); } catch (e) { if (qrImg) qrImgSrc = qrImg.src; }
-    } else if (qrImg) {
-      qrImgSrc = qrImg.src;
-    }
-
-    const title = v.title || 'Festive Garment Discount Voucher';
-    const cust = 'Audience: ' + (v.customer_name || 'Retail Customer Club');
-    const disc = v.discount_type === 'Percentage' ? `${v.discount_percent || 15}% OFF` : `₹${Number(v.discount_amount || v.discount_percent || 500).toLocaleString('en-IN')} FLAT OFF`;
-    const cap = v.discount_type === 'Percentage' ? `Up to ₹${Number(v.max_discount_cap || 2500).toLocaleString('en-IN')} on min. ₹${Number(v.min_order_value || 1500).toLocaleString('en-IN')} bill` : `Flat discount on min. ₹${Number(v.min_order_value || 1500).toLocaleString('en-IN')} bill`;
-    const code = v.voucher_code;
-    const expiry = v.valid_until ? ('Valid until: ' + new Date(v.valid_until).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })) : 'Valid indefinitely';
-
-    let printFrame = document.getElementById('history-print-iframe');
-    if (printFrame) printFrame.remove();
-
-    printFrame = document.createElement('iframe');
-    printFrame.id = 'history-print-iframe';
-    printFrame.style.position = 'fixed';
-    printFrame.style.top = '-9999px';
-    printFrame.style.left = '-9999px';
-    printFrame.style.width = '0';
-    printFrame.style.height = '0';
-    printFrame.style.border = '0';
-    document.body.appendChild(printFrame);
-
-    const doc = printFrame.contentWindow.document;
-    doc.open();
-    doc.write(`
-      <!DOCTYPE html>
-      <html lang="en">
-      <head>
-        <meta charset="UTF-8">
-        <title>${title} - ${code}</title>
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800;900&display=swap" rel="stylesheet">
-        <style>
-          @page {
-            size: portrait;
-            margin: 15mm auto;
-          }
-          * {
-            box-sizing: border-box;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-            color-adjust: exact !important;
-          }
-          html, body {
-            margin: 0;
-            padding: 0;
-            background: #ffffff;
-            font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-            min-height: 100%;
-          }
-          .print-wrapper {
-            width: 370px;
-            margin: 10px auto;
-            page-break-inside: avoid;
-            break-inside: avoid;
-          }
-          .luxury-voucher-pass {
-            position: relative;
-            border-radius: 20px;
-            padding: 24px 20px;
-            color: #ffffff;
-            overflow: hidden;
-            box-shadow: 0 10px 25px rgba(15, 23, 42, 0.25);
-            background: linear-gradient(135deg, #312e81 0%, #4338ca 50%, #6366f1 100%) !important;
-            page-break-inside: avoid;
-            break-inside: avoid;
-          }
-          .perforation-line {
-            position: relative;
-            margin: 18px -20px;
-            border-top: 2px dashed rgba(255, 255, 255, 0.4);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-          }
-          .perforation-line::before,
-          .perforation-line::after {
-            content: '';
-            position: absolute;
-            width: 22px;
-            height: 22px;
-            background: #ffffff !important;
-            border-radius: 50%;
-            top: -11px;
-            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15);
-          }
-          .perforation-line::before { left: -11px; }
-          .perforation-line::after { right: -11px; }
-
-          .ticket-qr-container {
-            background: #ffffff !important;
-            border-radius: 14px;
-            padding: 12px;
-            width: 154px;
-            height: 154px;
-            margin: 0 auto;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-          }
-          .ticket-qr-container img {
-            width: 130px !important;
-            height: 130px !important;
-            display: block !important;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="print-wrapper">
-          <div class="luxury-voucher-pass">
-            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-              <div>
-                <div style="font-size:0.68rem; font-weight:800; text-transform:uppercase; letter-spacing:1.5px; opacity:0.85;">
-                  GARMENT ERP • OFFICIAL PASS
-                </div>
-                <div style="font-size:1.1rem; font-weight:800; line-height:1.25; margin-top:2px;">
-                  ${title}
-                </div>
-              </div>
-              <div style="background:rgba(255,255,255,0.2); padding:4px 8px; border-radius:6px; font-size:0.65rem; font-weight:800; letter-spacing:0.5px; text-transform:uppercase;">
-                PROMO
-              </div>
-            </div>
-
-            <div style="margin-top:8px;">
-              <span style="font-size:0.75rem; background:rgba(0,0,0,0.25); padding:3px 8px; border-radius:4px; font-weight:600; opacity:0.9;">
-                ${cust}
-              </span>
-            </div>
-
-            <div style="margin:16px 0 6px; text-align:center;">
-              <div style="font-size:2.4rem; font-weight:900; letter-spacing:-0.03em; line-height:1;">
-                ${disc}
-              </div>
-              <div style="font-size:0.75rem; opacity:0.9; margin-top:4px; font-weight:600;">
-                ${cap}
-              </div>
-            </div>
-
-            <div class="perforation-line"></div>
-
-            <div class="ticket-qr-container">
-              ${qrImgSrc ? `<img src="${qrImgSrc}" alt="QR Code">` : ''}
-            </div>
-
-            <div style="text-align:center; margin-top:12px;">
-              <div style="font-family:'JetBrains Mono', monospace; font-weight:800; font-size:1.05rem; letter-spacing:1px; background:rgba(0,0,0,0.3); padding:6px 14px; border-radius:8px; display:inline-flex; align-items:center; gap:6px;">
-                <span>${code}</span>
-              </div>
-            </div>
-
-            <div style="margin-top:12px; font-size:0.68rem; opacity:0.8; text-align:center; display:flex; justify-content:space-between; align-items:center;">
-              <span>${expiry}</span>
-              <span>🔒 Single-Use Token</span>
-            </div>
-          </div>
-        </div>
-      </body>
-      </html>
-    `);
-    doc.close();
-
-    setTimeout(() => {
-      printFrame.contentWindow.focus();
-      printFrame.contentWindow.print();
-    }, 250);
-  }
-
-  /* ==========================================================================
-     EDIT VOUCHER MODAL CONTROLLER
-     ========================================================================== */
-  function openEditModal(v) {
-    document.getElementById('edit_voucher_id').value = v.id;
-    document.getElementById('edit-modal-code-title').innerText = v.voucher_code;
-    document.getElementById('edit_title').value = v.title || '';
-    document.getElementById('edit_cust_name').value = v.customer_name || '';
-    document.getElementById('edit_cust_phone').value = (v.customer_phone || '').replace('+91', '').trim();
-    
-    // Select registered customer if matches
-    const custSelect = document.getElementById('edit_registered_customer_select');
-    if (custSelect) {
-      custSelect.value = v.customer_name || '';
-    }
-
-    // Discount Type & Values
-    const isPercent = (v.discount_type === 'Percentage');
-    switchEditDiscountType(isPercent ? 'Percentage' : 'Flat');
-    if (isPercent) {
-      document.getElementById('edit_percent').value = v.discount_percent || 15;
-    } else {
-      document.getElementById('edit_amount').value = v.discount_amount || v.discount_percent || 500;
-    }
-
-    document.getElementById('edit_cap').value = v.max_discount_cap || 2500;
-    document.getElementById('edit_min_bill').value = v.min_order_value || 1500;
-    
-    if (v.valid_from) {
-      document.getElementById('edit_valid_from').value = v.valid_from.substring(0, 10);
-    }
-    if (v.valid_until) {
-      document.getElementById('edit_valid_until').value = v.valid_until.substring(0, 10);
-    }
-
-    document.getElementById('edit_status').value = v.status || 'Active';
-
-    // Set Form Action Route
-    const form = document.getElementById('edit-voucher-form');
-    form.action = `/qr/voucher/${v.id}`;
-
-    // Open Backdrop
-    const modal = document.getElementById('editVoucherModal');
-    modal.style.display = 'flex';
-    setTimeout(() => modal.classList.add('open'), 10);
-  }
-
-  function closeEditModal() {
-    const modal = document.getElementById('editVoucherModal');
-    modal.classList.remove('open');
-    setTimeout(() => { modal.style.display = 'none'; }, 200);
-  }
-
-  function switchEditDiscountType(type) {
-    document.getElementById('edit_type').value = type;
-    const btnPercent = document.getElementById('edit_btn_type_percent');
-    const btnFlat = document.getElementById('edit_btn_type_flat');
-    const groupPercent = document.getElementById('edit_group_percent');
-    const groupAmount = document.getElementById('edit_group_amount');
-    const inputPercent = document.getElementById('edit_percent');
-    const inputAmount = document.getElementById('edit_amount');
-
-    if (type === 'Percentage') {
-      btnPercent.classList.add('active');
-      btnFlat.classList.remove('active');
-      groupPercent.style.display = 'block';
-      groupAmount.style.display = 'none';
-      if (inputPercent) inputPercent.disabled = false;
-      if (inputAmount) inputAmount.disabled = true;
-    } else {
-      btnFlat.classList.add('active');
-      btnPercent.classList.remove('active');
-      groupPercent.style.display = 'none';
-      groupAmount.style.display = 'block';
-      if (inputPercent) inputPercent.disabled = true;
-      if (inputAmount) inputAmount.disabled = false;
-    }
-  }
-
-  function setEditPercent(val) {
-    document.getElementById('edit_percent').value = val;
-  }
-
-  function setEditAmount(val) {
-    document.getElementById('edit_amount').value = val;
-  }
-
-  function setEditCampaignTitle(val) {
-    document.getElementById('edit_title').value = val;
-  }
-
-  function onEditCustomerSelect(selectElem) {
-    const selected = selectElem.options[selectElem.selectedIndex];
-    if (selectElem.value) {
-      document.getElementById('edit_cust_name').value = selectElem.value;
-      const phone = selected.getAttribute('data-phone') || '';
-      document.getElementById('edit_cust_phone').value = phone.replace('+91', '').trim();
-    }
-  }
-
-  function addDaysToEditExpiry(days) {
-    const date = new Date();
-    date.setDate(date.getDate() + days);
-    const yyyy = date.getFullYear();
-    const mm = String(date.getMonth() + 1).padStart(2, '0');
-    const dd = String(date.getDate()).padStart(2, '0');
-    document.getElementById('edit_valid_until').value = `${yyyy}-${mm}-${dd}`;
-  }
-
-  /* ==========================================================================
-     EXPIRE / REACTIVATE / DELETE HANDLERS
-     ========================================================================== */
-  function handleExpireVoucher(form, code, e) {
-    e.preventDefault();
-    Swal.fire({
-      title: 'Expire Voucher?',
-      html: `Are you sure you want to expire single-use voucher <strong>${code}</strong>?<br><span style="font-size:0.85rem; color:#64748b;">It will be locked and can no longer be redeemed.</span>`,
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#f59e0b',
-      cancelButtonColor: '#94a3b8',
-      confirmButtonText: 'Yes, Expire Voucher',
-      cancelButtonText: 'Cancel',
-      reverseButtons: true
-    }).then((result) => {
-      if (result.isConfirmed) {
-        form.submit();
-      }
-    });
-    return false;
-  }
-
-  function handleReactivateVoucher(form, code, e) {
-    e.preventDefault();
-    Swal.fire({
-      title: 'Reactivate Voucher?',
-      html: `Make single-use voucher <strong>${code}</strong> active and claimable again?`,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonColor: '#10b981',
-      cancelButtonColor: '#94a3b8',
-      confirmButtonText: 'Yes, Reactivate',
-      cancelButtonText: 'Cancel',
-      reverseButtons: true
-    }).then((result) => {
-      if (result.isConfirmed) {
-        form.submit();
-      }
-    });
-    return false;
-  }
-
-  function handleDeleteVoucher(form, code, e) {
-    e.preventDefault();
-    Swal.fire({
-      title: 'Permanently Delete?',
-      html: `Delete voucher <strong>${code}</strong> from database?<br><span style="font-size:0.85rem; color:#ef4444;">This audit record will be completely removed.</span>`,
-      icon: 'error',
-      showCancelButton: true,
-      confirmButtonColor: '#ef4444',
-      cancelButtonColor: '#94a3b8',
-      confirmButtonText: 'Yes, Delete Permanently',
-      cancelButtonText: 'Cancel',
-      reverseButtons: true
-    }).then((result) => {
-      if (result.isConfirmed) {
-        form.submit();
-      }
-    });
-    return false;
-  }
-
-  function setStatusFilter(status, btnElem) {
-    currentStatusFilter = status;
-    document.querySelectorAll('.status-filter-btn').forEach(btn => btn.classList.remove('active'));
-    if (btnElem) btnElem.classList.add('active');
-    filterVouchersTable();
   }
 
   function filterVouchersTable() {
-    const query = (document.getElementById('voucher-search-input').value || '').toLowerCase().trim();
-    const rows = document.querySelectorAll('#qr-table tbody tr.voucher-row');
-
-    rows.forEach(row => {
-      const rowStatus = (row.getAttribute('data-status') || '').toLowerCase();
-      const text = row.innerText.toLowerCase();
-
-      const matchesStatus = (currentStatusFilter === 'all') || (rowStatus === currentStatusFilter);
-      const matchesQuery = !query || text.includes(query);
-
-      if (matchesStatus && matchesQuery) {
-        row.style.display = '';
+    const q = document.getElementById('voucher-search-input').value.toLowerCase().trim();
+    const rows = document.querySelectorAll('.voucher-row');
+    rows.forEach(r => {
+      const text = r.innerText.toLowerCase();
+      if (!q || text.includes(q)) {
+        r.style.display = '';
       } else {
-        row.style.display = 'none';
+        r.style.display = 'none';
       }
     });
   }
+
+  // Open 1"x1" Sticker View Modal
+  function openStickerModal(v) {
+    activeModalVoucher = v;
+    const batch = v.batch_name || v.title || 'MAJASOL';
+    const amt = v.amount || v.discount_amount || v.discount_percent || 0;
+    const code = v.voucher_code;
+    const claimUrl = `${baseUrl}/${code}`;
+
+    document.getElementById('m-batch-name').innerText = batch;
+    document.getElementById('m-amt').innerText = '₹' + amt;
+    document.getElementById('m-code').innerText = code;
+    document.getElementById('m-scan-url').innerText = claimUrl;
+    document.getElementById('m-open-claim-btn').href = claimUrl;
+
+    const qrTarget = document.getElementById('modal-qr-target');
+    qrTarget.innerHTML = '';
+    new QRCode(qrTarget, {
+      text: claimUrl,
+      width: 58,
+      height: 58,
+      colorDark: "#000000",
+      colorLight: "#ffffff",
+      correctLevel: QRCode.CorrectLevel.M
+    });
+
+    document.getElementById('stickerModal').style.display = 'flex';
+  }
+
+  function closeStickerModal() {
+    document.getElementById('stickerModal').style.display = 'none';
+  }
+
+  function copyModalClaimUrl() {
+    if (!activeModalVoucher) return;
+    const url = `${baseUrl}/${activeModalVoucher.voucher_code}`;
+    navigator.clipboard.writeText(url);
+    if (window.UI && UI.showToast) {
+      UI.showToast('Copied Claim URL', url, 'success');
+    } else {
+      alert('Copied Scan URL: ' + url);
+    }
+  }
+
+  // Print Single 1"x1" Sticker from Row
+  function printSingleRowSticker(v) {
+    renderAndPrintStickers([v]);
+  }
+
+  function printModalSticker() {
+    if (activeModalVoucher) {
+      renderAndPrintStickers([activeModalVoucher]);
+    }
+  }
+
+  // Batch Print All Visible Stickers
+  function batchPrintAllStickers() {
+    const visibleRows = Array.from(document.querySelectorAll('.voucher-row')).filter(r => r.style.display !== 'none');
+    if (visibleRows.length === 0) {
+      alert('No vouchers available to print.');
+      return;
+    }
+
+    const vouchersList = visibleRows.map(r => ({
+      voucher_code: r.getAttribute('data-code'),
+      batch_name: r.getAttribute('data-batch'),
+      amount: r.getAttribute('data-amt'),
+      claim_url: r.getAttribute('data-url')
+    }));
+
+    renderAndPrintStickers(vouchersList);
+  }
+
+  function renderAndPrintStickers(vouchers) {
+    const printArea = document.getElementById('print-container-area');
+    printArea.innerHTML = '';
+    printArea.style.display = 'block';
+
+    vouchers.forEach((v, index) => {
+      const batch = v.batch_name || v.title || 'MAJASOL';
+      const amt = v.amount || v.discount_amount || v.discount_percent || 0;
+      const code = v.voucher_code;
+      const claimUrl = `${baseUrl}/${code}`;
+
+      const stickerDiv = document.createElement('div');
+      stickerDiv.className = 'print-sticker-1x1';
+      stickerDiv.innerHTML = `
+        <div class="sticker-brand">${batch}</div>
+        <div class="sticker-qr" id="print-qr-slot-${index}"></div>
+        <div style="display:flex; justify-content:space-between; align-items:center; width:100%; padding:0 1px; line-height:1;">
+          <span class="sticker-amt">₹${amt}</span>
+          <span class="sticker-code">${code}</span>
+        </div>
+      `;
+      printArea.appendChild(stickerDiv);
+
+      const slot = document.getElementById(`print-qr-slot-${index}`);
+      new QRCode(slot, {
+        text: claimUrl,
+        width: 54,
+        height: 54,
+        colorDark: "#000000",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.M
+      });
+    });
+
+    setTimeout(() => {
+      window.print();
+    }, 300);
+  }
+
+  // Open Edit Modal
+  function openEditModal(v) {
+    document.getElementById('edit_voucher_id').value = v.id;
+    document.getElementById('edit_voucher_code').value = v.voucher_code;
+    document.getElementById('edit_batch_name').value = v.batch_name || v.title || '';
+    document.getElementById('edit_qr_date').value = v.qr_date ? v.qr_date.substring(0, 10) : (v.valid_from ? v.valid_from.substring(0, 10) : '');
+    document.getElementById('edit_amount').value = v.amount || v.discount_amount || v.discount_percent || 500;
+    document.getElementById('edit_status').value = v.status || 'Active';
+
+    document.getElementById('editVoucherModal').style.display = 'flex';
+  }
+
+  function closeEditModal() {
+    document.getElementById('editVoucherModal').style.display = 'none';
+  }
+
+  async function handleEditSubmit(e) {
+    e.preventDefault();
+    const id = document.getElementById('edit_voucher_id').value;
+    const btn = document.getElementById('btn-save-edit');
+    btn.disabled = true;
+    btn.innerText = 'Saving...';
+
+    const formData = new FormData(document.getElementById('edit-voucher-form'));
+    
+    try {
+      const res = await fetch(`{{ url('/qr/voucher') }}/${id}/update`, {
+        method: 'POST',
+        headers: {
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+          'Accept': 'application/json'
+        },
+        body: formData
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        if (window.UI && UI.showToast) {
+          UI.showToast('Saved', data.message, 'success');
+        } else {
+          alert(data.message);
+        }
+        window.location.reload();
+      } else {
+        alert(data.message || 'Update failed');
+        btn.disabled = false;
+        btn.innerText = 'Save Changes';
+      }
+    } catch(err) {
+      alert('Error updating voucher');
+      btn.disabled = false;
+      btn.innerText = 'Save Changes';
+    }
+  }
+
+  async function handleExpireVoucher(form, code, e) {
+    e.preventDefault();
+    if (!confirm(`Are you sure you want to expire/revoke voucher ${code}?`)) return false;
+    
+    try {
+      const res = await fetch(form.action, {
+        method: 'POST',
+        headers: {
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+          'Accept': 'application/json'
+        }
+      });
+      const data = await res.json();
+      if (data.success) {
+        window.location.reload();
+      }
+    } catch(err) {
+      form.submit();
+    }
+    return false;
+  }
+
+  async function handleReactivateVoucher(form, code, e) {
+    e.preventDefault();
+    try {
+      const res = await fetch(form.action, {
+        method: 'POST',
+        headers: {
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+          'Accept': 'application/json'
+        }
+      });
+      const data = await res.json();
+      if (data.success) {
+        window.location.reload();
+      }
+    } catch(err) {
+      form.submit();
+    }
+    return false;
+  }
+
+  async function handleDeleteVoucher(form, code, e) {
+    e.preventDefault();
+    if (!confirm(`Permanently delete QR Voucher ${code}? This action cannot be undone.`)) return false;
+
+    try {
+      const res = await fetch(form.action, {
+        method: 'POST',
+        headers: {
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+          'Accept': 'application/json'
+        },
+        body: new FormData(form)
+      });
+      const data = await res.json();
+      if (data.success) {
+        window.location.reload();
+      }
+    } catch(err) {
+      form.submit();
+    }
+    return false;
+  }
+
+  // Render QR Codes in Table Rows on load
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.list-qr-canvas').forEach(el => {
+      const url = el.getAttribute('data-url');
+      if (url) {
+        new QRCode(el, {
+          text: url,
+          width: 38,
+          height: 38,
+          colorDark: "#000000",
+          colorLight: "#ffffff",
+          correctLevel: QRCode.CorrectLevel.L
+        });
+      }
+    });
+  });
 </script>
 @endpush
 @endsection

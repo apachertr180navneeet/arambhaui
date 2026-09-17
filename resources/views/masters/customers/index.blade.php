@@ -645,33 +645,39 @@
       <div class="cm-modal-section-title">General Information</div>
       <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:14px; margin-bottom:12px;">
         <div class="form-group" style="margin:0;">
-          <label class="form-label required">Customer Name</label>
+          <label class="form-label required">Customer / Client Name</label>
           <input type="text" name="name" id="cust-name" class="form-control" required placeholder="e.g. Royal Apparels Ltd">
         </div>
         <div class="form-group" style="margin:0;">
           <label class="form-label">Customer Code</label>
-          <input type="text" name="code" id="cust-code" class="form-control" placeholder="Auto-generated if empty">
+          <input type="text" name="code" id="cust-code" class="form-control" placeholder="Auto-generated if empty (e.g. CUST-001)">
         </div>
       </div>
 
       <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:14px; margin-bottom:12px;">
         <div class="form-group" style="margin:0;">
+          <label class="form-label">Company / Firm Name</label>
+          <input type="text" name="company_name" id="cust-company" class="form-control" placeholder="e.g. Royal Apparel Garments Pvt Ltd">
+        </div>
+        <div class="form-group" style="margin:0;">
           <label class="form-label">Contact Person</label>
           <input type="text" name="contact_person" id="cust-contact-person" class="form-control" placeholder="e.g. Rahul Sharma">
         </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:14px; margin-bottom:12px;">
         <div class="form-group" style="margin:0;">
           <label class="form-label required">Phone / Mobile</label>
           <input type="text" name="phone" id="cust-phone" class="form-control" required placeholder="e.g. 9876543210">
         </div>
-      </div>
-
-      <div class="form-group" style="margin-bottom:12px;">
-        <label class="form-label">Email Address</label>
-        <input type="email" name="email" id="cust-email" class="form-control" placeholder="e.g. accounts@royalapparel.com">
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">Email Address</label>
+          <input type="email" name="email" id="cust-email" class="form-control" placeholder="e.g. accounts@royalapparel.com">
+        </div>
       </div>
 
       <!-- Financial & Tax Details -->
-      <div class="cm-modal-section-title">Tax & Financial Credentials</div>
+      <div class="cm-modal-section-title">Tax, Financial & Status Credentials</div>
       <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:14px; margin-bottom:12px;">
         <div class="form-group" style="margin:0;">
           <label class="form-label">GSTIN Number</label>
@@ -683,7 +689,26 @@
         </div>
         <div class="form-group" style="margin:0;">
           <label class="form-label">Credit Limit (₹)</label>
-          <input type="number" step="0.01" name="credit_limit" id="cust-credit-limit" class="form-control" placeholder="0.00">
+          <input type="number" step="0.01" name="credit_limit" id="cust-credit-limit" class="form-control" placeholder="500000.00" value="500000.00">
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:14px; margin-bottom:12px;">
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">Current Outstanding Balance (₹)</label>
+          <input type="number" step="0.01" name="outstanding" id="cust-outstanding" class="form-control" placeholder="0.00" value="0.00">
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">Payment Terms</label>
+          <input type="text" name="payment_terms" id="cust-payment-terms" class="form-control" placeholder="e.g. Net 30 Days" value="Net 30 Days">
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">Account Status</label>
+          <select name="status" id="cust-status" class="form-control">
+            <option value="Active">Active</option>
+            <option value="Inactive">Inactive</option>
+            <option value="Blocked">Blocked</option>
+          </select>
         </div>
       </div>
 
@@ -746,6 +771,14 @@
 <script>
   const CSRF_TOKEN = '{{ csrf_token() }}';
 
+  // Helper to resolve routes
+  function getCustomerApiUrl(path) {
+    if (typeof window.apiUrl === 'function') {
+      return window.apiUrl(path);
+    }
+    return path;
+  }
+
   // --- Modal Open / Close ---
   function openCustomerModal() {
     const modal = document.getElementById('customer-modal');
@@ -753,6 +786,10 @@
     
     document.getElementById('customer-form').reset();
     document.getElementById('customer-id').value = '';
+    document.getElementById('cust-credit-limit').value = '500000.00';
+    document.getElementById('cust-outstanding').value = '0.00';
+    document.getElementById('cust-payment-terms').value = 'Net 30 Days';
+    document.getElementById('cust-status').value = 'Active';
     document.getElementById('modal-title').textContent = 'Add New Customer';
     document.getElementById('save-cust-btn').textContent = 'Save Customer';
     document.getElementById('save-cust-btn').disabled = false;
@@ -776,15 +813,19 @@
 
     document.getElementById('cust-name').value = customer.name || '';
     document.getElementById('cust-code').value = customer.code || '';
+    document.getElementById('cust-company').value = customer.company_name || '';
     document.getElementById('cust-contact-person').value = customer.contact_person || '';
     document.getElementById('cust-phone').value = customer.phone || customer.mobile || '';
     document.getElementById('cust-email').value = customer.email || '';
     document.getElementById('cust-gst').value = customer.gst_number || customer.gstin || '';
     document.getElementById('cust-pan').value = customer.pan_number || '';
-    document.getElementById('cust-credit-limit').value = customer.credit_limit || '';
+    document.getElementById('cust-credit-limit').value = customer.credit_limit !== undefined ? customer.credit_limit : '500000.00';
+    document.getElementById('cust-outstanding').value = customer.outstanding !== undefined ? customer.outstanding : '0.00';
+    document.getElementById('cust-payment-terms').value = customer.payment_terms || 'Net 30 Days';
+    document.getElementById('cust-status').value = customer.status ? (customer.status.charAt(0).toUpperCase() + customer.status.slice(1).toLowerCase()) : 'Active';
     document.getElementById('cust-address').value = customer.billing_address || customer.address || '';
     document.getElementById('cust-city').value = customer.city || '';
-    document.getElementById('cust-state').value = customer.state || '';
+    document.getElementById('cust-state').value = customer.state || 'Maharashtra';
     document.getElementById('cust-pincode').value = customer.pincode || '';
 
     modal.style.display = 'flex';
@@ -811,7 +852,9 @@
     const prevClass = selectEl.className;
     selectEl.style.opacity = '0.5';
 
-    fetch('/masters/customers/' + id, {
+    const url = getCustomerApiUrl('/masters/customers/' + id);
+
+    fetch(url, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -834,16 +877,28 @@
         // Update stats if returned
         if (data.stats) updateKpiStats(data.stats);
 
-        UI.showToast('Status Updated', 'Customer status set to ' + newStatus, 'success');
+        if (window.Toast) {
+          Toast.fire({ icon: 'success', title: 'Customer status set to ' + newStatus });
+        } else if (typeof UI !== 'undefined' && UI.showToast) {
+          UI.showToast('Status Updated', 'Customer status set to ' + newStatus, 'success');
+        }
       } else {
         selectEl.className = prevClass;
-        UI.showToast('Error', data.message || 'Could not update status', 'error');
+        if (window.Toast) {
+          Toast.fire({ icon: 'error', title: data.message || 'Could not update status' });
+        } else if (typeof UI !== 'undefined' && UI.showToast) {
+          UI.showToast('Error', data.message || 'Could not update status', 'error');
+        }
       }
     })
     .catch(err => {
       selectEl.style.opacity = '1';
       selectEl.className = prevClass;
-      UI.showToast('Error', 'Network error occurred while updating status', 'error');
+      if (window.Toast) {
+        Toast.fire({ icon: 'error', title: 'Network error occurred while updating status' });
+      } else if (typeof UI !== 'undefined' && UI.showToast) {
+        UI.showToast('Error', 'Network error occurred while updating status', 'error');
+      }
     });
   }
 
@@ -858,13 +913,18 @@
     const payload = {
       name: document.getElementById('cust-name').value.trim(),
       code: document.getElementById('cust-code').value.trim(),
+      company_name: document.getElementById('cust-company').value.trim(),
       contact_person: document.getElementById('cust-contact-person').value.trim(),
       phone: document.getElementById('cust-phone').value.trim(),
+      mobile: document.getElementById('cust-phone').value.trim(),
       email: document.getElementById('cust-email').value.trim(),
       gstin: document.getElementById('cust-gst').value.trim(),
       gst_number: document.getElementById('cust-gst').value.trim(),
       pan_number: document.getElementById('cust-pan').value.trim(),
       credit_limit: parseFloat(document.getElementById('cust-credit-limit').value) || 0,
+      outstanding: parseFloat(document.getElementById('cust-outstanding').value) || 0,
+      payment_terms: document.getElementById('cust-payment-terms').value.trim(),
+      status: document.getElementById('cust-status').value,
       address: document.getElementById('cust-address').value.trim(),
       billing_address: document.getElementById('cust-address').value.trim(),
       city: document.getElementById('cust-city').value.trim(),
@@ -873,18 +933,19 @@
     };
 
     if (!payload.name) {
-      UI.showToast('Validation Error', 'Customer Name is required', 'error');
+      if (window.Toast) Toast.fire({ icon: 'error', title: 'Customer Name is required' });
       return;
     }
     if (!payload.phone) {
-      UI.showToast('Validation Error', 'Phone Number is required', 'error');
+      if (window.Toast) Toast.fire({ icon: 'error', title: 'Phone Number is required' });
       return;
     }
 
     saveBtn.disabled = true;
     saveBtn.textContent = isEdit ? 'Updating...' : 'Saving...';
 
-    const url = isEdit ? ('/masters/customers/' + custId) : "{{ route('masters.customers.store') }}";
+    const path = isEdit ? ('/masters/customers/' + custId) : "{{ route('masters.customers.store') }}";
+    const url = isEdit ? getCustomerApiUrl(path) : path;
     const method = isEdit ? 'PUT' : 'POST';
 
     fetch(url, {
@@ -903,7 +964,11 @@
 
       if (data.success && data.customer) {
         closeCustomerModal();
-        UI.showToast(isEdit ? 'Customer Updated' : 'Customer Created', data.message, 'success');
+        if (window.Toast) {
+          Toast.fire({ icon: 'success', title: data.message || (isEdit ? 'Customer Updated' : 'Customer Created') });
+        } else if (typeof UI !== 'undefined' && UI.showToast) {
+          UI.showToast(isEdit ? 'Customer Updated' : 'Customer Created', data.message, 'success');
+        }
 
         if (isEdit) {
           updateTableRow(data.customer);
@@ -913,16 +978,26 @@
 
         if (data.stats) updateKpiStats(data.stats);
       } else {
-        const msg = data.errors ? Object.values(data.errors).flat().join('<br>') : (data.message || 'Validation error');
-        UI.showToast('Error', msg, 'error');
+        const msg = data.errors ? Object.values(data.errors).flat().join(' ') : (data.message || 'Validation error');
+        if (window.Toast) {
+          Toast.fire({ icon: 'error', title: msg });
+        } else if (typeof UI !== 'undefined' && UI.showToast) {
+          UI.showToast('Error', msg, 'error');
+        }
       }
     })
     .catch(err => {
       saveBtn.disabled = false;
       saveBtn.textContent = isEdit ? 'Update Customer' : 'Save Customer';
-      UI.showToast('Error', 'Failed to save customer details', 'error');
+      if (window.Toast) {
+        Toast.fire({ icon: 'error', title: 'Failed to save customer details' });
+      } else if (typeof UI !== 'undefined' && UI.showToast) {
+        UI.showToast('Error', 'Failed to save customer details', 'error');
+      }
     });
   }
+
+
 
   // --- 3. DELETE USING AJAX ---
   function deleteCustomerAjax() {
@@ -1018,7 +1093,7 @@
       </td>
       <td class="cust-gst-cell">${gstinBadge}</td>
       <td class="cust-credit-val" style="text-align: right; font-weight: 600; color: var(--slate-700);">₹${Number(c.credit_limit || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-      <td class="cust-outstanding-val" style="text-align: right; font-weight: 700; color: #059669;">₹0.00</td>
+      <td class="cust-outstanding-val" style="text-align: right; font-weight: 700; color: ${Number(c.outstanding || 0) > 0 ? '#dc2626' : '#059669'};">₹${Number(c.outstanding || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
       <td style="text-align: center;">
         <select class="cm-status-select ${statusLower}" onchange="changeCustomerStatus(${c.id}, this.value, this)" title="Click to change status">
           <option value="Active" ${statusLower === 'active' ? 'selected' : ''}>Active</option>
@@ -1058,6 +1133,12 @@
     const row = document.getElementById('customer-row-' + c.id);
     if (!row) return;
 
+    const statusVal = c.status || 'Active';
+    const statusLower = statusVal.toLowerCase();
+
+    row.setAttribute('data-status', statusLower);
+    row.setAttribute('data-balance', c.outstanding || 0);
+
     row.querySelector('.cust-name-val').textContent = c.name;
     row.querySelector('.cust-code-val').textContent = c.code || ('CUST-' + String(c.id).padStart(4, '0'));
     row.querySelector('.cust-contact-val').textContent = c.contact_person || '—';
@@ -1081,8 +1162,21 @@
       creditCell.textContent = '₹' + Number(c.credit_limit || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
     }
 
+    const outstandingCell = row.querySelector('.cust-outstanding-val');
+    if (outstandingCell) {
+      const outVal = Number(c.outstanding || 0);
+      outstandingCell.textContent = '₹' + outVal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+      outstandingCell.style.color = outVal > 0 ? '#dc2626' : '#059669';
+    }
+
+    const statusSelect = row.querySelector('.cm-status-select');
+    if (statusSelect) {
+      statusSelect.value = statusVal.charAt(0).toUpperCase() + statusVal.slice(1).toLowerCase();
+      statusSelect.className = 'cm-status-select ' + statusLower;
+    }
+
     // Update edit button handler with fresh data
-    const editBtn = row.querySelector('.btn-secondary');
+    const editBtn = row.querySelector('.btn-secondary') || row.querySelector(`.edit-btn-${c.id}`);
     if (editBtn) {
       editBtn.onclick = () => editCustomer(c);
     }

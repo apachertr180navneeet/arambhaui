@@ -16,4 +16,9 @@ class JobAssignmentItem extends Model
     {
         return $this->belongsTo(JobAssignment::class);
     }
+
+    public function item()
+    {
+        return $this->belongsTo(Item::class);
+    }
 }

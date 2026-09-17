@@ -17,6 +17,8 @@ class QrVoucher extends Model
         'redeemed_at' => 'datetime',
         'valid_from' => 'date',
         'valid_until' => 'date',
+        'qr_date' => 'date',
+        'amount' => 'float',
         'discount_percent' => 'float',
         'discount_amount' => 'float',
         'max_discount_cap' => 'float',

@@ -723,6 +723,14 @@
           <label class="form-label">Current Outstanding Payables (₹)</label>
           <input type="number" step="0.01" name="outstanding" id="vend-outstanding" class="form-control" placeholder="0.00" value="0.00">
         </div>
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">Account Status</label>
+          <select name="status" id="vend-status" class="form-control">
+            <option value="Active">Active</option>
+            <option value="Inactive">Inactive</option>
+            <option value="Blocked">Blocked</option>
+          </select>
+        </div>
       </div>
 
       <!-- Address Details -->
@@ -833,6 +841,7 @@
     document.getElementById('vend-pan').value = vendor.pan_number || '';
     document.getElementById('vend-credit-days').value = vendor.credit_days !== undefined ? vendor.credit_days : 30;
     document.getElementById('vend-outstanding').value = vendor.outstanding || '0.00';
+    document.getElementById('vend-status').value = vendor.status || 'Active';
     document.getElementById('vend-address').value = vendor.address || vendor.billing_address || '';
     document.getElementById('vend-city').value = vendor.city || '';
     document.getElementById('vend-state').value = vendor.state || '';
@@ -857,12 +866,21 @@
     if (modal) modal.style.display = 'none';
   }
 
+  function getVendorApiUrl(path) {
+    if (window.apiUrl && typeof window.apiUrl === 'function') {
+      return window.apiUrl(path);
+    }
+    const base = "{{ url('/') }}".replace(/\/+$/, '');
+    const cleanPath = path.startsWith('/') ? path : '/' + path;
+    return base + cleanPath;
+  }
+
   // --- 1. STATUS CHANGE THROUGH TABLE VIA AJAX ---
   function changeVendorStatus(id, newStatus, selectEl) {
     const prevClass = selectEl.className;
     selectEl.style.opacity = '0.5';
 
-    fetch('/masters/vendors/' + id, {
+    fetch(getVendorApiUrl('/masters/vendors/' + id), {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -885,16 +903,28 @@
         // Update stats if returned
         if (data.stats) updateKpiStats(data.stats);
 
-        UI.showToast('Status Updated', 'Vendor status set to ' + newStatus, 'success');
+        if (window.Toast) {
+          window.Toast.show({ title: 'Status Updated', message: 'Vendor status set to ' + newStatus, type: 'success' });
+        } else if (typeof UI !== 'undefined' && UI.showToast) {
+          UI.showToast('Status Updated', 'Vendor status set to ' + newStatus, 'success');
+        }
       } else {
         selectEl.className = prevClass;
-        UI.showToast('Error', data.message || 'Could not update status', 'error');
+        if (window.Toast) {
+          window.Toast.show({ title: 'Error', message: data.message || 'Could not update status', type: 'error' });
+        } else if (typeof UI !== 'undefined' && UI.showToast) {
+          UI.showToast('Error', data.message || 'Could not update status', 'error');
+        }
       }
     })
     .catch(err => {
       selectEl.style.opacity = '1';
       selectEl.className = prevClass;
-      UI.showToast('Error', 'Network error occurred while updating status', 'error');
+      if (window.Toast) {
+        window.Toast.show({ title: 'Error', message: 'Network error occurred while updating status', type: 'error' });
+      } else if (typeof UI !== 'undefined' && UI.showToast) {
+        UI.showToast('Error', 'Network error occurred while updating status', 'error');
+      }
     });
   }
 
@@ -919,6 +949,7 @@
       pan_number: document.getElementById('vend-pan').value.trim(),
       credit_days: parseInt(document.getElementById('vend-credit-days').value) || 0,
       outstanding: parseFloat(document.getElementById('vend-outstanding').value) || 0,
+      status: document.getElementById('vend-status').value,
       address: document.getElementById('vend-address').value.trim(),
       city: document.getElementById('vend-city').value.trim(),
       state: document.getElementById('vend-state').value.trim(),
@@ -926,18 +957,26 @@
     };
 
     if (!payload.name) {
-      UI.showToast('Validation Error', 'Vendor Name is required', 'error');
+      if (window.Toast) {
+        window.Toast.show({ title: 'Validation Error', message: 'Vendor Name is required', type: 'error' });
+      } else if (typeof UI !== 'undefined' && UI.showToast) {
+        UI.showToast('Validation Error', 'Vendor Name is required', 'error');
+      }
       return;
     }
     if (!payload.phone) {
-      UI.showToast('Validation Error', 'Phone Number is required', 'error');
+      if (window.Toast) {
+        window.Toast.show({ title: 'Validation Error', message: 'Phone Number is required', type: 'error' });
+      } else if (typeof UI !== 'undefined' && UI.showToast) {
+        UI.showToast('Validation Error', 'Phone Number is required', 'error');
+      }
       return;
     }
 
     saveBtn.disabled = true;
     saveBtn.textContent = isEdit ? 'Updating...' : 'Saving...';
 
-    const url = isEdit ? ('/masters/vendors/' + vendId) : "{{ route('masters.vendors.store') }}";
+    const url = isEdit ? getVendorApiUrl('/masters/vendors/' + vendId) : "{{ route('masters.vendors.store') }}";
     const method = isEdit ? 'PUT' : 'POST';
 
     fetch(url, {
@@ -956,7 +995,12 @@
 
       if (data.success && data.vendor) {
         closeVendorModal();
-        UI.showToast(isEdit ? 'Vendor Updated' : 'Vendor Created', data.message, 'success');
+        const msg = data.message || (isEdit ? 'Vendor updated successfully.' : 'Vendor created successfully.');
+        if (window.Toast) {
+          window.Toast.show({ title: isEdit ? 'Vendor Updated' : 'Vendor Created', message: msg, type: 'success' });
+        } else if (typeof UI !== 'undefined' && UI.showToast) {
+          UI.showToast(isEdit ? 'Vendor Updated' : 'Vendor Created', msg, 'success');
+        }
 
         if (isEdit) {
           updateTableRow(data.vendor);
@@ -967,13 +1011,21 @@
         if (data.stats) updateKpiStats(data.stats);
       } else {
         const msg = data.errors ? Object.values(data.errors).flat().join('<br>') : (data.message || 'Validation error');
-        UI.showToast('Error', msg, 'error');
+        if (window.Toast) {
+          window.Toast.show({ title: 'Error', message: msg, type: 'error' });
+        } else if (typeof UI !== 'undefined' && UI.showToast) {
+          UI.showToast('Error', msg, 'error');
+        }
       }
     })
     .catch(err => {
       saveBtn.disabled = false;
       saveBtn.textContent = isEdit ? 'Update Vendor' : 'Save Vendor';
-      UI.showToast('Error', 'Failed to save vendor details', 'error');
+      if (window.Toast) {
+        window.Toast.show({ title: 'Error', message: 'Failed to save vendor details', type: 'error' });
+      } else if (typeof UI !== 'undefined' && UI.showToast) {
+        UI.showToast('Error', 'Failed to save vendor details', 'error');
+      }
     });
   }
 
@@ -986,7 +1038,7 @@
     delBtn.disabled = true;
     delBtn.textContent = 'Deleting...';
 
-    fetch('/masters/vendors/' + id, {
+    fetch(getVendorApiUrl('/masters/vendors/' + id), {
       method: 'DELETE',
       headers: {
         'Accept': 'application/json',
@@ -1000,7 +1052,11 @@
       closeDeleteModal();
 
       if (data.success) {
-        UI.showToast('Vendor Deleted', data.message || 'Vendor removed successfully', 'warning');
+        if (window.Toast) {
+          window.Toast.show({ title: 'Vendor Deleted', message: data.message || 'Vendor removed successfully', type: 'warning' });
+        } else if (typeof UI !== 'undefined' && UI.showToast) {
+          UI.showToast('Vendor Deleted', data.message || 'Vendor removed successfully', 'warning');
+        }
         
         // Animate row removal
         const row = document.getElementById('vendor-row-' + id);
@@ -1016,13 +1072,21 @@
 
         if (data.stats) updateKpiStats(data.stats);
       } else {
-        UI.showToast('Error', data.message || 'Could not delete vendor', 'error');
+        if (window.Toast) {
+          window.Toast.show({ title: 'Error', message: data.message || 'Could not delete vendor', type: 'error' });
+        } else if (typeof UI !== 'undefined' && UI.showToast) {
+          UI.showToast('Error', data.message || 'Could not delete vendor', 'error');
+        }
       }
     })
     .catch(err => {
       delBtn.disabled = false;
       delBtn.textContent = 'Yes, Delete Vendor';
-      UI.showToast('Error', 'Failed to delete vendor', 'error');
+      if (window.Toast) {
+        window.Toast.show({ title: 'Error', message: 'Failed to delete vendor', type: 'error' });
+      } else if (typeof UI !== 'undefined' && UI.showToast) {
+        UI.showToast('Error', 'Failed to delete vendor', 'error');
+      }
     });
   }
 
@@ -1118,6 +1182,10 @@
     const row = document.getElementById('vendor-row-' + v.id);
     if (!row) return;
 
+    row.setAttribute('data-category', (v.category || '').toLowerCase());
+    row.setAttribute('data-status', (v.status || 'active').toLowerCase());
+    row.setAttribute('data-balance', v.outstanding || 0);
+
     row.querySelector('.vend-name-val').textContent = v.name;
     row.querySelector('.vend-code-val').textContent = v.code || ('VEND-' + String(v.id).padStart(3, '0'));
     row.querySelector('.vend-contact-val').textContent = v.contact_person || (v.company_name || '—');
@@ -1152,6 +1220,12 @@
       const outVal = Number(v.outstanding || 0);
       outstandingCell.textContent = '₹' + outVal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
       outstandingCell.style.color = outVal > 0 ? '#dc2626' : '#059669';
+    }
+
+    const statusSelect = row.querySelector('.vm-status-select');
+    if (statusSelect && v.status) {
+      statusSelect.value = v.status;
+      statusSelect.className = 'vm-status-select ' + v.status.toLowerCase();
     }
 
     // Update edit button handler with fresh data

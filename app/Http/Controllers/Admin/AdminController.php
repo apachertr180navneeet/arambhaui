@@ -80,6 +80,53 @@ class AdminController extends Controller
         return redirect()->route('admin.users.index')->with('success', "User {$user->name} created successfully.");
     }
 
+    public function updateUser(Request $request, User $user)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email,' . $user->id,
+            'role' => 'required|string',
+            'status' => 'nullable|string',
+            'password' => 'nullable|string|min:6'
+        ]);
+
+        $user->name = $validated['name'];
+        $user->email = $validated['email'];
+        $user->role = $validated['role'];
+        if (isset($validated['status'])) {
+            $user->status = $validated['status'];
+        }
+        if (!empty($validated['password'])) {
+            $user->password = Hash::make($validated['password']);
+        }
+        $user->save();
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json(['success' => true, 'user' => $user, 'message' => "User {$user->name} updated successfully."]);
+        }
+
+        return redirect()->route('admin.users.index')->with('success', "User {$user->name} updated successfully.");
+    }
+
+    public function deleteUser(User $user)
+    {
+        if (Auth::id() === $user->id) {
+            if (request()->wantsJson() || request()->ajax()) {
+                return response()->json(['success' => false, 'message' => 'You cannot delete your own logged-in account.'], 422);
+            }
+            return redirect()->route('admin.users.index')->with('error', 'You cannot delete your own logged-in account.');
+        }
+
+        $name = $user->name;
+        $user->delete();
+
+        if (request()->wantsJson() || request()->ajax()) {
+            return response()->json(['success' => true, 'message' => "User {$name} deleted successfully."]);
+        }
+
+        return redirect()->route('admin.users.index')->with('success', "User {$name} deleted successfully.");
+    }
+
     public function updateSettings(Request $request)
     {
         $settings = $request->except(['_token']);

@@ -740,8 +740,8 @@
       </div>
 
       <!-- Tax & Storage -->
-      <div class="itm-modal-section-title">Compliance & Storage Location</div>
-      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:14px; margin-bottom:20px;">
+      <div class="itm-modal-section-title">Compliance, Storage & Status</div>
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:14px; margin-bottom:20px;">
         <div class="form-group" style="margin:0;">
           <label class="form-label">HSN Code</label>
           <input type="text" name="hsn_code" id="itm_hsn" class="form-control" placeholder="e.g. 5208">
@@ -749,6 +749,14 @@
         <div class="form-group" style="margin:0;">
           <label class="form-label">Storage Location / Rack</label>
           <input type="text" name="location" id="itm_location" class="form-control" placeholder="e.g. Warehouse A - Rack 04">
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">Status</label>
+          <select name="status" id="itm_status" class="form-control">
+            <option value="Active">Active</option>
+            <option value="Inactive">Inactive</option>
+            <option value="Blocked">Blocked</option>
+          </select>
         </div>
       </div>
 
@@ -799,6 +807,15 @@
     return 'badge-info';
   }
 
+  function getItemApiUrl(path) {
+    if (window.apiUrl && typeof window.apiUrl === 'function') {
+      return window.apiUrl(path);
+    }
+    const base = "{{ url('/') }}".replace(/\/+$/, '');
+    const cleanPath = path.startsWith('/') ? path : '/' + path;
+    return base + cleanPath;
+  }
+
   // --- Modal Open / Close ---
   function openItemModal() {
     const modal = document.getElementById('item-modal');
@@ -812,6 +829,7 @@
     document.getElementById('itm_cost').value = '280.00';
     document.getElementById('itm_stock').value = '500.00';
     document.getElementById('itm_min_stock').value = '100.00';
+    document.getElementById('itm_status').value = 'Active';
     
     modal.style.display = 'flex';
   }
@@ -841,6 +859,7 @@
     document.getElementById('itm_cost').value = itm.unit_cost !== undefined ? itm.unit_cost : 280;
     document.getElementById('itm_stock').value = itm.current_stock !== undefined ? itm.current_stock : 500;
     document.getElementById('itm_min_stock').value = itm.min_stock !== undefined ? itm.min_stock : 100;
+    document.getElementById('itm_status').value = itm.status || 'Active';
     document.getElementById('itm_hsn').value = itm.hsn_code || '';
     document.getElementById('itm_location').value = itm.location || '';
 
@@ -868,7 +887,7 @@
     const prevClass = selectEl.className;
     selectEl.style.opacity = '0.5';
 
-    fetch('/masters/items/' + id, {
+    fetch(getItemApiUrl('/masters/items/' + id), {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -888,16 +907,28 @@
 
         if (data.stats) updateKpiStats(data.stats);
 
-        UI.showToast('Status Updated', 'Item SKU status set to ' + newStatus, 'success');
+        if (window.Toast) {
+          window.Toast.show({ title: 'Status Updated', message: 'Item SKU status set to ' + newStatus, type: 'success' });
+        } else if (typeof UI !== 'undefined' && UI.showToast) {
+          UI.showToast('Status Updated', 'Item SKU status set to ' + newStatus, 'success');
+        }
       } else {
         selectEl.className = prevClass;
-        UI.showToast('Error', data.message || 'Could not update status', 'error');
+        if (window.Toast) {
+          window.Toast.show({ title: 'Error', message: data.message || 'Could not update status', type: 'error' });
+        } else if (typeof UI !== 'undefined' && UI.showToast) {
+          UI.showToast('Error', data.message || 'Could not update status', 'error');
+        }
       }
     })
     .catch(err => {
       selectEl.style.opacity = '1';
       selectEl.className = prevClass;
-      UI.showToast('Error', 'Network error occurred while updating status', 'error');
+      if (window.Toast) {
+        window.Toast.show({ title: 'Error', message: 'Network error occurred while updating status', type: 'error' });
+      } else if (typeof UI !== 'undefined' && UI.showToast) {
+        UI.showToast('Error', 'Network error occurred while updating status', 'error');
+      }
     });
   }
 
@@ -921,19 +952,24 @@
       unit_cost: parseFloat(document.getElementById('itm_cost').value) || 0,
       current_stock: parseFloat(document.getElementById('itm_stock').value) || 0,
       min_stock: parseFloat(document.getElementById('itm_min_stock').value) || 0,
+      status: document.getElementById('itm_status').value,
       hsn_code: document.getElementById('itm_hsn').value.trim(),
       location: document.getElementById('itm_location').value.trim()
     };
 
     if (!payload.name) {
-      UI.showToast('Validation Error', 'Item Name is required', 'error');
+      if (window.Toast) {
+        window.Toast.show({ title: 'Validation Error', message: 'Item Name is required', type: 'error' });
+      } else if (typeof UI !== 'undefined' && UI.showToast) {
+        UI.showToast('Validation Error', 'Item Name is required', 'error');
+      }
       return;
     }
 
     saveBtn.disabled = true;
     saveBtn.textContent = isEdit ? 'Updating...' : 'Saving...';
 
-    const url = isEdit ? ('/masters/items/' + itmId) : "{{ route('masters.items.store') }}";
+    const url = isEdit ? getItemApiUrl('/masters/items/' + itmId) : "{{ route('masters.items.store') }}";
     const method = isEdit ? 'PUT' : 'POST';
 
     fetch(url, {
@@ -952,7 +988,12 @@
 
       if (data.success && data.item) {
         closeItemModal();
-        UI.showToast(isEdit ? 'Item Updated' : 'Item Created', data.message, 'success');
+        const msg = data.message || (isEdit ? 'Item updated successfully.' : 'Item created successfully.');
+        if (window.Toast) {
+          window.Toast.show({ title: isEdit ? 'Item Updated' : 'Item Created', message: msg, type: 'success' });
+        } else if (typeof UI !== 'undefined' && UI.showToast) {
+          UI.showToast(isEdit ? 'Item Updated' : 'Item Created', msg, 'success');
+        }
 
         if (isEdit) {
           updateTableRow(data.item);
@@ -963,13 +1004,21 @@
         if (data.stats) updateKpiStats(data.stats);
       } else {
         const msg = data.errors ? Object.values(data.errors).flat().join('<br>') : (data.message || 'Validation error');
-        UI.showToast('Error', msg, 'error');
+        if (window.Toast) {
+          window.Toast.show({ title: 'Error', message: msg, type: 'error' });
+        } else if (typeof UI !== 'undefined' && UI.showToast) {
+          UI.showToast('Error', msg, 'error');
+        }
       }
     })
     .catch(err => {
       saveBtn.disabled = false;
       saveBtn.textContent = isEdit ? 'Update Item SKU' : 'Save Item SKU';
-      UI.showToast('Error', 'Failed to save item details', 'error');
+      if (window.Toast) {
+        window.Toast.show({ title: 'Error', message: 'Failed to save item details', type: 'error' });
+      } else if (typeof UI !== 'undefined' && UI.showToast) {
+        UI.showToast('Error', 'Failed to save item details', 'error');
+      }
     });
   }
 
@@ -982,7 +1031,7 @@
     delBtn.disabled = true;
     delBtn.textContent = 'Deleting...';
 
-    fetch('/masters/items/' + id, {
+    fetch(getItemApiUrl('/masters/items/' + id), {
       method: 'DELETE',
       headers: {
         'Accept': 'application/json',
@@ -996,7 +1045,11 @@
       closeDeleteModal();
 
       if (data.success) {
-        UI.showToast('Item Deleted', data.message || 'Item removed successfully', 'warning');
+        if (window.Toast) {
+          window.Toast.show({ title: 'Item Deleted', message: data.message || 'Item removed successfully', type: 'warning' });
+        } else if (typeof UI !== 'undefined' && UI.showToast) {
+          UI.showToast('Item Deleted', data.message || 'Item removed successfully', 'warning');
+        }
         
         const row = document.getElementById('item-row-' + id);
         if (row) {
@@ -1011,13 +1064,21 @@
 
         if (data.stats) updateKpiStats(data.stats);
       } else {
-        UI.showToast('Error', data.message || 'Could not delete item', 'error');
+        if (window.Toast) {
+          window.Toast.show({ title: 'Error', message: data.message || 'Could not delete item', type: 'error' });
+        } else if (typeof UI !== 'undefined' && UI.showToast) {
+          UI.showToast('Error', data.message || 'Could not delete item', 'error');
+        }
       }
     })
     .catch(err => {
       delBtn.disabled = false;
       delBtn.textContent = 'Yes, Delete Item';
-      UI.showToast('Error', 'Failed to delete item', 'error');
+      if (window.Toast) {
+        window.Toast.show({ title: 'Error', message: 'Failed to delete item', type: 'error' });
+      } else if (typeof UI !== 'undefined' && UI.showToast) {
+        UI.showToast('Error', 'Failed to delete item', 'error');
+      }
     });
   }
 
@@ -1122,6 +1183,11 @@
     const row = document.getElementById('item-row-' + itm.id);
     if (!row) return;
 
+    row.setAttribute('data-category', (itm.category || '').toLowerCase());
+    const isLow = (parseFloat(itm.current_stock || 0) <= parseFloat(itm.min_stock || 0));
+    row.setAttribute('data-lowstock', isLow ? '1' : '0');
+    row.setAttribute('data-status', (itm.status || 'active').toLowerCase());
+
     row.querySelector('.itm-name-val').textContent = itm.name;
     row.querySelector('.itm-code-val').textContent = itm.code || ('ITM-' + String(itm.id).padStart(3, '0'));
     
@@ -1149,9 +1215,6 @@
       costCell.textContent = '₹' + Number(itm.unit_cost || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
     }
 
-    const isLow = (parseFloat(itm.current_stock || 0) <= parseFloat(itm.min_stock || 0));
-    row.setAttribute('data-lowstock', isLow ? '1' : '0');
-
     const stockCell = row.querySelector('.itm-stock-val');
     if (stockCell) {
       stockCell.textContent = Number(itm.current_stock || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
@@ -1175,6 +1238,12 @@
 
     const locCell = row.querySelector('.itm-location-val');
     if (locCell) locCell.textContent = itm.location || '—';
+
+    const statusSelect = row.querySelector('.itm-status-select');
+    if (statusSelect && itm.status) {
+      statusSelect.value = itm.status;
+      statusSelect.className = 'itm-status-select ' + itm.status.toLowerCase();
+    }
 
     const editBtn = row.querySelector('.btn-secondary');
     if (editBtn) {
