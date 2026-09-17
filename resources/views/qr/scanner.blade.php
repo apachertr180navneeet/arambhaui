@@ -46,8 +46,9 @@
 
           <!-- Purchase Bill Amount -->
           <div class="form-group" style="margin-bottom:20px;">
-            <label class="form-label" style="font-weight:700;">Order Bill Amount (₹)</label>
-            <input type="number" id="claim_bill" class="form-control" value="3500.00" step="0.01" style="font-weight:700; font-size:1rem;" oninput="calculateRedemptionPreview()">
+            <label class="form-label" style="font-weight:700;">Order Bill Amount (₹) <span style="color:red;">*</span></label>
+            <input type="number" id="claim_bill" class="form-control" placeholder="e.g. 1500.00" step="0.01" style="font-weight:700; font-size:1rem;" oninput="calculateRedemptionPreview()">
+            <small id="min-bill-hint" style="color:var(--slate-500); font-size:0.75rem; display:block; margin-top:4px;">Auto-calculated based on voucher terms.</small>
           </div>
 
           <div style="display:flex; flex-direction:column; gap:10px;">
@@ -114,41 +115,75 @@
     if (!input) return '';
     input = input.toString().trim();
 
+    // 1. Try parsing JSON payload if QR contains a JSON object
     try {
       const parsed = JSON.parse(input);
-      if (parsed.code) return parsed.code.toUpperCase().trim();
+      if (parsed && typeof parsed === 'object' && parsed.code) {
+        return parsed.code.toString().toUpperCase().trim();
+      }
     } catch(ex) {}
 
-    if (input.includes('?code=') || input.includes('&code=') || input.startsWith('http://') || input.startsWith('https://')) {
+    // 2. Check query parameters (case-insensitive) like ?code=, &code=, ?voucher=, &c=, ?v=
+    const queryMatch = input.match(/[?&](?:code|voucher|c|v)=([^&#\s]+)/i);
+    if (queryMatch && queryMatch[1]) {
+      return decodeURIComponent(queryMatch[1]).toUpperCase().trim();
+    }
+
+    // 3. Check path routes like /claim/CODE or /voucher/CODE
+    const pathMatch = input.match(/(?:\/claim\/|\/voucher\/|\/qr\/scanner\/)([^\/?&#\s]+)/i);
+    if (pathMatch && pathMatch[1]) {
+      const seg = decodeURIComponent(pathMatch[1]).toUpperCase().trim();
+      if (!['SCANNER', 'CLAIM', 'QR', 'PUBLIC', 'GENERATOR'].includes(seg)) {
+        return seg;
+      }
+    }
+
+    // 4. If input is a URL, parse URL object
+    if (/^https?:\/\//i.test(input) || input.includes('://')) {
       try {
         const url = new URL(input, window.location.origin);
-        const codeParam = url.searchParams.get('code');
-        if (codeParam) return codeParam.toUpperCase().trim();
+        for (const [key, val] of url.searchParams.entries()) {
+          if (['code', 'voucher', 'c', 'v'].includes(key.toLowerCase()) && val) {
+            return decodeURIComponent(val).toUpperCase().trim();
+          }
+        }
+        const segments = url.pathname.split('/').filter(Boolean);
+        const last = segments[segments.length - 1];
+        if (last && !['scanner', 'claim', 'qr', 'public', 'generator', 'garment'].includes(last.toLowerCase())) {
+          return decodeURIComponent(last).toUpperCase().trim();
+        }
       } catch(ex) {}
     }
 
-    if (input.includes('/claim/')) {
-      const parts = input.split('/claim/');
-      if (parts[1]) return parts[1].split('?')[0].split('/')[0].toUpperCase().trim();
-    }
-
-    return input.toUpperCase().trim();
+    // 5. Clean up any trailing/leading special characters
+    return input.replace(/^["'\s]+|["'\s/]+$/g, '').toUpperCase().trim();
   }
 
   function onCodeInput() {
-    const raw = document.getElementById('claim_code').value;
-    const code = extractVoucherCode(raw);
-    if (code !== raw && code.length >= 4) {
-      document.getElementById('claim_code').value = code;
+    const inputElem = document.getElementById('claim_code');
+    const raw = inputElem.value;
+    const clean = extractVoucherCode(raw);
+    
+    // If the input was a URL or JSON, replace the field value immediately with the clean code
+    if (clean && clean !== raw && (raw.includes('/') || raw.includes('?') || raw.includes('{'))) {
+      inputElem.value = clean;
     }
-    if (code.length >= 4) {
-      checkVoucherStatus(code);
+    
+    const activeCode = clean || raw.toUpperCase().trim();
+    if (activeCode && activeCode.length >= 3) {
+      checkVoucherStatus(activeCode);
     }
   }
 
   async function checkVoucherStatus(rawCode) {
     const code = extractVoucherCode(rawCode);
     if (!code) return;
+    
+    const inputElem = document.getElementById('claim_code');
+    if (inputElem.value !== code && (inputElem.value.includes('/') || inputElem.value.includes('?'))) {
+      inputElem.value = code;
+    }
+
     try {
       const res = await fetch('{{ route('qr.validate') }}', {
         method: 'POST',
@@ -163,8 +198,39 @@
       const data = await res.json();
       if (data.success) {
         validatedVoucher = data.voucher;
+
+        // Auto-fill Bill Amount according to voucher parameters
+        const billInput = document.getElementById('claim_bill');
+        const minOrder = parseFloat(data.voucher.min_order_value || data.min_bill || 0);
+        const discAmount = parseFloat(data.voucher.discount_amount || 0);
+        const discPercent = parseFloat(data.voucher.discount_percent || 0);
+
+        if (minOrder > 0) {
+          billInput.value = minOrder.toFixed(2);
+        } else if (discAmount > 0) {
+          billInput.value = (discAmount * 2).toFixed(2);
+        } else if (discPercent > 0) {
+          billInput.value = "1000.00";
+        }
+
+        const hint = document.getElementById('min-bill-hint');
+        if (hint) {
+          if (minOrder > 0) {
+            hint.innerHTML = `Minimum qualifying order amount: <strong>₹${minOrder.toFixed(2)}</strong>`;
+          } else {
+            hint.innerHTML = `No minimum spend required.`;
+          }
+        }
+
+        // Auto-fill Customer Phone if tied to this voucher
+        const phoneInput = document.getElementById('claim_phone');
+        if (data.voucher.customer_phone && (!phoneInput.value || phoneInput.value.trim() === '')) {
+          phoneInput.value = data.voucher.customer_phone;
+        }
+
         calculateRedemptionPreview();
       } else {
+        validatedVoucher = null;
         showResultBanner(false, data.message || 'Voucher cannot be redeemed.');
       }
     } catch(err) {
@@ -175,8 +241,14 @@
   function calculateRedemptionPreview() {
     if (!validatedVoucher) return;
     const bill = parseFloat(document.getElementById('claim_bill').value) || 0;
-    let disc = 0;
+    const minOrder = parseFloat(validatedVoucher.min_order_value || 0);
 
+    if (minOrder > 0 && bill < minOrder) {
+      showResultBanner(false, `⚠️ Order amount ₹${bill.toFixed(2)} is below minimum required order value of ₹${minOrder.toFixed(2)} for this voucher.`);
+      return;
+    }
+
+    let disc = 0;
     if (validatedVoucher.discount_type === 'Percentage') {
       disc = (bill * parseFloat(validatedVoucher.discount_percent)) / 100;
       if (validatedVoucher.max_discount_cap && disc > validatedVoucher.max_discount_cap) {
@@ -184,6 +256,7 @@
       }
     } else {
       disc = parseFloat(validatedVoucher.discount_amount || validatedVoucher.discount_percent || 500);
+      if (disc > bill) disc = bill;
     }
 
     const finalPay = Math.max(0, bill - disc);
@@ -204,13 +277,16 @@
   async function handleClaimSubmit(e) {
     e.preventDefault();
     const phone = document.getElementById('claim_phone').value.trim();
-    const code = document.getElementById('claim_code').value.trim();
+    const rawCode = document.getElementById('claim_code').value.trim();
+    const code = extractVoucherCode(rawCode);
     const bill = document.getElementById('claim_bill').value.trim();
 
     if (!phone || !code) {
       alert('Please provide both phone number and voucher code.');
       return;
     }
+
+    document.getElementById('claim_code').value = code;
 
     const btn = document.getElementById('redeem-btn');
     btn.disabled = true;
@@ -297,14 +373,12 @@
             let extractedCode = extractVoucherCode(qrCode.data);
             document.getElementById('claim_code').value = extractedCode;
             checkVoucherStatus(extractedCode);
-            UI.showToast('QR Scanned', `Decoded voucher: ${extractedCode}`, 'success');
+            if (window.UI && UI.showToast) {
+              UI.showToast('QR Scanned', `Decoded voucher: ${extractedCode}`, 'success');
+            }
           } else {
             alert('Could not decode a valid QR barcode from this image. Please try a clearer picture or type the code.');
           }
-        } else {
-          // Fallback code fill
-          document.getElementById('claim_code').value = 'FASHION-15-CLAIM';
-          checkVoucherStatus('FASHION-15-CLAIM');
         }
       };
       img.src = reader.result;
@@ -358,7 +432,9 @@
           let code = extractVoucherCode(qrCode.data);
           document.getElementById('claim_code').value = code;
           checkVoucherStatus(code);
-          UI.showToast('QR Code Scanned', code, 'success');
+          if (window.UI && UI.showToast) {
+            UI.showToast('QR Code Scanned', code, 'success');
+          }
           return;
         }
       }
@@ -367,12 +443,21 @@
   }
 
   document.addEventListener('DOMContentLoaded', () => {
-    const raw = document.getElementById('claim_code').value;
+    const inputElem = document.getElementById('claim_code');
+    
+    // Auto-clean if raw value exists on page load (e.g. from query param)
+    const raw = inputElem.value;
     if (raw) {
       const code = extractVoucherCode(raw);
-      document.getElementById('claim_code').value = code;
+      inputElem.value = code;
       checkVoucherStatus(code);
     }
+
+    // Auto extract clean code on paste or change
+    inputElem.addEventListener('paste', () => {
+      setTimeout(onCodeInput, 30);
+    });
+    inputElem.addEventListener('change', onCodeInput);
   });
 </script>
 @endpush

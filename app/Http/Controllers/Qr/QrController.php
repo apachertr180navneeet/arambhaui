@@ -23,9 +23,65 @@ class QrController extends Controller
         return view('qr.generator', compact('vouchers', 'customers'));
     }
 
+    public static function cleanVoucherCode($input)
+    {
+        if (empty($input)) {
+            return '';
+        }
+
+        $input = trim((string)$input);
+
+        // If JSON payload was passed (e.g. {"code":"FASHION-15-X7K"})
+        if (str_starts_with($input, '{') && str_ends_with($input, '}')) {
+            $json = json_decode($input, true);
+            if (is_array($json) && !empty($json['code'])) {
+                return strtoupper(trim($json['code']));
+            }
+        }
+
+        // Check query parameters (case-insensitive) like ?code=, &code=, ?voucher=, &c=, &v=
+        if (preg_match('/[?&](?:code|voucher|c|v)=([^&#\s]+)/i', $input, $matches)) {
+            return strtoupper(trim(urldecode($matches[1])));
+        }
+
+        // Check path routes like /claim/CODE or /voucher/CODE
+        if (preg_match('/(?:\/claim\/|\/voucher\/|\/qr\/scanner\/)([^\/?&#\s]+)/i', $input, $matches)) {
+            $seg = strtoupper(trim(urldecode($matches[1])));
+            if (!in_array($seg, ['SCANNER', 'CLAIM', 'QR', 'PUBLIC', 'GENERATOR'])) {
+                return $seg;
+            }
+        }
+
+        // If full URL was passed without standard code query param
+        if (preg_match('/^https?:\/\//i', $input)) {
+            $parsed = parse_url($input);
+            if (!empty($parsed['query'])) {
+                parse_str($parsed['query'], $queryParams);
+                foreach ($queryParams as $key => $val) {
+                    if (in_array(strtolower($key), ['code', 'voucher', 'c', 'v']) && !empty($val)) {
+                        return strtoupper(trim($val));
+                    }
+                }
+            }
+            if (!empty($parsed['path'])) {
+                $segments = array_filter(explode('/', trim($parsed['path'], '/')));
+                $lastSegment = end($segments);
+                if ($lastSegment && !in_array(strtolower($lastSegment), ['scanner', 'claim', 'qr', 'public', 'generator'])) {
+                    return strtoupper(trim(urldecode($lastSegment)));
+                }
+            }
+        }
+
+        // Clean up quotes, whitespace, trailing slash
+        $input = trim($input, " \t\n\r\0\x0B\"'\\/");
+
+        return strtoupper($input);
+    }
+
     public function scanner(Request $request, $code = null)
     {
         $code = $code ?: $request->query('code', '');
+        $code = self::cleanVoucherCode($code);
         return view('qr.scanner', compact('code'));
     }
 
@@ -190,11 +246,17 @@ class QrController extends Controller
 
     public function validateVoucher(Request $request)
     {
-        $code = strtoupper(trim($request->input('voucher_code', '')));
-        $voucher = QrVoucher::where('voucher_code', $code)->first();
+        $raw = $request->input('voucher_code', '');
+        $code = self::cleanVoucherCode($raw);
+
+        $voucher = !empty($code) ? QrVoucher::where('voucher_code', $code)->first() : null;
+        if (!$voucher && !empty($code)) {
+            $voucher = QrVoucher::whereRaw('UPPER(voucher_code) = ?', [$code])->first();
+        }
 
         if (!$voucher) {
-            return response()->json(['success' => false, 'message' => 'Invalid voucher code. Code not found in database.'], 404);
+            $displayCode = $code ?: htmlspecialchars(substr($raw, 0, 30));
+            return response()->json(['success' => false, 'message' => "Invalid voucher code '{$displayCode}'. Code not found in database."], 404);
         }
 
         if ($voucher->is_redeemed || $voucher->status === 'Redeemed') {
@@ -235,10 +297,14 @@ class QrController extends Controller
             'order_bill' => 'nullable|numeric|min:0'
         ]);
 
-        $code = strtoupper(trim($validated['voucher_code']));
+        $raw = $validated['voucher_code'];
+        $code = self::cleanVoucherCode($raw);
         $phone = trim($validated['customer_phone']);
 
-        $voucher = QrVoucher::where('voucher_code', $code)->first();
+        $voucher = !empty($code) ? QrVoucher::where('voucher_code', $code)->first() : null;
+        if (!$voucher && !empty($code)) {
+            $voucher = QrVoucher::whereRaw('UPPER(voucher_code) = ?', [$code])->first();
+        }
 
         if (!$voucher) {
             return response()->json(['success' => false, 'message' => "Voucher code '{$code}' not found."], 404);
