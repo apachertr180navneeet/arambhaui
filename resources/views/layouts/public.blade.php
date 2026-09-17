@@ -176,25 +176,7 @@
 </head>
 <body class="public-layout">
 
-  <!-- Clean Minimal Public Header Bar -->
-  <nav class="public-navbar">
-    <a href="{{ url('/') }}" class="public-brand">
-      <div class="public-brand-logo">G</div>
-      <div>
-        <div class="public-brand-title">
-          GarmentERP
-          <span class="public-brand-badge">Customer Portal</span>
-        </div>
-        <div class="public-brand-sub">FashionWorks Pvt. Ltd.</div>
-      </div>
-    </a>
-    <div>
-      <a href="{{ route('login') }}" style="font-size:0.85rem; font-weight:600; color:#4f46e5; text-decoration:none; display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border-radius:8px; background:#eff6ff;">
-        <span>Staff Login</span>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-      </a>
-    </div>
-  </nav>
+
 
   <!-- Main Content Container -->
   <main class="public-main-container">
