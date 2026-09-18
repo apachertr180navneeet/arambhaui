@@ -80,7 +80,7 @@ class JobAssignController extends Controller
             'instructions' => 'nullable|string',
             'items' => 'required|array|min:1',
             'items.*.item_id' => 'nullable',
-            'items.*.item_name' => 'required|string|max:255',
+            'items.*.item_name' => 'nullable|string|max:255',
             'items.*.than_meters' => 'nullable|numeric|min:0',
             'items.*.production_pcs' => 'required|numeric|min:0',
             'items.*.wastage_meters' => 'nullable|numeric|min:0',
@@ -155,11 +155,12 @@ class JobAssignController extends Controller
                 $rate = (float)($it['rate_per_piece'] ?? 0);
                 $lineTotal = $pcs * $rate;
                 $avgCons = $pcs > 0 ? max(0, ($than - $wastage) / $pcs) : 0;
+                $resolvedItemName = !empty($it['item_name']) ? $it['item_name'] : (!empty($it['item_id']) ? (Item::find($it['item_id'])?->name ?? 'Item') : 'Item');
 
                 JobAssignmentItem::create([
                     'job_assignment_id' => $jobAssignment->id,
                     'item_id' => !empty($it['item_id']) ? (int)$it['item_id'] : null,
-                    'item_name' => $it['item_name'],
+                    'item_name' => $resolvedItemName,
                     'than_meters' => $than,
                     'production_pcs' => (int)$pcs,
                     'wastage_meters' => $wastage,
@@ -208,7 +209,7 @@ class JobAssignController extends Controller
             'instructions' => 'nullable|string',
             'items' => 'required|array|min:1',
             'items.*.item_id' => 'nullable',
-            'items.*.item_name' => 'required|string|max:255',
+            'items.*.item_name' => 'nullable|string|max:255',
             'items.*.than_meters' => 'nullable|numeric|min:0',
             'items.*.production_pcs' => 'required|numeric|min:0',
             'items.*.wastage_meters' => 'nullable|numeric|min:0',
@@ -281,11 +282,12 @@ class JobAssignController extends Controller
                 $rate = (float)($it['rate_per_piece'] ?? 0);
                 $lineTotal = $pcs * $rate;
                 $avgCons = $pcs > 0 ? max(0, ($than - $wastage) / $pcs) : 0;
+                $resolvedItemName = !empty($it['item_name']) ? $it['item_name'] : (!empty($it['item_id']) ? (Item::find($it['item_id'])?->name ?? 'Item') : 'Item');
 
                 JobAssignmentItem::create([
                     'job_assignment_id' => $assign->id,
                     'item_id' => !empty($it['item_id']) ? (int)$it['item_id'] : null,
-                    'item_name' => $it['item_name'],
+                    'item_name' => $resolvedItemName,
                     'than_meters' => $than,
                     'production_pcs' => (int)$pcs,
                     'wastage_meters' => $wastage,

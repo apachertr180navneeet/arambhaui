@@ -191,7 +191,7 @@ class QrController extends Controller
 
         for ($i = 1; $i <= $count; $i++) {
             $randomSuffix = strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 5));
-            $prefix = "MAJ-" . intval($amount);
+            $prefix = "ARM-" . intval($amount);
             $voucherCode = ($count === 1 && !empty($validated['voucher_code']))
                 ? strtoupper(trim($validated['voucher_code']))
                 : "{$prefix}-{$randomSuffix}";

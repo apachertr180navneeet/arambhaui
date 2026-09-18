@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Generate QR Vouchers (Majasol Style) - GarmentERP')
+@section('title', 'Generate QR Vouchers (Aarambh Style) - GarmentERP')
 
 @section('breadcrumb')
   <div class="breadcrumb-item"><span>Barcodes & QR</span></div>
@@ -11,7 +11,7 @@
 @push('styles')
 <style>
   /* ==========================================================================
-     MAJASOL QR GENERATOR STUDIO - 4 ESSENTIAL FIELDS
+     AARAMBH QR GENERATOR STUDIO - 4 ESSENTIAL FIELDS
      ========================================================================== */
   .qr-studio-wrapper {
     display: flex;
@@ -134,7 +134,7 @@
     color: var(--primary-700, #4338ca);
   }
 
-  /* Live 1" x 1" Majasol Preview Card */
+  /* Live 1" x 1" Aarambh Preview Card */
   .preview-sticky-card {
     background: #ffffff;
     border: 1px solid var(--slate-200, #e2e8f0);
@@ -146,7 +146,7 @@
     text-align: center;
   }
 
-  /* Majasol 1 inch by 1 inch Sticker Frame */
+  /* Aarambh 1 inch by 1 inch Sticker Frame */
   .majasol-sticker-box {
     width: 1.25in;
     height: 1.25in;
@@ -294,7 +294,7 @@
     <div>
       <div class="qr-badge-pill">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/><path d="M3 12h.01"/><path d="M12 3h.01"/></svg>
-        Majasol QR System (1" × 1" Thermal Sticker)
+        Aarambh QR System (1" × 1" Thermal Sticker)
       </div>
       <h2 style="margin:0; font-size:1.5rem; font-weight:800; letter-spacing:-0.02em;">Generate QR Vouchers</h2>
       <p style="margin:4px 0 0; font-size:0.85rem; color:#cbd5e1; max-width:640px;">
@@ -338,16 +338,16 @@
           <div class="form-group" style="margin-bottom:0;">
             <label class="input-label-primary">
               <span>2. Batch Name <span style="color:#ef4444;">*</span></span>
-              <span style="font-size:0.75rem; font-weight:500; color:var(--slate-500);">Majasol Batch Tag</span>
+              <span style="font-size:0.75rem; font-weight:500; color:var(--slate-500);">Aarambh Batch Tag</span>
             </label>
-            <input type="text" name="batch_name" id="input_batch_name" class="form-control" required value="MAJASOL BATCH #1" placeholder="e.g. MAJASOL-LOT-2026 or Festive Offer" oninput="updateLivePreview()" style="font-weight:700; font-size:1rem; text-transform:uppercase;">
+            <input type="text" name="batch_name" id="input_batch_name" class="form-control" required value="AARAMBH BATCH #1" placeholder="e.g. AARAMBH-LOT-2026 or Festive Offer" oninput="updateLivePreview()" style="font-weight:700; font-size:1rem; text-transform:uppercase;">
             
             <div class="preset-pills">
               <span style="font-size:0.75rem; color:var(--slate-500); align-self:center; margin-right:4px;">Quick:</span>
-              <button type="button" class="preset-pill-btn" onclick="setBatch('MAJASOL BATCH #1')">MAJASOL #1</button>
-              <button type="button" class="preset-pill-btn" onclick="setBatch('MAJASOL SUMMER 2026')">Summer 2026</button>
-              <button type="button" class="preset-pill-btn" onclick="setBatch('MAJASOL FESTIVE VIP')">Festive VIP</button>
-              <button type="button" class="preset-pill-btn" onclick="setBatch('MAJASOL LOT-A')">LOT-A</button>
+              <button type="button" class="preset-pill-btn" onclick="setBatch('AARAMBH BATCH #1')">AARAMBH #1</button>
+              <button type="button" class="preset-pill-btn" onclick="setBatch('AARAMBH SUMMER 2026')">Summer 2026</button>
+              <button type="button" class="preset-pill-btn" onclick="setBatch('AARAMBH FESTIVE VIP')">Festive VIP</button>
+              <button type="button" class="preset-pill-btn" onclick="setBatch('AARAMBH LOT-A')">LOT-A</button>
             </div>
           </div>
 
@@ -408,12 +408,12 @@
       </form>
     </div>
 
-    <!-- RIGHT: 1" x 1" Majasol Live Sticker Preview & Quick Print -->
+    <!-- RIGHT: 1" x 1" Aarambh Live Sticker Preview & Quick Print -->
     <div class="preview-sticky-card">
       
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
         <span style="font-size:0.8rem; font-weight:800; color:var(--slate-700); text-transform:uppercase; letter-spacing:0.06em;">
-          1" × 1" Majasol Sticker
+          1" × 1" Aarambh Sticker
         </span>
         <span style="font-size:0.75rem; background:#ecfdf5; color:#059669; font-weight:700; padding:2px 8px; border-radius:9999px; border:1px solid #a7f3d0;">
           Exact 1"x1" Size
@@ -426,13 +426,13 @@
 
       <!-- 1" x 1" STICKER BOX (PRINTABLE) -->
       <div id="single-print-wrapper" class="majasol-sticker-box">
-        <div class="sticker-brand" id="prev-brand">MAJASOL BATCH #1</div>
+        <div class="sticker-brand" id="prev-brand">AARAMBH BATCH #1</div>
         <div class="sticker-qr">
           <div id="preview-qrcode-target"></div>
         </div>
         <div class="sticker-footer">
           <span class="sticker-amt" id="prev-amt">₹500</span>
-          <span class="sticker-code" id="prev-code">MAJ-500-PREV</span>
+          <span class="sticker-code" id="prev-code">ARM-500-PREV</span>
         </div>
       </div>
 
@@ -442,7 +442,7 @@
           <span>🔗 Frontend Scan URL</span>
         </div>
         <div style="font-size:0.75rem; font-family:var(--font-mono, monospace); color:var(--primary-700); word-break:break-all; background:#fff; padding:6px 8px; border-radius:6px; border:1px solid #cbd5e1;" id="prev-scan-url">
-          {{ url('/claim/MAJ-500-PREV') }}
+          {{ url('/claim/ARM-500-PREV') }}
         </div>
         <div style="font-size:0.7rem; color:var(--slate-500); margin-top:6px;">
           📱 When scanned by phone camera, customer opens this URL directly to redeem their ₹ discount.
@@ -472,7 +472,7 @@
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
         <div>
           <h3 style="margin:0; font-size:1.1rem; font-weight:800; color:var(--slate-900);">Recent Active QR Vouchers</h3>
-          <p style="margin:2px 0 0; font-size:0.8rem; color:var(--slate-500);">Recently created Majasol QR vouchers in circulation.</p>
+          <p style="margin:2px 0 0; font-size:0.8rem; color:var(--slate-500);">Recently created Aarambh QR vouchers in circulation.</p>
         </div>
         <a href="{{ route('qr.history') }}" class="btn btn-secondary btn-sm" style="font-weight:700;">Open QR Listing Table →</a>
       </div>
@@ -554,7 +554,7 @@
   }
 
   function updateLivePreview() {
-    const batchName = document.getElementById('input_batch_name').value.trim() || 'MAJASOL BATCH #1';
+    const batchName = document.getElementById('input_batch_name').value.trim() || 'AARAMBH BATCH #1';
     const count = parseInt(document.getElementById('input_count').value) || 1;
     const amount = parseFloat(document.getElementById('input_amount').value) || 500;
     
@@ -562,7 +562,7 @@
     document.getElementById('prev-brand').innerText = batchName;
     document.getElementById('prev-amt').innerText = '₹' + amount;
     
-    const sampleCode = `MAJ-${Math.round(amount)}-SAMPLE`;
+    const sampleCode = `ARM-${Math.round(amount)}-SAMPLE`;
     document.getElementById('prev-code').innerText = sampleCode;
     
     const scanUrl = `${baseUrl}/${sampleCode}`;
@@ -592,7 +592,7 @@
 
   function testScanUrl() {
     const amount = parseFloat(document.getElementById('input_amount').value) || 500;
-    const sampleCode = `MAJ-${Math.round(amount)}-SAMPLE`;
+    const sampleCode = `ARM-${Math.round(amount)}-SAMPLE`;
     window.open(`${baseUrl}/${sampleCode}`, '_blank');
   }
 

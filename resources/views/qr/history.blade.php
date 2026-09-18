@@ -11,7 +11,7 @@
 @push('styles')
 <style>
   /* ==========================================================================
-     MAJASOL QR LISTING & 1" x 1" THERMAL STICKER PRINT SUITE
+     AARAMBH QR LISTING & 1" x 1" THERMAL STICKER PRINT SUITE
      ========================================================================== */
   .ledger-wrapper {
     display: flex;
@@ -291,7 +291,7 @@
     border-color: #fde68a;
   }
 
-  /* Majasol 1" x 1" Sticker Modal Design */
+  /* Aarambh 1" x 1" Sticker Modal Design */
   .majasol-sticker-card {
     width: 1.25in;
     height: 1.25in;
@@ -503,7 +503,7 @@
     <!-- Action Header -->
     <div class="qr-card-header">
       <div>
-        <h3 style="margin:0; font-size:1.2rem; font-weight:800; color:var(--slate-900);">Majasol QR Vouchers & Sticker Ledger</h3>
+        <h3 style="margin:0; font-size:1.2rem; font-weight:800; color:var(--slate-900);">Aarambh QR Vouchers & Sticker Ledger</h3>
         <p style="margin:4px 0 0; font-size:0.825rem; color:var(--slate-500);">
           Displaying QR codes directly in table. Print individual or batch 1" × 1" thermal sticker labels.
         </p>
@@ -564,7 +564,7 @@
           @forelse ($vouchers as $v)
             @php
               $amt = (float)($v->amount ?: $v->discount_amount ?: $v->discount_percent ?: 0);
-              $batch = $v->batch_name ?: $v->title ?: 'MAJASOL';
+              $batch = $v->batch_name ?: $v->title ?: 'AARAMBH';
               $isExpired = $v->valid_until && strtotime($v->valid_until) < strtotime(date('Y-m-d'));
               $statusKey = strtolower($v->status);
               $claimUrl = url('/claim/' . $v->voucher_code);
@@ -728,7 +728,7 @@
     <div class="modal-header">
       <div class="modal-title">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/></svg>
-        <span>1" × 1" Majasol Sticker & Scan URL</span>
+        <span>1" × 1" Aarambh Sticker & Scan URL</span>
       </div>
       <button type="button" class="modal-close-btn" onclick="closeStickerModal()">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -737,15 +737,15 @@
 
     <div class="modal-body" style="padding:24px; text-align:center;">
       
-      <!-- Exact 1"x1" Majasol Sticker Card -->
+      <!-- Exact 1"x1" Aarambh Sticker Card -->
       <div class="majasol-sticker-card" id="modal-sticker-card">
-        <div class="sticker-brand" id="m-batch-name">MAJASOL BATCH</div>
+        <div class="sticker-brand" id="m-batch-name">AARAMBH BATCH</div>
         <div class="sticker-qr">
           <div id="modal-qr-target"></div>
         </div>
         <div class="sticker-footer">
           <span class="sticker-amt" id="m-amt">₹500</span>
-          <span class="sticker-code" id="m-code">MAJ-500-1234</span>
+          <span class="sticker-code" id="m-code">ARM-500-1234</span>
         </div>
       </div>
 
@@ -900,7 +900,7 @@
   // Open 1"x1" Sticker View Modal
   function openStickerModal(v) {
     activeModalVoucher = v;
-    const batch = v.batch_name || v.title || 'MAJASOL';
+    const batch = v.batch_name || v.title || 'AARAMBH';
     const amt = v.amount || v.discount_amount || v.discount_percent || 0;
     const code = v.voucher_code;
     const claimUrl = `${baseUrl}/${code}`;
@@ -975,7 +975,7 @@
     printArea.style.display = 'block';
 
     vouchers.forEach((v, index) => {
-      const batch = v.batch_name || v.title || 'MAJASOL';
+      const batch = v.batch_name || v.title || 'AARAMBH';
       const amt = v.amount || v.discount_amount || v.discount_percent || 0;
       const code = v.voucher_code;
       const claimUrl = `${baseUrl}/${code}`;

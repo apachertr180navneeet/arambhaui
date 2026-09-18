@@ -202,15 +202,13 @@
               @endphp
               <tr class="item-row" data-index="{{ $idx }}">
                 <td>
-                  <div style="display:flex; flex-direction:column; gap:4px;">
-                    <select name="items[{{ $idx }}][item_id]" class="form-control item-select" onchange="onItemDropdownChange(this, {{ $idx }})">
-                      <option value="">-- Choose from Master / Custom --</option>
-                      @foreach($items as $it)
-                        <option value="{{ $it->id }}" {{ ($line && $line->item_id == $it->id) ? 'selected' : '' }} data-name="{{ $it->name }}">{{ $it->name }} ({{ $it->item_code ?? 'Item' }})</option>
-                      @endforeach
-                    </select>
-                    <input type="text" name="items[{{ $idx }}][item_name]" class="form-control item-name-input" required value="{{ $itemName }}" placeholder="Style/Fabric name">
-                  </div>
+                  <select name="items[{{ $idx }}][item_id]" class="form-control item-select" onchange="onItemDropdownChange(this, {{ $idx }})" required>
+                    <option value="">-- Select Item / Fabric --</option>
+                    @foreach($items as $it)
+                      <option value="{{ $it->id }}" {{ ($line && $line->item_id == $it->id) ? 'selected' : '' }} data-name="{{ $it->name }}">{{ $it->name }} ({{ $it->item_code ?? 'Item' }})</option>
+                    @endforeach
+                  </select>
+                  <input type="hidden" name="items[{{ $idx }}][item_name]" class="item-name-input" value="{{ $itemName }}">
                 </td>
                 <td>
                   <div style="position:relative;">
@@ -351,12 +349,12 @@
 
   function onItemDropdownChange(select, idx) {
     const opt = select.options[select.selectedIndex];
-    const name = opt.getAttribute('data-name');
+    const name = opt ? (opt.getAttribute('data-name') || (opt.value ? opt.text : '')) : '';
     const row = select.closest('tr');
     const nameInput = row.querySelector('.item-name-input');
 
-    if (name && nameInput) {
-      nameInput.value = name;
+    if (nameInput) {
+      nameInput.value = name || '';
     }
   }
 
@@ -364,7 +362,7 @@
     const tbody = document.getElementById('items-tbody');
     const idx = rowCount++;
 
-    let itemsOptions = '<option value="">-- Choose from Master / Custom --</option>';
+    let itemsOptions = '<option value="">-- Select Item / Fabric --</option>';
     itemsMasterList.forEach(it => {
       itemsOptions += `<option value="${it.id}" data-name="${it.name}">${it.name} (${it.item_code || 'Item'})</option>`;
     });
@@ -374,12 +372,10 @@
     tr.setAttribute('data-index', idx);
     tr.innerHTML = `
       <td>
-        <div style="display:flex; flex-direction:column; gap:4px;">
-          <select name="items[${idx}][item_id]" class="form-control item-select" onchange="onItemDropdownChange(this, ${idx})">
-            ${itemsOptions}
-          </select>
-          <input type="text" name="items[${idx}][item_name]" class="form-control item-name-input" required value="Cotton Than Roll #${idx + 1}" placeholder="Style/Fabric name">
-        </div>
+        <select name="items[${idx}][item_id]" class="form-control item-select" onchange="onItemDropdownChange(this, ${idx})" required>
+          ${itemsOptions}
+        </select>
+        <input type="hidden" name="items[${idx}][item_name]" class="item-name-input" value="">
       </td>
       <td>
         <div style="position:relative;">
