@@ -49,10 +49,8 @@ class JobWorkerController extends Controller
         return [
             'total' => JobWorker::count(),
             'active' => JobWorker::whereRaw('LOWER(status) = ?', ['active'])->count(),
-            'totalCapacity' => (int) JobWorker::sum('daily_capacity'),
-            'totalOutstanding' => (float) JobWorker::sum('outstanding'),
-            'stitchingCount' => JobWorker::where('skill_type', 'like', '%stitch%')->count(),
-            'cuttingCount' => JobWorker::where('skill_type', 'like', '%cut%')->count()
+            'inactive' => JobWorker::whereRaw('LOWER(status) != ?', ['active'])->count(),
+            'totalOutstanding' => (float) JobWorker::sum('outstanding')
         ];
     }
 
@@ -62,11 +60,8 @@ class JobWorkerController extends Controller
             'name' => 'required|string|max:255',
             'phone' => 'required|string|max:30',
             'code' => 'nullable|string|max:50',
-            'skill_type' => 'required|string|max:255',
             'contact_person' => 'nullable|string|max:255',
             'email' => 'nullable|email|max:255',
-            'rate_per_piece' => 'required|numeric|min:0',
-            'daily_capacity' => 'nullable|integer|min:0',
             'address' => 'nullable|string',
             'city' => 'nullable|string|max:100',
             'state' => 'nullable|string|max:100',
@@ -82,16 +77,23 @@ class JobWorkerController extends Controller
         }
 
         if (empty($validated['code'])) {
-            $count = JobWorker::count() + 1;
-            $validated['code'] = 'JW-' . str_pad($count, 3, '0', STR_PAD_LEFT);
+            $maxId = (int)(JobWorker::withTrashed()->max('id') ?? 0);
+            $candidateNum = max(JobWorker::count() + 1, $maxId + 1);
+            do {
+                $candidateCode = 'JW-' . str_pad($candidateNum, 3, '0', STR_PAD_LEFT);
+                $candidateNum++;
+            } while (JobWorker::withTrashed()->where('code', $candidateCode)->exists());
+            $validated['code'] = $candidateCode;
         }
 
-        $validated['daily_capacity'] = isset($validated['daily_capacity']) ? intval($validated['daily_capacity']) : 250;
-        $validated['rate_per_piece'] = floatval($validated['rate_per_piece']);
+        $validated['skill_type'] = $request->input('skill_type', 'General');
+        $validated['rate_per_piece'] = floatval($request->input('rate_per_piece', 0));
+        $validated['daily_capacity'] = intval($request->input('daily_capacity', 0));
+        $validated['outstanding'] = floatval($validated['outstanding'] ?? 0);
 
         $worker = JobWorker::create($validated);
 
-        if ($request->wantsJson() || $request->ajax()) {
+        if ($request->expectsJson() || $request->wantsJson() || $request->ajax() || $request->isJson() || str_contains((string)$request->header('Accept'), 'application/json')) {
             return response()->json([
                 'success' => true,
                 'job_worker' => $worker,
@@ -117,11 +119,8 @@ class JobWorkerController extends Controller
             'name' => 'sometimes|required|string|max:255',
             'phone' => 'sometimes|required|string|max:30',
             'code' => 'nullable|string|max:50',
-            'skill_type' => 'nullable|string|max:255',
             'contact_person' => 'nullable|string|max:255',
             'email' => 'nullable|email|max:255',
-            'rate_per_piece' => 'sometimes|required|numeric|min:0',
-            'daily_capacity' => 'nullable|integer|min:0',
             'address' => 'nullable|string',
             'city' => 'nullable|string|max:100',
             'state' => 'nullable|string|max:100',
@@ -134,9 +133,19 @@ class JobWorkerController extends Controller
             $validated['status'] = ucfirst(strtolower($validated['status']));
         }
 
+        if ($request->filled('skill_type')) {
+            $validated['skill_type'] = $request->input('skill_type');
+        }
+        if ($request->filled('rate_per_piece')) {
+            $validated['rate_per_piece'] = floatval($request->input('rate_per_piece'));
+        }
+        if ($request->filled('daily_capacity')) {
+            $validated['daily_capacity'] = intval($request->input('daily_capacity'));
+        }
+
         $jobworker->update($validated);
 
-        if ($request->wantsJson() || $request->ajax()) {
+        if ($request->expectsJson() || $request->wantsJson() || $request->ajax() || $request->isJson() || str_contains((string)$request->header('Accept'), 'application/json')) {
             return response()->json([
                 'success' => true,
                 'job_worker' => $jobworker,
@@ -153,7 +162,7 @@ class JobWorkerController extends Controller
         $name = $jobworker->name;
         $jobworker->delete();
 
-        if (request()->wantsJson() || request()->ajax()) {
+        if (request()->expectsJson() || request()->wantsJson() || request()->ajax() || request()->isJson() || str_contains((string)request()->header('Accept'), 'application/json')) {
             return response()->json([
                 'success' => true,
                 'stats' => $this->getStats(),

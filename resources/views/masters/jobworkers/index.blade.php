@@ -365,7 +365,7 @@
       </div>
     </div>
 
-    <!-- 2. Daily Production Capacity -->
+    <!-- 2. Active Units -->
     <div class="jw-stat-card" style="--stat-accent: #059669;">
       <div class="jw-stat-icon" style="background:#ecfdf5; color:#059669;">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -373,26 +373,27 @@
         </svg>
       </div>
       <div class="jw-stat-info">
-        <div class="jw-stat-label">Total Daily Capacity</div>
+        <div class="jw-stat-label">Active Job Workers</div>
         <div class="jw-stat-value">
-          <span id="stat-capacity-count">{{ number_format($stats['totalCapacity']) }}</span>
-          <span style="font-size:0.75rem; font-weight:600; color:var(--slate-500);">Pcs / Day</span>
+          <span id="stat-active-total">{{ $stats['active'] }}</span>
+          <span style="font-size:0.75rem; font-weight:600; color:var(--slate-500);">Contractors</span>
         </div>
       </div>
     </div>
 
-    <!-- 3. Stitching & Sewing Units -->
-    <div class="jw-stat-card" style="--stat-accent: #8b5cf6;">
-      <div class="jw-stat-icon" style="background:#faf5ff; color:#7c3aed;">
+    <!-- 3. Inactive / Blocked Units -->
+    <div class="jw-stat-card" style="--stat-accent: #64748b;">
+      <div class="jw-stat-icon" style="background:#f8fafc; color:#64748b;">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
         </svg>
       </div>
       <div class="jw-stat-info">
-        <div class="jw-stat-label">Stitching Units</div>
+        <div class="jw-stat-label">Inactive / Blocked</div>
         <div class="jw-stat-value">
-          <span id="stat-stitching-count">{{ $stats['stitchingCount'] }}</span>
-          <span style="font-size:0.75rem; font-weight:600; color:var(--slate-500);">Sewing Lines</span>
+          <span id="stat-inactive-count">{{ $stats['inactive'] }}</span>
+          <span style="font-size:0.75rem; font-weight:600; color:var(--slate-500);">Units</span>
         </div>
       </div>
     </div>
@@ -462,17 +463,14 @@
           <circle cx="11" cy="11" r="8"/>
           <line x1="21" y1="21" x2="16.65" y2="16.65"/>
         </svg>
-        <input type="text" id="jw-filter-input" class="jw-search-input" placeholder="Search worker, skill, phone, city..." onkeyup="filterJobWorkerTable(this.value)">
+        <input type="text" id="jw-filter-input" class="jw-search-input" placeholder="Search worker, phone, contact, city..." onkeyup="filterJobWorkerTable(this.value)">
       </div>
 
       <div class="jw-filter-pills">
         <button type="button" class="jw-filter-pill active" id="pill-all" onclick="applyJobWorkerFilter('all', this)">All (<span id="pill-count-all">{{ $stats['total'] }}</span>)</button>
         <button type="button" class="jw-filter-pill" id="pill-active" onclick="applyJobWorkerFilter('active', this)">Active (<span id="pill-count-active">{{ $stats['active'] }}</span>)</button>
-        <button type="button" class="jw-filter-pill" onclick="applyJobWorkerFilter('stitching', this)">Stitching</button>
-        <button type="button" class="jw-filter-pill" onclick="applyJobWorkerFilter('cutting', this)">Cutting</button>
-        <button type="button" class="jw-filter-pill" onclick="applyJobWorkerFilter('embroidery', this)">Embroidery</button>
-        <button type="button" class="jw-filter-pill" onclick="applyJobWorkerFilter('washing', this)">Washing / Finishing</button>
-        <button type="button" class="jw-filter-pill" onclick="applyJobWorkerFilter('blocked', this)">Blocked / Inactive</button>
+        <button type="button" class="jw-filter-pill" id="pill-inactive" onclick="applyJobWorkerFilter('blocked', this)">Blocked / Inactive (<span id="pill-count-inactive">{{ $stats['inactive'] }}</span>)</button>
+        <button type="button" class="jw-filter-pill" onclick="applyJobWorkerFilter('balance', this)">With Balance</button>
       </div>
     </div>
 
@@ -486,7 +484,7 @@
 
       <h3 style="margin:0 0 8px; font-size:1.25rem; font-weight:800; color:var(--slate-900);">No Job Workers in Directory Yet</h3>
       <p style="margin:0 0 20px; font-size:0.875rem; color:var(--slate-500); max-width:480px; line-height:1.5;">
-        Register manufacturing contractors, cutting masters, sewing units, and embroidery specialists to manage job orders and piece rates.
+        Register manufacturing contractors, cutting masters, sewing units, and embroidery specialists to manage job orders.
       </p>
 
       <button type="button" class="btn btn-primary" onclick="openJobWorkerModal()" style="display:inline-flex; align-items:center; gap:8px; padding:10px 22px; font-size:0.9rem; font-weight:700; border-radius:10px; background:linear-gradient(135deg, #2563eb, #1d4ed8); box-shadow:0 6px 16px rgba(37,99,235,0.25); cursor:pointer;">
@@ -501,21 +499,21 @@
       <div class="jw-empty-features">
         <div class="jw-feature-card">
           <div style="width:34px; height:34px; border-radius:8px; background:#eff6ff; color:#2563eb; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
           </div>
           <div>
-            <div style="font-weight:700; font-size:0.825rem; color:var(--slate-800);">Piece Rates & Capacity</div>
-            <div style="font-size:0.75rem; color:var(--slate-500); margin-top:2px;">Track standard unit rates, output limits, and daily work allocation</div>
+            <div style="font-weight:700; font-size:0.825rem; color:var(--slate-800);">Contractor Profiles & Contacts</div>
+            <div style="font-size:0.75rem; color:var(--slate-500); margin-top:2px;">Maintain workshop locations, phone numbers, and key master contacts</div>
           </div>
         </div>
 
         <div class="jw-feature-card">
           <div style="width:34px; height:34px; border-radius:8px; background:#ecfdf5; color:#059669; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
           </div>
           <div>
-            <div style="font-weight:700; font-size:0.825rem; color:var(--slate-800);">Job Work Process Tracking</div>
-            <div style="font-size:0.75rem; color:var(--slate-500); margin-top:2px;">Issue cutting & stitching challans with live progress tracking</div>
+            <div style="font-weight:700; font-size:0.825rem; color:var(--slate-800);">Accounts & Outstanding Dues</div>
+            <div style="font-size:0.75rem; color:var(--slate-500); margin-top:2px;">Track payment balances, ledger entries, and job order dues</div>
           </div>
         </div>
       </div>
@@ -528,9 +526,6 @@
           <tr>
             <th style="width: 50px; text-align: center;">#</th>
             <th>Worker / Unit Name & Code</th>
-            <th>Specialization / Skill</th>
-            <th style="text-align: right;">Rate / Pc</th>
-            <th style="text-align: center;">Daily Capacity</th>
             <th>Contact & Phone</th>
             <th>Workshop Location</th>
             <th style="text-align: right;">Outstanding</th>
@@ -540,16 +535,7 @@
         </thead>
         <tbody id="jobworkers-table-body">
           @foreach($jobworkers as $index => $jw)
-            @php
-              $skillLower = strtolower($jw->skill_type ?? '');
-              $skillBadge = 'badge-info';
-              if (str_contains($skillLower, 'stitch')) $skillBadge = 'badge-primary';
-              elseif (str_contains($skillLower, 'cut')) $skillBadge = 'badge-warning';
-              elseif (str_contains($skillLower, 'embroid')) $skillBadge = 'badge-purple';
-              elseif (str_contains($skillLower, 'wash') || str_contains($skillLower, 'finish')) $skillBadge = 'badge-success';
-              elseif (str_contains($skillLower, 'print')) $skillBadge = 'badge-cyan';
-            @endphp
-            <tr class="jw-row jw-row-transition" id="jobworker-row-{{ $jw->id }}" data-id="{{ $jw->id }}" data-skill="{{ $skillLower }}" data-status="{{ strtolower($jw->status ?? 'active') }}" data-balance="{{ $jw->outstanding ?? 0 }}">
+            <tr class="jw-row jw-row-transition" id="jobworker-row-{{ $jw->id }}" data-id="{{ $jw->id }}" data-status="{{ strtolower($jw->status ?? 'active') }}" data-balance="{{ $jw->outstanding ?? 0 }}">
               <td class="row-index" style="text-align: center; font-weight: 600; color: var(--slate-400);">{{ $index + 1 }}</td>
               <td>
                 <div style="display:flex; align-items:center; gap:10px;">
@@ -562,20 +548,9 @@
                   </div>
                 </div>
               </td>
-              <td class="jw-skill-cell">
-                <span class="badge {{ $skillBadge }}" style="font-size:0.75rem; font-weight:600; padding:4px 8px; border-radius:8px;">
-                  {{ $jw->skill_type }}
-                </span>
-              </td>
-              <td class="jw-rate-val" style="text-align: right; font-weight: 700; color: #059669;">
-                ₹{{ number_format($jw->rate_per_piece, 2) }}
-              </td>
-              <td class="jw-capacity-val" style="text-align: center; font-weight: 600; color: var(--slate-700);">
-                {{ number_format($jw->daily_capacity) }} pcs
-              </td>
               <td>
-                <div class="jw-contact-val" style="font-weight:600; color:var(--slate-800); font-size:0.85rem;">{{ $jw->contact_person ?: $jw->name }}</div>
-                <div class="jw-phone-val" style="font-size:0.75rem; color:var(--slate-500);">{{ $jw->phone }}</div>
+                <div class="jw-contact-val" style="font-weight:600; color:var(--slate-800); font-size:0.85rem;">{{ $jw->contact_person ?: ($jw->name ?: '—') }}</div>
+                <div class="jw-phone-val" style="font-size:0.75rem; color:var(--slate-500);">{{ $jw->phone ?? '—' }}</div>
               </td>
               <td>
                 <div class="jw-city-val" style="font-weight:600; color:var(--slate-700); font-size:0.85rem;">{{ $jw->city ?: ($jw->address ? \Illuminate\Support\Str::limit($jw->address, 25) : '—') }}</div>
@@ -624,7 +599,7 @@
     <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--slate-100); padding-bottom:16px; margin-bottom:18px;">
       <div style="display:flex; align-items:center; gap:10px;">
         <div style="width:38px; height:38px; border-radius:10px; background:#eff6ff; color:#2563eb; display:flex; align-items:center; justify-content:center;">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
           </svg>
         </div>
@@ -657,45 +632,23 @@
 
       <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:14px; margin-bottom:12px;">
         <div class="form-group" style="margin:0;">
-          <label class="form-label required">Specialization / Process</label>
-          <select name="skill_type" id="jw_skill" class="form-control" required>
-            <option value="Stitching">Stitching / Sewing</option>
-            <option value="Cutting">Fabric Cutting</option>
-            <option value="Embroidery">Computer Embroidery</option>
-            <option value="Printing">Screen / Digital Printing</option>
-            <option value="Washing & Finishing">Washing & Finishing</option>
-            <option value="Ironing & Packing">Ironing & Packing</option>
-            <option value="Button & Eyelet">Button & Eyelet Hole</option>
-          </select>
-        </div>
-        <div class="form-group" style="margin:0;">
           <label class="form-label">Contact Person</label>
           <input type="text" name="contact_person" id="jw_contact" class="form-control" placeholder="e.g. Master Rajesh">
         </div>
-      </div>
-
-      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:14px; margin-bottom:12px;">
         <div class="form-group" style="margin:0;">
           <label class="form-label required">Phone / Mobile</label>
           <input type="text" name="phone" id="jw_phone" class="form-control" required placeholder="e.g. 9845067890">
         </div>
-        <div class="form-group" style="margin:0;">
-          <label class="form-label">Email Address</label>
-          <input type="email" name="email" id="jw_email" class="form-control" placeholder="e.g. raj.stitching@gmail.com">
-        </div>
       </div>
 
-      <!-- Financial & Rates -->
-      <div class="jw-modal-section-title">Rates & Production Capacity</div>
-      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:14px; margin-bottom:12px;">
-        <div class="form-group" style="margin:0;">
-          <label class="form-label required">Default Rate / Piece (₹)</label>
-          <input type="number" step="0.01" name="rate_per_piece" id="jw_rate" class="form-control" required placeholder="45.00" value="45.00">
-        </div>
-        <div class="form-group" style="margin:0;">
-          <label class="form-label">Daily Capacity (Pcs)</label>
-          <input type="number" name="daily_capacity" id="jw_capacity" class="form-control" placeholder="500" value="500">
-        </div>
+      <div class="form-group" style="margin-bottom:12px;">
+        <label class="form-label">Email Address</label>
+        <input type="email" name="email" id="jw_email" class="form-control" placeholder="e.g. raj.stitching@gmail.com">
+      </div>
+
+      <!-- Financial & Status Details -->
+      <div class="jw-modal-section-title">Financial & Account Status</div>
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:14px; margin-bottom:12px;">
         <div class="form-group" style="margin:0;">
           <label class="form-label">Opening Outstanding (₹)</label>
           <input type="number" step="0.01" name="outstanding" id="jw_outstanding" class="form-control" placeholder="0.00" value="0.00">
@@ -769,14 +722,39 @@
 <script>
   const CSRF_TOKEN = '{{ csrf_token() }}';
 
-  function getSkillBadgeClass(skill) {
-    const s = (skill || '').toLowerCase();
-    if (s.includes('stitch')) return 'badge-primary';
-    if (s.includes('cut')) return 'badge-warning';
-    if (s.includes('embroid')) return 'badge-purple';
-    if (s.includes('wash') || s.includes('finish')) return 'badge-success';
-    if (s.includes('print')) return 'badge-cyan';
-    return 'badge-info';
+  // --- Safe Notification & HTML Escaping Helpers ---
+  function showToastNotification(title, message, type = 'success') {
+    const iconType = type === 'error' ? 'error' : (type === 'warning' ? 'warning' : 'success');
+    if (window.Toast && typeof window.Toast.fire === 'function') {
+      window.Toast.fire({
+        icon: iconType,
+        title: title ? (title + (message ? ': ' + message : '')) : (message || '')
+      });
+    } else if (typeof UI !== 'undefined' && typeof UI.showToast === 'function') {
+      UI.showToast(title, message, type);
+    } else if (typeof Swal !== 'undefined' && typeof Swal.fire === 'function') {
+      Swal.fire({
+        icon: iconType,
+        title: title,
+        text: message,
+        timer: 3000,
+        showConfirmButton: false,
+        toast: true,
+        position: 'top-end'
+      });
+    } else {
+      console.log(`[${type.toUpperCase()}] ${title}: ${message}`);
+    }
+  }
+
+  function escapeHtml(text) {
+    if (text === null || text === undefined) return '';
+    return String(text)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
   }
 
   function getJobWorkerApiUrl(path) {
@@ -798,8 +776,6 @@
     document.getElementById('jwmodal-title').textContent = 'Add New Job Worker';
     document.getElementById('save-jw-btn').textContent = 'Save Job Worker';
     document.getElementById('save-jw-btn').disabled = false;
-    document.getElementById('jw_rate').value = '45.00';
-    document.getElementById('jw_capacity').value = '500';
     document.getElementById('jw_outstanding').value = '0.00';
     document.getElementById('jw_status').value = 'Active';
     
@@ -822,12 +798,9 @@
 
     document.getElementById('jw_name').value = jw.name || '';
     document.getElementById('jw_code').value = jw.code || '';
-    document.getElementById('jw_skill').value = jw.skill_type || 'Stitching';
     document.getElementById('jw_contact').value = jw.contact_person || '';
     document.getElementById('jw_phone').value = jw.phone || '';
     document.getElementById('jw_email').value = jw.email || '';
-    document.getElementById('jw_rate').value = jw.rate_per_piece || 45.00;
-    document.getElementById('jw_capacity').value = jw.daily_capacity || 500;
     document.getElementById('jw_outstanding').value = jw.outstanding || '0.00';
     document.getElementById('jw_status').value = jw.status || 'Active';
     document.getElementById('jw_address').value = jw.address || '';
@@ -864,7 +837,8 @@
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'X-CSRF-TOKEN': CSRF_TOKEN
+        'X-CSRF-TOKEN': CSRF_TOKEN,
+        'X-Requested-With': 'XMLHttpRequest'
       },
       body: JSON.stringify({ status: newStatus })
     })
@@ -878,29 +852,16 @@
         if (row) row.setAttribute('data-status', newStatus.toLowerCase());
 
         if (data.stats) updateKpiStats(data.stats);
-
-        if (window.Toast) {
-          window.Toast.show({ title: 'Status Updated', message: 'Job worker status set to ' + newStatus, type: 'success' });
-        } else if (typeof UI !== 'undefined' && UI.showToast) {
-          UI.showToast('Status Updated', 'Job worker status set to ' + newStatus, 'success');
-        }
+        showToastNotification('Status Updated', 'Job worker status set to ' + newStatus, 'success');
       } else {
         selectEl.className = prevClass;
-        if (window.Toast) {
-          window.Toast.show({ title: 'Error', message: data.message || 'Could not update status', type: 'error' });
-        } else if (typeof UI !== 'undefined' && UI.showToast) {
-          UI.showToast('Error', data.message || 'Could not update status', 'error');
-        }
+        showToastNotification('Error', data.message || 'Could not update status', 'error');
       }
     })
     .catch(err => {
       selectEl.style.opacity = '1';
       selectEl.className = prevClass;
-      if (window.Toast) {
-        window.Toast.show({ title: 'Error', message: 'Network error occurred while updating status', type: 'error' });
-      } else if (typeof UI !== 'undefined' && UI.showToast) {
-        UI.showToast('Error', 'Network error occurred while updating status', 'error');
-      }
+      showToastNotification('Error', 'Network error occurred while updating status', 'error');
     });
   }
 
@@ -915,12 +876,9 @@
     const payload = {
       name: document.getElementById('jw_name').value.trim(),
       code: document.getElementById('jw_code').value.trim(),
-      skill_type: document.getElementById('jw_skill').value,
       contact_person: document.getElementById('jw_contact').value.trim(),
       phone: document.getElementById('jw_phone').value.trim(),
       email: document.getElementById('jw_email').value.trim(),
-      rate_per_piece: parseFloat(document.getElementById('jw_rate').value) || 0,
-      daily_capacity: parseInt(document.getElementById('jw_capacity').value) || 0,
       outstanding: parseFloat(document.getElementById('jw_outstanding').value) || 0,
       status: document.getElementById('jw_status').value,
       address: document.getElementById('jw_address').value.trim(),
@@ -930,19 +888,11 @@
     };
 
     if (!payload.name) {
-      if (window.Toast) {
-        window.Toast.show({ title: 'Validation Error', message: 'Worker Name is required', type: 'error' });
-      } else if (typeof UI !== 'undefined' && UI.showToast) {
-        UI.showToast('Validation Error', 'Worker Name is required', 'error');
-      }
+      showToastNotification('Validation Error', 'Worker Name is required', 'error');
       return;
     }
     if (!payload.phone) {
-      if (window.Toast) {
-        window.Toast.show({ title: 'Validation Error', message: 'Phone Number is required', type: 'error' });
-      } else if (typeof UI !== 'undefined' && UI.showToast) {
-        UI.showToast('Validation Error', 'Phone Number is required', 'error');
-      }
+      showToastNotification('Validation Error', 'Phone Number is required', 'error');
       return;
     }
 
@@ -957,48 +907,61 @@
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'X-CSRF-TOKEN': CSRF_TOKEN
+        'X-CSRF-TOKEN': CSRF_TOKEN,
+        'X-Requested-With': 'XMLHttpRequest'
       },
       body: JSON.stringify(payload)
     })
-    .then(res => res.json())
+    .then(res => {
+      if (!res.ok) {
+        return res.text().then(text => {
+          try { return JSON.parse(text); } catch(e) { throw new Error('Server returned ' + res.status); }
+        });
+      }
+      return res.json();
+    })
     .then(data => {
       saveBtn.disabled = false;
       saveBtn.textContent = isEdit ? 'Update Job Worker' : 'Save Job Worker';
 
       if (data.success && data.job_worker) {
+        // 1. Immediately close modal
         closeJobWorkerModal();
+
+        // 2. Immediately update DOM table so row shows without refresh
+        try {
+          if (isEdit) {
+            updateTableRow(data.job_worker);
+          } else {
+            prependTableRow(data.job_worker);
+          }
+
+          // Reset filter to 'All' so new row is not hidden by active filter
+          const allPill = document.getElementById('pill-all');
+          if (allPill) applyJobWorkerFilter('all', allPill);
+          const filterInput = document.getElementById('jw-filter-input');
+          if (filterInput) filterInput.value = '';
+
+          if (data.stats) updateKpiStats(data.stats);
+        } catch (domErr) {
+          console.error('Error updating job worker table DOM:', domErr);
+          window.location.reload();
+          return;
+        }
+
+        // 3. Show success notification
         const msg = data.message || (isEdit ? 'Job Worker updated successfully.' : 'Job Worker created successfully.');
-        if (window.Toast) {
-          window.Toast.show({ title: isEdit ? 'Job Worker Updated' : 'Job Worker Created', message: msg, type: 'success' });
-        } else if (typeof UI !== 'undefined' && UI.showToast) {
-          UI.showToast(isEdit ? 'Job Worker Updated' : 'Job Worker Created', msg, 'success');
-        }
-
-        if (isEdit) {
-          updateTableRow(data.job_worker);
-        } else {
-          prependTableRow(data.job_worker);
-        }
-
-        if (data.stats) updateKpiStats(data.stats);
+        showToastNotification(isEdit ? 'Job Worker Updated' : 'Job Worker Created', msg, 'success');
       } else {
         const msg = data.errors ? Object.values(data.errors).flat().join('<br>') : (data.message || 'Validation error');
-        if (window.Toast) {
-          window.Toast.show({ title: 'Error', message: msg, type: 'error' });
-        } else if (typeof UI !== 'undefined' && UI.showToast) {
-          UI.showToast('Error', msg, 'error');
-        }
+        showToastNotification('Error', msg, 'error');
       }
     })
     .catch(err => {
       saveBtn.disabled = false;
       saveBtn.textContent = isEdit ? 'Update Job Worker' : 'Save Job Worker';
-      if (window.Toast) {
-        window.Toast.show({ title: 'Error', message: 'Failed to save job worker details', type: 'error' });
-      } else if (typeof UI !== 'undefined' && UI.showToast) {
-        UI.showToast('Error', 'Failed to save job worker details', 'error');
-      }
+      console.error('Job Worker save error:', err);
+      showToastNotification('Error', err.message || 'Failed to save job worker details', 'error');
     });
   }
 
@@ -1015,7 +978,8 @@
       method: 'DELETE',
       headers: {
         'Accept': 'application/json',
-        'X-CSRF-TOKEN': CSRF_TOKEN
+        'X-CSRF-TOKEN': CSRF_TOKEN,
+        'X-Requested-With': 'XMLHttpRequest'
       }
     })
     .then(res => res.json())
@@ -1025,11 +989,7 @@
       closeDeleteModal();
 
       if (data.success) {
-        if (window.Toast) {
-          window.Toast.show({ title: 'Job Worker Deleted', message: data.message || 'Job Worker removed successfully', type: 'warning' });
-        } else if (typeof UI !== 'undefined' && UI.showToast) {
-          UI.showToast('Job Worker Deleted', data.message || 'Job Worker removed successfully', 'warning');
-        }
+        showToastNotification('Job Worker Deleted', data.message || 'Job Worker removed successfully', 'warning');
         
         const row = document.getElementById('jobworker-row-' + id);
         if (row) {
@@ -1044,26 +1004,24 @@
 
         if (data.stats) updateKpiStats(data.stats);
       } else {
-        if (window.Toast) {
-          window.Toast.show({ title: 'Error', message: data.message || 'Could not delete job worker', type: 'error' });
-        } else if (typeof UI !== 'undefined' && UI.showToast) {
-          UI.showToast('Error', data.message || 'Could not delete job worker', 'error');
-        }
+        showToastNotification('Error', data.message || 'Could not delete job worker', 'error');
       }
     })
     .catch(err => {
       delBtn.disabled = false;
       delBtn.textContent = 'Yes, Delete Job Worker';
-      if (window.Toast) {
-        window.Toast.show({ title: 'Error', message: 'Failed to delete job worker', type: 'error' });
-      } else if (typeof UI !== 'undefined' && UI.showToast) {
-        UI.showToast('Error', 'Failed to delete job worker', 'error');
-      }
+      showToastNotification('Error', 'Failed to delete job worker', 'error');
     });
   }
 
   // --- Dynamic Table DOM Manipulation ---
   function prependTableRow(jw) {
+    if (!jw || !jw.id) {
+      console.error('prependTableRow: Invalid job worker data', jw);
+      window.location.reload();
+      return;
+    }
+
     const tbody = document.getElementById('jobworkers-table-body');
     const tableContainer = document.getElementById('jobworkers-table-container');
     const emptyState = document.getElementById('jobworkers-empty-state');
@@ -1071,120 +1029,130 @@
     if (emptyState) emptyState.style.display = 'none';
     if (tableContainer) tableContainer.style.display = '';
 
+    if (!tbody) {
+      console.error('prependTableRow: jobworkers-table-body not found');
+      window.location.reload();
+      return;
+    }
+
+    // Remove duplicate if already exists
+    const existingRow = document.getElementById('jobworker-row-' + jw.id);
+    if (existingRow) existingRow.remove();
+
     const tr = document.createElement('tr');
     tr.className = 'jw-row jw-row-transition';
     tr.id = 'jobworker-row-' + jw.id;
     tr.setAttribute('data-id', jw.id);
-    tr.setAttribute('data-skill', (jw.skill_type || '').toLowerCase());
     tr.setAttribute('data-status', (jw.status || 'active').toLowerCase());
     tr.setAttribute('data-balance', jw.outstanding || 0);
 
-    const initials = (jw.name || 'JW').substring(0, 2).toUpperCase();
-    const badgeClass = getSkillBadgeClass(jw.skill_type);
+    const initials = escapeHtml((jw.name || 'JW').substring(0, 2).toUpperCase());
     const statusVal = (jw.status || 'Active');
     const statusLower = statusVal.toLowerCase();
+    const workerCode = escapeHtml(jw.code || ('JW-' + String(jw.id).padStart(3, '0')));
+    const contactDisplay = escapeHtml(jw.contact_person || (jw.name || '—'));
+    const phoneDisplay = escapeHtml(jw.phone || '—');
+    const cityDisplay = escapeHtml(jw.city || (jw.address ? jw.address.substring(0, 25) : '—'));
+    const stateDisplay = escapeHtml(jw.state || '—');
+    const outstandingNum = Number(jw.outstanding || 0);
+    const outstandingColor = outstandingNum > 0 ? '#dc2626' : '#059669';
+    const outstandingDisplay = '₹' + outstandingNum.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    const workerNameDisplay = escapeHtml(jw.name || '');
 
-    tr.innerHTML = `
-      <td class="row-index" style="text-align: center; font-weight: 600; color: var(--slate-400);">1</td>
-      <td>
-        <div style="display:flex; align-items:center; gap:10px;">
-          <div class="jw-avatar" id="avatar-${jw.id}">${initials}</div>
-          <div>
-            <div class="jw-name-val" style="font-weight:700; color:var(--slate-900); font-size:0.9rem;">${jw.name}</div>
-            <div class="jw-code-val" style="font-size:0.75rem; color:var(--slate-500); font-family:monospace;">${jw.code || ('JW-' + String(jw.id).padStart(3, '0'))}</div>
-          </div>
-        </div>
-      </td>
-      <td class="jw-skill-cell">
-        <span class="badge ${badgeClass}" style="font-size:0.75rem; font-weight:600; padding:4px 8px; border-radius:8px;">
-          ${jw.skill_type || 'Stitching'}
-        </span>
-      </td>
-      <td class="jw-rate-val" style="text-align: right; font-weight: 700; color: #059669;">
-        ₹${Number(jw.rate_per_piece || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-      </td>
-      <td class="jw-capacity-val" style="text-align: center; font-weight: 600; color: var(--slate-700);">
-        ${Number(jw.daily_capacity || 0).toLocaleString()} pcs
-      </td>
-      <td>
-        <div class="jw-contact-val" style="font-weight:600; color:var(--slate-800); font-size:0.85rem;">${jw.contact_person || jw.name}</div>
-        <div class="jw-phone-val" style="font-size:0.75rem; color:var(--slate-500);">${jw.phone || '—'}</div>
-      </td>
-      <td>
-        <div class="jw-city-val" style="font-weight:600; color:var(--slate-700); font-size:0.85rem;">${jw.city || (jw.address ? jw.address.substring(0, 25) : '—')}</div>
-        <div class="jw-state-val" style="font-size:0.75rem; color:var(--slate-500);">${jw.state || '—'}</div>
-      </td>
-      <td class="jw-outstanding-val" style="text-align: right; font-weight: 700; color: ${Number(jw.outstanding || 0) > 0 ? '#dc2626' : '#059669'};">
-        ₹${Number(jw.outstanding || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-      </td>
-      <td style="text-align: center;">
-        <select class="jw-status-select ${statusLower}" onchange="changeJobWorkerStatus(${jw.id}, this.value, this)" title="Click to change status">
-          <option value="Active" ${statusLower === 'active' ? 'selected' : ''}>Active</option>
-          <option value="Inactive" ${statusLower === 'inactive' ? 'selected' : ''}>Inactive</option>
-          <option value="Blocked" ${statusLower === 'blocked' ? 'selected' : ''}>Blocked</option>
-        </select>
-      </td>
-      <td style="text-align: center;">
-        <div style="display:inline-flex; align-items:center; gap:6px;">
-          <button type="button" class="btn btn-secondary btn-icon edit-btn-${jw.id}" title="Edit Job Worker" style="width:30px; height:30px; padding:0; display:inline-flex; align-items:center; justify-content:center;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-            </svg>
-          </button>
-          <button type="button" class="btn btn-danger btn-icon" onclick="confirmDeleteJobWorker(${jw.id}, '${(jw.name || '').replace(/'/g, "\\'")}')" title="Delete Job Worker" style="width:30px; height:30px; padding:0; display:inline-flex; align-items:center; justify-content:center;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="3 6 5 6 21 6"/>
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-            </svg>
-          </button>
-        </div>
-      </td>
-    `;
+    tr.innerHTML =
+      '<td class="row-index" style="text-align: center; font-weight: 600; color: var(--slate-400);">1</td>' +
+      '<td>' +
+        '<div style="display:flex; align-items:center; gap:10px;">' +
+          '<div class="jw-avatar" id="avatar-' + jw.id + '">' + initials + '</div>' +
+          '<div>' +
+            '<div class="jw-name-val" style="font-weight:700; color:var(--slate-900); font-size:0.9rem;">' + workerNameDisplay + '</div>' +
+            '<div class="jw-code-val" style="font-size:0.75rem; color:var(--slate-500); font-family:monospace;">' + workerCode + '</div>' +
+          '</div>' +
+        '</div>' +
+      '</td>' +
+      '<td>' +
+        '<div class="jw-contact-val" style="font-weight:600; color:var(--slate-800); font-size:0.85rem;">' + contactDisplay + '</div>' +
+        '<div class="jw-phone-val" style="font-size:0.75rem; color:var(--slate-500);">' + phoneDisplay + '</div>' +
+      '</td>' +
+      '<td>' +
+        '<div class="jw-city-val" style="font-weight:600; color:var(--slate-700); font-size:0.85rem;">' + cityDisplay + '</div>' +
+        '<div class="jw-state-val" style="font-size:0.75rem; color:var(--slate-500);">' + stateDisplay + '</div>' +
+      '</td>' +
+      '<td class="jw-outstanding-val" style="text-align: right; font-weight: 700; color: ' + outstandingColor + ';">' + outstandingDisplay + '</td>' +
+      '<td style="text-align: center;">' +
+        '<select class="jw-status-select ' + statusLower + '" onchange="changeJobWorkerStatus(' + jw.id + ', this.value, this)" title="Click to change status">' +
+          '<option value="Active"' + (statusLower === 'active' ? ' selected' : '') + '>Active</option>' +
+          '<option value="Inactive"' + (statusLower === 'inactive' ? ' selected' : '') + '>Inactive</option>' +
+          '<option value="Blocked"' + (statusLower === 'blocked' ? ' selected' : '') + '>Blocked</option>' +
+        '</select>' +
+      '</td>' +
+      '<td style="text-align: center;">' +
+        '<div style="display:inline-flex; align-items:center; gap:6px;">' +
+          '<button type="button" class="btn btn-secondary btn-icon edit-btn-' + jw.id + '" title="Edit Job Worker" style="width:30px; height:30px; padding:0; display:inline-flex; align-items:center; justify-content:center;">' +
+            '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+              '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>' +
+              '<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>' +
+            '</svg>' +
+          '</button>' +
+          '<button type="button" class="btn btn-danger btn-icon del-btn-' + jw.id + '" title="Delete Job Worker" style="width:30px; height:30px; padding:0; display:inline-flex; align-items:center; justify-content:center;">' +
+            '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+              '<polyline points="3 6 5 6 21 6"/>' +
+              '<path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>' +
+            '</svg>' +
+          '</button>' +
+        '</div>' +
+      '</td>';
 
-    const editBtn = tr.querySelector(`.edit-btn-${jw.id}`);
+    // Attach edit and delete onclick handlers directly
+    const editBtn = tr.querySelector('.edit-btn-' + jw.id);
     if (editBtn) {
-      editBtn.onclick = () => editJobWorker(jw);
+      editBtn.onclick = function() { editJobWorker(jw); };
+    }
+    const delBtn = tr.querySelector('.del-btn-' + jw.id);
+    if (delBtn) {
+      delBtn.onclick = function() { confirmDeleteJobWorker(jw.id, jw.name); };
     }
 
     tbody.insertBefore(tr, tbody.firstChild);
     reindexRows();
+
+    // Visual highlight on insertion
+    tr.style.backgroundColor = '#eff6ff';
+    tr.style.opacity = '0';
+    tr.style.transform = 'translateY(-10px)';
+    requestAnimationFrame(function() {
+      tr.style.transition = 'opacity 0.4s ease, transform 0.4s ease, background-color 1.5s ease';
+      tr.style.opacity = '1';
+      tr.style.transform = 'translateY(0)';
+      setTimeout(function() {
+        tr.style.backgroundColor = '';
+      }, 1200);
+    });
   }
 
   function updateTableRow(jw) {
     const row = document.getElementById('jobworker-row-' + jw.id);
     if (!row) return;
 
-    row.setAttribute('data-skill', (jw.skill_type || '').toLowerCase());
     row.setAttribute('data-status', (jw.status || 'active').toLowerCase());
     row.setAttribute('data-balance', jw.outstanding || 0);
 
-    row.querySelector('.jw-name-val').textContent = jw.name;
-    row.querySelector('.jw-code-val').textContent = jw.code || ('JW-' + String(jw.id).padStart(3, '0'));
-    row.querySelector('.jw-contact-val').textContent = jw.contact_person || jw.name;
-    row.querySelector('.jw-phone-val').textContent = jw.phone || '—';
-    row.querySelector('.jw-city-val').textContent = jw.city || (jw.address ? jw.address.substring(0, 25) : '—');
-    row.querySelector('.jw-state-val').textContent = jw.state || '—';
+    const nameEl = row.querySelector('.jw-name-val');
+    if (nameEl) nameEl.textContent = jw.name;
+    const codeEl = row.querySelector('.jw-code-val');
+    if (codeEl) codeEl.textContent = jw.code || ('JW-' + String(jw.id).padStart(3, '0'));
+    const contactEl = row.querySelector('.jw-contact-val');
+    if (contactEl) contactEl.textContent = jw.contact_person || (jw.name || '—');
+    const phoneEl = row.querySelector('.jw-phone-val');
+    if (phoneEl) phoneEl.textContent = jw.phone || '—';
+    const cityEl = row.querySelector('.jw-city-val');
+    if (cityEl) cityEl.textContent = jw.city || (jw.address ? jw.address.substring(0, 25) : '—');
+    const stateEl = row.querySelector('.jw-state-val');
+    if (stateEl) stateEl.textContent = jw.state || '—';
     
-    const initials = (jw.name || 'JW').substring(0, 2).toUpperCase();
+    const initials = escapeHtml((jw.name || 'JW').substring(0, 2).toUpperCase());
     const avatar = document.getElementById('avatar-' + jw.id);
     if (avatar) avatar.textContent = initials;
-
-    const skillCell = row.querySelector('.jw-skill-cell');
-    if (skillCell) {
-      const badgeClass = getSkillBadgeClass(jw.skill_type);
-      skillCell.innerHTML = `<span class="badge ${badgeClass}" style="font-size:0.75rem; font-weight:600; padding:4px 8px; border-radius:8px;">${jw.skill_type || 'Stitching'}</span>`;
-    }
-
-    const rateCell = row.querySelector('.jw-rate-val');
-    if (rateCell) {
-      rateCell.textContent = '₹' + Number(jw.rate_per_piece || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-    }
-
-    const capCell = row.querySelector('.jw-capacity-val');
-    if (capCell) {
-      capCell.textContent = Number(jw.daily_capacity || 0).toLocaleString() + ' pcs';
-    }
 
     const outCell = row.querySelector('.jw-outstanding-val');
     if (outCell) {
@@ -1199,7 +1167,7 @@
       statusSelect.className = 'jw-status-select ' + jw.status.toLowerCase();
     }
 
-    const editBtn = row.querySelector('.btn-secondary');
+    const editBtn = row.querySelector('.edit-btn-' + jw.id) || row.querySelector('.btn-secondary');
     if (editBtn) {
       editBtn.onclick = () => editJobWorker(jw);
     }
@@ -1232,17 +1200,16 @@
 
     if (document.getElementById('stat-total-count')) document.getElementById('stat-total-count').textContent = stats.total;
     if (document.getElementById('stat-active-count')) document.getElementById('stat-active-count').textContent = stats.active;
+    if (document.getElementById('stat-active-total')) document.getElementById('stat-active-total').textContent = stats.active;
+    if (document.getElementById('stat-inactive-count') && stats.inactive !== undefined) {
+      document.getElementById('stat-inactive-count').textContent = stats.inactive;
+    }
     if (document.getElementById('pill-count-all')) document.getElementById('pill-count-all').textContent = stats.total;
     if (document.getElementById('pill-count-active')) document.getElementById('pill-count-active').textContent = stats.active;
+    if (document.getElementById('pill-count-inactive') && stats.inactive !== undefined) {
+      document.getElementById('pill-count-inactive').textContent = stats.inactive;
+    }
     if (document.getElementById('jobworker-badge-count')) document.getElementById('jobworker-badge-count').textContent = stats.total + ' Records';
-
-    if (document.getElementById('stat-capacity-count') && stats.totalCapacity !== undefined) {
-      document.getElementById('stat-capacity-count').textContent = Number(stats.totalCapacity).toLocaleString();
-    }
-
-    if (document.getElementById('stat-stitching-count') && stats.stitchingCount !== undefined) {
-      document.getElementById('stat-stitching-count').textContent = stats.stitchingCount;
-    }
 
     if (document.getElementById('stat-total-outstanding') && stats.totalOutstanding !== undefined) {
       const val = Number(stats.totalOutstanding);
@@ -1268,23 +1235,16 @@
     const rows = document.querySelectorAll('#jobworkers-table-body tr.jw-row');
     rows.forEach(row => {
       const status = row.getAttribute('data-status');
-      const skill = (row.getAttribute('data-skill') || '').toLowerCase();
       const balance = parseFloat(row.getAttribute('data-balance') || 0);
 
       if (type === 'all') {
         row.style.display = '';
       } else if (type === 'active') {
         row.style.display = (status === 'active') ? '' : 'none';
-      } else if (type === 'stitching') {
-        row.style.display = skill.includes('stitch') ? '' : 'none';
-      } else if (type === 'cutting') {
-        row.style.display = skill.includes('cut') ? '' : 'none';
-      } else if (type === 'embroidery') {
-        row.style.display = skill.includes('embroid') ? '' : 'none';
-      } else if (type === 'washing') {
-        row.style.display = (skill.includes('wash') || skill.includes('finish')) ? '' : 'none';
       } else if (type === 'blocked') {
         row.style.display = (status === 'blocked' || status === 'inactive') ? '' : 'none';
+      } else if (type === 'balance') {
+        row.style.display = (balance > 0) ? '' : 'none';
       }
     });
   }
@@ -1298,3 +1258,4 @@
   });
 </script>
 @endpush
+
