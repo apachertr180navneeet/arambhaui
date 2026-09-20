@@ -461,6 +461,15 @@
       }
     });
 
+    // Compatibility shim: allow window.Toast.show(...) calls across the app without throwing TypeError
+    window.Toast.show = function(opts) {
+      if (!opts) return;
+      const type = opts.type || 'info';
+      const icon = type === 'error' ? 'error' : (type === 'warning' ? 'warning' : 'success');
+      const title = opts.title ? (opts.title + (opts.message ? ': ' + opts.message : '')) : (opts.message || '');
+      window.Toast.fire({ icon: icon, title: title });
+    };
+
     @if (session('success'))
       Toast.fire({
         icon: 'success',

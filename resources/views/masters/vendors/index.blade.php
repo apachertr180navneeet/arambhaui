@@ -670,13 +670,13 @@
         <div class="form-group" style="margin:0;">
           <label class="form-label">Category</label>
           <select name="category" id="vend-category" class="form-control">
+            <option value="General Supplier" selected>General Supplier</option>
             <option value="Fabric Mill">Fabric Mill</option>
             <option value="Yarn & Thread">Yarn & Thread</option>
             <option value="Trims & Accessories">Trims & Accessories (Buttons/Zippers)</option>
             <option value="Packaging Materials">Packaging Materials</option>
             <option value="Dyes & Chemicals">Dyes & Chemicals</option>
             <option value="Jobwork / Services">Jobwork / Services</option>
-            <option value="General">General Supplier</option>
           </select>
         </div>
         <div class="form-group" style="margin:0;">
@@ -810,6 +810,7 @@
     document.getElementById('modal-title').textContent = 'Add New Vendor';
     document.getElementById('save-vend-btn').textContent = 'Save Vendor';
     document.getElementById('save-vend-btn').disabled = false;
+    document.getElementById('vend-category').value = 'General Supplier';
     document.getElementById('vend-credit-days').value = '30';
     document.getElementById('vend-outstanding').value = '0.00';
     
@@ -832,7 +833,7 @@
 
     document.getElementById('vend-name').value = vendor.name || '';
     document.getElementById('vend-code').value = vendor.code || '';
-    document.getElementById('vend-category').value = vendor.category || 'Fabric Mill';
+    document.getElementById('vend-category').value = vendor.category || 'General Supplier';
     document.getElementById('vend-company').value = vendor.company_name || '';
     document.getElementById('vend-contact-person').value = vendor.contact_person || '';
     document.getElementById('vend-phone').value = vendor.phone || '';
@@ -875,6 +876,41 @@
     return base + cleanPath;
   }
 
+  // --- Safe Notification & HTML Escaping Helpers ---
+  function showToastNotification(title, message, type = 'success') {
+    const iconType = type === 'error' ? 'error' : (type === 'warning' ? 'warning' : 'success');
+    if (window.Toast && typeof window.Toast.fire === 'function') {
+      window.Toast.fire({
+        icon: iconType,
+        title: title ? (title + (message ? ': ' + message : '')) : (message || '')
+      });
+    } else if (typeof UI !== 'undefined' && typeof UI.showToast === 'function') {
+      UI.showToast(title, message, type);
+    } else if (typeof Swal !== 'undefined' && typeof Swal.fire === 'function') {
+      Swal.fire({
+        icon: iconType,
+        title: title,
+        text: message,
+        timer: 3000,
+        showConfirmButton: false,
+        toast: true,
+        position: 'top-end'
+      });
+    } else {
+      console.log(`[${type.toUpperCase()}] ${title}: ${message}`);
+    }
+  }
+
+  function escapeHtml(text) {
+    if (text === null || text === undefined) return '';
+    return String(text)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
   // --- 1. STATUS CHANGE THROUGH TABLE VIA AJAX ---
   function changeVendorStatus(id, newStatus, selectEl) {
     const prevClass = selectEl.className;
@@ -885,7 +921,8 @@
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'X-CSRF-TOKEN': CSRF_TOKEN
+        'X-CSRF-TOKEN': CSRF_TOKEN,
+        'X-Requested-With': 'XMLHttpRequest'
       },
       body: JSON.stringify({ status: newStatus })
     })
@@ -893,38 +930,20 @@
     .then(data => {
       selectEl.style.opacity = '1';
       if (data.success) {
-        // Update select styles
         selectEl.className = 'vm-status-select ' + newStatus.toLowerCase();
-        
-        // Update row data-status
         const row = document.getElementById('vendor-row-' + id);
         if (row) row.setAttribute('data-status', newStatus.toLowerCase());
-
-        // Update stats if returned
         if (data.stats) updateKpiStats(data.stats);
-
-        if (window.Toast) {
-          window.Toast.show({ title: 'Status Updated', message: 'Vendor status set to ' + newStatus, type: 'success' });
-        } else if (typeof UI !== 'undefined' && UI.showToast) {
-          UI.showToast('Status Updated', 'Vendor status set to ' + newStatus, 'success');
-        }
+        showToastNotification('Status Updated', 'Vendor status set to ' + newStatus, 'success');
       } else {
         selectEl.className = prevClass;
-        if (window.Toast) {
-          window.Toast.show({ title: 'Error', message: data.message || 'Could not update status', type: 'error' });
-        } else if (typeof UI !== 'undefined' && UI.showToast) {
-          UI.showToast('Error', data.message || 'Could not update status', 'error');
-        }
+        showToastNotification('Error', data.message || 'Could not update status', 'error');
       }
     })
     .catch(err => {
       selectEl.style.opacity = '1';
       selectEl.className = prevClass;
-      if (window.Toast) {
-        window.Toast.show({ title: 'Error', message: 'Network error occurred while updating status', type: 'error' });
-      } else if (typeof UI !== 'undefined' && UI.showToast) {
-        UI.showToast('Error', 'Network error occurred while updating status', 'error');
-      }
+      showToastNotification('Error', 'Network error occurred while updating status', 'error');
     });
   }
 
@@ -957,19 +976,11 @@
     };
 
     if (!payload.name) {
-      if (window.Toast) {
-        window.Toast.show({ title: 'Validation Error', message: 'Vendor Name is required', type: 'error' });
-      } else if (typeof UI !== 'undefined' && UI.showToast) {
-        UI.showToast('Validation Error', 'Vendor Name is required', 'error');
-      }
+      showToastNotification('Validation Error', 'Vendor Name is required', 'error');
       return;
     }
     if (!payload.phone) {
-      if (window.Toast) {
-        window.Toast.show({ title: 'Validation Error', message: 'Phone Number is required', type: 'error' });
-      } else if (typeof UI !== 'undefined' && UI.showToast) {
-        UI.showToast('Validation Error', 'Phone Number is required', 'error');
-      }
+      showToastNotification('Validation Error', 'Phone Number is required', 'error');
       return;
     }
 
@@ -984,48 +995,61 @@
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'X-CSRF-TOKEN': CSRF_TOKEN
+        'X-CSRF-TOKEN': CSRF_TOKEN,
+        'X-Requested-With': 'XMLHttpRequest'
       },
       body: JSON.stringify(payload)
     })
-    .then(res => res.json())
+    .then(res => {
+      if (!res.ok) {
+        return res.text().then(text => {
+          try { return JSON.parse(text); } catch(e) { throw new Error('Server returned ' + res.status); }
+        });
+      }
+      return res.json();
+    })
     .then(data => {
       saveBtn.disabled = false;
       saveBtn.textContent = isEdit ? 'Update Vendor' : 'Save Vendor';
 
       if (data.success && data.vendor) {
+        // 1. Immediately close modal
         closeVendorModal();
+
+        // 2. Immediately update the DOM table so row shows without refresh
+        try {
+          if (isEdit) {
+            updateTableRow(data.vendor);
+          } else {
+            prependTableRow(data.vendor);
+          }
+
+          // Reset filter to 'All' so new row is not hidden by active filter
+          const allPill = document.getElementById('pill-all');
+          if (allPill) applyVendorFilter('all', allPill);
+          const filterInput = document.getElementById('vend-filter-input');
+          if (filterInput) filterInput.value = '';
+
+          if (data.stats) updateKpiStats(data.stats);
+        } catch (domErr) {
+          console.error('Error updating vendor table DOM:', domErr);
+          window.location.reload();
+          return;
+        }
+
+        // 3. Show success notification
         const msg = data.message || (isEdit ? 'Vendor updated successfully.' : 'Vendor created successfully.');
-        if (window.Toast) {
-          window.Toast.show({ title: isEdit ? 'Vendor Updated' : 'Vendor Created', message: msg, type: 'success' });
-        } else if (typeof UI !== 'undefined' && UI.showToast) {
-          UI.showToast(isEdit ? 'Vendor Updated' : 'Vendor Created', msg, 'success');
-        }
-
-        if (isEdit) {
-          updateTableRow(data.vendor);
-        } else {
-          prependTableRow(data.vendor);
-        }
-
-        if (data.stats) updateKpiStats(data.stats);
+        showToastNotification(isEdit ? 'Vendor Updated' : 'Vendor Created', msg, 'success');
       } else {
         const msg = data.errors ? Object.values(data.errors).flat().join('<br>') : (data.message || 'Validation error');
-        if (window.Toast) {
-          window.Toast.show({ title: 'Error', message: msg, type: 'error' });
-        } else if (typeof UI !== 'undefined' && UI.showToast) {
-          UI.showToast('Error', msg, 'error');
-        }
+        showToastNotification('Error', msg, 'error');
       }
     })
     .catch(err => {
       saveBtn.disabled = false;
       saveBtn.textContent = isEdit ? 'Update Vendor' : 'Save Vendor';
-      if (window.Toast) {
-        window.Toast.show({ title: 'Error', message: 'Failed to save vendor details', type: 'error' });
-      } else if (typeof UI !== 'undefined' && UI.showToast) {
-        UI.showToast('Error', 'Failed to save vendor details', 'error');
-      }
+      console.error('Vendor save error:', err);
+      showToastNotification('Error', err.message || 'Failed to save vendor details', 'error');
     });
   }
 
@@ -1042,7 +1066,8 @@
       method: 'DELETE',
       headers: {
         'Accept': 'application/json',
-        'X-CSRF-TOKEN': CSRF_TOKEN
+        'X-CSRF-TOKEN': CSRF_TOKEN,
+        'X-Requested-With': 'XMLHttpRequest'
       }
     })
     .then(res => res.json())
@@ -1052,11 +1077,7 @@
       closeDeleteModal();
 
       if (data.success) {
-        if (window.Toast) {
-          window.Toast.show({ title: 'Vendor Deleted', message: data.message || 'Vendor removed successfully', type: 'warning' });
-        } else if (typeof UI !== 'undefined' && UI.showToast) {
-          UI.showToast('Vendor Deleted', data.message || 'Vendor removed successfully', 'warning');
-        }
+        showToastNotification('Vendor Deleted', data.message || 'Vendor removed successfully', 'warning');
         
         // Animate row removal
         const row = document.getElementById('vendor-row-' + id);
@@ -1072,32 +1093,40 @@
 
         if (data.stats) updateKpiStats(data.stats);
       } else {
-        if (window.Toast) {
-          window.Toast.show({ title: 'Error', message: data.message || 'Could not delete vendor', type: 'error' });
-        } else if (typeof UI !== 'undefined' && UI.showToast) {
-          UI.showToast('Error', data.message || 'Could not delete vendor', 'error');
-        }
+        showToastNotification('Error', data.message || 'Could not delete vendor', 'error');
       }
     })
     .catch(err => {
       delBtn.disabled = false;
       delBtn.textContent = 'Yes, Delete Vendor';
-      if (window.Toast) {
-        window.Toast.show({ title: 'Error', message: 'Failed to delete vendor', type: 'error' });
-      } else if (typeof UI !== 'undefined' && UI.showToast) {
-        UI.showToast('Error', 'Failed to delete vendor', 'error');
-      }
+      showToastNotification('Error', 'Failed to delete vendor', 'error');
     });
   }
 
   // --- Dynamic Table DOM Manipulation ---
   function prependTableRow(v) {
+    if (!v || !v.id) {
+      console.error('prependTableRow: Invalid vendor data', v);
+      window.location.reload();
+      return;
+    }
+
     const tbody = document.getElementById('vendors-table-body');
     const tableContainer = document.getElementById('vendors-table-container');
     const emptyState = document.getElementById('vendors-empty-state');
 
     if (emptyState) emptyState.style.display = 'none';
     if (tableContainer) tableContainer.style.display = '';
+
+    if (!tbody) {
+      console.error('prependTableRow: vendors-table-body not found');
+      window.location.reload();
+      return;
+    }
+
+    // Remove duplicate if already exists
+    const existingRow = document.getElementById('vendor-row-' + v.id);
+    if (existingRow) existingRow.remove();
 
     const tr = document.createElement('tr');
     tr.className = 'vm-row vm-row-transition';
@@ -1107,75 +1136,101 @@
     tr.setAttribute('data-status', (v.status || 'active').toLowerCase());
     tr.setAttribute('data-balance', v.outstanding || 0);
 
-    const initials = (v.name || 'VE').substring(0, 2).toUpperCase();
-    const gstinBadge = (v.gstin || v.gst_number)
-      ? `<span class="badge" style="background:#f1f5f9; color:#1e293b; font-family:monospace; font-size:0.75rem; font-weight:600; border:1px solid #e2e8f0;">${v.gstin || v.gst_number}</span>`
-      : `<span style="font-size:0.75rem; color:var(--slate-400);">Unregistered</span>`;
+    const initials = escapeHtml((v.name || 'VE').substring(0, 2).toUpperCase());
+    const gstVal = escapeHtml(v.gstin || v.gst_number || '');
+    const gstinBadge = gstVal
+      ? '<span class="badge" style="background:#f1f5f9; color:#1e293b; font-family:monospace; font-size:0.75rem; font-weight:600; border:1px solid #e2e8f0;">' + gstVal + '</span>'
+      : '<span style="font-size:0.75rem; color:var(--slate-400);">Unregistered</span>';
 
     const badgeClass = getCategoryBadgeClass(v.category);
+    const categoryDisplay = escapeHtml(v.category || 'General Supplier');
     const statusVal = (v.status || 'Active');
     const statusLower = statusVal.toLowerCase();
+    const vendorCode = escapeHtml(v.code || ('VEND-' + String(v.id).padStart(3, '0')));
+    const contactDisplay = escapeHtml(v.contact_person || (v.company_name || '\u2014'));
+    const phoneDisplay = escapeHtml(v.phone || '\u2014');
+    const cityDisplay = escapeHtml(v.city || '\u2014');
+    const stateDisplay = escapeHtml(v.state || '\u2014');
+    const creditDisplay = v.credit_days ? (v.credit_days + ' Days') : 'Immediate / Cash';
+    const outstandingNum = Number(v.outstanding || 0);
+    const outstandingColor = outstandingNum > 0 ? '#dc2626' : '#059669';
+    const outstandingDisplay = '\u20b9' + outstandingNum.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    const vendorNameDisplay = escapeHtml(v.name || '');
 
-    tr.innerHTML = `
-      <td class="row-index" style="text-align: center; font-weight: 600; color: var(--slate-400);">1</td>
-      <td>
-        <div style="display:flex; align-items:center; gap:10px;">
-          <div class="vm-avatar" id="avatar-${v.id}">${initials}</div>
-          <div>
-            <div class="vend-name-val" style="font-weight:700; color:var(--slate-900); font-size:0.9rem;">${v.name}</div>
-            <div class="vend-code-val" style="font-size:0.75rem; color:var(--slate-500); font-family:monospace;">${v.code || ('VEND-' + String(v.id).padStart(3, '0'))}</div>
-          </div>
-        </div>
-      </td>
-      <td class="vend-cat-cell">
-        <span class="badge ${badgeClass}" style="font-size:0.75rem; font-weight:600; padding:4px 8px; border-radius:8px;">
-          ${v.category || 'General Supplier'}
-        </span>
-      </td>
-      <td>
-        <div class="vend-contact-val" style="font-weight:600; color:var(--slate-800); font-size:0.85rem;">${v.contact_person || (v.company_name || '—')}</div>
-        <div class="vend-phone-val" style="font-size:0.75rem; color:var(--slate-500);">${v.phone || '—'}</div>
-      </td>
-      <td>
-        <div class="vend-city-val" style="font-weight:600; color:var(--slate-700); font-size:0.85rem;">${v.city || '—'}</div>
-        <div class="vend-state-val" style="font-size:0.75rem; color:var(--slate-500);">${v.state || '—'}</div>
-      </td>
-      <td class="vend-gst-cell">${gstinBadge}</td>
-      <td class="vend-credit-cell" style="text-align: center; font-weight: 600; color: var(--slate-700); font-size:0.85rem;">${v.credit_days ? (v.credit_days + ' Days') : 'Immediate / Cash'}</td>
-      <td class="vend-outstanding-val" style="text-align: right; font-weight: 700; color: ${Number(v.outstanding || 0) > 0 ? '#dc2626' : '#059669'};">₹${Number(v.outstanding || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-      <td style="text-align: center;">
-        <select class="vm-status-select ${statusLower}" onchange="changeVendorStatus(${v.id}, this.value, this)" title="Click to change status">
-          <option value="Active" ${statusLower === 'active' ? 'selected' : ''}>Active</option>
-          <option value="Inactive" ${statusLower === 'inactive' ? 'selected' : ''}>Inactive</option>
-          <option value="Blocked" ${statusLower === 'blocked' ? 'selected' : ''}>Blocked</option>
-        </select>
-      </td>
-      <td style="text-align: center;">
-        <div style="display:inline-flex; align-items:center; gap:6px;">
-          <button type="button" class="btn btn-secondary btn-icon edit-btn-${v.id}" title="Edit Vendor" style="width:30px; height:30px; padding:0; display:inline-flex; align-items:center; justify-content:center;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-            </svg>
-          </button>
-          <button type="button" class="btn btn-danger btn-icon" onclick="confirmDeleteVendor(${v.id}, '${(v.name || '').replace(/'/g, "\\'")}')" title="Delete Vendor" style="width:30px; height:30px; padding:0; display:inline-flex; align-items:center; justify-content:center;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="3 6 5 6 21 6"/>
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-            </svg>
-          </button>
-        </div>
-      </td>
-    `;
+    tr.innerHTML =
+      '<td class="row-index" style="text-align: center; font-weight: 600; color: var(--slate-400);">1</td>' +
+      '<td>' +
+        '<div style="display:flex; align-items:center; gap:10px;">' +
+          '<div class="vm-avatar" id="avatar-' + v.id + '">' + initials + '</div>' +
+          '<div>' +
+            '<div class="vend-name-val" style="font-weight:700; color:var(--slate-900); font-size:0.9rem;">' + vendorNameDisplay + '</div>' +
+            '<div class="vend-code-val" style="font-size:0.75rem; color:var(--slate-500); font-family:monospace;">' + vendorCode + '</div>' +
+          '</div>' +
+        '</div>' +
+      '</td>' +
+      '<td class="vend-cat-cell">' +
+        '<span class="badge ' + badgeClass + '" style="font-size:0.75rem; font-weight:600; padding:4px 8px; border-radius:8px;">' + categoryDisplay + '</span>' +
+      '</td>' +
+      '<td>' +
+        '<div class="vend-contact-val" style="font-weight:600; color:var(--slate-800); font-size:0.85rem;">' + contactDisplay + '</div>' +
+        '<div class="vend-phone-val" style="font-size:0.75rem; color:var(--slate-500);">' + phoneDisplay + '</div>' +
+      '</td>' +
+      '<td>' +
+        '<div class="vend-city-val" style="font-weight:600; color:var(--slate-700); font-size:0.85rem;">' + cityDisplay + '</div>' +
+        '<div class="vend-state-val" style="font-size:0.75rem; color:var(--slate-500);">' + stateDisplay + '</div>' +
+      '</td>' +
+      '<td class="vend-gst-cell">' + gstinBadge + '</td>' +
+      '<td class="vend-credit-cell" style="text-align: center; font-weight: 600; color: var(--slate-700); font-size:0.85rem;">' + creditDisplay + '</td>' +
+      '<td class="vend-outstanding-val" style="text-align: right; font-weight: 700; color: ' + outstandingColor + ';">' + outstandingDisplay + '</td>' +
+      '<td style="text-align: center;">' +
+        '<select class="vm-status-select ' + statusLower + '" onchange="changeVendorStatus(' + v.id + ', this.value, this)" title="Click to change status">' +
+          '<option value="Active"' + (statusLower === 'active' ? ' selected' : '') + '>Active</option>' +
+          '<option value="Inactive"' + (statusLower === 'inactive' ? ' selected' : '') + '>Inactive</option>' +
+          '<option value="Blocked"' + (statusLower === 'blocked' ? ' selected' : '') + '>Blocked</option>' +
+        '</select>' +
+      '</td>' +
+      '<td style="text-align: center;">' +
+        '<div style="display:inline-flex; align-items:center; gap:6px;">' +
+          '<button type="button" class="btn btn-secondary btn-icon edit-btn-' + v.id + '" title="Edit Vendor" style="width:30px; height:30px; padding:0; display:inline-flex; align-items:center; justify-content:center;">' +
+            '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+              '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>' +
+              '<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>' +
+            '</svg>' +
+          '</button>' +
+          '<button type="button" class="btn btn-danger btn-icon del-btn-' + v.id + '" title="Delete Vendor" style="width:30px; height:30px; padding:0; display:inline-flex; align-items:center; justify-content:center;">' +
+            '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+              '<polyline points="3 6 5 6 21 6"/>' +
+              '<path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>' +
+            '</svg>' +
+          '</button>' +
+        '</div>' +
+      '</td>';
 
-    // Attach edit onclick handler
-    const editBtn = tr.querySelector(`.edit-btn-${v.id}`);
+    // Attach edit and delete onclick handlers directly
+    const editBtn = tr.querySelector('.edit-btn-' + v.id);
     if (editBtn) {
-      editBtn.onclick = () => editVendor(v);
+      editBtn.onclick = function() { editVendor(v); };
+    }
+    const delBtn = tr.querySelector('.del-btn-' + v.id);
+    if (delBtn) {
+      delBtn.onclick = function() { confirmDeleteVendor(v.id, v.name); };
     }
 
     tbody.insertBefore(tr, tbody.firstChild);
     reindexRows();
+
+    // Visual highlight on insertion
+    tr.style.backgroundColor = '#eff6ff';
+    tr.style.opacity = '0';
+    tr.style.transform = 'translateY(-10px)';
+    requestAnimationFrame(function() {
+      tr.style.transition = 'opacity 0.4s ease, transform 0.4s ease, background-color 1.5s ease';
+      tr.style.opacity = '1';
+      tr.style.transform = 'translateY(0)';
+      setTimeout(function() {
+        tr.style.backgroundColor = '';
+      }, 1200);
+    });
   }
 
   function updateTableRow(v) {
@@ -1186,28 +1241,35 @@
     row.setAttribute('data-status', (v.status || 'active').toLowerCase());
     row.setAttribute('data-balance', v.outstanding || 0);
 
-    row.querySelector('.vend-name-val').textContent = v.name;
-    row.querySelector('.vend-code-val').textContent = v.code || ('VEND-' + String(v.id).padStart(3, '0'));
-    row.querySelector('.vend-contact-val').textContent = v.contact_person || (v.company_name || '—');
-    row.querySelector('.vend-phone-val').textContent = v.phone || '—';
-    row.querySelector('.vend-city-val').textContent = v.city || '—';
-    row.querySelector('.vend-state-val').textContent = v.state || '—';
+    const nameEl = row.querySelector('.vend-name-val');
+    if (nameEl) nameEl.textContent = v.name;
+    const codeEl = row.querySelector('.vend-code-val');
+    if (codeEl) codeEl.textContent = v.code || ('VEND-' + String(v.id).padStart(3, '0'));
+    const contactEl = row.querySelector('.vend-contact-val');
+    if (contactEl) contactEl.textContent = v.contact_person || (v.company_name || '\u2014');
+    const phoneEl = row.querySelector('.vend-phone-val');
+    if (phoneEl) phoneEl.textContent = v.phone || '\u2014';
+    const cityEl = row.querySelector('.vend-city-val');
+    if (cityEl) cityEl.textContent = v.city || '\u2014';
+    const stateEl = row.querySelector('.vend-state-val');
+    if (stateEl) stateEl.textContent = v.state || '\u2014';
     
-    const initials = (v.name || 'VE').substring(0, 2).toUpperCase();
+    const initials = escapeHtml((v.name || 'VE').substring(0, 2).toUpperCase());
     const avatar = document.getElementById('avatar-' + v.id);
     if (avatar) avatar.textContent = initials;
 
     const catCell = row.querySelector('.vend-cat-cell');
     if (catCell) {
       const badgeClass = getCategoryBadgeClass(v.category);
-      catCell.innerHTML = `<span class="badge ${badgeClass}" style="font-size:0.75rem; font-weight:600; padding:4px 8px; border-radius:8px;">${v.category || 'General Supplier'}</span>`;
+      catCell.innerHTML = '<span class="badge ' + badgeClass + '" style="font-size:0.75rem; font-weight:600; padding:4px 8px; border-radius:8px;">' + escapeHtml(v.category || 'General Supplier') + '</span>';
     }
 
     const gstinCell = row.querySelector('.vend-gst-cell');
     if (gstinCell) {
-      gstinCell.innerHTML = (v.gstin || v.gst_number)
-        ? `<span class="badge" style="background:#f1f5f9; color:#1e293b; font-family:monospace; font-size:0.75rem; font-weight:600; border:1px solid #e2e8f0;">${v.gstin || v.gst_number}</span>`
-        : `<span style="font-size:0.75rem; color:var(--slate-400);">Unregistered</span>`;
+      const gstVal = escapeHtml(v.gstin || v.gst_number || '');
+      gstinCell.innerHTML = gstVal
+        ? '<span class="badge" style="background:#f1f5f9; color:#1e293b; font-family:monospace; font-size:0.75rem; font-weight:600; border:1px solid #e2e8f0;">' + gstVal + '</span>'
+        : '<span style="font-size:0.75rem; color:var(--slate-400);">Unregistered</span>';
     }
 
     const creditCell = row.querySelector('.vend-credit-cell');
@@ -1218,7 +1280,7 @@
     const outstandingCell = row.querySelector('.vend-outstanding-val');
     if (outstandingCell) {
       const outVal = Number(v.outstanding || 0);
-      outstandingCell.textContent = '₹' + outVal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+      outstandingCell.textContent = '\u20b9' + outVal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
       outstandingCell.style.color = outVal > 0 ? '#dc2626' : '#059669';
     }
 
@@ -1229,7 +1291,7 @@
     }
 
     // Update edit button handler with fresh data
-    const editBtn = row.querySelector('.btn-secondary');
+    const editBtn = row.querySelector('.edit-btn-' + v.id) || row.querySelector('.btn-secondary');
     if (editBtn) {
       editBtn.onclick = () => editVendor(v);
     }

@@ -106,17 +106,22 @@ class VendorController extends Controller
         }
 
         if (empty($validated['code'])) {
-            $count = Vendor::count() + 1;
-            $validated['code'] = 'VEND-' . str_pad($count, 3, '0', STR_PAD_LEFT);
+            $maxId = (int)(Vendor::withTrashed()->max('id') ?? 0);
+            $candidateNum = max(Vendor::count() + 1, $maxId + 1);
+            do {
+                $candidateCode = 'VEND-' . str_pad($candidateNum, 3, '0', STR_PAD_LEFT);
+                $candidateNum++;
+            } while (Vendor::withTrashed()->where('code', $candidateCode)->exists());
+            $validated['code'] = $candidateCode;
         }
 
         if (empty($validated['category'])) {
-            $validated['category'] = 'Fabric Mill';
+            $validated['category'] = 'General Supplier';
         }
 
         $vendor = Vendor::create($validated);
 
-        if ($request->wantsJson() || $request->ajax()) {
+        if ($request->expectsJson() || $request->wantsJson() || $request->ajax() || $request->isJson() || str_contains((string)$request->header('Accept'), 'application/json')) {
             return response()->json([
                 'success' => true,
                 'vendor' => $vendor,
@@ -171,7 +176,7 @@ class VendorController extends Controller
 
         $vendor->update($validated);
 
-        if ($request->wantsJson() || $request->ajax()) {
+        if ($request->expectsJson() || $request->wantsJson() || $request->ajax() || $request->isJson() || str_contains((string)$request->header('Accept'), 'application/json')) {
             return response()->json([
                 'success' => true,
                 'vendor' => $vendor,
@@ -188,7 +193,7 @@ class VendorController extends Controller
         $name = $vendor->name;
         $vendor->delete();
 
-        if (request()->wantsJson() || request()->ajax()) {
+        if (request()->expectsJson() || request()->wantsJson() || request()->ajax() || request()->isJson() || str_contains((string)request()->header('Accept'), 'application/json')) {
             return response()->json([
                 'success' => true,
                 'stats' => $this->getStats(),
