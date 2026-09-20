@@ -159,7 +159,7 @@
             2. Product Items, Than Fabric, Pcs & Wastage Calculator
           </h3>
           <p style="margin:2px 0 0; font-size:0.8rem; color:var(--slate-500);">
-            Add one or more items. E.g., 100 meters than &rarr; 33 pcs output &rarr; 2 meters expected wastage.
+            Enter issued Than/Roll meters, expected production pcs, wastage (if any), and contractor rate.
           </p>
         </div>
 
@@ -194,41 +194,41 @@
                     <option value="{{ $it->id }}" data-name="{{ $it->name }}" data-unit="{{ $it->unit ?? 'Mtr' }}">{{ $it->name }} ({{ $it->item_code ?? 'Item' }})</option>
                   @endforeach
                 </select>
-                <input type="hidden" name="items[0][item_name]" class="item-name-input" value="Cotton Fabric Than (Navy Blue)">
+                <input type="hidden" name="items[0][item_name]" class="item-name-input" value="">
               </td>
               <td>
                 <div style="position:relative;">
-                  <input type="number" step="0.01" min="0" name="items[0][than_meters]" class="form-control input-than" value="100" placeholder="100.00" oninput="calculateRow(0)" style="font-weight:700;">
+                  <input type="number" step="0.01" min="0" name="items[0][than_meters]" class="form-control input-than" value="" placeholder="0.00" oninput="calculateRow(0)" style="font-weight:700;">
                   <span style="position:absolute; right:8px; top:50%; transform:translateY(-50%); font-size:0.7rem; color:var(--slate-400);">Mtr</span>
                 </div>
               </td>
               <td>
                 <div style="position:relative;">
-                  <input type="number" step="1" min="1" name="items[0][production_pcs]" class="form-control input-pcs" required value="33" placeholder="33" oninput="calculateRow(0)" style="font-weight:800; color:var(--primary-700);">
+                  <input type="number" step="1" min="1" name="items[0][production_pcs]" class="form-control input-pcs" required value="" placeholder="0" oninput="calculateRow(0)" style="font-weight:800; color:var(--primary-700);">
                   <span style="position:absolute; right:8px; top:50%; transform:translateY(-50%); font-size:0.7rem; color:var(--slate-400);">Pcs</span>
                 </div>
               </td>
               <td>
                 <div style="position:relative;">
-                  <input type="number" step="0.01" min="0" name="items[0][wastage_meters]" class="form-control input-wastage" value="2" placeholder="2.00" oninput="calculateRow(0)" style="font-weight:700; color:#dc2626;">
+                  <input type="number" step="0.01" min="0" name="items[0][wastage_meters]" class="form-control input-wastage" value="0" placeholder="0.00" oninput="calculateRow(0)" style="font-weight:700; color:#dc2626;">
                   <span style="position:absolute; right:8px; top:50%; transform:translateY(-50%); font-size:0.7rem; color:var(--slate-400);">Mtr</span>
                 </div>
               </td>
               <td style="text-align:center;">
                 <span class="calc-badge row-avg-badge" id="badge-avg-0">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                  <span class="val">2.97 Mtr/Pc</span>
+                  <span class="val">0.00 Mtr/Pc</span>
                 </span>
               </td>
               <td>
                 <div style="position:relative;">
                   <span style="position:absolute; left:8px; top:50%; transform:translateY(-50%); font-size:0.75rem; font-weight:700; color:var(--slate-500);">₹</span>
-                  <input type="number" step="0.5" min="0" name="items[0][rate_per_piece]" class="form-control input-rate" required value="50.00" placeholder="50.00" oninput="calculateRow(0)" style="padding-left:20px; font-weight:700;">
+                  <input type="number" step="0.5" min="0" name="items[0][rate_per_piece]" class="form-control input-rate" required value="" placeholder="0.00" oninput="calculateRow(0)" style="padding-left:20px; font-weight:700;">
                 </div>
               </td>
               <td style="text-align:right;">
                 <div style="font-weight:800; font-size:0.95rem; color:#059669;" class="row-total" id="total-val-0">
-                  ₹1,650.00
+                  ₹0.00
                 </div>
               </td>
               <td style="text-align:center;">
@@ -251,32 +251,32 @@
 
           <div style="display:flex; justify-content:space-between; font-size:0.85rem;">
             <span style="color:var(--slate-600);">Total Than Fabric Issued:</span>
-            <strong id="grand-than" style="color:var(--slate-900);">100.00 Mtr</strong>
+            <strong id="grand-than" style="color:var(--slate-900);">0.00 Mtr</strong>
           </div>
 
           <div style="display:flex; justify-content:space-between; font-size:0.85rem;">
             <span style="color:var(--slate-600);">Expected Wastage:</span>
-            <strong id="grand-wastage" style="color:#dc2626;">2.00 Mtr</strong>
+            <strong id="grand-wastage" style="color:#dc2626;">0.00 Mtr</strong>
           </div>
 
           <div style="display:flex; justify-content:space-between; font-size:0.85rem;">
             <span style="color:var(--slate-600);">Net Fabric Consumption:</span>
-            <strong id="grand-net-fabric" style="color:#059669;">98.00 Mtr</strong>
+            <strong id="grand-net-fabric" style="color:#059669;">0.00 Mtr</strong>
           </div>
 
           <div style="display:flex; justify-content:space-between; font-size:0.85rem;">
             <span style="color:var(--slate-600);">Total Finished Pieces:</span>
-            <strong id="grand-pcs" style="color:var(--primary-700); font-size:0.95rem;">33 Pcs</strong>
+            <strong id="grand-pcs" style="color:var(--primary-700); font-size:0.95rem;">0 Pcs</strong>
           </div>
 
           <div style="display:flex; justify-content:space-between; font-size:0.85rem;">
             <span style="color:var(--slate-600);">Overall Avg Consumption:</span>
-            <strong id="grand-avg-cons" style="color:var(--slate-800);">2.97 Mtr / Pc</strong>
+            <strong id="grand-avg-cons" style="color:var(--slate-800);">0.00 Mtr / Pc</strong>
           </div>
 
           <div style="border-top:2px dashed #cbd5e1; padding-top:10px; display:flex; justify-content:space-between; align-items:baseline; font-size:1.15rem;">
             <span style="font-weight:800; color:var(--slate-900);">Contract Total Amount:</span>
-            <span style="font-weight:800; color:#059669;" id="grand-amount">₹1,650.00</span>
+            <span style="font-weight:800; color:#059669;" id="grand-amount">₹0.00</span>
           </div>
 
         </div>
@@ -314,8 +314,11 @@
 
     if (rate && parseFloat(rate) > 0) {
       document.querySelectorAll('.input-rate').forEach(inp => {
-        if (!inp.value || parseFloat(inp.value) === 0 || inp.value === '50.00') {
+        if (!inp.value || parseFloat(inp.value) === 0) {
           inp.value = parseFloat(rate).toFixed(2);
+          const row = inp.closest('tr');
+          const idx = row ? row.getAttribute('data-index') : null;
+          if (idx !== null) calculateRow(idx);
         }
       });
       calculateAll();
@@ -364,37 +367,37 @@
       </td>
       <td>
         <div style="position:relative;">
-          <input type="number" step="0.01" min="0" name="items[${idx}][than_meters]" class="form-control input-than" value="50" placeholder="50.00" oninput="calculateRow(${idx})" style="font-weight:700;">
+          <input type="number" step="0.01" min="0" name="items[${idx}][than_meters]" class="form-control input-than" value="" placeholder="0.00" oninput="calculateRow(${idx})" style="font-weight:700;">
           <span style="position:absolute; right:8px; top:50%; transform:translateY(-50%); font-size:0.7rem; color:var(--slate-400);">Mtr</span>
         </div>
       </td>
       <td>
         <div style="position:relative;">
-          <input type="number" step="1" min="1" name="items[${idx}][production_pcs]" class="form-control input-pcs" required value="16" placeholder="16" oninput="calculateRow(${idx})" style="font-weight:800; color:var(--primary-700);">
+          <input type="number" step="1" min="1" name="items[${idx}][production_pcs]" class="form-control input-pcs" required value="" placeholder="0" oninput="calculateRow(${idx})" style="font-weight:800; color:var(--primary-700);">
           <span style="position:absolute; right:8px; top:50%; transform:translateY(-50%); font-size:0.7rem; color:var(--slate-400);">Pcs</span>
         </div>
       </td>
       <td>
         <div style="position:relative;">
-          <input type="number" step="0.01" min="0" name="items[${idx}][wastage_meters]" class="form-control input-wastage" value="1" placeholder="1.00" oninput="calculateRow(${idx})" style="font-weight:700; color:#dc2626;">
+          <input type="number" step="0.01" min="0" name="items[${idx}][wastage_meters]" class="form-control input-wastage" value="0" placeholder="0.00" oninput="calculateRow(${idx})" style="font-weight:700; color:#dc2626;">
           <span style="position:absolute; right:8px; top:50%; transform:translateY(-50%); font-size:0.7rem; color:var(--slate-400);">Mtr</span>
         </div>
       </td>
       <td style="text-align:center;">
         <span class="calc-badge row-avg-badge" id="badge-avg-${idx}">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          <span class="val">3.06 Mtr/Pc</span>
+          <span class="val">0.00 Mtr/Pc</span>
         </span>
       </td>
       <td>
         <div style="position:relative;">
           <span style="position:absolute; left:8px; top:50%; transform:translateY(-50%); font-size:0.75rem; font-weight:700; color:var(--slate-500);">₹</span>
-          <input type="number" step="0.5" min="0" name="items[${idx}][rate_per_piece]" class="form-control input-rate" required value="50.00" placeholder="50.00" oninput="calculateRow(${idx})" style="padding-left:20px; font-weight:700;">
+          <input type="number" step="0.5" min="0" name="items[${idx}][rate_per_piece]" class="form-control input-rate" required value="" placeholder="0.00" oninput="calculateRow(${idx})" style="padding-left:20px; font-weight:700;">
         </div>
       </td>
       <td style="text-align:right;">
         <div style="font-weight:800; font-size:0.95rem; color:#059669;" class="row-total" id="total-val-${idx}">
-          ₹800.00
+          ₹0.00
         </div>
       </td>
       <td style="text-align:center;">
