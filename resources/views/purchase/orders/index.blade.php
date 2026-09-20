@@ -1,17 +1,17 @@
 @extends('layouts.app')
 
-@section('title', 'Purchase Orders - GarmentERP')
+@section('title', 'Purchase Entry - GarmentERP')
 
 @section('breadcrumb')
   <div class="breadcrumb-item"><span>Purchase Management</span></div>
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-  <div class="breadcrumb-item active"><span>Purchase Orders</span></div>
+  <div class="breadcrumb-item active"><span>Purchase Entry</span></div>
 @endsection
 
 @push('styles')
 <style>
   /* ==========================================================================
-     PURCHASE ORDERS REGISTRY - MODERN ERP STYLING
+     PURCHASE ENTRY REGISTRY - MODERN ERP STYLING
      ========================================================================== */
   .po-wrapper {
     display: flex;
@@ -122,7 +122,7 @@
 
   .search-input-wrapper {
     position: relative;
-    max-width: 320px;
+    max-width: 340px;
     width: 100%;
   }
 
@@ -264,16 +264,16 @@
   <!-- KPI Metrics Row -->
   <div class="po-stats-grid">
     
-    <!-- Total Orders Issued -->
+    <!-- Total Entries Recorded -->
     <div class="po-stat-card" style="--accent-color: #2563eb;">
       <div class="po-stat-icon" style="background: #eff6ff; color: #2563eb;">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
       </div>
       <div class="po-stat-info">
-        <div class="po-stat-label">Total Orders Issued</div>
+        <div class="po-stat-label">Total Purchase Entries</div>
         <div class="po-stat-value">
           {{ number_format($stats['totalOrders']) }}
-          <span style="font-size:0.75rem; font-weight:600; color:var(--slate-500);">Orders</span>
+          <span style="font-size:0.75rem; font-weight:600; color:var(--slate-500);">Entries</span>
         </div>
       </div>
     </div>
@@ -284,14 +284,14 @@
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
       </div>
       <div class="po-stat-info">
-        <div class="po-stat-label">Cumulative PO Value</div>
+        <div class="po-stat-label">Cumulative Purchase Value</div>
         <div class="po-stat-value" style="color: #059669;">
           ₹{{ number_format($stats['totalAmount'], 2) }}
         </div>
       </div>
     </div>
 
-    <!-- Approved Orders -->
+    <!-- Approved Entries -->
     <div class="po-stat-card" style="--accent-color: #8b5cf6;">
       <div class="po-stat-icon" style="background: #f5f3ff; color: #7c3aed;">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
@@ -307,27 +307,27 @@
 
   </div>
 
-  <!-- Main PO Ledger Card Container -->
+  <!-- Main Purchase Entry Ledger Card Container -->
   <div class="po-ledger-card">
     
     <!-- Action Header -->
     <div class="po-card-header">
       <div>
-        <h3 style="margin:0; font-size:1.2rem; font-weight:800; color:var(--slate-900);">Purchase Orders Registry</h3>
+        <h3 style="margin:0; font-size:1.2rem; font-weight:800; color:var(--slate-900);">Purchase Entry Registry</h3>
         <p style="margin:4px 0 0; font-size:0.825rem; color:var(--slate-500);">
-          Procurement orders for greige fabric, finished rolls, trims & manufacturing accessories.
+          Track supplier fabric inward challans, Than-wise meters breakdown & procurement bills.
         </p>
       </div>
 
       <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-        <button class="btn btn-secondary btn-sm" onclick="UI.exportTableToCSV('po-table', 'Purchase_Orders.csv')" style="display:inline-flex; align-items:center; gap:6px; font-weight:700;">
+        <button class="btn btn-secondary btn-sm" onclick="UI.exportTableToCSV('po-table', 'Purchase_Entries.csv')" style="display:inline-flex; align-items:center; gap:6px; font-weight:700;">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           Export CSV
         </button>
 
         <a href="{{ route('purchase.orders.create') }}" class="btn btn-primary btn-sm" style="display:inline-flex; align-items:center; gap:6px; font-weight:700; box-shadow:0 2px 8px rgba(37, 99, 235, 0.3);">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
-          Create Purchase Order
+          + New Purchase Entry
         </a>
       </div>
     </div>
@@ -336,7 +336,7 @@
     <div class="po-toolbar">
       <div class="search-input-wrapper">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input type="text" id="po-search-input" placeholder="Search PO#, vendor name, warehouse..." onkeyup="filterPOTable()">
+        <input type="text" id="po-search-input" placeholder="Search Entry #, Challan #, Vendor..." onkeyup="filterPOTable()">
       </div>
 
       <div class="status-filter-pills">
@@ -352,35 +352,46 @@
       </div>
     </div>
 
-    <!-- Purchase Orders Table -->
+    <!-- Purchase Entries Table -->
     <div class="table-responsive">
       <table class="data-table po-table" id="po-table" style="width:100%;">
         <thead>
           <tr>
-            <th style="width:170px;">PO Number</th>
+            <th style="width:145px;">Entry #</th>
+            <th style="width:125px;">Challan #</th>
             <th>Vendor / Supplier</th>
-            <th>PO Date</th>
-            <th>Expected Date</th>
-            <th>Warehouse</th>
-            <th>Line Items</th>
+            <th>Entry Date</th>
+            <th>Product / Fabric</th>
+            <th>Thans & Meters</th>
             <th>Grand Total</th>
             <th>Status</th>
             <th>Payment</th>
-            <th style="text-align:right; width:130px;">Actions</th>
+            <th style="text-align:right; width:120px;">Actions</th>
           </tr>
         </thead>
         <tbody>
           @forelse ($orders as $po)
             @php
               $statusKey = strtolower($po->status);
+              $firstItem = $po->items->first();
+              $totalMeters = $firstItem ? $firstItem->ordered_qty : 0;
+              $thansCount = $po->total_thans_count ?: ($po->than_list ? count($po->than_list) : 0);
+              $challanNo = $po->challan_number ?: '—';
             @endphp
             <tr class="po-row" data-status="{{ $statusKey }}">
               
-              <!-- PO Number -->
+              <!-- Entry Number -->
               <td>
-                <span class="po-code-badge" onclick="copyCode('{{ $po->po_number }}')" title="Click to copy PO Number">
+                <span class="po-code-badge" onclick="copyCode('{{ $po->po_number }}')" title="Click to copy Entry Number">
                   <span>{{ $po->po_number }}</span>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                </span>
+              </td>
+
+              <!-- Challan # -->
+              <td>
+                <span class="badge" style="background:#fef3c7; color:#92400e; border:1px solid #fde68a; font-weight:800; font-family:var(--font-mono, monospace);">
+                  {{ $challanNo }}
                 </span>
               </td>
 
@@ -395,25 +406,24 @@
                 <div style="font-weight:600; color:var(--slate-800);">{{ date('d M Y', strtotime($po->po_date)) }}</div>
               </td>
 
-              <!-- Expected Date -->
+              <!-- Product / Fabric -->
               <td>
-                <div style="color:var(--slate-700);">
-                  {{ $po->expected_delivery_date ? date('d M Y', strtotime($po->expected_delivery_date)) : '—' }}
+                <div style="font-weight:700; color:var(--slate-800);">{{ $firstItem?->item_name ?: 'Fabric Quality' }}</div>
+                @if($firstItem && $firstItem->item_sku)
+                  <div style="font-size:0.725rem; color:var(--slate-500); font-family:monospace;">{{ $firstItem->item_sku }}</div>
+                @endif
+              </td>
+
+              <!-- Thans & Total Meters -->
+              <td>
+                <div>
+                  <span class="badge" style="background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; font-weight:700;">
+                    {{ $thansCount }} {{ Str::plural('Than', $thansCount) }}
+                  </span>
+                  <div style="font-weight:800; color:var(--slate-900); margin-top:4px; font-size:0.85rem;">
+                    {{ number_format($totalMeters, 2) }} {{ $firstItem?->unit ?: 'Mtr' }}
+                  </div>
                 </div>
-              </td>
-
-              <!-- Warehouse -->
-              <td>
-                <span class="badge" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; font-weight:600; font-size:0.75rem;">
-                  {{ $po->warehouse_location ?: 'Main Store' }}
-                </span>
-              </td>
-
-              <!-- Line Items Count -->
-              <td>
-                <span class="badge" style="background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; font-weight:700;">
-                  {{ $po->items ? $po->items->count() : 0 }} Items
-                </span>
               </td>
 
               <!-- Grand Total -->
@@ -453,18 +463,18 @@
               <td style="text-align:right;">
                 <div style="display:inline-flex; gap:6px; align-items:center;">
                   
-                  <a href="{{ route('purchase.orders.edit', $po->id) }}" class="action-icon-btn primary" title="Edit Purchase Order">
+                  <a href="{{ route('purchase.orders.edit', $po->id) }}" class="action-icon-btn primary" title="Edit Purchase Entry">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                   </a>
 
-                  <button type="button" class="action-icon-btn" onclick='printPurchaseOrder(@json($po))' title="Print Purchase Order">
+                  <button type="button" class="action-icon-btn" onclick='printPurchaseOrder(@json($po))' title="Print Challan Slip">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
                   </button>
 
                   <form action="{{ route('purchase.orders.destroy', $po->id) }}" method="POST" style="display:inline;" onsubmit="return handleDeletePO(this, '{{ $po->po_number }}', event)">
                     @csrf
                     @method('DELETE')
-                    <button type="submit" class="action-icon-btn danger" title="Delete Purchase Order">
+                    <button type="submit" class="action-icon-btn danger" title="Delete Purchase Entry">
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                     </button>
                   </form>
@@ -479,9 +489,9 @@
                 <div style="width:48px; height:48px; border-radius:12px; background:var(--slate-100); color:var(--slate-400); display:inline-flex; align-items:center; justify-content:center; margin-bottom:12px;">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
                 </div>
-                <div style="font-weight:700; color:var(--slate-700); font-size:1rem; margin-bottom:4px;">No purchase orders found</div>
-                <p style="font-size:0.85rem; color:var(--slate-500); margin:0 0 16px;">Create your first procurement order to start tracking material supply.</p>
-                <a href="{{ route('purchase.orders.create') }}" class="btn btn-primary btn-sm">+ Create Purchase Order</a>
+                <div style="font-weight:700; color:var(--slate-700); font-size:1rem; margin-bottom:4px;">No purchase entries found</div>
+                <p style="font-size:0.85rem; color:var(--slate-500); margin:0 0 16px;">Record fabric than-wise challan details and inward bills.</p>
+                <a href="{{ route('purchase.orders.create') }}" class="btn btn-primary btn-sm">+ New Purchase Entry</a>
               </td>
             </tr>
           @endforelse
@@ -505,14 +515,14 @@
       if (window.Toast) {
         Toast.fire({
           icon: 'success',
-          title: `PO Number ${code} copied!`
+          title: `Entry Number ${code} copied!`
         });
       } else if (window.Swal) {
         Swal.fire({
           toast: true,
           position: 'top-end',
           icon: 'success',
-          title: `PO Number ${code} copied!`,
+          title: `Entry Number ${code} copied!`,
           showConfirmButton: false,
           timer: 2000
         });
@@ -523,13 +533,13 @@
   function handleDeletePO(form, poNumber, e) {
     e.preventDefault();
     Swal.fire({
-      title: 'Delete Purchase Order?',
-      html: `Are you sure you want to delete PO <strong>${poNumber}</strong>?<br><span style="font-size:0.85rem; color:#ef4444;">This order and its line items will be removed.</span>`,
+      title: 'Delete Purchase Entry?',
+      html: `Are you sure you want to delete entry <strong>${poNumber}</strong>?<br><span style="font-size:0.85rem; color:#ef4444;">This record and all Than meter entries will be removed.</span>`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#ef4444',
       cancelButtonColor: '#94a3b8',
-      confirmButtonText: 'Yes, Delete PO',
+      confirmButtonText: 'Yes, Delete Entry',
       cancelButtonText: 'Cancel',
       reverseButtons: true
     }).then((result) => {
@@ -567,68 +577,155 @@
   }
 
   function printPurchaseOrder(po) {
-    let linesHtml = (po.items || []).map((itm, idx) => `
-      <tr>
-        <td style="padding:8px; border:1px solid #e2e8f0; text-align:center;">${idx + 1}</td>
-        <td style="padding:8px; border:1px solid #e2e8f0; font-weight:600;">${itm.item_name}</td>
-        <td style="padding:8px; border:1px solid #e2e8f0; text-align:center;">${itm.ordered_qty} ${itm.unit || 'm'}</td>
-        <td style="padding:8px; border:1px solid #e2e8f0; text-align:right;">₹${Number(itm.rate).toFixed(2)}</td>
-        <td style="padding:8px; border:1px solid #e2e8f0; text-align:right;">${itm.tax_percent}%</td>
-        <td style="padding:8px; border:1px solid #e2e8f0; text-align:right; font-weight:700;">₹${Number(itm.total_amount).toFixed(2)}</td>
-      </tr>
-    `).join('');
+    // Determine thans list
+    let thans = po.than_list || [];
+    if (!thans.length && po.notes) {
+      try {
+        const parsed = JSON.parse(po.notes);
+        if (parsed.thans) thans = parsed.thans;
+      } catch(e) {}
+    }
+
+    const firstItem = (po.items && po.items.length) ? po.items[0] : null;
+    const itemName = firstItem ? firstItem.item_name : 'Fabric Quality';
+    const rate = firstItem ? Number(firstItem.rate) : 0;
+    const challanNo = po.challan_number || po.challan_no || '—';
+
+    // Split thans into two columns matching physical challan format
+    const half = Math.ceil(thans.length / 2);
+    const col1 = thans.slice(0, half);
+    const col2 = thans.slice(half);
+
+    const sumCol1 = col1.reduce((acc, val) => acc + (parseFloat(val) || 0), 0);
+    const sumCol2 = col2.reduce((acc, val) => acc + (parseFloat(val) || 0), 0);
+    const totalMeters = sumCol1 + sumCol2;
+
+    const maxRows = Math.max(col1.length, col2.length, 1);
+
+    let rowsHtml = '';
+    for (let i = 0; i < maxRows; i++) {
+      const t1 = col1[i] !== undefined ? parseFloat(col1[i]).toFixed(2) : '';
+      const t2 = col2[i] !== undefined ? parseFloat(col2[i]).toFixed(2) : '';
+      rowsHtml += `
+        <tr>
+          <td style="padding:6px 12px; border:1px solid #cbd5e1; text-align:center; font-weight:600; color:#64748b;">${col1[i] !== undefined ? (i + 1) : ''}</td>
+          <td style="padding:6px 12px; border:1px solid #cbd5e1; text-align:right; font-weight:700; font-size:15px; font-family:monospace;">${t1}</td>
+          <td style="padding:6px 12px; border:1px solid #cbd5e1; text-align:center; font-weight:600; color:#64748b;">${col2[i] !== undefined ? (half + i + 1) : ''}</td>
+          <td style="padding:6px 12px; border:1px solid #cbd5e1; text-align:right; font-weight:700; font-size:15px; font-family:monospace;">${t2}</td>
+        </tr>
+      `;
+    }
 
     const html = `
-      <div style="font-family:'Plus Jakarta Sans', sans-serif; padding:30px; color:#1e293b; max-width:800px; margin:auto;">
-        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #0f172a; padding-bottom:16px; margin-bottom:20px;">
+      <div style="font-family:'Plus Jakarta Sans', Arial, sans-serif; padding:24px; color:#1e293b; max-width:760px; margin:auto; border:2px solid #334155; border-radius:12px; background:#fff;">
+        
+        <!-- Challan Header (Textile Format) -->
+        <div style="text-align:center; border-bottom:2px solid #0f172a; padding-bottom:12px; margin-bottom:16px;">
+          <div style="font-size:11px; font-weight:700; letter-spacing:2px; color:#64748b; text-transform:uppercase;">॥ Shree Ganeshay Namah ॥</div>
+          <h1 style="margin:4px 0 0; font-size:24px; font-weight:900; letter-spacing:1px; color:#0f172a; text-transform:uppercase;">PURCHASE CHALLAN ENTRY</h1>
+          <div style="font-size:12px; color:#475569; margin-top:2px;">Textile Weaving, Dyeing & Processing House Inward Slip</div>
+        </div>
+
+        <!-- Meta Details Grid -->
+        <table style="width:100%; border-collapse:collapse; margin-bottom:16px; font-size:13px;">
+          <tr>
+            <td style="width:60%; vertical-align:top; padding:8px 12px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:6px;">
+              <span style="font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase;">M/s (Vendor / Supplier):</span>
+              <div style="font-size:16px; font-weight:800; color:#0f172a; margin-top:4px;">${po.vendor_name || 'Direct Supplier'}</div>
+              <div style="font-size:12px; color:#64748b; margin-top:2px;">Entry Reference: <strong>${po.po_number}</strong></div>
+            </td>
+            <td style="width:40%; vertical-align:top; padding:8px 12px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:6px;">
+              <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                <span style="font-weight:700; color:#475569;">Challan No.:</span>
+                <strong style="font-size:15px; color:#b45309; font-family:monospace;">${challanNo}</strong>
+              </div>
+              <div style="display:flex; justify-content:space-between;">
+                <span style="font-weight:700; color:#475569;">Date:</span>
+                <strong>${po.po_date}</strong>
+              </div>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Product Banner -->
+        <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:6px; padding:10px 14px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center;">
           <div>
-            <h2 style="margin:0; font-size:1.5rem; color:#0f172a; font-weight:800;">FashionWorks Pvt. Ltd.</h2>
-            <p style="margin:2px 0 0; font-size:0.85rem; color:#64748b;">Apparel Park MIDC, Tiruppur / Mumbai | GSTIN: 27AABCF1234F1Z1</p>
+            <span style="font-size:11px; font-weight:700; color:#1d4ed8; text-transform:uppercase;">Description of Goods / Fabric Quality:</span>
+            <div style="font-size:16px; font-weight:800; color:#1e3a8a;">${itemName}</div>
           </div>
           <div style="text-align:right;">
-            <h3 style="margin:0; font-size:1.25rem; color:#4f46e5; font-weight:800;">PURCHASE ORDER</h3>
-            <p style="margin:2px 0 0; font-size:0.85rem; font-family:monospace; font-weight:700;">${po.po_number}</p>
+            <span style="font-size:11px; font-weight:700; color:#1d4ed8; text-transform:uppercase;">Rate per Mtr:</span>
+            <div style="font-size:16px; font-weight:800; color:#1e3a8a;">₹${rate.toFixed(2)}</div>
           </div>
         </div>
 
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px; font-size:0.85rem;">
-          <div style="padding:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px;">
-            <div style="font-size:0.75rem; color:#64748b; font-weight:700; text-transform:uppercase;">Vendor / Supplier:</div>
-            <div style="font-weight:700; font-size:1rem; margin-top:4px;">${po.vendor_name}</div>
-          </div>
-          <div style="padding:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px;">
-            <div><strong>PO Date:</strong> ${po.po_date}</div>
-            <div><strong>Delivery Location:</strong> ${po.warehouse_location || 'Main Store'}</div>
-          </div>
-        </div>
-
-        <table style="width:100%; border-collapse:collapse; font-size:0.85rem; margin-bottom:20px;">
+        <!-- Than List in 2 Columns matching paper slip -->
+        <table style="width:100%; border-collapse:collapse; font-size:13px; margin-bottom:16px;">
           <thead>
             <tr style="background:#f1f5f9;">
-              <th style="padding:8px; border:1px solid #e2e8f0;">#</th>
-              <th style="padding:8px; border:1px solid #e2e8f0; text-align:left;">Item Description</th>
-              <th style="padding:8px; border:1px solid #e2e8f0;">Qty</th>
-              <th style="padding:8px; border:1px solid #e2e8f0; text-align:right;">Rate</th>
-              <th style="padding:8px; border:1px solid #e2e8f0; text-align:right;">Tax %</th>
-              <th style="padding:8px; border:1px solid #e2e8f0; text-align:right;">Total Amount</th>
+              <th style="padding:6px; border:1px solid #cbd5e1; width:12%;">Than #</th>
+              <th style="padding:6px; border:1px solid #cbd5e1; width:38%; text-align:right;">Meters</th>
+              <th style="padding:6px; border:1px solid #cbd5e1; width:12%;">Than #</th>
+              <th style="padding:6px; border:1px solid #cbd5e1; width:38%; text-align:right;">Meters</th>
             </tr>
           </thead>
-          <tbody>${linesHtml}</tbody>
+          <tbody>
+            ${rowsHtml}
+          </tbody>
           <tfoot>
-            <tr>
-              <td colspan="5" style="padding:8px; text-align:right; font-weight:700; border:1px solid #e2e8f0;">Subtotal:</td>
-              <td style="padding:8px; text-align:right; font-weight:700; border:1px solid #e2e8f0;">₹${Number(po.subtotal).toFixed(2)}</td>
-            </tr>
-            <tr>
-              <td colspan="5" style="padding:8px; text-align:right; font-weight:700; border:1px solid #e2e8f0;">GST / Tax:</td>
-              <td style="padding:8px; text-align:right; font-weight:700; border:1px solid #e2e8f0;">₹${Number(po.tax_total).toFixed(2)}</td>
-            </tr>
-            <tr style="background:#f8fafc;">
-              <td colspan="5" style="padding:10px; text-align:right; font-weight:800; font-size:1rem; border:1px solid #e2e8f0;">Grand Total:</td>
-              <td style="padding:10px; text-align:right; font-weight:800; font-size:1rem; color:#059669; border:1px solid #e2e8f0;">₹${Number(po.grand_total).toFixed(2)}</td>
+            <tr style="background:#f8fafc; font-weight:700;">
+              <td style="padding:6px; border:1px solid #cbd5e1; text-align:center;">Subtotal 1:</td>
+              <td style="padding:6px; border:1px solid #cbd5e1; text-align:right; font-family:monospace; color:#2563eb;">${sumCol1.toFixed(2)} m</td>
+              <td style="padding:6px; border:1px solid #cbd5e1; text-align:center;">Subtotal 2:</td>
+              <td style="padding:6px; border:1px solid #cbd5e1; text-align:right; font-family:monospace; color:#2563eb;">${sumCol2.toFixed(2)} m</td>
             </tr>
           </tfoot>
         </table>
+
+        <!-- Summary & Financials Calculation -->
+        <table style="width:100%; border-collapse:collapse; margin-bottom:20px; font-size:13px;">
+          <tr>
+            <td style="width:55%; vertical-align:top; padding:10px 14px; border:1px solid #cbd5e1; background:#f8fafc; border-radius:6px;">
+              <div style="font-weight:700; color:#334155; margin-bottom:6px;">Than Summary:</div>
+              <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                <span>Total Thans / Rolls:</span>
+                <strong style="font-size:14px;">${thans.length} Thans</strong>
+              </div>
+              <div style="display:flex; justify-content:space-between;">
+                <span>Total Meters Aggregated:</span>
+                <strong style="font-size:15px; color:#0f172a;">${totalMeters.toFixed(2)} Mtr</strong>
+              </div>
+            </td>
+            <td style="width:45%; vertical-align:top; padding:10px 14px; border:1px solid #cbd5e1; background:#ffffff; border-radius:6px;">
+              <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                <span style="color:#64748b;">Subtotal:</span>
+                <strong style="font-family:monospace;">₹${Number(po.subtotal).toFixed(2)}</strong>
+              </div>
+              <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                <span style="color:#64748b;">GST / Taxes:</span>
+                <strong style="font-family:monospace;">₹${Number(po.tax_total).toFixed(2)}</strong>
+              </div>
+              <div style="border-top:2px solid #0f172a; padding-top:6px; display:flex; justify-content:space-between; font-size:16px;">
+                <strong style="color:#0f172a;">Grand Total:</strong>
+                <strong style="color:#059669; font-size:17px; font-family:monospace;">₹${Number(po.grand_total).toFixed(2)}</strong>
+              </div>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Signatures and Stamp Section -->
+        <div style="display:flex; justify-content:space-between; padding-top:28px; border-top:1px dashed #94a3b8; font-size:12px; color:#64748b;">
+          <div>
+            <div>Prepared By: _________________</div>
+          </div>
+          <div>
+            <div>Checked By: _________________</div>
+          </div>
+          <div style="text-align:right;">
+            <div>Authorised Signatory</div>
+          </div>
+        </div>
+
       </div>
     `;
 
@@ -639,3 +736,4 @@
 </script>
 @endpush
 @endsection
+

@@ -11,6 +11,7 @@ use App\Models\Unit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class PurchaseOrderController extends Controller
 {
@@ -24,7 +25,7 @@ class PurchaseOrderController extends Controller
 
         $stats = [
             'totalOrders' => PurchaseOrder::count(),
-            'totalAmount' => PurchaseOrder::sum('grand_total'),
+            'totalAmount' => (float) PurchaseOrder::sum('grand_total'),
             'approvedCount' => PurchaseOrder::where('status', 'Approved')->count(),
             'pendingPayment' => PurchaseOrder::where('payment_status', 'Pending')->count()
         ];
@@ -34,19 +35,35 @@ class PurchaseOrderController extends Controller
 
     public function create()
     {
-        $vendors = Vendor::all();
-        $items = Item::all();
+        $vendors = Vendor::whereRaw('LOWER(status) = ?', ['active'])->orderBy('name')->get();
+        if ($vendors->isEmpty()) {
+            $vendors = Vendor::orderBy('name')->get();
+        }
+
+        $items = Item::whereRaw('LOWER(status) = ?', ['active'])->orderBy('name')->get();
+        if ($items->isEmpty()) {
+            $items = Item::orderBy('name')->get();
+        }
+
         $units = Unit::all();
         $count = PurchaseOrder::count() + 1;
-        $nextPoNumber = 'PO-2026-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+        $nextPoNumber = 'PE-2026-' . str_pad($count, 4, '0', STR_PAD_LEFT);
 
         return view('purchase.orders.create', compact('vendors', 'items', 'units', 'nextPoNumber'));
     }
 
     public function edit(PurchaseOrder $order)
     {
-        $vendors = Vendor::all();
-        $items = Item::all();
+        $vendors = Vendor::whereRaw('LOWER(status) = ?', ['active'])->orderBy('name')->get();
+        if ($vendors->isEmpty()) {
+            $vendors = Vendor::orderBy('name')->get();
+        }
+
+        $items = Item::whereRaw('LOWER(status) = ?', ['active'])->orderBy('name')->get();
+        if ($items->isEmpty()) {
+            $items = Item::orderBy('name')->get();
+        }
+
         $units = Unit::all();
         $order->load(['items', 'vendor']);
 
@@ -58,78 +75,178 @@ class PurchaseOrderController extends Controller
         $validated = $request->validate([
             'vendor_name' => 'required|string|max:255',
             'vendor_id' => 'nullable|integer',
+            'challan_no' => 'nullable|string|max:100',
             'po_date' => 'required|date',
             'expected_delivery_date' => 'nullable|date',
-            'warehouse_location' => 'nullable|string|max:255',
             'notes' => 'nullable|string',
             'status' => 'nullable|string|in:Draft,Approved,Partially Received,Received,Cancelled',
             'payment_status' => 'nullable|string|in:Pending,Partially Paid,Paid',
-            'items' => 'required|array|min:1',
-            'items.*.item_name' => 'required|string',
-            'items.*.item_code' => 'nullable|string',
-            'items.*.ordered_qty' => 'required|numeric|min:0.01',
-            'items.*.unit' => 'nullable|string',
-            'items.*.rate' => 'required|numeric|min:0',
-            'items.*.tax_percent' => 'nullable|numeric'
+
+            // Textile Than-Wise format (Product selected once, multiple Than meters)
+            'item_name' => 'nullable|string|max:255',
+            'item_id' => 'nullable',
+            'item_code' => 'nullable|string|max:100',
+            'rate' => 'nullable|numeric|min:0',
+            'tax_percent' => 'nullable|numeric|min:0',
+            'thans' => 'nullable|array',
+            'thans.*' => 'nullable|numeric|min:0',
+
+            // Multi-item fallback
+            'items' => 'nullable|array'
         ]);
 
         return DB::transaction(function () use ($validated, $request) {
             $count = PurchaseOrder::count() + 1;
-            $poNumber = 'PO-2026-' . str_pad($count, 4, '0', STR_PAD_LEFT);
-
-            $subtotal = 0;
-            $taxTotal = 0;
-
-            foreach ($validated['items'] as $item) {
-                $lineSub = $item['ordered_qty'] * $item['rate'];
-                $taxRate = isset($item['tax_percent']) ? (float)$item['tax_percent'] : 5.0;
-                $taxLine = ($lineSub * $taxRate) / 100.0;
-                $subtotal += $lineSub;
-                $taxTotal += $taxLine;
+            $poNumber = 'PE-2026-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+            while (PurchaseOrder::where('po_number', $poNumber)->exists()) {
+                $count++;
+                $poNumber = 'PE-2026-' . str_pad($count, 4, '0', STR_PAD_LEFT);
             }
 
-            $grandTotal = $subtotal + $taxTotal;
+            // 1. If Textile Than-wise input format
+            if (!empty($request->item_name) || $request->has('thans')) {
+                $rawThans = $request->input('thans', []);
+                $cleanThans = [];
+                foreach ((array)$rawThans as $val) {
+                    $fVal = floatval($val);
+                    if ($fVal > 0) {
+                        $cleanThans[] = round($fVal, 2);
+                    }
+                }
 
-            $po = PurchaseOrder::create([
-                'po_number' => $poNumber,
-                'vendor_id' => $validated['vendor_id'] ?? null,
-                'vendor_name' => $validated['vendor_name'],
-                'po_date' => $validated['po_date'],
-                'expected_delivery_date' => $validated['expected_delivery_date'] ?? null,
-                'warehouse_location' => $validated['warehouse_location'] ?? 'Main Store - Unit 1',
-                'subtotal' => $subtotal,
-                'tax_total' => $taxTotal,
-                'grand_total' => $grandTotal,
-                'status' => $validated['status'] ?? 'Approved',
-                'payment_status' => $validated['payment_status'] ?? 'Pending',
-                'notes' => $validated['notes'] ?? null
-            ]);
+                $totalMeters = round(array_sum($cleanThans), 2);
+                if ($totalMeters <= 0 && $request->filled('ordered_qty')) {
+                    $totalMeters = floatval($request->input('ordered_qty'));
+                }
 
-            foreach ($validated['items'] as $item) {
-                $lineSub = $item['ordered_qty'] * $item['rate'];
-                $taxRate = isset($item['tax_percent']) ? (float)$item['tax_percent'] : 5.0;
-                $taxLine = ($lineSub * $taxRate) / 100.0;
-                $lineTotal = $lineSub + $taxLine;
+                $totalThans = count($cleanThans);
+                $rate = floatval($request->input('rate', 0));
+                $taxPercent = floatval($request->input('tax_percent', 5.0));
 
-                PurchaseOrderItem::create([
+                $subtotal = round($totalMeters * $rate, 2);
+                $taxTotal = round(($subtotal * $taxPercent) / 100.0, 2);
+                $grandTotal = round($subtotal + $taxTotal, 2);
+
+                $challanNo = $request->input('challan_no');
+
+                $notesPayload = [
+                    'challan_no' => $challanNo,
+                    'total_thans' => $totalThans,
+                    'total_meters' => $totalMeters,
+                    'thans' => $cleanThans,
+                    'user_notes' => $request->input('notes')
+                ];
+
+                $poData = [
+                    'po_number' => $poNumber,
+                    'vendor_id' => $validated['vendor_id'] ?? null,
+                    'vendor_name' => $validated['vendor_name'],
+                    'po_date' => $validated['po_date'],
+                    'expected_delivery_date' => $validated['expected_delivery_date'] ?? null,
+                    'warehouse_location' => 'Main Store',
+                    'subtotal' => $subtotal,
+                    'tax_total' => $taxTotal,
+                    'grand_total' => $grandTotal,
+                    'status' => $validated['status'] ?? 'Approved',
+                    'payment_status' => $validated['payment_status'] ?? 'Pending',
+                    'notes' => json_encode($notesPayload)
+                ];
+
+                if (Schema::hasColumn('purchase_orders', 'challan_no')) {
+                    $poData['challan_no'] = $challanNo;
+                }
+                if (Schema::hasColumn('purchase_orders', 'total_thans')) {
+                    $poData['total_thans'] = $totalThans;
+                }
+                if (Schema::hasColumn('purchase_orders', 'than_details')) {
+                    $poData['than_details'] = json_encode($cleanThans);
+                }
+
+                $po = PurchaseOrder::create($poData);
+
+                // Create the single line item representing this fabric challan
+                $itemData = [
                     'purchase_order_id' => $po->id,
-                    'item_id' => $item['item_id'] ?? null,
-                    'item_name' => $item['item_name'],
-                    'item_code' => $item['item_code'] ?? null,
-                    'ordered_qty' => $item['ordered_qty'],
-                    'unit' => $item['unit'] ?? 'Meters',
-                    'rate' => $item['rate'],
-                    'tax_percent' => $taxRate,
-                    'tax_amount' => $taxLine,
-                    'total_amount' => $lineTotal
+                    'item_id' => $request->input('item_id') ?: null,
+                    'item_name' => $request->input('item_name') ?: 'Fabric',
+                    'item_code' => $request->input('item_code') ?: null,
+                    'ordered_qty' => $totalMeters,
+                    'unit' => $request->input('unit', 'Meters'),
+                    'rate' => $rate,
+                    'tax_percent' => $taxPercent,
+                    'tax_amount' => $taxTotal,
+                    'total_amount' => $grandTotal
+                ];
+
+                if (Schema::hasColumn('purchase_order_items', 'than_count')) {
+                    $itemData['than_count'] = $totalThans;
+                }
+                if (Schema::hasColumn('purchase_order_items', 'than_details')) {
+                    $itemData['than_details'] = json_encode($cleanThans);
+                }
+
+                PurchaseOrderItem::create($itemData);
+
+            } else {
+                // 2. Standard multi-item fallback
+                $items = $request->input('items', []);
+                $subtotal = 0;
+                $taxTotal = 0;
+
+                foreach ($items as $item) {
+                    $qty = floatval($item['ordered_qty'] ?? 0);
+                    $rate = floatval($item['rate'] ?? 0);
+                    $lineSub = $qty * $rate;
+                    $taxRate = isset($item['tax_percent']) ? floatval($item['tax_percent']) : 5.0;
+                    $taxLine = ($lineSub * $taxRate) / 100.0;
+                    $subtotal += $lineSub;
+                    $taxTotal += $taxLine;
+                }
+
+                $grandTotal = round($subtotal + $taxTotal, 2);
+
+                $po = PurchaseOrder::create([
+                    'po_number' => $poNumber,
+                    'vendor_id' => $validated['vendor_id'] ?? null,
+                    'vendor_name' => $validated['vendor_name'],
+                    'po_date' => $validated['po_date'],
+                    'expected_delivery_date' => $validated['expected_delivery_date'] ?? null,
+                    'warehouse_location' => 'Main Store',
+                    'subtotal' => $subtotal,
+                    'tax_total' => $taxTotal,
+                    'grand_total' => $grandTotal,
+                    'status' => $validated['status'] ?? 'Approved',
+                    'payment_status' => $validated['payment_status'] ?? 'Pending',
+                    'notes' => $validated['notes'] ?? null
                 ]);
+
+                foreach ($items as $item) {
+                    $qty = floatval($item['ordered_qty'] ?? 0);
+                    $rate = floatval($item['rate'] ?? 0);
+                    $lineSub = $qty * $rate;
+                    $taxRate = isset($item['tax_percent']) ? floatval($item['tax_percent']) : 5.0;
+                    $taxLine = ($lineSub * $taxRate) / 100.0;
+
+                    PurchaseOrderItem::create([
+                        'purchase_order_id' => $po->id,
+                        'item_id' => $item['item_id'] ?? null,
+                        'item_name' => $item['item_name'],
+                        'item_code' => $item['item_code'] ?? null,
+                        'ordered_qty' => $qty,
+                        'unit' => $item['unit'] ?? 'Meters',
+                        'rate' => $rate,
+                        'tax_percent' => $taxRate,
+                        'tax_amount' => $taxLine,
+                        'total_amount' => $lineSub + $taxLine
+                    ]);
+                }
             }
 
-            if ($request->wantsJson() || $request->ajax()) {
+            if ($request->expectsJson() || $request->wantsJson() || $request->ajax() || $request->isJson() || str_contains((string)$request->header('Accept'), 'application/json')) {
                 return response()->json(['success' => true, 'order' => $po->load('items')]);
             }
 
-            return redirect()->route('purchase.orders.index')->with('success', "Purchase Order {$poNumber} created successfully.");
+            return redirect()->route('purchase.orders.index')->with('success', "Purchase Entry {$poNumber} recorded successfully.");
         });
     }
 
@@ -143,29 +260,113 @@ class PurchaseOrderController extends Controller
         $validated = $request->validate([
             'vendor_name' => 'sometimes|required|string|max:255',
             'vendor_id' => 'nullable|integer',
+            'challan_no' => 'nullable|string|max:100',
             'po_date' => 'sometimes|required|date',
             'expected_delivery_date' => 'nullable|date',
-            'warehouse_location' => 'nullable|string|max:255',
             'notes' => 'nullable|string',
             'status' => 'nullable|string|in:Draft,Approved,Partially Received,Received,Cancelled',
             'payment_status' => 'nullable|string|in:Pending,Partially Paid,Paid',
-            'items' => 'sometimes|array|min:1',
-            'items.*.item_name' => 'required|string',
-            'items.*.item_code' => 'nullable|string',
-            'items.*.ordered_qty' => 'required|numeric|min:0.01',
-            'items.*.unit' => 'nullable|string',
-            'items.*.rate' => 'required|numeric|min:0',
-            'items.*.tax_percent' => 'nullable|numeric'
+
+            'item_name' => 'nullable|string|max:255',
+            'item_id' => 'nullable',
+            'item_code' => 'nullable|string|max:100',
+            'rate' => 'nullable|numeric|min:0',
+            'tax_percent' => 'nullable|numeric|min:0',
+            'thans' => 'nullable|array',
+            'thans.*' => 'nullable|numeric|min:0',
+            'items' => 'nullable|array'
         ]);
 
         return DB::transaction(function () use ($validated, $order, $request) {
-            if (isset($validated['items'])) {
+            if (!empty($request->item_name) || $request->has('thans')) {
+                $rawThans = $request->input('thans', []);
+                $cleanThans = [];
+                foreach ((array)$rawThans as $val) {
+                    $fVal = floatval($val);
+                    if ($fVal > 0) {
+                        $cleanThans[] = round($fVal, 2);
+                    }
+                }
+
+                $totalMeters = round(array_sum($cleanThans), 2);
+                if ($totalMeters <= 0 && $request->filled('ordered_qty')) {
+                    $totalMeters = floatval($request->input('ordered_qty'));
+                }
+
+                $totalThans = count($cleanThans);
+                $rate = floatval($request->input('rate', 0));
+                $taxPercent = floatval($request->input('tax_percent', 5.0));
+
+                $subtotal = round($totalMeters * $rate, 2);
+                $taxTotal = round(($subtotal * $taxPercent) / 100.0, 2);
+                $grandTotal = round($subtotal + $taxTotal, 2);
+                $challanNo = $request->input('challan_no');
+
+                $notesPayload = [
+                    'challan_no' => $challanNo,
+                    'total_thans' => $totalThans,
+                    'total_meters' => $totalMeters,
+                    'thans' => $cleanThans,
+                    'user_notes' => $request->input('notes')
+                ];
+
+                $updateData = [
+                    'vendor_id' => $validated['vendor_id'] ?? $order->vendor_id,
+                    'vendor_name' => $validated['vendor_name'] ?? $order->vendor_name,
+                    'po_date' => $validated['po_date'] ?? $order->po_date,
+                    'expected_delivery_date' => $validated['expected_delivery_date'] ?? $order->expected_delivery_date,
+                    'subtotal' => $subtotal,
+                    'tax_total' => $taxTotal,
+                    'grand_total' => $grandTotal,
+                    'status' => $validated['status'] ?? $order->status,
+                    'payment_status' => $validated['payment_status'] ?? $order->payment_status,
+                    'notes' => json_encode($notesPayload)
+                ];
+
+                if (Schema::hasColumn('purchase_orders', 'challan_no')) {
+                    $updateData['challan_no'] = $challanNo;
+                }
+                if (Schema::hasColumn('purchase_orders', 'total_thans')) {
+                    $updateData['total_thans'] = $totalThans;
+                }
+                if (Schema::hasColumn('purchase_orders', 'than_details')) {
+                    $updateData['than_details'] = json_encode($cleanThans);
+                }
+
+                $order->update($updateData);
+
+                $order->items()->delete();
+                $itemData = [
+                    'purchase_order_id' => $order->id,
+                    'item_id' => $request->input('item_id') ?: null,
+                    'item_name' => $request->input('item_name') ?: 'Fabric',
+                    'item_code' => $request->input('item_code') ?: null,
+                    'ordered_qty' => $totalMeters,
+                    'unit' => $request->input('unit', 'Meters'),
+                    'rate' => $rate,
+                    'tax_percent' => $taxPercent,
+                    'tax_amount' => $taxTotal,
+                    'total_amount' => $grandTotal
+                ];
+
+                if (Schema::hasColumn('purchase_order_items', 'than_count')) {
+                    $itemData['than_count'] = $totalThans;
+                }
+                if (Schema::hasColumn('purchase_order_items', 'than_details')) {
+                    $itemData['than_details'] = json_encode($cleanThans);
+                }
+
+                PurchaseOrderItem::create($itemData);
+
+            } elseif (isset($validated['items'])) {
                 $subtotal = 0;
                 $taxTotal = 0;
 
                 foreach ($validated['items'] as $item) {
-                    $lineSub = $item['ordered_qty'] * $item['rate'];
-                    $taxRate = isset($item['tax_percent']) ? (float)$item['tax_percent'] : 5.0;
+                    $qty = floatval($item['ordered_qty'] ?? 0);
+                    $rate = floatval($item['rate'] ?? 0);
+                    $lineSub = $qty * $rate;
+                    $taxRate = isset($item['tax_percent']) ? floatval($item['tax_percent']) : 5.0;
                     $taxLine = ($lineSub * $taxRate) / 100.0;
                     $subtotal += $lineSub;
                     $taxTotal += $taxLine;
@@ -175,36 +376,36 @@ class PurchaseOrderController extends Controller
                 $validated['tax_total'] = $taxTotal;
                 $validated['grand_total'] = $subtotal + $taxTotal;
 
-                // Sync line items
                 $order->items()->delete();
                 foreach ($validated['items'] as $item) {
-                    $lineSub = $item['ordered_qty'] * $item['rate'];
-                    $taxRate = isset($item['tax_percent']) ? (float)$item['tax_percent'] : 5.0;
+                    $qty = floatval($item['ordered_qty'] ?? 0);
+                    $rate = floatval($item['rate'] ?? 0);
+                    $lineSub = $qty * $rate;
+                    $taxRate = isset($item['tax_percent']) ? floatval($item['tax_percent']) : 5.0;
                     $taxLine = ($lineSub * $taxRate) / 100.0;
-                    $lineTotal = $lineSub + $taxLine;
 
                     PurchaseOrderItem::create([
                         'purchase_order_id' => $order->id,
                         'item_id' => $item['item_id'] ?? null,
                         'item_name' => $item['item_name'],
                         'item_code' => $item['item_code'] ?? null,
-                        'ordered_qty' => $item['ordered_qty'],
+                        'ordered_qty' => $qty,
                         'unit' => $item['unit'] ?? 'Meters',
-                        'rate' => $item['rate'],
+                        'rate' => $rate,
                         'tax_percent' => $taxRate,
                         'tax_amount' => $taxLine,
-                        'total_amount' => $lineTotal
+                        'total_amount' => $lineSub + $taxLine
                     ]);
                 }
+
+                $order->update($validated);
             }
 
-            $order->update($validated);
-
-            if ($request->wantsJson() || $request->ajax()) {
+            if ($request->expectsJson() || $request->wantsJson() || $request->ajax() || $request->isJson() || str_contains((string)$request->header('Accept'), 'application/json')) {
                 return response()->json(['success' => true, 'order' => $order->load('items')]);
             }
 
-            return redirect()->route('purchase.orders.index')->with('success', "Purchase Order {$order->po_number} updated successfully.");
+            return redirect()->route('purchase.orders.index')->with('success', "Purchase Entry {$order->po_number} updated successfully.");
         });
     }
 
@@ -214,10 +415,10 @@ class PurchaseOrderController extends Controller
         $order->items()->delete();
         $order->delete();
 
-        if (request()->wantsJson() || request()->ajax()) {
-            return response()->json(['success' => true, 'message' => "Purchase Order {$poNumber} deleted successfully."]);
+        if (request()->expectsJson() || request()->wantsJson() || request()->ajax() || request()->isJson() || str_contains((string)request()->header('Accept'), 'application/json')) {
+            return response()->json(['success' => true, 'message' => "Purchase Entry {$poNumber} deleted successfully."]);
         }
 
-        return redirect()->route('purchase.orders.index')->with('success', "Purchase Order {$poNumber} deleted successfully.");
+        return redirect()->route('purchase.orders.index')->with('success', "Purchase Entry {$poNumber} deleted successfully.");
     }
 }

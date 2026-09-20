@@ -169,8 +169,8 @@
               <svg class="nav-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
             </a>
             <div class="nav-submenu">
-              <a href="{{ route('purchase.orders.index') }}" class="submenu-link {{ request()->routeIs('purchase.orders.index') ? 'active' : '' }}">Purchase Orders (PO)</a>
-              <a href="{{ route('purchase.orders.create') }}" class="submenu-link {{ request()->routeIs('purchase.orders.create') ? 'active' : '' }}">+ Create New PO</a>
+              <a href="{{ route('purchase.orders.index') }}" class="submenu-link {{ request()->routeIs('purchase.orders.index') ? 'active' : '' }}">Purchase Entry</a>
+              <a href="{{ route('purchase.orders.create') }}" class="submenu-link {{ request()->routeIs('purchase.orders.create') ? 'active' : '' }}">+ New Purchase Entry</a>
             </div>
           </div>
         </div>
