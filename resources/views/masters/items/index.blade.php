@@ -510,8 +510,8 @@
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 22h14a2 2 0 0 0 2-2V7.5L14.5 2H6a2 2 0 0 0-2 2v4"/><polyline points="14 2 14 8 20 8"/></svg>
           </div>
           <div>
-            <div style="font-weight:700; font-size:0.825rem; color:var(--slate-800);">Fabric & Roll Specifications</div>
-            <div style="font-size:0.75rem; color:var(--slate-500); margin-top:2px;">Track weaves, GSM, fabric blends, color shades & sizes</div>
+            <div style="font-weight:700; font-size:0.825rem; color:var(--slate-800);">Unit & Inventory Tracking</div>
+            <div style="font-size:0.75rem; color:var(--slate-500); margin-top:2px;">Standardized UOM, real-time stock levels & warehouse tracking</div>
           </div>
         </div>
 
@@ -569,9 +569,6 @@
                     <div class="itm-name-val" style="font-weight:700; color:var(--slate-900); font-size:0.9rem;">{{ $itm->name }}</div>
                     <div style="display:flex; align-items:center; gap:6px;">
                       <span class="itm-code-val" style="font-size:0.75rem; color:var(--slate-500); font-family:monospace;">{{ $itm->code ?? ('ITM-'.str_pad($itm->id, 3, '0', STR_PAD_LEFT)) }}</span>
-                      @if($itm->fabric || $itm->color || $itm->size)
-                        <span class="itm-spec-val" style="font-size:0.75rem; color:var(--slate-400);">• {{ implode(' • ', array_filter([$itm->fabric, $itm->color, $itm->size])) }}</span>
-                      @endif
                     </div>
                   </div>
                 </div>
@@ -676,7 +673,7 @@
         </div>
       </div>
 
-      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:14px; margin-bottom:12px;">
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:14px; margin-bottom:12px;">
         <div class="form-group" style="margin:0;">
           <label class="form-label required">Category</label>
           <select name="category" id="itm_category" class="form-control" required>
@@ -688,37 +685,37 @@
           </select>
         </div>
         <div class="form-group" style="margin:0;">
-          <label class="form-label">Brand / Mill Source</label>
-          <input type="text" name="brand" id="itm_brand" class="form-control" placeholder="e.g. Arvind / Vardhman">
-        </div>
-        <div class="form-group" style="margin:0;">
-          <label class="form-label">Unit of Measure (UOM)</label>
-          <select name="unit" id="itm_unit" class="form-control">
-            <option value="Meters">Meters (m)</option>
-            <option value="Kilograms">Kilograms (kg)</option>
-            <option value="Pieces">Pieces (pcs)</option>
-            <option value="Yards">Yards (yd)</option>
-            <option value="Rolls">Rolls</option>
-            <option value="Gross">Gross (144 pcs)</option>
-            <option value="Cones">Cones</option>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <label class="form-label required" style="margin:0;">Unit of Measure (UOM)</label>
+            <a href="{{ route('masters.units.index') }}" target="_blank" style="font-size:0.75rem; color:#2563eb; text-decoration:none; font-weight:600;" title="Click to manage units in Unit Master">+ Manage Units</a>
+          </div>
+          <select name="unit" id="itm_unit" class="form-control" required>
+            <option value="">-- Select Unit (UOM) --</option>
+            @if(isset($units) && count($units) > 0)
+              @foreach($units as $u)
+                @php
+                  $unitLabel = $u->name;
+                  if (!empty($u->symbol)) {
+                    $unitLabel .= ' (' . $u->symbol . ')';
+                  } elseif (!empty($u->code)) {
+                    $unitLabel .= ' (' . $u->code . ')';
+                  }
+                @endphp
+                <option value="{{ $u->name }}" data-symbol="{{ $u->symbol ?? '' }}" data-code="{{ $u->code ?? '' }}">{{ $unitLabel }}</option>
+              @endforeach
+            @else
+              <option value="Meters">Meters (m)</option>
+              <option value="Pieces">Pieces (pcs)</option>
+              <option value="Kilograms">Kilograms (kg)</option>
+              <option value="Dozens">Dozens (dz)</option>
+              <option value="Rolls">Rolls (roll)</option>
+              <option value="Boxes / Cartons">Boxes / Cartons (box)</option>
+              <option value="Yards">Yards (yd)</option>
+              <option value="Thread Cones">Thread Cones (cone)</option>
+              <option value="Gross">Gross (grs)</option>
+              <option value="Sets">Sets (set)</option>
+            @endif
           </select>
-        </div>
-      </div>
-
-      <!-- Specifications -->
-      <div class="itm-modal-section-title">Specifications & Variants</div>
-      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:14px; margin-bottom:12px;">
-        <div class="form-group" style="margin:0;">
-          <label class="form-label">Fabric Blend / Weave</label>
-          <input type="text" name="fabric" id="itm_fabric" class="form-control" placeholder="e.g. 100% Cotton Bio-wash">
-        </div>
-        <div class="form-group" style="margin:0;">
-          <label class="form-label">Color / Shade</label>
-          <input type="text" name="color" id="itm_color" class="form-control" placeholder="e.g. Navy Blue #001">
-        </div>
-        <div class="form-group" style="margin:0;">
-          <label class="form-label">Size / Width</label>
-          <input type="text" name="size" id="itm_size" class="form-control" placeholder="e.g. 60 Inch Dia / M">
         </div>
       </div>
 
@@ -797,6 +794,50 @@
 <script>
   const CSRF_TOKEN = '{{ csrf_token() }}';
 
+  function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  function showToastNotification(title, message, type) {
+    type = type || 'success';
+    if (window.Toast && typeof window.Toast.show === 'function') {
+      window.Toast.show({ title: title, message: message, type: type });
+      return;
+    }
+    if (typeof UI !== 'undefined' && typeof UI.showToast === 'function') {
+      UI.showToast(title, message, type);
+      return;
+    }
+    const container = document.getElementById('toast-container') || (function() {
+      const c = document.createElement('div');
+      c.id = 'toast-container';
+      c.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:999999;display:flex;flex-direction:column;gap:10px;pointer-events:none;';
+      document.body.appendChild(c);
+      return c;
+    })();
+
+    const toast = document.createElement('div');
+    const bg = type === 'success' ? '#059669' : (type === 'error' ? '#dc2626' : (type === 'warning' ? '#d97706' : '#2563eb'));
+    toast.style.cssText = `background:${bg};color:#ffffff;padding:12px 18px;border-radius:10px;box-shadow:0 10px 25px rgba(0,0,0,0.18);display:flex;flex-direction:column;gap:2px;font-size:0.875rem;pointer-events:auto;min-width:280px;max-width:380px;transition:all 0.3s cubic-bezier(0.16, 1, 0.3, 1);opacity:0;transform:translateY(12px);`;
+    toast.innerHTML = `<strong style="font-weight:700;">${escapeHtml(title)}</strong><span style="opacity:0.92;font-size:0.8rem;">${escapeHtml(message)}</span>`;
+    container.appendChild(toast);
+    requestAnimationFrame(() => {
+      toast.style.opacity = '1';
+      toast.style.transform = 'translateY(0)';
+    });
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateY(12px)';
+      setTimeout(() => toast.remove(), 300);
+    }, 3800);
+  }
+
   function getItemCategoryBadgeClass(category) {
     const c = (category || '').toLowerCase();
     if (c.includes('fabric')) return 'badge-primary';
@@ -816,6 +857,46 @@
     return base + cleanPath;
   }
 
+  // Dynamically refresh units dropdown from Unit Master API
+  function refreshUnitsDropdown(selectedUnit) {
+    fetch(getItemApiUrl('/masters/units'), {
+      headers: {
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (Array.isArray(data) && data.length > 0) {
+        const select = document.getElementById('itm_unit');
+        if (!select) return;
+        const currentVal = (selectedUnit !== undefined && selectedUnit !== null) ? String(selectedUnit).trim() : select.value;
+        select.innerHTML = '<option value="">-- Select Unit (UOM) --</option>';
+        data.forEach(u => {
+          const label = u.name + (u.symbol ? ' (' + u.symbol + ')' : (u.code ? ' (' + u.code + ')' : ''));
+          const opt = document.createElement('option');
+          opt.value = u.name;
+          opt.textContent = label;
+          if (currentVal && (u.name.toLowerCase() === currentVal.toLowerCase() || (u.code && u.code.toLowerCase() === currentVal.toLowerCase()))) {
+            opt.selected = true;
+          }
+          select.appendChild(opt);
+        });
+        // If currentVal was set and is not yet in options, add it as a preserved option
+        if (currentVal && !Array.from(select.options).some(o => o.value.toLowerCase() === currentVal.toLowerCase())) {
+          const customOpt = document.createElement('option');
+          customOpt.value = currentVal;
+          customOpt.textContent = currentVal;
+          customOpt.selected = true;
+          select.appendChild(customOpt);
+        }
+      }
+    })
+    .catch(() => {
+      // Graceful fallback to server-rendered options in Blade
+    });
+  }
+
   // --- Modal Open / Close ---
   function openItemModal() {
     const modal = document.getElementById('item-modal');
@@ -830,6 +911,8 @@
     document.getElementById('itm_stock').value = '500.00';
     document.getElementById('itm_min_stock').value = '100.00';
     document.getElementById('itm_status').value = 'Active';
+
+    refreshUnitsDropdown('');
     
     modal.style.display = 'flex';
   }
@@ -851,11 +934,29 @@
     document.getElementById('itm_name').value = itm.name || '';
     document.getElementById('itm_code').value = itm.code || '';
     document.getElementById('itm_category').value = itm.category || 'Fabric';
-    document.getElementById('itm_brand').value = itm.brand || '';
-    document.getElementById('itm_unit').value = itm.unit || 'Meters';
-    document.getElementById('itm_fabric').value = itm.fabric || '';
-    document.getElementById('itm_color').value = itm.color || '';
-    document.getElementById('itm_size').value = itm.size || '';
+
+    // Set unit and refresh from master list
+    const unitVal = (itm.unit || '').trim();
+    const unitSelect = document.getElementById('itm_unit');
+    if (unitSelect) {
+      let matched = false;
+      for (let i = 0; i < unitSelect.options.length; i++) {
+        if (unitSelect.options[i].value.toLowerCase() === unitVal.toLowerCase()) {
+          unitSelect.selectedIndex = i;
+          matched = true;
+          break;
+        }
+      }
+      if (!matched && unitVal) {
+        const opt = new Option(unitVal, unitVal, true, true);
+        unitSelect.add(opt);
+      } else if (!matched && !unitVal) {
+        unitSelect.selectedIndex = 0;
+      }
+    }
+
+    refreshUnitsDropdown(unitVal);
+
     document.getElementById('itm_cost').value = itm.unit_cost !== undefined ? itm.unit_cost : 280;
     document.getElementById('itm_stock').value = itm.current_stock !== undefined ? itm.current_stock : 500;
     document.getElementById('itm_min_stock').value = itm.min_stock !== undefined ? itm.min_stock : 100;
@@ -907,28 +1008,16 @@
 
         if (data.stats) updateKpiStats(data.stats);
 
-        if (window.Toast) {
-          window.Toast.show({ title: 'Status Updated', message: 'Item SKU status set to ' + newStatus, type: 'success' });
-        } else if (typeof UI !== 'undefined' && UI.showToast) {
-          UI.showToast('Status Updated', 'Item SKU status set to ' + newStatus, 'success');
-        }
+        showToastNotification('Status Updated', 'Item SKU status set to ' + newStatus, 'success');
       } else {
         selectEl.className = prevClass;
-        if (window.Toast) {
-          window.Toast.show({ title: 'Error', message: data.message || 'Could not update status', type: 'error' });
-        } else if (typeof UI !== 'undefined' && UI.showToast) {
-          UI.showToast('Error', data.message || 'Could not update status', 'error');
-        }
+        showToastNotification('Error', data.message || 'Could not update status', 'error');
       }
     })
     .catch(err => {
       selectEl.style.opacity = '1';
       selectEl.className = prevClass;
-      if (window.Toast) {
-        window.Toast.show({ title: 'Error', message: 'Network error occurred while updating status', type: 'error' });
-      } else if (typeof UI !== 'undefined' && UI.showToast) {
-        UI.showToast('Error', 'Network error occurred while updating status', 'error');
-      }
+      showToastNotification('Error', 'Network error occurred while updating status', 'error');
     });
   }
 
@@ -944,11 +1033,7 @@
       name: document.getElementById('itm_name').value.trim(),
       code: document.getElementById('itm_code').value.trim(),
       category: document.getElementById('itm_category').value,
-      brand: document.getElementById('itm_brand').value.trim(),
       unit: document.getElementById('itm_unit').value,
-      fabric: document.getElementById('itm_fabric').value.trim(),
-      color: document.getElementById('itm_color').value.trim(),
-      size: document.getElementById('itm_size').value.trim(),
       unit_cost: parseFloat(document.getElementById('itm_cost').value) || 0,
       current_stock: parseFloat(document.getElementById('itm_stock').value) || 0,
       min_stock: parseFloat(document.getElementById('itm_min_stock').value) || 0,
@@ -958,11 +1043,12 @@
     };
 
     if (!payload.name) {
-      if (window.Toast) {
-        window.Toast.show({ title: 'Validation Error', message: 'Item Name is required', type: 'error' });
-      } else if (typeof UI !== 'undefined' && UI.showToast) {
-        UI.showToast('Validation Error', 'Item Name is required', 'error');
-      }
+      showToastNotification('Validation Error', 'Item SKU Name is required', 'error');
+      return;
+    }
+
+    if (!payload.unit) {
+      showToastNotification('Validation Error', 'Please select a Unit of Measure (UOM)', 'error');
       return;
     }
 
@@ -977,6 +1063,7 @@
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
         'X-CSRF-TOKEN': CSRF_TOKEN
       },
       body: JSON.stringify(payload)
@@ -988,37 +1075,30 @@
 
       if (data.success && data.item) {
         closeItemModal();
-        const msg = data.message || (isEdit ? 'Item updated successfully.' : 'Item created successfully.');
-        if (window.Toast) {
-          window.Toast.show({ title: isEdit ? 'Item Updated' : 'Item Created', message: msg, type: 'success' });
-        } else if (typeof UI !== 'undefined' && UI.showToast) {
-          UI.showToast(isEdit ? 'Item Updated' : 'Item Created', msg, 'success');
-        }
 
+        // Immediate DOM update
         if (isEdit) {
           updateTableRow(data.item);
         } else {
           prependTableRow(data.item);
+          // Reset table filter to 'all' so new item is visible immediately
+          const allPill = document.querySelector('.itm-filter-pill[data-filter="all"]') || document.querySelector('.itm-filter-pill');
+          if (allPill) applyItemFilter('all', allPill);
         }
 
         if (data.stats) updateKpiStats(data.stats);
+
+        const msg = data.message || (isEdit ? 'Item updated successfully.' : 'Item created successfully.');
+        showToastNotification(isEdit ? 'Item Updated' : 'Item Created', msg, 'success');
       } else {
         const msg = data.errors ? Object.values(data.errors).flat().join('<br>') : (data.message || 'Validation error');
-        if (window.Toast) {
-          window.Toast.show({ title: 'Error', message: msg, type: 'error' });
-        } else if (typeof UI !== 'undefined' && UI.showToast) {
-          UI.showToast('Error', msg, 'error');
-        }
+        showToastNotification('Error', msg, 'error');
       }
     })
     .catch(err => {
       saveBtn.disabled = false;
       saveBtn.textContent = isEdit ? 'Update Item SKU' : 'Save Item SKU';
-      if (window.Toast) {
-        window.Toast.show({ title: 'Error', message: 'Failed to save item details', type: 'error' });
-      } else if (typeof UI !== 'undefined' && UI.showToast) {
-        UI.showToast('Error', 'Failed to save item details', 'error');
-      }
+      showToastNotification('Error', 'Failed to save item details', 'error');
     });
   }
 
@@ -1035,6 +1115,7 @@
       method: 'DELETE',
       headers: {
         'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
         'X-CSRF-TOKEN': CSRF_TOKEN
       }
     })
@@ -1045,11 +1126,7 @@
       closeDeleteModal();
 
       if (data.success) {
-        if (window.Toast) {
-          window.Toast.show({ title: 'Item Deleted', message: data.message || 'Item removed successfully', type: 'warning' });
-        } else if (typeof UI !== 'undefined' && UI.showToast) {
-          UI.showToast('Item Deleted', data.message || 'Item removed successfully', 'warning');
-        }
+        showToastNotification('Item Deleted', data.message || 'Item removed successfully', 'warning');
         
         const row = document.getElementById('item-row-' + id);
         if (row) {
@@ -1064,21 +1141,13 @@
 
         if (data.stats) updateKpiStats(data.stats);
       } else {
-        if (window.Toast) {
-          window.Toast.show({ title: 'Error', message: data.message || 'Could not delete item', type: 'error' });
-        } else if (typeof UI !== 'undefined' && UI.showToast) {
-          UI.showToast('Error', data.message || 'Could not delete item', 'error');
-        }
+        showToastNotification('Error', data.message || 'Could not delete item', 'error');
       }
     })
     .catch(err => {
       delBtn.disabled = false;
       delBtn.textContent = 'Yes, Delete Item';
-      if (window.Toast) {
-        window.Toast.show({ title: 'Error', message: 'Failed to delete item', type: 'error' });
-      } else if (typeof UI !== 'undefined' && UI.showToast) {
-        UI.showToast('Error', 'Failed to delete item', 'error');
-      }
+      showToastNotification('Error', 'Failed to delete item', 'error');
     });
   }
 
@@ -1100,83 +1169,96 @@
     tr.setAttribute('data-lowstock', isLow ? '1' : '0');
     tr.setAttribute('data-status', (itm.status || 'active').toLowerCase());
 
-    const initials = (itm.name || 'IT').substring(0, 2).toUpperCase();
+    const initials = escapeHtml((itm.name || 'IT').substring(0, 2).toUpperCase());
     const badgeClass = getItemCategoryBadgeClass(itm.category);
     const statusVal = (itm.status || 'Active');
     const statusLower = statusVal.toLowerCase();
 
-    const specText = [itm.fabric, itm.color, itm.size].filter(Boolean).join(' • ');
+    tr.innerHTML = 
+      '<td class="row-index" style="text-align: center; font-weight: 600; color: var(--slate-400);">1</td>' +
+      '<td>' +
+        '<div style="display:flex; align-items:center; gap:10px;">' +
+          '<div class="itm-avatar" id="avatar-' + itm.id + '">' + initials + '</div>' +
+          '<div>' +
+            '<div class="itm-name-val" style="font-weight:700; color:var(--slate-900); font-size:0.9rem;">' + escapeHtml(itm.name) + '</div>' +
+            '<div style="display:flex; align-items:center; gap:6px;">' +
+              '<span class="itm-code-val" style="font-size:0.75rem; color:var(--slate-500); font-family:monospace;">' + escapeHtml(itm.code || ('ITM-' + String(itm.id).padStart(3, '0'))) + '</span>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</td>' +
+      '<td class="itm-cat-cell">' +
+        '<span class="badge ' + badgeClass + '" style="font-size:0.75rem; font-weight:600; padding:4px 8px; border-radius:8px;">' +
+          escapeHtml(itm.category || 'Fabric') +
+        '</span>' +
+      '</td>' +
+      '<td class="itm-unit-val" style="font-weight:600; color:var(--slate-700);">' +
+        escapeHtml(itm.unit || 'Meters') +
+      '</td>' +
+      '<td class="itm-cost-val" style="text-align: right; font-weight: 700; color: var(--slate-800);">' +
+        '₹' + Number(itm.unit_cost || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}) +
+      '</td>' +
+      '<td class="itm-stock-val" style="text-align: right; font-weight: 800; color: ' + (isLow ? '#dc2626' : '#059669') + ';">' +
+        Number(itm.current_stock || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}) +
+      '</td>' +
+      '<td class="itm-minstock-val" style="text-align: right; font-size:0.8rem; color:var(--slate-500); font-weight:600;">' +
+        Number(itm.min_stock || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}) +
+      '</td>' +
+      '<td class="itm-stock-status-cell" style="text-align: center;">' +
+        (isLow ? '<span class="badge badge-danger" style="font-size:0.7rem; font-weight:700;">Low Stock</span>' : '<span class="badge badge-success" style="font-size:0.7rem; font-weight:700;">In Stock</span>') +
+      '</td>' +
+      '<td>' +
+        '<div class="itm-hsn-val" style="font-family:monospace; font-size:0.75rem; font-weight:600; color:var(--slate-700);">' + escapeHtml(itm.hsn_code || '—') + '</div>' +
+        '<div class="itm-location-val" style="font-size:0.75rem; color:var(--slate-400);">' + escapeHtml(itm.location || '—') + '</div>' +
+      '</td>' +
+      '<td style="text-align: center;">' +
+        '<select class="itm-status-select ' + statusLower + '" onchange="changeItemStatus(' + itm.id + ', this.value, this)" title="Click to change status">' +
+          '<option value="Active" ' + (statusLower === 'active' ? 'selected' : '') + '>Active</option>' +
+          '<option value="Inactive" ' + (statusLower === 'inactive' ? 'selected' : '') + '>Inactive</option>' +
+          '<option value="Blocked" ' + (statusLower === 'blocked' ? 'selected' : '') + '>Blocked</option>' +
+        '</select>' +
+      '</td>' +
+      '<td style="text-align: center;">' +
+        '<div style="display:inline-flex; align-items:center; gap:6px;">' +
+          '<button type="button" class="btn btn-secondary btn-icon edit-btn-' + itm.id + '" title="Edit Item SKU" style="width:30px; height:30px; padding:0; display:inline-flex; align-items:center; justify-content:center;">' +
+            '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+              '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>' +
+              '<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>' +
+            '</svg>' +
+          '</button>' +
+          '<button type="button" class="btn btn-danger btn-icon del-btn-' + itm.id + '" title="Delete Item SKU" style="width:30px; height:30px; padding:0; display:inline-flex; align-items:center; justify-content:center;">' +
+            '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+              '<polyline points="3 6 5 6 21 6"/>' +
+              '<path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>' +
+            '</svg>' +
+          '</button>' +
+        '</div>' +
+      '</td>';
 
-    tr.innerHTML = `
-      <td class="row-index" style="text-align: center; font-weight: 600; color: var(--slate-400);">1</td>
-      <td>
-        <div style="display:flex; align-items:center; gap:10px;">
-          <div class="itm-avatar" id="avatar-${itm.id}">${initials}</div>
-          <div>
-            <div class="itm-name-val" style="font-weight:700; color:var(--slate-900); font-size:0.9rem;">${itm.name}</div>
-            <div style="display:flex; align-items:center; gap:6px;">
-              <span class="itm-code-val" style="font-size:0.75rem; color:var(--slate-500); font-family:monospace;">${itm.code || ('ITM-' + String(itm.id).padStart(3, '0'))}</span>
-              ${specText ? `<span class="itm-spec-val" style="font-size:0.75rem; color:var(--slate-400);">• ${specText}</span>` : ''}
-            </div>
-          </div>
-        </div>
-      </td>
-      <td class="itm-cat-cell">
-        <span class="badge ${badgeClass}" style="font-size:0.75rem; font-weight:600; padding:4px 8px; border-radius:8px;">
-          ${itm.category || 'Fabric'}
-        </span>
-      </td>
-      <td class="itm-unit-val" style="font-weight:600; color:var(--slate-700);">
-        ${itm.unit || 'Meters'}
-      </td>
-      <td class="itm-cost-val" style="text-align: right; font-weight: 700; color: var(--slate-800);">
-        ₹${Number(itm.unit_cost || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-      </td>
-      <td class="itm-stock-val" style="text-align: right; font-weight: 800; color: ${isLow ? '#dc2626' : '#059669'};">
-        ${Number(itm.current_stock || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-      </td>
-      <td class="itm-minstock-val" style="text-align: right; font-size:0.8rem; color:var(--slate-500); font-weight:600;">
-        ${Number(itm.min_stock || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-      </td>
-      <td class="itm-stock-status-cell" style="text-align: center;">
-        ${isLow ? '<span class="badge badge-danger" style="font-size:0.7rem; font-weight:700;">Low Stock</span>' : '<span class="badge badge-success" style="font-size:0.7rem; font-weight:700;">In Stock</span>'}
-      </td>
-      <td>
-        <div class="itm-hsn-val" style="font-family:monospace; font-size:0.75rem; font-weight:600; color:var(--slate-700);">${itm.hsn_code || '—'}</div>
-        <div class="itm-location-val" style="font-size:0.75rem; color:var(--slate-400);">${itm.location || '—'}</div>
-      </td>
-      <td style="text-align: center;">
-        <select class="itm-status-select ${statusLower}" onchange="changeItemStatus(${itm.id}, this.value, this)" title="Click to change status">
-          <option value="Active" ${statusLower === 'active' ? 'selected' : ''}>Active</option>
-          <option value="Inactive" ${statusLower === 'inactive' ? 'selected' : ''}>Inactive</option>
-          <option value="Blocked" ${statusLower === 'blocked' ? 'selected' : ''}>Blocked</option>
-        </select>
-      </td>
-      <td style="text-align: center;">
-        <div style="display:inline-flex; align-items:center; gap:6px;">
-          <button type="button" class="btn btn-secondary btn-icon edit-btn-${itm.id}" title="Edit Item SKU" style="width:30px; height:30px; padding:0; display:inline-flex; align-items:center; justify-content:center;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-            </svg>
-          </button>
-          <button type="button" class="btn btn-danger btn-icon" onclick="confirmDeleteItem(${itm.id}, '${(itm.name || '').replace(/'/g, "\\'")}')" title="Delete Item SKU" style="width:30px; height:30px; padding:0; display:inline-flex; align-items:center; justify-content:center;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="3 6 5 6 21 6"/>
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-            </svg>
-          </button>
-        </div>
-      </td>
-    `;
-
-    const editBtn = tr.querySelector(`.edit-btn-${itm.id}`);
+    const editBtn = tr.querySelector('.edit-btn-' + itm.id);
     if (editBtn) {
-      editBtn.onclick = () => editItem(itm);
+      editBtn.onclick = function() { editItem(itm); };
+    }
+    const delBtn = tr.querySelector('.del-btn-' + itm.id);
+    if (delBtn) {
+      delBtn.onclick = function() { confirmDeleteItem(itm.id, itm.name || ''); };
     }
 
     tbody.insertBefore(tr, tbody.firstChild);
     reindexRows();
+
+    // Visual entrance highlight
+    tr.style.backgroundColor = '#eff6ff';
+    tr.style.opacity = '0';
+    tr.style.transform = 'translateY(-10px)';
+    requestAnimationFrame(function() {
+      tr.style.transition = 'opacity 0.4s ease, transform 0.4s ease, background-color 1.5s ease';
+      tr.style.opacity = '1';
+      tr.style.transform = 'translateY(0)';
+      setTimeout(function() {
+        tr.style.backgroundColor = '';
+      }, 1200);
+    });
   }
 
   function updateTableRow(itm) {
@@ -1188,23 +1270,24 @@
     row.setAttribute('data-lowstock', isLow ? '1' : '0');
     row.setAttribute('data-status', (itm.status || 'active').toLowerCase());
 
-    row.querySelector('.itm-name-val').textContent = itm.name;
-    row.querySelector('.itm-code-val').textContent = itm.code || ('ITM-' + String(itm.id).padStart(3, '0'));
-    
-    const specText = [itm.fabric, itm.color, itm.size].filter(Boolean).join(' • ');
-    const specEl = row.querySelector('.itm-spec-val');
-    if (specEl) {
-      specEl.textContent = specText ? ('• ' + specText) : '';
-    }
+    const nameEl = row.querySelector('.itm-name-val');
+    if (nameEl) nameEl.textContent = itm.name;
 
-    const initials = (itm.name || 'IT').substring(0, 2).toUpperCase();
+    const codeEl = row.querySelector('.itm-code-val');
+    if (codeEl) codeEl.textContent = itm.code || ('ITM-' + String(itm.id).padStart(3, '0'));
+
+    // Remove legacy spec span if present
+    const specEl = row.querySelector('.itm-spec-val');
+    if (specEl) specEl.remove();
+
+    const initials = escapeHtml((itm.name || 'IT').substring(0, 2).toUpperCase());
     const avatar = document.getElementById('avatar-' + itm.id);
     if (avatar) avatar.textContent = initials;
 
     const catCell = row.querySelector('.itm-cat-cell');
     if (catCell) {
       const badgeClass = getItemCategoryBadgeClass(itm.category);
-      catCell.innerHTML = `<span class="badge ${badgeClass}" style="font-size:0.75rem; font-weight:600; padding:4px 8px; border-radius:8px;">${itm.category || 'Fabric'}</span>`;
+      catCell.innerHTML = `<span class="badge ${badgeClass}" style="font-size:0.75rem; font-weight:600; padding:4px 8px; border-radius:8px;">${escapeHtml(itm.category || 'Fabric')}</span>`;
     }
 
     const unitCell = row.querySelector('.itm-unit-val');
@@ -1245,9 +1328,9 @@
       statusSelect.className = 'itm-status-select ' + itm.status.toLowerCase();
     }
 
-    const editBtn = row.querySelector('.btn-secondary');
+    const editBtn = row.querySelector('.edit-btn-' + itm.id) || row.querySelector('.btn-secondary');
     if (editBtn) {
-      editBtn.onclick = () => editItem(itm);
+      editBtn.onclick = function() { editItem(itm); };
     }
   }
 

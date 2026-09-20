@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Masters;
 
 use App\Http\Controllers\Controller;
 use App\Models\Item;
+use App\Models\Unit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -43,7 +44,8 @@ class ItemController extends Controller
         }
 
         $stats = $this->getStats();
-        return view('masters.items.index', compact('items', 'stats'));
+        $units = Unit::orderByRaw("CASE WHEN LOWER(status) = 'active' THEN 0 ELSE 1 END")->orderBy('name')->get();
+        return view('masters.items.index', compact('items', 'stats', 'units'));
     }
 
     private function getStats()
@@ -116,18 +118,18 @@ class ItemController extends Controller
         if (empty($validated['code'])) {
             $prefix = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $category), 0, 3));
             if (empty($prefix)) $prefix = 'ITM';
-            $count = Item::count() + 1;
-            $code = $prefix . '-' . str_pad($count, 3, '0', STR_PAD_LEFT);
-            while (Item::where('code', $code)->exists()) {
-                $count++;
-                $code = $prefix . '-' . str_pad($count, 3, '0', STR_PAD_LEFT);
-            }
-            $validated['code'] = $code;
+            $maxId = (int)(Item::withTrashed()->max('id') ?? 0);
+            $candidateNum = max(Item::count() + 1, $maxId + 1);
+            do {
+                $candidateCode = $prefix . '-' . str_pad($candidateNum, 3, '0', STR_PAD_LEFT);
+                $candidateNum++;
+            } while (Item::withTrashed()->where('code', $candidateCode)->exists());
+            $validated['code'] = $candidateCode;
         }
 
         $item = Item::create($validated);
 
-        if ($request->wantsJson() || $request->ajax()) {
+        if ($request->expectsJson() || $request->wantsJson() || $request->ajax() || $request->isJson() || str_contains((string)$request->header('Accept'), 'application/json')) {
             return response()->json([
                 'success' => true,
                 'item' => $item,
@@ -187,7 +189,7 @@ class ItemController extends Controller
 
         $item->update($validated);
 
-        if ($request->wantsJson() || $request->ajax()) {
+        if ($request->expectsJson() || $request->wantsJson() || $request->ajax() || $request->isJson() || str_contains((string)$request->header('Accept'), 'application/json')) {
             return response()->json([
                 'success' => true,
                 'item' => $item,
@@ -204,7 +206,7 @@ class ItemController extends Controller
         $name = $item->name;
         $item->delete();
 
-        if (request()->wantsJson() || request()->ajax()) {
+        if (request()->expectsJson() || request()->wantsJson() || request()->ajax() || request()->isJson() || str_contains((string)request()->header('Accept'), 'application/json')) {
             return response()->json([
                 'success' => true,
                 'stats' => $this->getStats(),
