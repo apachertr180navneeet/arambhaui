@@ -542,22 +542,22 @@ const JobWorkView = {
 
             <div class="dispatch-field-group">
               <label class="dispatch-field-label">AVAILABLE METER</label>
-              <input type="text" class="dispatch-input-styled readonly-bg" id="jw-avail-meter" value="5000" readonly>
+              <input type="text" class="dispatch-input-styled readonly-bg" id="jw-avail-meter" value="" placeholder="0.00" readonly>
             </div>
 
             <div class="dispatch-field-group">
               <label class="dispatch-field-label">METER</label>
-              <input type="number" class="dispatch-input-styled" id="jw-item-meter" placeholder="Enter meters" oninput="JobWorkView.recalcJobCalculations()">
+              <input type="number" class="dispatch-input-styled" id="jw-item-meter" placeholder="Meters" oninput="JobWorkView.recalcJobCalculations()">
             </div>
 
             <div class="dispatch-field-group">
               <label class="dispatch-field-label">NET METER</label>
-              <input type="number" class="dispatch-input-styled readonly-bg" id="jw-net-meter" placeholder="Net meters" readonly>
+              <input type="number" class="dispatch-input-styled readonly-bg" id="jw-net-meter" placeholder="Net Mtr" readonly>
             </div>
 
             <div class="dispatch-field-group">
               <label class="dispatch-field-label">RATE (₹)</label>
-              <input type="number" class="dispatch-input-styled" id="jw-item-rate" placeholder="Rate ₹" value="25" oninput="JobWorkView.recalcJobCalculations()">
+              <input type="number" class="dispatch-input-styled" id="jw-item-rate" placeholder="Rate" value="" oninput="JobWorkView.recalcJobCalculations()">
             </div>
           </div>
 
