@@ -764,6 +764,50 @@ const INITIAL_DATA = {
     }
   ],
 
+  // 9b. Job Inward Receipts (Batch-wise Inward)
+  jobInwards: [
+    {
+      id: "JINW-2026-0001",
+      inwardNumber: "JINW-2026-0001",
+      date: "2026-08-16",
+      jobWorkId: "JW-2026-0008",
+      jobOrderNo: "JW-0008",
+      lotNo: "LOT-2026-00145",
+      jobWorker: "Raj Stitching",
+      challanNo: "DC-RS-8921",
+      item: "100% Combed Cotton Fabric 180 GSM",
+      process: "Stitching",
+      receivedGoodQty: 4850,
+      rejectedQty: 50,
+      wastageMeters: 15.5,
+      rate: 25,
+      totalAmount: 121250,
+      qcStatus: "Passed QC",
+      storageLocation: "FG Bin A-14",
+      remarks: "Stitched crew neck t-shirts received in good packing. 50 pcs rejected for seam slippage."
+    },
+    {
+      id: "JINW-2026-0002",
+      inwardNumber: "JINW-2026-0002",
+      date: "2026-08-12",
+      jobWorkId: "JW-2026-0006",
+      jobOrderNo: "JW-0006",
+      lotNo: "LOT-2026-00140",
+      jobWorker: "Modern Finishing",
+      challanNo: "DC-MF-4402",
+      item: "Men's Slim Fit Formal Shirt",
+      process: "Finishing & Packing",
+      receivedGoodQty: 4600,
+      rejectedQty: 0,
+      wastageMeters: 0,
+      rate: 10,
+      totalAmount: 46000,
+      qcStatus: "Passed QC",
+      storageLocation: "FG Unit 2 / Bay 4",
+      remarks: "Complete finishing and steam pressing completed with brand tags attached."
+    }
+  ],
+
   // 10. Quality Check (QC) Records
   qualityChecks: [
     {

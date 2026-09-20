@@ -21,10 +21,20 @@
         <p style="margin:2px 0 0; font-size:0.8rem; color:var(--slate-500);">Received stitched/processed bundles, passed QC pieces, defect rejections, and ready lots</p>
       </div>
 
-      <button class="btn btn-secondary btn-sm" onclick="UI.exportTableToCSV('inward-table', 'Job_Inward_Report.csv')" style="display:inline-flex; align-items:center; gap:6px;">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Export CSV
-      </button>
+      <div style="display:flex; gap:10px; align-items:center;">
+        <a href="{{ route('jobwork.inward.index') }}" class="btn btn-secondary btn-sm" style="display:inline-flex; align-items:center; gap:6px; font-weight:700;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Inward Entries
+        </a>
+        <a href="{{ route('jobwork.inward.create') }}" class="btn btn-sm" style="background:#059669; color:#fff; display:inline-flex; align-items:center; gap:6px; font-weight:700;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          + Receive Inward
+        </a>
+        <button class="btn btn-secondary btn-sm" onclick="UI.exportTableToCSV('inward-table', 'Job_Inward_Report.csv')" style="display:inline-flex; align-items:center; gap:6px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export CSV
+        </button>
+      </div>
     </div>
 
     <!-- Quick Filter Bar -->
@@ -42,19 +52,23 @@
             <th>Process</th>
             <th>Lot #</th>
             <th>Style Article</th>
-            <th>Issued Qty</th>
+            <th>Target Pcs</th>
             <th>Received Good Qty</th>
             <th>QC Defect Rejection</th>
-            <th>Wastage %</th>
+            <th>Pending Pcs</th>
+            <th>Defect %</th>
             <th>Status</th>
+            <th style="text-align:right;">Actions</th>
           </tr>
         </thead>
         <tbody>
           @forelse ($assignments as $ja)
             @php
-              $good = (int)($ja->issued_qty * 0.98);
-              $defect = $ja->issued_qty - $good;
-              $defectPct = round(($defect / $ja->issued_qty) * 100, 1);
+              $good = (int)($ja->received_qty ?: 0);
+              $defect = (int)($ja->rejected_qty ?: 0);
+              $issued = (int)($ja->issued_qty ?: 0);
+              $pending = max(0, $issued - $good - $defect);
+              $defectPct = ($good + $defect) > 0 ? round(($defect / ($good + $defect)) * 100, 1) : 0;
             @endphp
             <tr>
               <td style="font-family:var(--font-mono); font-weight:700; color:var(--primary-600);">{{ $ja->job_order_no }}</td>
@@ -62,15 +76,25 @@
               <td><span class="badge badge-info">{{ $ja->process_name }}</span></td>
               <td style="font-family:var(--font-mono); font-weight:600;">{{ $ja->lot_number }}</td>
               <td>{{ $ja->style_name }}</td>
-              <td style="font-weight:700;">{{ number_format($ja->issued_qty) }} pcs</td>
+              <td style="font-weight:700;">{{ number_format($issued) }} pcs</td>
               <td style="font-weight:800; color:#059669;">{{ number_format($good) }} pcs</td>
               <td style="font-weight:700; color:var(--danger-600);">{{ number_format($defect) }} pcs</td>
-              <td><span class="badge {{ $defectPct > 3 ? 'badge-danger' : 'badge-success' }}">{{ $defectPct }}%</span></td>
+              <td style="font-weight:700; color:{{ $pending > 0 ? '#b45309' : '#059669' }};">{{ number_format($pending) }} pcs</td>
+              <td><span class="badge {{ $defectPct > 3 ? 'badge-danger' : ($defectPct > 0 ? 'badge-warning' : 'badge-success') }}">{{ $defectPct }}%</span></td>
               <td><span class="badge badge-success">{{ $ja->status }}</span></td>
+              <td style="text-align:right;">
+                @if($ja->status !== 'Completed')
+                  <a href="{{ route('jobwork.inward.create', ['job_order_id' => $ja->id]) }}" class="btn btn-sm" style="background:#ecfdf5; color:#059669; border:1px solid #a7f3d0; font-size:0.75rem; font-weight:700; padding:3px 8px;">
+                    + Receive
+                  </a>
+                @else
+                  <span class="badge badge-slate" style="font-size:0.7rem;">Completed</span>
+                @endif
+              </td>
             </tr>
           @empty
             <tr>
-              <td colspan="10" style="text-align:center; padding:30px; color:var(--slate-400);">
+              <td colspan="12" style="text-align:center; padding:30px; color:var(--slate-400);">
                 No job inward logs recorded yet.
               </td>
             </tr>

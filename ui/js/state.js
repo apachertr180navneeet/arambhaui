@@ -15,7 +15,11 @@ class ERPStateManager {
     try {
       const saved = localStorage.getItem(this.STORAGE_KEY);
       if (saved) {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (!parsed.jobInwards || parsed.jobInwards.length === 0) {
+          parsed.jobInwards = (typeof INITIAL_DATA !== 'undefined' && INITIAL_DATA.jobInwards) ? JSON.parse(JSON.stringify(INITIAL_DATA.jobInwards)) : [];
+        }
+        return parsed;
       }
     } catch (e) {
       console.warn("Could not load from localStorage:", e);
@@ -391,42 +395,96 @@ class ERPStateManager {
   }
 
   receiveJobWorkInward(jwId, inward) {
-    const jw = this.data.jobWorks.find(j => j.id === jwId);
+    const jw = (this.data.jobWorks || []).find(j => j.id === jwId);
     if (jw) {
-      const goodQty = Number(inward.goodQty);
+      if (!this.data.jobInwards) this.data.jobInwards = [];
+      const goodQty = Number(inward.goodQty !== undefined ? inward.goodQty : (inward.receivedGoodQty || 0));
       const rejectedQty = Number(inward.rejectedQty || 0);
       const damagedQty = Number(inward.damagedQty || 0);
-      
-      jw.receivedGoodQty += goodQty;
-      jw.rejectedQty += rejectedQty;
-      jw.damagedQty += damagedQty;
-      jw.pendingQty = Math.max(0, jw.sentQty - jw.receivedGoodQty - jw.rejectedQty - jw.damagedQty);
+      const wastageMeters = Number(inward.wastageMeters || inward.wastage_returned_meters || 0);
+      const rate = Number(inward.rate !== undefined ? inward.rate : (jw.rate || 0));
+      const totalAmount = goodQty * rate;
+
+      jw.receivedGoodQty = (Number(jw.receivedGoodQty) || 0) + goodQty;
+      jw.rejectedQty = (Number(jw.rejectedQty) || 0) + rejectedQty;
+      jw.damagedQty = (Number(jw.damagedQty) || 0) + damagedQty;
+      const totalSent = Number(jw.netMeter || jw.sentQty || jw.quantity || 0);
+      jw.pendingQty = Math.max(0, totalSent - jw.receivedGoodQty - jw.rejectedQty - jw.damagedQty);
       
       if (jw.pendingQty === 0) {
         jw.status = "Completed";
-        jw.qcStatus = "Ready for QC";
+        jw.qcStatus = inward.qcStatus || "Passed QC";
       } else {
         jw.status = "Partially Received";
-        jw.qcStatus = "Partially Received";
+        jw.qcStatus = inward.qcStatus || "Partially Received";
       }
 
+      // Record inward entry in jobInwards registry
+      const inwCount = this.data.jobInwards.length + 1;
+      const inwardNo = inward.inwardNumber || `JINW-2026-${String(inwCount).padStart(4, '0')}`;
+      const newInward = {
+        id: inwardNo,
+        inwardNumber: inwardNo,
+        date: inward.date || new Date().toISOString().split('T')[0],
+        jobWorkId: jw.id,
+        jobOrderNo: jw.assignNo ? `JW-${jw.assignNo}` : jw.id,
+        lotNo: jw.lotNo || "LOT-GEN",
+        jobWorker: jw.jobWorker,
+        challanNo: inward.challanNo || inward.inwardChallan || `DC-INW-${Date.now().toString().slice(-5)}`,
+        item: jw.item,
+        process: jw.process,
+        receivedGoodQty: goodQty,
+        rejectedQty: rejectedQty,
+        wastageMeters: wastageMeters,
+        rate: rate,
+        totalAmount: totalAmount,
+        qcStatus: inward.qcStatus || "Passed QC",
+        storageLocation: inward.storageLocation || "Finished Goods Store",
+        remarks: inward.remarks || ""
+      };
+      this.data.jobInwards.unshift(newInward);
+
       // Add to Lot Timeline
-      const lot = this.data.lots.find(l => l.lotNo === jw.lotNo);
+      const lot = this.data.lots ? this.data.lots.find(l => l.lotNo === jw.lotNo) : null;
       if (lot) {
         lot.currentQty = jw.receivedGoodQty;
+        if (!lot.timeline) lot.timeline = [];
         lot.timeline.push({
           date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           stage: `Inward from ${jw.jobWorker}`,
           qty: goodQty,
-          operator: this.data.currentUser.name,
-          note: `Received ${goodQty} good, ${rejectedQty} rejected, ${damagedQty} damaged`
+          operator: (this.data.currentUser && this.data.currentUser.name) || "Store Manager",
+          note: `Received ${goodQty} good pcs, ${rejectedQty} defect, ${wastageMeters}m wastage. DC #${newInward.challanNo}`
         });
       }
 
-      this.logActivity(`Received Job Work Inward: ${jw.id} (${goodQty} good pcs)`, "Job Work Inward", jw.id);
+      // Update Finished Goods Stock in Inventory
+      if (this.data.items) {
+        const itm = this.data.items.find(i => (i.name || '').toLowerCase() === (jw.item || '').toLowerCase());
+        if (itm) {
+          itm.currentStock = (Number(itm.currentStock) || 0) + goodQty;
+          if (this.data.itemLedger) {
+            this.data.itemLedger.unshift({
+              date: newInward.date,
+              ref: newInward.inwardNumber,
+              item: itm.name,
+              type: "Job Work Inward (Ready)",
+              inward: goodQty,
+              outward: 0,
+              balance: itm.currentStock,
+              user: (this.data.currentUser && this.data.currentUser.name) || "Store Manager",
+              lot: jw.lotNo || "LOT-READY"
+            });
+          }
+        }
+      }
+
+      this.logActivity(`Received Job Work Inward: ${inwardNo} (${goodQty} good pcs from ${jw.jobWorker})`, "Job Work Inward", jw.id);
       this.saveState();
+      return newInward;
     }
+    return null;
   }
 
   // --- 8. QUALITY CHECK (QC) ---

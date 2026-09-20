@@ -1443,6 +1443,127 @@ class ERPStateManager {
     }
   }
 
+  receiveJobWorkInward(jwId, inward) {
+    const jw = (this.data.jobWorks || []).find(j => j.id === jwId || (j.dbId && j.dbId == jwId));
+    if (jw) {
+      if (!this.data.jobInwards) this.data.jobInwards = [];
+      const goodQty = Number(inward.goodQty !== undefined ? inward.goodQty : (inward.receivedGoodQty || 0));
+      const rejectedQty = Number(inward.rejectedQty || 0);
+      const damagedQty = Number(inward.damagedQty || 0);
+      const wastageMeters = Number(inward.wastageMeters || inward.wastage_returned_meters || 0);
+      const rate = Number(inward.rate !== undefined ? inward.rate : (jw.rate || 0));
+      const totalAmount = goodQty * rate;
+
+      jw.receivedGoodQty = (Number(jw.receivedGoodQty) || 0) + goodQty;
+      jw.rejectedQty = (Number(jw.rejectedQty) || 0) + rejectedQty;
+      jw.damagedQty = (Number(jw.damagedQty) || 0) + damagedQty;
+      const totalSent = Number(jw.sentQty || jw.quantity || 0);
+      jw.pendingQty = Math.max(0, totalSent - jw.receivedGoodQty - jw.rejectedQty - jw.damagedQty);
+
+      if (jw.pendingQty === 0) {
+        jw.status = "Completed";
+        jw.qcStatus = inward.qcStatus || "Passed QC";
+      } else {
+        jw.status = "Partially Received";
+        jw.qcStatus = inward.qcStatus || "Partially Received";
+      }
+
+      const inwCount = this.data.jobInwards.length + 1;
+      const inwardNo = inward.inwardNumber || `JINW-2026-${String(inwCount).padStart(4, '0')}`;
+      const newInward = {
+        id: inwardNo,
+        inwardNumber: inwardNo,
+        date: inward.date || new Date().toISOString().split('T')[0],
+        jobWorkId: jw.id,
+        jobAssignmentId: jw.dbId || null,
+        jobOrderNo: jw.assignNo ? `JW-${jw.assignNo}` : jw.id,
+        lotNo: jw.lotNo || "LOT-GEN",
+        jobWorker: jw.jobWorker,
+        challanNo: inward.challanNo || inward.inwardChallan || `DC-INW-${Date.now().toString().slice(-5)}`,
+        item: jw.item,
+        process: jw.process,
+        receivedGoodQty: goodQty,
+        rejectedQty: rejectedQty,
+        wastageMeters: wastageMeters,
+        rate: rate,
+        totalAmount: totalAmount,
+        qcStatus: inward.qcStatus || "Passed QC",
+        storageLocation: inward.storageLocation || "Finished Goods Store",
+        remarks: inward.remarks || ""
+      };
+      this.data.jobInwards.unshift(newInward);
+
+      // Add to Lot Timeline if lots exist
+      const lot = this.data.lots ? this.data.lots.find(l => l.lotNo === jw.lotNo) : null;
+      if (lot) {
+        lot.currentQty = jw.receivedGoodQty;
+        if (!lot.timeline) lot.timeline = [];
+        lot.timeline.push({
+          date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          stage: `Inward from ${jw.jobWorker}`,
+          qty: goodQty,
+          operator: (this.data.currentUser && this.data.currentUser.name) || "Store Manager",
+          note: `Received ${goodQty} good pcs, ${rejectedQty} defect, ${wastageMeters}m wastage. Challan #${newInward.challanNo}`
+        });
+      }
+
+      // Update Finished Goods Stock
+      if (this.data.items) {
+        const itm = this.data.items.find(i => (i.name || '').toLowerCase() === (jw.item || '').toLowerCase());
+        if (itm) {
+          itm.currentStock = (Number(itm.currentStock) || 0) + goodQty;
+          if (this.data.itemLedger) {
+            this.data.itemLedger.unshift({
+              date: newInward.date,
+              ref: newInward.inwardNumber,
+              item: itm.name,
+              type: "Job Work Inward (Ready)",
+              inward: goodQty,
+              outward: 0,
+              balance: itm.currentStock,
+              user: (this.data.currentUser && this.data.currentUser.name) || "Store Manager",
+              lot: jw.lotNo || "LOT-READY"
+            });
+          }
+        }
+      }
+
+      this.logActivity(`Received Job Work Inward: ${inwardNo} (${goodQty} good pcs from ${jw.jobWorker})`, "Job Work Inward", jw.id);
+      this.saveState();
+
+      // Async sync with Laravel Backend
+      if (jw.dbId) {
+        fetch('/jobwork/inward', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': this.getCsrfToken(),
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          body: JSON.stringify({
+            job_assignment_id: jw.dbId,
+            inward_date: newInward.date,
+            challan_no: newInward.challanNo,
+            received_qty: goodQty,
+            defect_qty: rejectedQty,
+            wastage_returned_meters: wastageMeters,
+            rate_per_piece: rate,
+            qc_status: newInward.qcStatus,
+            storage_location: newInward.storageLocation,
+            remarks: newInward.remarks
+          })
+        }).then(r => r.json()).then(res => {
+          if (res && res.inward && res.inward.id) newInward.dbId = res.inward.id;
+        }).catch(e => console.warn("Inward sync note:", e));
+      }
+
+      return newInward;
+    }
+    return null;
+  }
+
   // =========================================================================
   // 8. PRODUCTION ORDERS & LOT TRACKING
   // =========================================================================

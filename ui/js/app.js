@@ -184,6 +184,7 @@ const App = {
       create: "Create Purchase Order",
       edit: "Edit Purchase Order",
       assign: "Job Assign Orders",
+      inward: "Job Inward Entries",
       "inward-report": "Job Inward & Ready Report",
       ready: "Ready for Dispatch",
       dispatch: "Dispatch Challans",

@@ -10,6 +10,7 @@ use App\Http\Controllers\Masters\JobWorkerController;
 use App\Http\Controllers\Masters\ItemController;
 use App\Http\Controllers\Masters\UnitController;
 use App\Http\Controllers\JobWork\JobAssignController;
+use App\Http\Controllers\JobWork\JobInwardController;
 use App\Http\Controllers\JobWork\JobInwardReportController;
 use App\Http\Controllers\Purchase\PurchaseOrderController;
 use App\Http\Controllers\Qr\QrController;
@@ -73,6 +74,7 @@ Route::middleware('auth')->group(function () {
     // ==========================================
     Route::prefix('jobwork')->name('jobwork.')->group(function () {
         Route::resource('assign', JobAssignController::class);
+        Route::resource('inward', JobInwardController::class);
         Route::get('inward-report', [JobInwardReportController::class, 'index'])->name('inward-report');
     });
 

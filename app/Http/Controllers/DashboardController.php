@@ -70,6 +70,8 @@ class DashboardController extends Controller
                 if ($submodule === 'create') return redirect()->route('purchase.orders.create');
                 return redirect()->route('purchase.orders.index');
             case 'jobwork':
+                if ($submodule === 'inward') return redirect()->route('jobwork.inward.index');
+                if ($submodule === 'inward-create') return redirect()->route('jobwork.inward.create');
                 if ($submodule === 'inward-report') return redirect()->route('jobwork.inward-report');
                 return redirect()->route('jobwork.assign.index');
             case 'qr':

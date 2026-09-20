@@ -21,4 +21,9 @@ class JobAssignment extends Model
     {
         return $this->hasMany(JobAssignmentItem::class);
     }
+
+    public function inwards()
+    {
+        return $this->hasMany(JobInward::class);
+    }
 }

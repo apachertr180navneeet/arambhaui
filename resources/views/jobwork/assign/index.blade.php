@@ -344,6 +344,14 @@
       </div>
 
       <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+        <a href="{{ route('jobwork.inward.index') }}" class="btn btn-secondary btn-sm" style="display:inline-flex; align-items:center; gap:6px; font-weight:700;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Job Inwards
+        </a>
+        <a href="{{ route('jobwork.inward.create') }}" class="btn btn-sm" style="background:#059669; color:#fff; display:inline-flex; align-items:center; gap:6px; font-weight:700;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+          + Receive Inward
+        </a>
         <button class="btn btn-secondary btn-sm" onclick="UI.exportTableToCSV('job-assign-table', 'Job_Assignments.csv')" style="display:inline-flex; align-items:center; gap:6px; font-weight:700;">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           Export CSV
@@ -494,6 +502,11 @@
               <td style="text-align:right;">
                 <div style="display:inline-flex; gap:6px; align-items:center;">
                   
+                  <!-- Receive Inward -->
+                  <a href="{{ route('jobwork.inward.create', ['job_order_id' => $ja->id]) }}" class="action-icon-btn" style="color:#059669; background:#ecfdf5; border-color:#a7f3d0;" title="Receive Inward (Batch-wise Lot {{ $ja->lot_number }})">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                  </a>
+
                   <!-- View Breakdown Modal -->
                   <button type="button" class="action-icon-btn info" title="View Order & Fabric Breakdown" onclick='openJobOrderModal(@json($ja))'>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>

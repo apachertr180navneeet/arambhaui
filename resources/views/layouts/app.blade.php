@@ -188,6 +188,8 @@
             </a>
             <div class="nav-submenu">
               <a href="{{ route('jobwork.assign.index') }}" class="submenu-link {{ request()->routeIs('jobwork.assign.*') ? 'active' : '' }}">Job Assign Orders</a>
+              <a href="{{ route('jobwork.inward.index') }}" class="submenu-link {{ request()->routeIs('jobwork.inward.index') ? 'active' : '' }}">Job Inward Entries</a>
+              <a href="{{ route('jobwork.inward.create') }}" class="submenu-link {{ request()->routeIs('jobwork.inward.create') ? 'active' : '' }}">+ New Inward Entry</a>
               <a href="{{ route('jobwork.inward-report') }}" class="submenu-link {{ request()->routeIs('jobwork.inward-report') ? 'active' : '' }}">Job Inward & Ready Report</a>
             </div>
           </div>

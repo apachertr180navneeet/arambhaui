@@ -64,6 +64,7 @@ const INITIAL_DATA = {
   salesOrders: [],
   purchaseOrders: [],
   jobWorks: [],
+  jobInwards: [],
   productionOrders: [],
   qualityChecks: [],
   lotTracking: [],
