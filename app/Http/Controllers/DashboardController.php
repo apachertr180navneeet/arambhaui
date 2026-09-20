@@ -32,6 +32,7 @@ class DashboardController extends Controller
         $totalActiveVouchers = QrVoucher::where('status', 'Active')->count();
         $totalRedeemedVouchers = QrVoucher::where('status', 'Redeemed')->count();
         $totalChallans = DispatchChallan::count();
+        $totalPendingAssignments = JobAssignment::whereIn('status', ['Issued', 'In Progress', 'Partial Ready'])->count();
         $lowStockItems = Item::whereRaw('current_stock <= min_stock')->get();
         $recentPOs = PurchaseOrder::with('vendor')->latest()->take(5)->get();
         $recentJobOrders = JobAssignment::latest()->take(5)->get();
@@ -46,6 +47,7 @@ class DashboardController extends Controller
             'totalActiveVouchers' => $totalActiveVouchers,
             'totalRedeemedVouchers' => $totalRedeemedVouchers,
             'totalChallans' => $totalChallans,
+            'totalPendingAssignments' => $totalPendingAssignments,
             'lowStockCount' => $lowStockItems->count()
         ];
 

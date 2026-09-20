@@ -83,6 +83,18 @@
         <div style="font-size:0.75rem; color:#059669; margin-top:2px;"><a href="{{ route('masters.items.index') }}" style="color:inherit; font-weight:600; text-decoration:none;">Inventory Master &rarr;</a></div>
       </div>
     </div>
+
+    <!-- Pending Assignments KPI -->
+    <div class="kpi-card" style="background:#fff; border-radius:var(--radius-xl); border:1px solid var(--slate-200); padding:20px; box-shadow:var(--shadow-sm); display:flex; align-items:center; gap:16px;">
+      <div style="width:48px; height:48px; border-radius:12px; background:#fffbeb; color:#d97706; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      </div>
+      <div>
+        <div style="font-size:0.75rem; color:var(--slate-500); font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Pending Assignments</div>
+        <div style="font-size:1.5rem; font-weight:800; color:var(--slate-900); margin-top:2px;">{{ $stats['totalPendingAssignments'] }}</div>
+        <div style="font-size:0.75rem; color:#d97706; margin-top:2px;"><a href="{{ route('jobwork.assign.index') }}" style="color:inherit; font-weight:600; text-decoration:none;">View Assignments &rarr;</a></div>
+      </div>
+    </div>
   </div>
 
   <!-- Quick Workflow Modules Hub -->
