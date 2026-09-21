@@ -91,6 +91,9 @@ Route::middleware('auth')->group(function () {
     Route::prefix('qr')->name('qr.')->group(function () {
         Route::get('generator', [QrController::class, 'generator'])->name('generator');
         Route::post('generator', [QrController::class, 'store'])->name('generator.store');
+        Route::post('store-batch', [QrController::class, 'storeBatch'])->name('storeBatch');
+        Route::get('export-pdf', [QrController::class, 'exportPdf'])->name('exportPdf');
+        Route::get('pdf-preview', [QrController::class, 'previewPdf'])->name('pdfPreview');
         Route::get('history', [QrController::class, 'history'])->name('history');
         Route::get('voucher/{id}', [QrController::class, 'show'])->name('show');
         Route::put('voucher/{id}', [QrController::class, 'update'])->name('update');
@@ -99,6 +102,10 @@ Route::middleware('auth')->group(function () {
         Route::post('reactivate/{id}', [QrController::class, 'reactivateVoucher'])->name('reactivate');
         Route::delete('voucher/{id}', [QrController::class, 'destroy'])->name('destroy');
     });
+
+    // Color Master module compatibility aliases
+    Route::get('/admin/qr/export-pdf', [QrController::class, 'exportPdf'])->name('admin.qr.exportPdf');
+    Route::post('/admin/qr/storeBatch', [QrController::class, 'storeBatch'])->name('admin.qr.storeBatch');
 
     // ==========================================
     // 6. LOGISTICS & DISPATCH

@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'QR Vouchers Listing & 1x1 Sticker Printing - GarmentERP')
+@section('title', 'QR Vouchers Listing & A4 Sheet Printing - GarmentERP')
 
 @section('breadcrumb')
   <div class="breadcrumb-item"><span>Barcodes & QR</span></div>
@@ -352,21 +352,22 @@
   }
 
   /* ==========================================================================
-     EXACT 1" x 1" (ONE INCH BY ONE INCH) PRINT STYLES
+     COLOR MASTER A4 MULTI-QR SHEET PRINT STYLES (MAX QR CODES ON A4 PAPER)
      ========================================================================== */
   @media print {
     @page {
-      size: 1in 1in;
-      margin: 0;
+      size: A4 portrait;
+      margin: 4mm 4mm 5mm 4mm;
     }
 
     html, body {
       background: #ffffff !important;
       margin: 0 !important;
       padding: 0 !important;
-      width: 1in !important;
-      height: 1in !important;
+      width: 100% !important;
+      height: auto !important;
       overflow: visible !important;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif !important;
     }
 
     body * {
@@ -379,59 +380,100 @@
     }
 
     #print-container-area {
+      display: block !important;
       position: absolute !important;
       left: 0 !important;
       top: 0 !important;
-      width: 1in !important;
+      width: 100% !important;
       margin: 0 !important;
       padding: 0 !important;
       background: #fff !important;
     }
 
-    .print-sticker-1x1 {
-      width: 1in !important;
-      height: 1in !important;
-      max-width: 1in !important;
-      max-height: 1in !important;
+    .print-a4-header {
+      text-align: center !important;
+      margin-bottom: 4px !important;
+      padding-bottom: 3px !important;
+      border-bottom: 0.8px solid #0f172a !important;
+    }
+
+    .print-a4-header h2 {
       margin: 0 !important;
-      padding: 2px !important;
+      font-size: 11pt !important;
+      font-weight: 900 !important;
+      text-transform: uppercase !important;
+      letter-spacing: 0.5px !important;
+      color: #000 !important;
+    }
+
+    .print-a4-header p {
+      margin: 1px 0 0 !important;
+      font-size: 7pt !important;
+      color: #334155 !important;
+    }
+
+    /* High-Density Grid: 10 columns across single A4 sheet */
+    .print-a4-grid {
+      display: grid !important;
+      grid-template-columns: repeat(10, 1fr) !important;
+      gap: 1.5mm !important;
+      width: 100% !important;
       box-sizing: border-box !important;
+    }
+
+    .print-qr-cell {
+      border: 0.8px dashed #64748b !important;
+      border-radius: 2px !important;
+      padding: 1.5mm 1mm !important;
+      text-align: center !important;
+      background: #fff !important;
       display: flex !important;
       flex-direction: column !important;
       align-items: center !important;
       justify-content: space-between !important;
-      text-align: center !important;
-      background: #fff !important;
-      border: 1px solid #000 !important;
-      page-break-after: always !important;
-      break-after: page !important;
+      box-sizing: border-box !important;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+      height: 25mm !important;
+      max-height: 25mm !important;
+      overflow: hidden !important;
     }
 
-    .print-sticker-1x1 .sticker-brand {
+    .print-qr-cell .cell-brand {
+      font-size: 5.5pt !important;
+      font-weight: 800 !important;
+      color: #000 !important;
+      text-transform: uppercase !important;
+      line-height: 1 !important;
+      white-space: nowrap !important;
+      overflow: hidden !important;
+      width: 100% !important;
+    }
+
+    .print-qr-cell .cell-qr img,
+    .print-qr-cell .cell-qr canvas {
+      width: 44px !important;
+      height: 44px !important;
+      display: block !important;
+      margin: 0 auto !important;
+    }
+
+    .print-qr-cell .cell-amt {
       font-size: 7pt !important;
       font-weight: 900 !important;
       color: #000 !important;
       line-height: 1 !important;
+    }
+
+    .print-qr-cell .cell-code {
+      font-size: 4.8pt !important;
+      font-weight: 700 !important;
+      color: #000 !important;
+      font-family: monospace !important;
+      line-height: 1 !important;
       white-space: nowrap !important;
       overflow: hidden !important;
-    }
-
-    .print-sticker-1x1 .sticker-qr img,
-    .print-sticker-1x1 .sticker-qr canvas {
-      width: 54px !important;
-      height: 54px !important;
-    }
-
-    .print-sticker-1x1 .sticker-amt {
-      font-size: 8pt !important;
-      font-weight: 900 !important;
-      color: #000 !important;
-    }
-
-    .print-sticker-1x1 .sticker-code {
-      font-size: 5.5pt !important;
-      font-weight: 800 !important;
-      color: #000 !important;
+      width: 100% !important;
     }
   }
 </style>
@@ -503,19 +545,28 @@
     <!-- Action Header -->
     <div class="qr-card-header">
       <div>
-        <h3 style="margin:0; font-size:1.2rem; font-weight:800; color:var(--slate-900);">Aarambh QR Vouchers & Sticker Ledger</h3>
+        <h3 style="margin:0; font-size:1.2rem; font-weight:800; color:var(--slate-900);">Aarambh QR Vouchers Ledger & A4 Sheet Printing</h3>
         <p style="margin:4px 0 0; font-size:0.825rem; color:var(--slate-500);">
-          Displaying QR codes directly in table. Print individual or batch 1" × 1" thermal sticker labels.
+          Displaying QR codes directly in table. Print A4 multi-QR sheets (Color Master style) or download PDF.
         </p>
       </div>
 
       <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-        <button type="button" class="btn btn-secondary btn-sm" onclick="batchPrintAllStickers()" style="display:inline-flex; align-items:center; gap:6px; font-weight:700;">
+        <!-- Color Master Export PDF Form -->
+        <form action="{{ route('qr.exportPdf') }}" method="GET" style="display:inline-flex; align-items:center; gap:6px;">
+          <input type="number" name="count" value="50" min="1" max="1000" class="form-control form-control-sm" placeholder="No. of Records" style="width:105px; height:34px; font-weight:700;" title="Number of QR records to export on A4 sheet">
+          <button type="submit" class="btn btn-secondary btn-sm" style="height:34px; font-weight:700; display:inline-flex; align-items:center; gap:5px; background:#f1f5f9; color:#0f172a; border-color:#cbd5e1;" title="Download A4 Multi-QR PDF (Color Master Layout)">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export A4 PDF
+          </button>
+        </form>
+
+        <button type="button" class="btn btn-secondary btn-sm" onclick="printVisibleA4Grid()" style="height:34px; display:inline-flex; align-items:center; gap:6px; font-weight:700;" title="Print All Visible QR Codes onto Single A4 Grid">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
-          Print All 1"x1" Stickers
+          Print A4 Sheet
         </button>
 
-        <a href="{{ route('qr.generator') }}" class="btn btn-primary btn-sm" style="display:inline-flex; align-items:center; gap:6px; font-weight:700; box-shadow:0 2px 8px rgba(79, 70, 229, 0.3);">
+        <a href="{{ route('qr.generator') }}" class="btn btn-primary btn-sm" style="height:34px; display:inline-flex; align-items:center; gap:6px; font-weight:700; box-shadow:0 2px 8px rgba(79, 70, 229, 0.3);">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
           + Generate New Batch
         </a>
@@ -545,11 +596,35 @@
       </div>
     </div>
 
+    <!-- Multi-Select Action Bar -->
+    <div id="selection-action-bar" style="display:none; background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; padding:10px 16px; margin:0 24px 16px 24px; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+      <div style="font-weight:700; color:#1e40af; font-size:0.875rem; display:inline-flex; align-items:center; gap:8px;">
+        <span class="badge" style="background:#2563eb; color:#fff; font-size:0.8rem; padding:3px 8px; border-radius:9999px;" id="selected-count-badge">0</span>
+        <span>QR Voucher(s) selected</span>
+      </div>
+      <div style="display:inline-flex; gap:8px;">
+        <button type="button" class="btn btn-primary btn-sm" onclick="printSelectedA4()" style="background:#2563eb; border-color:#2563eb; font-weight:700; display:inline-flex; align-items:center; gap:6px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
+          Print Selected (A4 Grid)
+        </button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="exportSelectedPdf()" style="font-weight:700; display:inline-flex; align-items:center; gap:6px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export Selected to PDF
+        </button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="clearSelectedVouchers()" style="font-weight:600; color:#64748b;">
+          Clear
+        </button>
+      </div>
+    </div>
+
     <!-- Table With Direct QR Preview Column -->
     <div class="table-responsive">
       <table class="data-table ledger-table" id="qr-table" style="width:100%;">
         <thead>
           <tr>
+            <th style="width:36px; text-align:center;">
+              <input type="checkbox" id="check-all-vouchers" onchange="toggleSelectAllVouchers(this)" title="Select All Visible">
+            </th>
             <th style="width:60px; text-align:center;">QR</th>
             <th style="width:160px;">Voucher Code</th>
             <th>Batch Name</th>
@@ -557,7 +632,7 @@
             <th>Amount (₹)</th>
             <th>Status</th>
             <th>Redemption Audit</th>
-            <th style="text-align:right; width:170px;">Actions & 1"x1" Print</th>
+            <th style="text-align:right; width:150px;">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -569,11 +644,16 @@
               $statusKey = strtolower($v->status);
               $claimUrl = url('/claim/' . $v->voucher_code);
             @endphp
-            <tr class="voucher-row" data-status="{{ $statusKey }}" data-code="{{ $v->voucher_code }}" data-batch="{{ $batch }}" data-amt="{{ $amt }}" data-url="{{ $claimUrl }}">
+            <tr class="voucher-row" data-id="{{ $v->id }}" data-status="{{ $statusKey }}" data-code="{{ $v->voucher_code }}" data-batch="{{ $batch }}" data-amt="{{ $amt }}" data-url="{{ $claimUrl }}">
               
+              <!-- 0. SELECT CHECKBOX -->
+              <td style="text-align:center;">
+                <input type="checkbox" class="voucher-select-box" value="{{ $v->id }}" data-code="{{ $v->voucher_code }}" data-batch="{{ $batch }}" data-amt="{{ $amt }}" data-url="{{ $claimUrl }}" onchange="handleRowSelect()">
+              </td>
+
               <!-- 1. LIVE QR CODE PREVIEW COLUMN -->
               <td style="text-align:center;">
-                <div class="table-qr-thumb list-qr-canvas" data-url="{{ $claimUrl }}" data-code="{{ $v->voucher_code }}" onclick='openStickerModal(@json($v))' title="Click to view 1x1 Sticker & Scan URL">
+                <div class="table-qr-thumb list-qr-canvas" data-url="{{ $claimUrl }}" data-code="{{ $v->voucher_code }}" onclick='openStickerModal(@json($v))' title="Click to view Sticker & Scan URL">
                 </div>
               </td>
 
@@ -649,14 +729,14 @@
                 @endif
               </td>
 
-              <!-- 8. ACTIONS & 1x1 PRINT -->
+              <!-- 8. ACTIONS & PRINT -->
               <td style="text-align:right;">
                 <div style="display:inline-flex; gap:6px; align-items:center;">
                   
-                  <!-- Direct 1"x1" Print Button -->
-                  <button type="button" class="btn btn-secondary btn-sm" title="Print 1 inch by 1 inch Sticker" onclick='printSingleRowSticker(@json($v))' style="font-size:0.75rem; font-weight:800; padding:3px 8px; display:inline-flex; align-items:center; gap:4px; background:#f8fafc; border-color:#0f172a; color:#0f172a;">
+                  <!-- Direct Print Button -->
+                  <button type="button" class="btn btn-secondary btn-sm" title="Print this QR Code" onclick='printSingleRowSticker(@json($v))' style="font-size:0.75rem; font-weight:800; padding:3px 8px; display:inline-flex; align-items:center; gap:4px; background:#f8fafc; border-color:#0f172a; color:#0f172a;">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
-                    1"×1"
+                    Print
                   </button>
 
                   <!-- View Modal Trigger -->
@@ -701,7 +781,7 @@
             </tr>
           @empty
             <tr>
-              <td colspan="8" style="text-align:center; padding:48px 20px; color:var(--slate-400);">
+              <td colspan="9" style="text-align:center; padding:48px 20px; color:var(--slate-400);">
                 <div style="width:48px; height:48px; border-radius:12px; background:var(--slate-100); color:var(--slate-400); display:inline-flex; align-items:center; justify-content:center; margin-bottom:12px;">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/></svg>
                 </div>
@@ -940,7 +1020,7 @@
     }
   }
 
-  // Print Single 1"x1" Sticker from Row
+  // Print Single Sticker from Row
   function printSingleRowSticker(v) {
     renderAndPrintStickers([v]);
   }
@@ -951,15 +1031,16 @@
     }
   }
 
-  // Batch Print All Visible Stickers
-  function batchPrintAllStickers() {
+  // Print All Visible QR Codes onto single A4 Grid Sheet
+  function printVisibleA4Grid() {
     const visibleRows = Array.from(document.querySelectorAll('.voucher-row')).filter(r => r.style.display !== 'none');
     if (visibleRows.length === 0) {
-      alert('No vouchers available to print.');
+      alert('No vouchers visible to print.');
       return;
     }
 
     const vouchersList = visibleRows.map(r => ({
+      id: r.getAttribute('data-id'),
       voucher_code: r.getAttribute('data-code'),
       batch_name: r.getAttribute('data-batch'),
       amount: r.getAttribute('data-amt'),
@@ -969,34 +1050,113 @@
     renderAndPrintStickers(vouchersList);
   }
 
+  // Legacy alias for batchPrintAllStickers
+  function batchPrintAllStickers() {
+    printVisibleA4Grid();
+  }
+
+  // Multi-Select Checkboxes Functions
+  function toggleSelectAllVouchers(master) {
+    const boxes = document.querySelectorAll('.voucher-select-box');
+    boxes.forEach(b => {
+      const row = b.closest('.voucher-row');
+      if (row && row.style.display !== 'none') {
+        b.checked = master.checked;
+      }
+    });
+    handleRowSelect();
+  }
+
+  function handleRowSelect() {
+    const checkedBoxes = Array.from(document.querySelectorAll('.voucher-select-box:checked'));
+    const bar = document.getElementById('selection-action-bar');
+    const badge = document.getElementById('selected-count-badge');
+    
+    if (checkedBoxes.length > 0) {
+      bar.style.display = 'flex';
+      badge.innerText = checkedBoxes.length;
+    } else {
+      bar.style.display = 'none';
+      const master = document.getElementById('check-all-vouchers');
+      if (master) master.checked = false;
+    }
+  }
+
+  function clearSelectedVouchers() {
+    document.querySelectorAll('.voucher-select-box').forEach(b => b.checked = false);
+    const master = document.getElementById('check-all-vouchers');
+    if (master) master.checked = false;
+    handleRowSelect();
+  }
+
+  function printSelectedA4() {
+    const checkedBoxes = Array.from(document.querySelectorAll('.voucher-select-box:checked'));
+    if (checkedBoxes.length === 0) {
+      alert('Please select at least one QR voucher.');
+      return;
+    }
+
+    const vouchersList = checkedBoxes.map(b => ({
+      id: b.value,
+      voucher_code: b.getAttribute('data-code'),
+      batch_name: b.getAttribute('data-batch'),
+      amount: b.getAttribute('data-amt'),
+      claim_url: b.getAttribute('data-url')
+    }));
+
+    renderAndPrintStickers(vouchersList);
+  }
+
+  function exportSelectedPdf() {
+    const checkedBoxes = Array.from(document.querySelectorAll('.voucher-select-box:checked'));
+    if (checkedBoxes.length === 0) {
+      alert('Please select at least one QR voucher to export.');
+      return;
+    }
+
+    const ids = checkedBoxes.map(b => b.value).join(',');
+    window.location.href = `{{ route('qr.exportPdf') }}?ids=${ids}`;
+  }
+
+  // Render High Density Multi-QR Grid on A4 Sheet
   function renderAndPrintStickers(vouchers) {
     const printArea = document.getElementById('print-container-area');
     printArea.innerHTML = '';
     printArea.style.display = 'block';
 
+    const header = document.createElement('div');
+    header.className = 'print-a4-header';
+    header.innerHTML = `
+      <h2>Aarambh Garments - QR Voucher Sheet</h2>
+      <p>Total QRs: <strong>${vouchers.length}</strong> | Printed: ${new Date().toLocaleString('en-IN')}</p>
+    `;
+    printArea.appendChild(header);
+
+    const grid = document.createElement('div');
+    grid.className = 'print-a4-grid';
+    printArea.appendChild(grid);
+
     vouchers.forEach((v, index) => {
       const batch = v.batch_name || v.title || 'AARAMBH';
       const amt = v.amount || v.discount_amount || v.discount_percent || 0;
       const code = v.voucher_code;
-      const claimUrl = `${baseUrl}/${code}`;
+      const claimUrl = v.claim_url || `${baseUrl}/${code}`;
 
-      const stickerDiv = document.createElement('div');
-      stickerDiv.className = 'print-sticker-1x1';
-      stickerDiv.innerHTML = `
-        <div class="sticker-brand">${batch}</div>
-        <div class="sticker-qr" id="print-qr-slot-${index}"></div>
-        <div style="display:flex; justify-content:space-between; align-items:center; width:100%; padding:0 1px; line-height:1;">
-          <span class="sticker-amt">₹${amt}</span>
-          <span class="sticker-code">${code}</span>
-        </div>
+      const cell = document.createElement('div');
+      cell.className = 'print-qr-cell';
+      cell.innerHTML = `
+        <div class="cell-brand">${batch}</div>
+        <div class="cell-qr" id="print-qr-slot-${index}"></div>
+        <div class="cell-amt">₹${amt}</div>
+        <div class="cell-code">${code}</div>
       `;
-      printArea.appendChild(stickerDiv);
+      grid.appendChild(cell);
 
       const slot = document.getElementById(`print-qr-slot-${index}`);
       new QRCode(slot, {
         text: claimUrl,
-        width: 54,
-        height: 54,
+        width: 44,
+        height: 44,
         colorDark: "#000000",
         colorLight: "#ffffff",
         correctLevel: QRCode.CorrectLevel.M
@@ -1005,7 +1165,7 @@
 
     setTimeout(() => {
       window.print();
-    }, 300);
+    }, 400);
   }
 
   // Open Edit Modal

@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\QrVoucher;
 use App\Models\Customer;
 use Illuminate\Http\Request;
+use Barryvdh\DomPDF\Facade\Pdf;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class QrController extends Controller
 {
@@ -175,17 +177,36 @@ class QrController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'qr_date' => 'required|date',
-            'batch_name' => 'required|string|max:255',
-            'count' => 'required|integer|min:1|max:1000',
-            'amount' => 'required|numeric|min:1',
-            'voucher_code' => 'nullable|string|max:50'
+            'qr_date' => 'nullable|date',
+            'batch_name' => 'nullable|string|max:255',
+            'count' => 'nullable|integer|min:1|max:2000',
+            'amount' => 'nullable|numeric|min:1',
+            'voucher_code' => 'nullable|string|max:50',
+            'customer_name' => 'nullable|string|max:255',
+            'customer_phone' => 'nullable|string|max:25',
+            'discount_type' => 'nullable|in:Flat,Percentage',
+            'discount_amount' => 'nullable|numeric',
+            'discount_percent' => 'nullable|numeric',
+            'max_discount_cap' => 'nullable|numeric',
+            'min_order_value' => 'nullable|numeric',
+            'valid_until' => 'nullable|date',
         ]);
 
-        $qrDate = $validated['qr_date'];
-        $batchName = trim($validated['batch_name']);
-        $count = (int)$validated['count'];
-        $amount = (float)$validated['amount'];
+        $qrDate = $validated['qr_date'] ?? date('Y-m-d');
+        $batchName = trim($validated['batch_name'] ?? $request->input('title', 'AARAMBH BATCH'));
+        $count = (int)($validated['count'] ?? 1);
+        $amount = (float)($validated['amount'] ?? $validated['discount_amount'] ?? $validated['discount_percent'] ?? 500);
+        $customerName = $validated['customer_name'] ?? 'General Promotion';
+        $customerPhone = $validated['customer_phone'] ?? null;
+        $discountType = $validated['discount_type'] ?? 'Flat';
+        $maxCap = (float)($validated['max_discount_cap'] ?? $amount);
+        $minOrder = (float)($validated['min_order_value'] ?? 0);
+        $validUntil = $validated['valid_until'] ?? date('Y-m-d', strtotime('+365 days', strtotime($qrDate)));
+
+        $dirPath = public_path('images/qrcodes');
+        if (!file_exists($dirPath)) {
+            @mkdir($dirPath, 0777, true);
+        }
 
         $createdVouchers = [];
 
@@ -204,21 +225,29 @@ class QrController extends Controller
 
             $claimUrl = url('/claim/' . $voucherCode);
 
+            // Generate crisp vector SVG for the QR code
+            try {
+                $svg = (string)QrCode::size(120)->margin(0)->generate($claimUrl);
+                @file_put_contents($dirPath . "/qr_{$voucherCode}.svg", $svg);
+            } catch (\Throwable $e) {
+                // If offline or GD fallback
+            }
+
             $voucher = QrVoucher::create([
                 'voucher_code' => $voucherCode,
                 'batch_name' => $batchName,
                 'qr_date' => $qrDate,
                 'amount' => $amount,
-                'customer_name' => 'General Promotion',
-                'customer_phone' => null,
+                'customer_name' => $customerName,
+                'customer_phone' => $customerPhone,
                 'title' => $batchName,
-                'discount_type' => 'Flat',
+                'discount_type' => $discountType,
                 'discount_percent' => $amount,
                 'discount_amount' => $amount,
-                'max_discount_cap' => $amount,
-                'min_order_value' => 0,
+                'max_discount_cap' => $maxCap,
+                'min_order_value' => $minOrder,
                 'valid_from' => $qrDate,
-                'valid_until' => date('Y-m-d', strtotime('+365 days', strtotime($qrDate))),
+                'valid_until' => $validUntil,
                 'status' => 'Active',
                 'is_redeemed' => false,
                 'qr_payload' => $claimUrl
@@ -227,16 +256,168 @@ class QrController extends Controller
             $createdVouchers[] = $voucher;
         }
 
+        // Return JSON if requested
         if ($request->wantsJson() || $request->ajax()) {
             return response()->json([
                 'success' => true,
                 'message' => "Successfully generated {$count} QR Voucher(s) for batch '{$batchName}' with ₹{$amount} value.",
+                'voucher' => $createdVouchers[0] ?? null,
                 'vouchers' => $createdVouchers,
-                'count' => $count
+                'count' => $count,
+                'pdf_url' => route('qr.exportPdf', ['batch' => $batchName, 'count' => $count])
             ], 201);
         }
 
+        // Color Master behavior: If requested or user checked download_pdf
+        if ($request->boolean('download_pdf', true)) {
+            $cols = (int)$request->input('cols', 10);
+            return $this->generatePdfFromVouchers($createdVouchers, $batchName, $cols);
+        }
+
         return redirect()->route('qr.history')->with('success', "Batch '{$batchName}' created ({$count} QRs of ₹{$amount} generated successfully).");
+    }
+
+    /**
+     * Color Master Batch Store & Direct A4 PDF Download
+     */
+    public function storeBatch(Request $request)
+    {
+        $request->merge(['download_pdf' => true]);
+        return $this->store($request);
+    }
+
+    /**
+     * Export A4 Sheet PDF (Color Master Module equivalent)
+     */
+    public function exportPdf(Request $request)
+    {
+        $countInput = $request->input('count', 50);
+        $batch = $request->input('batch_name') ?: $request->input('batch');
+        $status = $request->input('status', 'Active');
+        $ids = $request->input('ids');
+        $cols = (int)$request->input('cols', 10);
+        if ($cols < 4 || $cols > 15) {
+            $cols = 10;
+        }
+
+        $query = QrVoucher::query();
+
+        if (!empty($ids)) {
+            $idList = is_array($ids) ? $ids : explode(',', $ids);
+            $query->whereIn('id', array_filter(array_map('intval', $idList)));
+        } else {
+            if ($status && $status !== 'all') {
+                $query->where('status', $status);
+            }
+            if ($batch) {
+                $query->where('batch_name', $batch);
+            }
+            if ($countInput !== 'all') {
+                $count = max(1, min(2000, (int)$countInput));
+                $query->take($count);
+            }
+        }
+
+        $vouchers = $query->latest()->get();
+
+        if ($vouchers->isEmpty()) {
+            return redirect()->route('qr.history')->with('error', 'No QR vouchers found matching criteria to export.');
+        }
+
+        $batchName = $batch ?: ($vouchers->first()->batch_name ?? 'Aarambh Vouchers');
+
+        if ($request->boolean('preview')) {
+            return $this->previewPdfFromVouchers($vouchers, $batchName, $cols);
+        }
+
+        return $this->generatePdfFromVouchers($vouchers, $batchName, $cols);
+    }
+
+    /**
+     * HTML Preview of A4 Sheet
+     */
+    public function previewPdf(Request $request)
+    {
+        $request->merge(['preview' => true]);
+        return $this->exportPdf($request);
+    }
+
+    /**
+     * Helper to render and download DomPDF for vouchers
+     */
+    private function generatePdfFromVouchers($vouchers, $batchName = 'Aarambh Vouchers', $cols = 10)
+    {
+        $dirPath = public_path('images/qrcodes');
+        if (!file_exists($dirPath)) {
+            @mkdir($dirPath, 0777, true);
+        }
+
+        $qrs = [];
+        foreach ($vouchers as $v) {
+            $code = $v->voucher_code;
+            $claimUrl = url('/claim/' . $code);
+            $svgPath = $dirPath . "/qr_{$code}.svg";
+
+            if (file_exists($svgPath)) {
+                $svg = file_get_contents($svgPath);
+            } else {
+                $svg = (string)QrCode::size(120)->margin(0)->generate($claimUrl);
+                @file_put_contents($svgPath, $svg);
+            }
+
+            $qrs[] = [
+                'id' => $v->id,
+                'voucher_code' => $code,
+                'batch_name' => $v->batch_name ?: $v->title ?: 'AARAMBH',
+                'amount' => $v->amount ?: $v->discount_amount ?: $v->discount_percent ?: 500,
+                'qr_base64' => base64_encode($svg),
+                'claim_url' => $claimUrl,
+            ];
+        }
+
+        $generatedAt = now()->format('d M Y, h:i A');
+        $pdf = Pdf::loadView('qr.pdf', compact('qrs', 'cols', 'batchName', 'generatedAt'));
+        $pdf->setPaper('a4', 'portrait');
+
+        $filename = 'qr_records_' . count($qrs) . '_' . now()->format('Y-m-d_H-i-s') . '.pdf';
+        return $pdf->download($filename);
+    }
+
+    /**
+     * Helper to preview HTML in browser
+     */
+    private function previewPdfFromVouchers($vouchers, $batchName = 'Aarambh Vouchers', $cols = 10)
+    {
+        $dirPath = public_path('images/qrcodes');
+        if (!file_exists($dirPath)) {
+            @mkdir($dirPath, 0777, true);
+        }
+
+        $qrs = [];
+        foreach ($vouchers as $v) {
+            $code = $v->voucher_code;
+            $claimUrl = url('/claim/' . $code);
+            $svgPath = $dirPath . "/qr_{$code}.svg";
+
+            if (file_exists($svgPath)) {
+                $svg = file_get_contents($svgPath);
+            } else {
+                $svg = (string)QrCode::size(120)->margin(0)->generate($claimUrl);
+                @file_put_contents($svgPath, $svg);
+            }
+
+            $qrs[] = [
+                'id' => $v->id,
+                'voucher_code' => $code,
+                'batch_name' => $v->batch_name ?: $v->title ?: 'AARAMBH',
+                'amount' => $v->amount ?: $v->discount_amount ?: $v->discount_percent ?: 500,
+                'qr_base64' => base64_encode($svg),
+                'claim_url' => $claimUrl,
+            ];
+        }
+
+        $generatedAt = now()->format('d M Y, h:i A');
+        return view('qr.pdf', compact('qrs', 'cols', 'batchName', 'generatedAt'));
     }
 
     public function validateVoucher(Request $request)

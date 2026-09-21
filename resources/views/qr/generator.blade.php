@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Generate QR Vouchers (Aarambh Style) - GarmentERP')
+@section('title', 'Generate QR Vouchers (Color Master A4 Setup) - GarmentERP')
 
 @section('breadcrumb')
   <div class="breadcrumb-item"><span>Barcodes & QR</span></div>
@@ -215,20 +215,17 @@
     letter-spacing: 0.2px;
   }
 
-  /* Exact 1" x 1" Print CSS */
+  /* A4 Print CSS - Maximum QRs on Single A4 Sheet */
   @media print {
     @page {
-      size: 1in 1in;
-      margin: 0;
+      size: A4 portrait;
+      margin: 5mm;
     }
 
     html, body {
       background: #ffffff !important;
       margin: 0 !important;
       padding: 0 !important;
-      width: 1in !important;
-      height: 1in !important;
-      overflow: hidden !important;
     }
 
     body * {
@@ -242,12 +239,12 @@
 
     #single-print-wrapper {
       position: absolute !important;
-      left: 0 !important;
-      top: 0 !important;
-      width: 1in !important;
-      height: 1in !important;
+      left: 10mm !important;
+      top: 10mm !important;
+      width: 25mm !important;
+      height: 25mm !important;
       margin: 0 !important;
-      padding: 2px !important;
+      padding: 1.5mm !important;
       box-sizing: border-box !important;
       display: flex !important;
       flex-direction: column !important;
@@ -255,11 +252,11 @@
       justify-content: space-between !important;
       text-align: center !important;
       background: #fff !important;
-      border: 1px solid #000 !important;
+      border: 0.8px dashed #000 !important;
     }
 
     #single-print-wrapper .sticker-brand {
-      font-size: 7.5pt !important;
+      font-size: 6pt !important;
       font-weight: 900 !important;
       color: #000 !important;
       line-height: 1 !important;
@@ -267,18 +264,18 @@
 
     #single-print-wrapper .sticker-qr img,
     #single-print-wrapper .sticker-qr canvas {
-      width: 54px !important;
-      height: 54px !important;
+      width: 44px !important;
+      height: 44px !important;
     }
 
     #single-print-wrapper .sticker-amt {
-      font-size: 8pt !important;
+      font-size: 7pt !important;
       font-weight: 900 !important;
       color: #000 !important;
     }
 
     #single-print-wrapper .sticker-code {
-      font-size: 5.5pt !important;
+      font-size: 5pt !important;
       font-weight: 800 !important;
       color: #000 !important;
     }
@@ -298,7 +295,7 @@
       </div>
       <h2 style="margin:0; font-size:1.5rem; font-weight:800; letter-spacing:-0.02em;">Generate QR Vouchers</h2>
       <p style="margin:4px 0 0; font-size:0.85rem; color:#cbd5e1; max-width:640px;">
-        Create bulk QR batches with 4 simple inputs: <strong>QR Date</strong>, <strong>Batch Name</strong>, <strong>Count</strong>, and <strong>QR Amount</strong>. Printed directly in 1 inch by 1 inch sticker format.
+        Create bulk QR batches with 4 simple inputs: <strong>QR Date</strong>, <strong>Batch Name</strong>, <strong>Count</strong>, and <strong>QR Amount</strong>. Generates high-density A4 PDF sheets (up to 100–120 QRs per page) matching the Color Master module.
       </p>
     </div>
 
@@ -392,17 +389,34 @@
 
           </div>
 
+          <!-- Color Master PDF Generation Option -->
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:14px 16px; margin-top:4px;">
+            <label style="display:flex; align-items:center; gap:10px; font-weight:700; color:var(--slate-800); cursor:pointer; font-size:0.9rem; margin-bottom:0;">
+              <input type="checkbox" name="download_pdf" value="1" checked style="width:18px; height:18px; accent-color:#4f46e5;">
+              <span>Download A4 Multi-QR PDF Sheet immediately (Color Master Module Mode)</span>
+            </label>
+            <div style="font-size:0.75rem; color:var(--slate-500); margin-left:28px; margin-top:4px;">
+              Arranges up to 100–120 QR codes tightly onto an A4 paper in a 10-column table grid with dashed cutting borders.
+            </div>
+          </div>
+
         </div>
 
         <!-- Form Submit Bar -->
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:28px; padding-top:20px; border-top:1px solid var(--slate-200, #e2e8f0);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:28px; padding-top:20px; border-top:1px solid var(--slate-200, #e2e8f0); flex-wrap:wrap; gap:12px;">
           <a href="{{ route('qr.history') }}" class="btn btn-secondary">
             View All QRs
           </a>
-          <button type="submit" id="btn-submit-gen" class="btn btn-primary" style="padding:12px 28px; font-size:1rem; font-weight:800; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 14px rgba(79, 70, 229, 0.35);">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/></svg>
-            Generate <span id="btn-count-label">10</span> QR Stickers
-          </button>
+          <div style="display:inline-flex; gap:10px;">
+            <a href="{{ route('qr.pdfPreview') }}" target="_blank" class="btn btn-secondary" style="font-weight:700; display:inline-flex; align-items:center; gap:6px;" title="View HTML layout of A4 PDF sheet">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              Preview A4 Sheet
+            </a>
+            <button type="submit" id="btn-submit-gen" class="btn btn-primary" style="padding:12px 28px; font-size:1rem; font-weight:800; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 14px rgba(79, 70, 229, 0.35);">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/></svg>
+              Generate & Export A4 Sheet (<span id="btn-count-label">10</span> QRs)
+            </button>
+          </div>
         </div>
 
       </form>
@@ -451,15 +465,15 @@
 
       <!-- Quick Action Buttons -->
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:14px;">
-        <button type="button" class="btn btn-secondary btn-sm" onclick="printSingleSticker()" style="font-weight:700; display:inline-flex; align-items:center; justify-content:center; gap:6px;">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
-          Print 1"x1"
-        </button>
+        <a href="{{ route('qr.pdfPreview') }}" target="_blank" class="btn btn-secondary btn-sm" style="font-weight:700; display:inline-flex; align-items:center; justify-content:center; gap:6px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          A4 Preview
+        </a>
 
-        <button type="button" class="btn btn-secondary btn-sm" onclick="testScanUrl()" style="font-weight:700; display:inline-flex; align-items:center; justify-content:center; gap:6px; color:#4f46e5;">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-          Test Claim
-        </button>
+        <a href="{{ route('qr.exportPdf') }}?count=50" class="btn btn-secondary btn-sm" style="font-weight:700; display:inline-flex; align-items:center; justify-content:center; gap:6px; color:#4f46e5;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export 50 A4
+        </a>
       </div>
 
     </div>
