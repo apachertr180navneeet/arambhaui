@@ -185,56 +185,23 @@
             </tr>
           </thead>
           <tbody id="items-tbody">
-            <!-- Row 1 Default -->
-            <tr class="item-row" data-index="0">
-              <td>
-                <select name="items[0][item_id]" class="form-control item-select" onchange="onItemDropdownChange(this, 0)" required>
-                  <option value="">-- Select Item / Fabric --</option>
-                  @foreach($items as $it)
-                    <option value="{{ $it->id }}" data-name="{{ $it->name }}" data-unit="{{ $it->unit ?? 'Mtr' }}">{{ $it->name }} ({{ $it->item_code ?? 'Item' }})</option>
-                  @endforeach
-                </select>
-                <input type="hidden" name="items[0][item_name]" class="item-name-input" value="">
-              </td>
-              <td>
-                <div style="position:relative;">
-                  <input type="number" step="0.01" min="0" name="items[0][than_meters]" class="form-control input-than" value="" placeholder="0.00" oninput="calculateRow(0)" style="font-weight:700;">
-                  <span style="position:absolute; right:8px; top:50%; transform:translateY(-50%); font-size:0.7rem; color:var(--slate-400);">Mtr</span>
+            <!-- Empty state placeholder: Product rows added only when user clicks '+ Add Item Row' -->
+            <tr id="empty-items-row">
+              <td colspan="8" style="text-align:center; padding:36px 20px; background:#f8fafc; border-radius:8px;">
+                <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;">
+                  <div style="width:44px; height:44px; border-radius:50%; background:#e2e8f0; display:flex; align-items:center; justify-content:center; color:#64748b;">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+                      <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+                    </svg>
+                  </div>
+                  <div style="font-size:0.95rem; font-weight:700; color:var(--slate-700);">No Items Added to This Job Order</div>
+                  <div style="font-size:0.8rem; color:var(--slate-500); max-width:420px;">Product / fabric rows will only be included when you explicitly add them. Click the button below to add an item.</div>
+                  <button type="button" class="btn btn-sm btn-primary" onclick="addNewItemRow()" style="margin-top:8px; display:inline-flex; align-items:center; gap:6px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    + Add Item Row
+                  </button>
                 </div>
-              </td>
-              <td>
-                <div style="position:relative;">
-                  <input type="number" step="1" min="1" name="items[0][production_pcs]" class="form-control input-pcs" required value="" placeholder="0" oninput="calculateRow(0)" style="font-weight:800; color:var(--primary-700);">
-                  <span style="position:absolute; right:8px; top:50%; transform:translateY(-50%); font-size:0.7rem; color:var(--slate-400);">Pcs</span>
-                </div>
-              </td>
-              <td>
-                <div style="position:relative;">
-                  <input type="number" step="0.01" min="0" name="items[0][wastage_meters]" class="form-control input-wastage" value="0" placeholder="0.00" oninput="calculateRow(0)" style="font-weight:700; color:#dc2626;">
-                  <span style="position:absolute; right:8px; top:50%; transform:translateY(-50%); font-size:0.7rem; color:var(--slate-400);">Mtr</span>
-                </div>
-              </td>
-              <td style="text-align:center;">
-                <span class="calc-badge row-avg-badge" id="badge-avg-0">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                  <span class="val">0.00 Mtr/Pc</span>
-                </span>
-              </td>
-              <td>
-                <div style="position:relative;">
-                  <span style="position:absolute; left:8px; top:50%; transform:translateY(-50%); font-size:0.75rem; font-weight:700; color:var(--slate-500);">₹</span>
-                  <input type="number" step="0.5" min="0" name="items[0][rate_per_piece]" class="form-control input-rate" required value="" placeholder="0.00" oninput="calculateRow(0)" style="padding-left:20px; font-weight:700;">
-                </div>
-              </td>
-              <td style="text-align:right;">
-                <div style="font-weight:800; font-size:0.95rem; color:#059669;" class="row-total" id="total-val-0">
-                  ₹0.00
-                </div>
-              </td>
-              <td style="text-align:center;">
-                <button type="button" class="btn btn-secondary btn-xs" onclick="removeRow(this)" title="Delete Row" style="color:#ef4444; padding:4px 6px;">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                </button>
               </td>
             </tr>
           </tbody>
@@ -299,8 +266,35 @@
 
 @push('scripts')
 <script>
-  let rowCount = 1;
+  let rowCount = 0;
   const itemsMasterList = @json($items);
+
+  function renderEmptyState() {
+    const tbody = document.getElementById('items-tbody');
+    if (!tbody) return;
+    if (tbody.querySelectorAll('tr.item-row').length === 0 && !document.getElementById('empty-items-row')) {
+      tbody.innerHTML = `
+        <tr id="empty-items-row">
+          <td colspan="8" style="text-align:center; padding:36px 20px; background:#f8fafc; border-radius:8px;">
+            <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;">
+              <div style="width:44px; height:44px; border-radius:50%; background:#e2e8f0; display:flex; align-items:center; justify-content:center; color:#64748b;">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+                  <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+                </svg>
+              </div>
+              <div style="font-size:0.95rem; font-weight:700; color:var(--slate-700);">No Items Added to This Job Order</div>
+              <div style="font-size:0.8rem; color:var(--slate-500); max-width:420px;">Product / fabric rows will only be included when you explicitly add them. Click the button below to add an item.</div>
+              <button type="button" class="btn btn-sm btn-primary" onclick="addNewItemRow()" style="margin-top:8px; display:inline-flex; align-items:center; gap:6px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                + Add Item Row
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }
+  }
 
   function onWorkerSelect(select) {
     const opt = select.options[select.selectedIndex];
@@ -348,6 +342,11 @@
 
   function addNewItemRow() {
     const tbody = document.getElementById('items-tbody');
+    const emptyRow = document.getElementById('empty-items-row');
+    if (emptyRow) {
+      emptyRow.remove();
+    }
+
     const idx = rowCount++;
 
     let itemsOptions = '<option value="">-- Select Item / Fabric --</option>';
@@ -408,18 +407,27 @@
     `;
 
     tbody.appendChild(tr);
+
+    // Apply worker rate default if already chosen
+    const workerSelect = document.getElementById('ja_worker_name');
+    if (workerSelect) {
+      const selectedWorkerOpt = workerSelect.options[workerSelect.selectedIndex];
+      const workerRate = selectedWorkerOpt ? selectedWorkerOpt.getAttribute('data-rate') : null;
+      if (workerRate && parseFloat(workerRate) > 0) {
+        tr.querySelector('.input-rate').value = parseFloat(workerRate).toFixed(2);
+      }
+    }
+
     calculateRow(idx);
   }
 
   function removeRow(btn) {
     const row = btn.closest('tr');
-    const tbody = document.getElementById('items-tbody');
-    if (tbody.querySelectorAll('tr').length > 1) {
+    if (row) {
       row.remove();
-      calculateAll();
-    } else {
-      alert('At least one item is required in the Job Work Order.');
     }
+    renderEmptyState();
+    calculateAll();
   }
 
   function calculateRow(idx) {
@@ -457,7 +465,8 @@
     let grandPcs = 0;
     let grandAmount = 0;
 
-    document.querySelectorAll('#items-tbody tr').forEach(row => {
+    const rows = document.querySelectorAll('#items-tbody tr.item-row');
+    rows.forEach(row => {
       const than = parseFloat(row.querySelector('.input-than')?.value) || 0;
       const pcs = parseFloat(row.querySelector('.input-pcs')?.value) || 0;
       const wastage = parseFloat(row.querySelector('.input-wastage')?.value) || 0;
@@ -472,16 +481,23 @@
     const netFabric = Math.max(0, grandThan - grandWastage);
     const overallAvg = grandPcs > 0 ? (netFabric / grandPcs) : 0;
 
-    document.getElementById('grand-than').innerText = grandThan.toFixed(2) + ' Mtr';
-    document.getElementById('grand-wastage').innerText = grandWastage.toFixed(2) + ' Mtr';
-    document.getElementById('grand-net-fabric').innerText = netFabric.toFixed(2) + ' Mtr';
-    document.getElementById('grand-pcs').innerText = Math.round(grandPcs) + ' Pcs';
-    document.getElementById('grand-avg-cons').innerText = overallAvg.toFixed(2) + ' Mtr / Pc';
-    document.getElementById('grand-amount').innerText = '₹' + grandAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const elThan = document.getElementById('grand-than');
+    const elWastage = document.getElementById('grand-wastage');
+    const elNet = document.getElementById('grand-net-fabric');
+    const elPcs = document.getElementById('grand-pcs');
+    const elAvg = document.getElementById('grand-avg-cons');
+    const elAmt = document.getElementById('grand-amount');
+
+    if (elThan) elThan.innerText = grandThan.toFixed(2) + ' Mtr';
+    if (elWastage) elWastage.innerText = grandWastage.toFixed(2) + ' Mtr';
+    if (elNet) elNet.innerText = netFabric.toFixed(2) + ' Mtr';
+    if (elPcs) elPcs.innerText = Math.round(grandPcs) + ' Pcs';
+    if (elAvg) elAvg.innerText = overallAvg.toFixed(2) + ' Mtr / Pc';
+    if (elAmt) elAmt.innerText = '₹' + grandAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
   document.addEventListener('DOMContentLoaded', () => {
-    calculateRow(0);
+    calculateAll();
   });
 </script>
 @endpush

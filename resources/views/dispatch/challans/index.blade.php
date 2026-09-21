@@ -363,8 +363,9 @@
       <table class="data-table dispatch-table" id="challans-table" style="width:100%;">
         <thead>
           <tr>
-            <th style="width:160px;">Challan #</th>
+            <th style="width:150px;">Challan #</th>
             <th>Customer / Consignee</th>
+            <th style="width:140px;">Batch #</th>
             <th>Order Ref</th>
             <th>Dispatch Date</th>
             <th>Transporter</th>
@@ -373,13 +374,14 @@
             <th>Cartons</th>
             <th>Total Qty</th>
             <th>Status</th>
-            <th style="text-align:right; width:110px;">Actions</th>
+            <th style="text-align:right; width:130px;">Actions</th>
           </tr>
         </thead>
         <tbody>
           @forelse ($challans as $dc)
             @php
               $statusKey = strtolower($dc->status);
+              $dcBatches = $dc->items->pluck('batch_no')->filter()->unique();
             @endphp
             <tr class="dc-row" data-status="{{ $statusKey }}">
               
@@ -397,6 +399,17 @@
                 @if($dc->destination_city)
                   <div style="font-size:0.725rem; color:var(--slate-500); margin-top:2px;">📍 {{ $dc->destination_city }}</div>
                 @endif
+              </td>
+
+              <!-- Batch # -->
+              <td>
+                @forelse($dcBatches as $b)
+                  <span class="badge" style="background:#eef2ff; color:#4338ca; border:1px solid #c7d2fe; font-family:var(--font-mono, monospace); font-weight:700; font-size:0.725rem; display:inline-block; margin-bottom:2px;">
+                    {{ $b }}
+                  </span>
+                @empty
+                  <span style="color:var(--slate-400); font-size:0.75rem;">—</span>
+                @endforelse
               </td>
 
               <!-- Order Ref -->
@@ -460,6 +473,9 @@
               <!-- Actions -->
               <td style="text-align:right;">
                 <div style="display:inline-flex; gap:6px; align-items:center;">
+                  <button type="button" class="action-icon-btn" onclick="openChallanPrintModal({{ json_encode($dc) }})" title="View & Print Delivery Challan">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
+                  </button>
                   <a href="{{ route('dispatch.challans.edit', $dc->id) }}" class="action-icon-btn" title="Edit Challan">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                   </a>
@@ -476,7 +492,7 @@
             </tr>
           @empty
             <tr>
-              <td colspan="11" style="text-align:center; padding:48px 20px; color:var(--slate-400);">
+              <td colspan="12" style="text-align:center; padding:48px 20px; color:var(--slate-400);">
                 <div style="width:48px; height:48px; border-radius:12px; background:var(--slate-100); color:var(--slate-400); display:inline-flex; align-items:center; justify-content:center; margin-bottom:12px;">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>
                 </div>
@@ -551,6 +567,140 @@
         row.style.display = '';
       } else {
         row.style.display = 'none';
+      }
+    });
+  }
+
+  function openChallanPrintModal(dc) {
+    if (!dc) return;
+    const companyName = {!! json_encode($companyName ?? 'GarmentERP') !!};
+    const companySettings = {!! json_encode($companySettings ?? []) !!};
+
+    let itemsHtml = '';
+    const items = dc.items || [];
+    let totalQty = 0;
+    let totalBoxes = dc.total_cartons || 1;
+
+    items.forEach((it, idx) => {
+      totalQty += parseFloat(it.qty) || 0;
+      itemsHtml += `
+        <tr>
+          <td style="border:1px solid #cbd5e1; padding:8px; text-align:center;">${idx + 1}</td>
+          <td style="border:1px solid #cbd5e1; padding:8px; font-weight:700;">${it.style_name || 'Finished Garment'}</td>
+          <td style="border:1px solid #cbd5e1; padding:8px; font-family:monospace; font-weight:700; color:#4338ca; text-align:center;">
+            ${it.batch_no || 'DEFAULT-LOT'}
+          </td>
+          <td style="border:1px solid #cbd5e1; padding:8px; text-align:center;">${it.size || 'All Sizes'}</td>
+          <td style="border:1px solid #cbd5e1; padding:8px; text-align:center;">${it.color || 'Assorted'}</td>
+          <td style="border:1px solid #cbd5e1; padding:8px; text-align:center;">${it.carton_barcode || 'CTN-1'}</td>
+          <td style="border:1px solid #cbd5e1; padding:8px; font-weight:800; text-align:right; color:#059669;">${Number(it.qty).toLocaleString()} ${it.unit || 'pcs'}</td>
+        </tr>
+      `;
+    });
+
+    if (items.length === 0) {
+      itemsHtml = `
+        <tr>
+          <td style="border:1px solid #cbd5e1; padding:8px; text-align:center;">1</td>
+          <td style="border:1px solid #cbd5e1; padding:8px; font-weight:700;">Finished Garment Consignment</td>
+          <td style="border:1px solid #cbd5e1; padding:8px; font-family:monospace; font-weight:700; color:#4338ca; text-align:center;">DEFAULT-LOT</td>
+          <td style="border:1px solid #cbd5e1; padding:8px; text-align:center;">All Sizes</td>
+          <td style="border:1px solid #cbd5e1; padding:8px; text-align:center;">Assorted</td>
+          <td style="border:1px solid #cbd5e1; padding:8px; text-align:center;">CTN-MAIN</td>
+          <td style="border:1px solid #cbd5e1; padding:8px; font-weight:800; text-align:right; color:#059669;">${Number(dc.total_qty).toLocaleString()} pcs</td>
+        </tr>
+      `;
+      totalQty = dc.total_qty;
+    }
+
+    const modalHtml = `
+      <div id="printable-dc-modal" style="text-align:left; font-family:'Plus Jakarta Sans', sans-serif; color:#0f172a; padding:10px;">
+        <!-- Header -->
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:2px solid #0f172a; padding-bottom:12px; margin-bottom:16px;">
+          <div>
+            <h2 style="margin:0; font-size:1.35rem; font-weight:800; color:#0f172a;">${companyName}</h2>
+            <div style="font-size:0.8rem; color:#475569; margin-top:3px;">
+              ${companySettings.company_address || 'Apparel & Textile Manufacturing Facility'}<br>
+              ${companySettings.gstin ? 'GSTIN: <strong>' + companySettings.gstin + '</strong>' : ''} ${companySettings.company_phone ? '| Ph: ' + companySettings.company_phone : ''}
+            </div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:0.85rem; font-weight:800; text-transform:uppercase; letter-spacing:1px; background:#e0f2fe; color:#0369a1; padding:4px 10px; border-radius:6px; display:inline-block;">
+              DELIVERY CHALLAN
+            </div>
+            <div style="font-size:1.15rem; font-weight:800; font-family:monospace; color:#2563eb; margin-top:4px;">
+              ${dc.challan_no}
+            </div>
+            <div style="font-size:0.775rem; color:#64748b;">Date: ${dc.dispatch_date}</div>
+          </div>
+        </div>
+
+        <!-- Consignee & Transport Meta -->
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; font-size:0.825rem; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px;">
+          <div>
+            <div style="font-size:0.7rem; font-weight:700; color:#64748b; text-transform:uppercase;">Customer / Consignee</div>
+            <div style="font-size:1rem; font-weight:800; color:#0f172a; margin-top:2px;">${dc.customer_name}</div>
+            <div style="color:#475569; margin-top:2px;">Destination: ${dc.destination_city || 'As per invoice'}</div>
+            <div style="color:#475569;">Sales Order Ref: <strong style="font-family:monospace;">${dc.order_no}</strong></div>
+          </div>
+          <div>
+            <div style="font-size:0.7rem; font-weight:700; color:#64748b; text-transform:uppercase;">Transport & Carrier Details</div>
+            <div style="font-size:0.95rem; font-weight:700; color:#0f172a; margin-top:2px;">${dc.transporter_name}</div>
+            <div style="color:#475569; margin-top:2px;">LR Number: <strong style="font-family:monospace; color:#2563eb;">${dc.lr_number || '—'}</strong></div>
+            <div style="color:#475569;">Vehicle Number: <strong style="font-family:monospace;">${dc.vehicle_number || '—'}</strong></div>
+          </div>
+        </div>
+
+        <!-- Items Table with Batch # -->
+        <table style="width:100%; border-collapse:collapse; font-size:0.8rem; margin-bottom:16px;">
+          <thead>
+            <tr style="background:#f1f5f9;">
+              <th style="border:1px solid #cbd5e1; padding:8px; width:30px; text-align:center;">#</th>
+              <th style="border:1px solid #cbd5e1; padding:8px; text-align:left;">Product / Style Description</th>
+              <th style="border:1px solid #cbd5e1; padding:8px; width:130px; text-align:center; background:#eef2ff; color:#3730a3;">Batch Number</th>
+              <th style="border:1px solid #cbd5e1; padding:8px; width:70px; text-align:center;">Size</th>
+              <th style="border:1px solid #cbd5e1; padding:8px; width:80px; text-align:center;">Color</th>
+              <th style="border:1px solid #cbd5e1; padding:8px; width:90px; text-align:center;">Box / Barcode</th>
+              <th style="border:1px solid #cbd5e1; padding:8px; width:90px; text-align:right;">Quantity</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itemsHtml}
+          </tbody>
+          <tfoot>
+            <tr style="background:#f8fafc; font-weight:800;">
+              <td colspan="5" style="border:1px solid #cbd5e1; padding:8px; text-align:right;">Total Dispatched Quantity:</td>
+              <td style="border:1px solid #cbd5e1; padding:8px; text-align:center;">${totalBoxes} Boxes</td>
+              <td style="border:1px solid #cbd5e1; padding:8px; text-align:right; color:#059669; font-size:0.95rem;">${Number(totalQty).toLocaleString()} pcs</td>
+            </tr>
+          </tfoot>
+        </table>
+
+        <!-- Signatures -->
+        <div style="display:flex; justify-content:space-between; margin-top:30px; font-size:0.8rem; color:#475569; padding-top:20px; border-top:1px dashed #cbd5e1;">
+          <div>
+            <div style="height:35px;"></div>
+            <div>Receiver's Signature & Stamp</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="height:35px;"></div>
+            <div>For <strong>${companyName}</strong> (Authorized Signatory)</div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    Swal.fire({
+      html: modalHtml,
+      width: '820px',
+      showCloseButton: true,
+      showCancelButton: true,
+      confirmButtonText: '🖨️ Print Delivery Challan',
+      cancelButtonText: 'Close',
+      confirmButtonColor: '#2563eb'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        UI.printElement('printable-dc-modal', 'Delivery Challan ' + dc.challan_no);
       }
     });
   }

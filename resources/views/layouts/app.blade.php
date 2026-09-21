@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>@yield('title', 'GarmentERP - Manufacturing & Supply Chain Management | FashionWorks Pvt. Ltd.')</title>
+  <title>@yield('title', 'GarmentERP - Manufacturing & Supply Chain Management | ' . ($companyName ?? 'GarmentERP'))</title>
   <meta name="description" content="Production-ready Garment Manufacturing ERP for customer orders, raw materials, job worker outward/inward, QR lot tracking, quality check, finished goods dispatch, and accounts settlement.">
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <meta name="base-url" content="{{ url('/') }}">
@@ -12,6 +12,8 @@
   <script>
     window.APP_URL = "{{ rtrim(url('/'), '/') }}";
     window.API_BASE_URL = window.APP_URL;
+    window.COMPANY_SETTINGS = {!! json_encode($companySettings ?? []) !!};
+    window.COMPANY_NAME = {!! json_encode($companyName ?? 'GarmentERP') !!};
 
     // Helper to resolve relative routes to the full application base URL
     window.apiUrl = function(path) {
@@ -278,7 +280,7 @@
       <div class="sidebar-footer">
         <div class="system-status-pill">
           <div class="status-indicator-dot"></div>
-          <span>FashionWorks Cloud Active</span>
+          <span>{{ $companyName ?? 'GarmentERP' }} Active</span>
         </div>
       </div>
     </aside>
@@ -314,7 +316,7 @@
         <div class="header-right">
           <div class="header-company-badge">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>
-            FashionWorks Pvt. Ltd.
+            {{ $companyName ?? 'GarmentERP' }}
           </div>
 
           <div class="header-actions">

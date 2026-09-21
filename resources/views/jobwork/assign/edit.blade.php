@@ -188,8 +188,28 @@
           </thead>
           <tbody id="items-tbody">
             @php
-              $existingItems = $assign->items && count($assign->items) > 0 ? $assign->items : [null];
+              $existingItems = $assign->items && count($assign->items) > 0 ? $assign->items : [];
             @endphp
+            @if(count($existingItems) === 0)
+              <tr id="empty-items-row">
+                <td colspan="8" style="text-align:center; padding:36px 20px; background:#f8fafc; border-radius:8px;">
+                  <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;">
+                    <div style="width:44px; height:44px; border-radius:50%; background:#e2e8f0; display:flex; align-items:center; justify-content:center; color:#64748b;">
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+                        <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+                      </svg>
+                    </div>
+                    <div style="font-size:0.95rem; font-weight:700; color:var(--slate-700);">No Items in This Job Order</div>
+                    <div style="font-size:0.8rem; color:var(--slate-500); max-width:420px;">Click '+ Add Item Row' to add items.</div>
+                    <button type="button" class="btn btn-sm btn-primary" onclick="addNewItemRow()" style="margin-top:8px; display:inline-flex; align-items:center; gap:6px;">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                      + Add Item Row
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            @endif
             @foreach($existingItems as $idx => $line)
               @php
                 $itemName = $line ? ($line->item_name ?: $assign->style_name) : $assign->style_name;
@@ -361,8 +381,40 @@
     }
   }
 
+  function renderEmptyState() {
+    const tbody = document.getElementById('items-tbody');
+    if (!tbody) return;
+    if (tbody.querySelectorAll('tr.item-row').length === 0 && !document.getElementById('empty-items-row')) {
+      tbody.innerHTML = `
+        <tr id="empty-items-row">
+          <td colspan="8" style="text-align:center; padding:36px 20px; background:#f8fafc; border-radius:8px;">
+            <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;">
+              <div style="width:44px; height:44px; border-radius:50%; background:#e2e8f0; display:flex; align-items:center; justify-content:center; color:#64748b;">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+                  <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+                </svg>
+              </div>
+              <div style="font-size:0.95rem; font-weight:700; color:var(--slate-700);">No Items in This Job Order</div>
+              <div style="font-size:0.8rem; color:var(--slate-500); max-width:420px;">Click '+ Add Item Row' to add items.</div>
+              <button type="button" class="btn btn-sm btn-primary" onclick="addNewItemRow()" style="margin-top:8px; display:inline-flex; align-items:center; gap:6px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                + Add Item Row
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }
+  }
+
   function addNewItemRow() {
     const tbody = document.getElementById('items-tbody');
+    const emptyRow = document.getElementById('empty-items-row');
+    if (emptyRow) {
+      emptyRow.remove();
+    }
+
     const idx = rowCount++;
 
     let itemsOptions = '<option value="">-- Select Item / Fabric --</option>';
@@ -428,13 +480,11 @@
 
   function removeRow(btn) {
     const row = btn.closest('tr');
-    const tbody = document.getElementById('items-tbody');
-    if (tbody.querySelectorAll('tr').length > 1) {
+    if (row) {
       row.remove();
-      calculateAll();
-    } else {
-      alert('At least one item is required in the Job Work Order.');
     }
+    renderEmptyState();
+    calculateAll();
   }
 
   function calculateRow(idx) {
@@ -446,6 +496,7 @@
     const wastage = parseFloat(row.querySelector('.input-wastage')?.value) || 0;
     const rate = parseFloat(row.querySelector('.input-rate')?.value) || 0;
 
+    // Avg Consumption: (Than - Wastage) / Pcs
     let avg = 0;
     if (pcs > 0) {
       avg = Math.max(0, (than - wastage) / pcs);
@@ -471,7 +522,8 @@
     let grandPcs = 0;
     let grandAmount = 0;
 
-    document.querySelectorAll('#items-tbody tr').forEach(row => {
+    const rows = document.querySelectorAll('#items-tbody tr.item-row');
+    rows.forEach(row => {
       const than = parseFloat(row.querySelector('.input-than')?.value) || 0;
       const pcs = parseFloat(row.querySelector('.input-pcs')?.value) || 0;
       const wastage = parseFloat(row.querySelector('.input-wastage')?.value) || 0;
@@ -486,12 +538,19 @@
     const netFabric = Math.max(0, grandThan - grandWastage);
     const overallAvg = grandPcs > 0 ? (netFabric / grandPcs) : 0;
 
-    document.getElementById('grand-than').innerText = grandThan.toFixed(2) + ' Mtr';
-    document.getElementById('grand-wastage').innerText = grandWastage.toFixed(2) + ' Mtr';
-    document.getElementById('grand-net-fabric').innerText = netFabric.toFixed(2) + ' Mtr';
-    document.getElementById('grand-pcs').innerText = Math.round(grandPcs) + ' Pcs';
-    document.getElementById('grand-avg-cons').innerText = overallAvg.toFixed(2) + ' Mtr / Pc';
-    document.getElementById('grand-amount').innerText = '₹' + grandAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const elThan = document.getElementById('grand-than');
+    const elWastage = document.getElementById('grand-wastage');
+    const elNet = document.getElementById('grand-net-fabric');
+    const elPcs = document.getElementById('grand-pcs');
+    const elAvg = document.getElementById('grand-avg-cons');
+    const elAmt = document.getElementById('grand-amount');
+
+    if (elThan) elThan.innerText = grandThan.toFixed(2) + ' Mtr';
+    if (elWastage) elWastage.innerText = grandWastage.toFixed(2) + ' Mtr';
+    if (elNet) elNet.innerText = netFabric.toFixed(2) + ' Mtr';
+    if (elPcs) elPcs.innerText = Math.round(grandPcs) + ' Pcs';
+    if (elAvg) elAvg.innerText = overallAvg.toFixed(2) + ' Mtr / Pc';
+    if (elAmt) elAmt.innerText = '₹' + grandAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
   document.addEventListener('DOMContentLoaded', () => {

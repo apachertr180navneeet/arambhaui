@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>@yield('title', 'Customer Voucher Portal') - FashionWorks GarmentERP</title>
+  <title>@yield('title', 'Customer Voucher Portal') - {{ $companyName ?? 'GarmentERP' }}</title>
   <meta name="description" content="Customer QR voucher verification and instant discount redemption portal.">
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <meta name="base-url" content="{{ url('/') }}">
@@ -12,6 +12,8 @@
   <script>
     window.APP_URL = "{{ rtrim(url('/'), '/') }}";
     window.API_BASE_URL = window.APP_URL;
+    window.COMPANY_SETTINGS = {!! json_encode($companySettings ?? []) !!};
+    window.COMPANY_NAME = {!! json_encode($companyName ?? 'GarmentERP') !!};
 
     // Helper to resolve relative routes to the full application base URL
     window.apiUrl = function(path) {
@@ -69,6 +71,9 @@
 
   <!-- jsQR library for browser camera/file QR decoding -->
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+
+  <!-- QRCode.js library for dynamic UPI QR generation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
   <!-- SweetAlert2 library -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -185,7 +190,7 @@
 
   <!-- Clean Public Footer -->
   <footer class="public-footer">
-    <div>&copy; {{ date('Y') }} FashionWorks Pvt. Ltd. &bull; Single-Use Secure QR Voucher System</div>
+    <div>&copy; {{ date('Y') }} {{ $companyName ?? 'GarmentERP' }} &bull; Single-Use Secure QR Voucher System</div>
   </footer>
 
   <!-- Core UI Components (Toasts, Modals) -->

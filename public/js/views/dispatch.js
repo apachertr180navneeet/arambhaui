@@ -573,7 +573,7 @@ const DispatchView = {
             <div style="font-size:0.85rem; color:var(--slate-500); margin-top:4px;">Date: ${UI.formatDate(d.dispatchDate)} | LR No: <strong>${d.lrNumber}</strong></div>
           </div>
           <div style="text-align:right;">
-            <h3 style="font-size:1.1rem; color:var(--slate-900);">FashionWorks Pvt. Ltd.</h3>
+            <h3 style="font-size:1.1rem; color:var(--slate-900);">${ERPState.data.company.name || window.COMPANY_NAME || 'GarmentERP'}</h3>
             <p style="font-size:0.775rem; color:var(--slate-600); max-width:280px; margin-top:2px;">
               ${ERPState.data.company.address}<br>
               GSTIN: ${ERPState.data.company.gstin}

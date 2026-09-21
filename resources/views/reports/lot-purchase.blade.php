@@ -11,6 +11,32 @@
 @section('content')
 <div style="display:flex; flex-direction:column; gap:20px;">
 
+  <!-- Company Report Header Banner -->
+  <div style="background:#ffffff; border-radius:var(--radius-xl); border:1px solid var(--slate-200); padding:16px 20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; box-shadow:var(--shadow-sm);">
+    <div style="display:flex; align-items:center; gap:12px;">
+      <div style="width:42px; height:42px; border-radius:10px; background:var(--primary-50); color:var(--primary-700); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:1.2rem;">
+        🏢
+      </div>
+      <div>
+        <div style="font-weight:800; font-size:1.15rem; color:var(--slate-900);">{{ $companyName ?? 'GarmentERP' }}</div>
+        <div style="font-size:0.775rem; color:var(--slate-500);">
+          @if(!empty($companySettings['gstin'])) GSTIN: <strong style="color:var(--slate-700);">{{ $companySettings['gstin'] }}</strong> &bull; @endif
+          Financial Year: <strong style="color:var(--slate-700);">{{ $companySettings['financial_year'] ?? date('Y') . '-' . (date('Y')+1) }}</strong>
+          @if(!empty($companySettings['company_address'])) &bull; {{ Str::limit($companySettings['company_address'], 60) }} @endif
+        </div>
+      </div>
+    </div>
+    <div style="display:flex; gap:8px;">
+      <button class="btn btn-secondary btn-sm" onclick="UI.printElement('lot-pur-table', 'Lot-Wise Raw Material Purchase Report - ' + {!! json_encode($companyName ?? 'GarmentERP') !!})" style="display:inline-flex; align-items:center; gap:6px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
+        Print Report
+      </button>
+      <button class="btn btn-secondary btn-sm" onclick="UI.exportTableToCSV('lot-pur-table', '{{ Str::slug($companyName ?? 'company') }}_Lot_Purchase_Report.csv')">
+        Export CSV
+      </button>
+    </div>
+  </div>
+
   <div class="card" style="background:#fff; border-radius:var(--radius-xl); border:1px solid var(--slate-200); box-shadow:var(--shadow-sm); padding:20px;">
     
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; margin-bottom:20px;">

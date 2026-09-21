@@ -69,6 +69,18 @@ class JobAssignController extends Controller
 
     public function store(Request $request)
     {
+        // Clean up empty rows before validation
+        $rawItems = $request->input('items', []);
+        $cleanedItems = [];
+        if (is_array($rawItems)) {
+            foreach ($rawItems as $it) {
+                if (!empty($it['item_id']) || !empty($it['item_name']) || (!empty($it['production_pcs']) && (float)$it['production_pcs'] > 0) || (!empty($it['than_meters']) && (float)$it['than_meters'] > 0)) {
+                    $cleanedItems[] = $it;
+                }
+            }
+        }
+        $request->merge(['items' => $cleanedItems]);
+
         $validated = $request->validate([
             'job_worker_name' => 'required|string|max:255',
             'job_worker_id' => 'nullable|integer',
@@ -78,19 +90,19 @@ class JobAssignController extends Controller
             'issue_date' => 'required|date',
             'due_date' => 'nullable|date',
             'instructions' => 'nullable|string',
-            'items' => 'required|array|min:1',
+            'items' => 'nullable|array',
             'items.*.item_id' => 'nullable',
             'items.*.item_name' => 'nullable|string|max:255',
             'items.*.than_meters' => 'nullable|numeric|min:0',
-            'items.*.production_pcs' => 'required|numeric|min:0',
+            'items.*.production_pcs' => 'nullable|numeric|min:0',
             'items.*.wastage_meters' => 'nullable|numeric|min:0',
-            'items.*.rate_per_piece' => 'required|numeric|min:0',
+            'items.*.rate_per_piece' => 'nullable|numeric|min:0',
             'items.*.size' => 'nullable|string|max:50',
             'items.*.color' => 'nullable|string|max:50',
             'items.*.remarks' => 'nullable|string|max:255'
         ]);
 
-        return DB::transaction(function () use ($validated, $request) {
+        return DB::transaction(function () use ($validated, $request, $cleanedItems) {
             $jobWorker = null;
             if (!empty($validated['job_worker_id'])) {
                 $jobWorker = JobWorker::find($validated['job_worker_id']);
@@ -100,14 +112,14 @@ class JobAssignController extends Controller
 
             $jobOrderNo = self::generateNextJobOrderNo();
 
-            // Calculate totals across all items
+            // Calculate totals across all valid items
             $totalPcs = 0;
             $totalThan = 0;
             $totalWastage = 0;
             $totalAmount = 0;
             $styleNames = [];
 
-            foreach ($validated['items'] as $it) {
+            foreach ($cleanedItems as $it) {
                 $pcs = (float)($it['production_pcs'] ?? 0);
                 $than = (float)($it['than_meters'] ?? 0);
                 $wastage = (float)($it['wastage_meters'] ?? 0);
@@ -127,7 +139,7 @@ class JobAssignController extends Controller
             $avgRate = $totalPcs > 0 ? ($totalAmount / $totalPcs) : 0;
             $styleNameSummary = !empty($validated['style_name'])
                 ? $validated['style_name']
-                : (count($styleNames) > 0 ? implode(', ', array_unique($styleNames)) : 'Garment Style');
+                : (count($styleNames) > 0 ? implode(', ', array_unique($styleNames)) : 'Garment Lot');
 
             $jobAssignment = JobAssignment::create([
                 'job_order_no' => $jobOrderNo,
@@ -148,7 +160,7 @@ class JobAssignController extends Controller
             ]);
 
             // Save line items
-            foreach ($validated['items'] as $it) {
+            foreach ($cleanedItems as $it) {
                 $pcs = (float)($it['production_pcs'] ?? 0);
                 $than = (float)($it['than_meters'] ?? 0);
                 $wastage = (float)($it['wastage_meters'] ?? 0);
@@ -197,6 +209,18 @@ class JobAssignController extends Controller
 
     public function update(Request $request, JobAssignment $assign)
     {
+        // Clean up empty rows before validation
+        $rawItems = $request->input('items', []);
+        $cleanedItems = [];
+        if (is_array($rawItems)) {
+            foreach ($rawItems as $it) {
+                if (!empty($it['item_id']) || !empty($it['item_name']) || (!empty($it['production_pcs']) && (float)$it['production_pcs'] > 0) || (!empty($it['than_meters']) && (float)$it['than_meters'] > 0)) {
+                    $cleanedItems[] = $it;
+                }
+            }
+        }
+        $request->merge(['items' => $cleanedItems]);
+
         $validated = $request->validate([
             'job_worker_name' => 'required|string|max:255',
             'job_worker_id' => 'nullable|integer',
@@ -207,19 +231,19 @@ class JobAssignController extends Controller
             'due_date' => 'nullable|date',
             'status' => 'nullable|string',
             'instructions' => 'nullable|string',
-            'items' => 'required|array|min:1',
+            'items' => 'nullable|array',
             'items.*.item_id' => 'nullable',
             'items.*.item_name' => 'nullable|string|max:255',
             'items.*.than_meters' => 'nullable|numeric|min:0',
-            'items.*.production_pcs' => 'required|numeric|min:0',
+            'items.*.production_pcs' => 'nullable|numeric|min:0',
             'items.*.wastage_meters' => 'nullable|numeric|min:0',
-            'items.*.rate_per_piece' => 'required|numeric|min:0',
+            'items.*.rate_per_piece' => 'nullable|numeric|min:0',
             'items.*.size' => 'nullable|string|max:50',
             'items.*.color' => 'nullable|string|max:50',
             'items.*.remarks' => 'nullable|string|max:255'
         ]);
 
-        return DB::transaction(function () use ($validated, $request, $assign) {
+        return DB::transaction(function () use ($validated, $request, $assign, $cleanedItems) {
             $jobWorker = null;
             if (!empty($validated['job_worker_id'])) {
                 $jobWorker = JobWorker::find($validated['job_worker_id']);
@@ -234,7 +258,7 @@ class JobAssignController extends Controller
             $totalAmount = 0;
             $styleNames = [];
 
-            foreach ($validated['items'] as $it) {
+            foreach ($cleanedItems as $it) {
                 $pcs = (float)($it['production_pcs'] ?? 0);
                 $than = (float)($it['than_meters'] ?? 0);
                 $wastage = (float)($it['wastage_meters'] ?? 0);
@@ -273,9 +297,9 @@ class JobAssignController extends Controller
                 'instructions' => $validated['instructions'] ?? null
             ]);
 
-            // Re-sync line items
+            // Sync line items
             $assign->items()->delete();
-            foreach ($validated['items'] as $it) {
+            foreach ($cleanedItems as $it) {
                 $pcs = (float)($it['production_pcs'] ?? 0);
                 $than = (float)($it['than_meters'] ?? 0);
                 $wastage = (float)($it['wastage_meters'] ?? 0);

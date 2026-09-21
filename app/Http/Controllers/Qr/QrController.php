@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Qr;
 use App\Http\Controllers\Controller;
 use App\Models\QrVoucher;
 use App\Models\Customer;
+use App\Models\CompanySetting;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
 use Barryvdh\DomPDF\Facade\Pdf;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
@@ -83,7 +85,89 @@ class QrController extends Controller
     {
         $code = $code ?: $request->query('code', '');
         $code = self::cleanVoucherCode($code);
-        return view('qr.scanner', compact('code'));
+
+        $companySettings = CompanySetting::all()->pluck('value', 'key')->toArray();
+        $defaultRecipientUpi = $companySettings['recipient_upi_id'] ?? '';
+        $defaultRecipientName = $companySettings['recipient_name'] ?? ($companySettings['company_name'] ?? 'Aarambh Garments');
+        $defaultRecipientQr = $companySettings['recipient_qr_image'] ?? '';
+
+        return view('qr.scanner', compact('code', 'defaultRecipientUpi', 'defaultRecipientName', 'defaultRecipientQr', 'companySettings'));
+    }
+
+    public function uploadRecipientQr(Request $request)
+    {
+        $request->validate([
+            'qr_image' => 'required|image|max:5120', // 5MB max
+            'recipient_upi_id' => 'nullable|string|max:100',
+            'recipient_name' => 'nullable|string|max:100',
+            'save_as_default' => 'nullable'
+        ]);
+
+        $file = $request->file('qr_image');
+        $fileName = 'recipient_qr_' . time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+        $destinationPath = public_path('uploads/upi_qr');
+        if (!file_exists($destinationPath)) {
+            @mkdir($destinationPath, 0777, true);
+        }
+        $file->move($destinationPath, $fileName);
+        $imageUrl = asset('uploads/upi_qr/' . $fileName);
+
+        $upiId = trim($request->input('recipient_upi_id', ''));
+        $recipientName = trim($request->input('recipient_name', ''));
+
+        if ($request->boolean('save_as_default') || $request->input('save_as_default') === '1' || $request->input('save_as_default') === 'true') {
+            if ($upiId) {
+                CompanySetting::updateOrCreate(['key' => 'recipient_upi_id'], ['value' => $upiId, 'group' => 'general']);
+            }
+            if ($recipientName) {
+                CompanySetting::updateOrCreate(['key' => 'recipient_name'], ['value' => $recipientName, 'group' => 'general']);
+            }
+            CompanySetting::updateOrCreate(['key' => 'recipient_qr_image'], ['value' => $imageUrl, 'group' => 'general']);
+            Artisan::call('view:clear');
+        }
+
+        return response()->json([
+            'success' => true,
+            'image_url' => $imageUrl,
+            'recipient_upi_id' => $upiId,
+            'recipient_name' => $recipientName,
+            'message' => 'Recipient UPI QR Scanner uploaded successfully.'
+        ]);
+    }
+
+    public function saveRecipientSettings(Request $request)
+    {
+        $validated = $request->validate([
+            'recipient_upi_id' => 'required|string|max:100',
+            'recipient_name' => 'nullable|string|max:100',
+            'recipient_qr_image' => 'nullable|string'
+        ]);
+
+        CompanySetting::updateOrCreate(
+            ['key' => 'recipient_upi_id'],
+            ['value' => trim($validated['recipient_upi_id']), 'group' => 'general']
+        );
+
+        if (!empty($validated['recipient_name'])) {
+            CompanySetting::updateOrCreate(
+                ['key' => 'recipient_name'],
+                ['value' => trim($validated['recipient_name']), 'group' => 'general']
+            );
+        }
+
+        if (!empty($validated['recipient_qr_image'])) {
+            CompanySetting::updateOrCreate(
+                ['key' => 'recipient_qr_image'],
+                ['value' => trim($validated['recipient_qr_image']), 'group' => 'general']
+            );
+        }
+
+        Artisan::call('view:clear');
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Default recipient UPI details saved successfully.'
+        ]);
     }
 
     public function history(Request $request)
@@ -474,7 +558,13 @@ class QrController extends Controller
         $validated = $request->validate([
             'voucher_code' => 'required|string',
             'customer_phone' => 'required|string',
-            'order_bill' => 'nullable|numeric|min:0'
+            'order_bill' => 'nullable|numeric|min:0',
+            'recipient_upi_id' => 'nullable|string|max:100',
+            'recipient_name' => 'nullable|string|max:100',
+            'payment_status' => 'nullable|string|max:50',
+            'payment_method' => 'nullable|string|max:50',
+            'upi_txn_ref' => 'nullable|string|max:100',
+            'recipient_qr_image' => 'nullable|string'
         ]);
 
         $raw = $validated['voucher_code'];
@@ -509,18 +599,47 @@ class QrController extends Controller
             ], 422);
         }
 
-        // Apply single-use redemption and permanently mark expired
+        $discountValue = (float)($voucher->amount ?: $voucher->discount_amount ?: $voucher->discount_percent ?: 0);
+        $bill = (float)($validated['order_bill'] ?? $discountValue);
+
+        // Handle Percentage discount calculation
+        if ($voucher->discount_type === 'Percentage') {
+            $pct = (float)($voucher->discount_percent ?: 10);
+            $calcDisc = ($bill * $pct) / 100;
+            if ($voucher->max_discount_cap && $calcDisc > (float)$voucher->max_discount_cap) {
+                $calcDisc = (float)$voucher->max_discount_cap;
+            }
+            $discountValue = $calcDisc;
+        }
+
+        if ($discountValue > $bill && $bill > 0) {
+            $discountValue = $bill;
+        }
+
+        $finalPayable = max(0, $bill - $discountValue);
+
+        // Apply single-use redemption and permanently mark redeemed with full payment tracking
         $claimId = 'CLM-' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 6));
         $voucher->is_redeemed = true;
         $voucher->status = 'Redeemed';
         $voucher->redeemed_at = now();
         $voucher->customer_phone = $phone;
         $voucher->redeemed_invoice_no = $claimId;
+
+        $voucher->recipient_upi_id = !empty($validated['recipient_upi_id']) ? trim($validated['recipient_upi_id']) : null;
+        $voucher->recipient_name = !empty($validated['recipient_name']) ? trim($validated['recipient_name']) : null;
+        $voucher->original_bill = $bill;
+        $voucher->discount_claimed = $discountValue;
+        $voucher->final_payable = $finalPayable;
+        $voucher->payment_status = !empty($validated['payment_status']) ? $validated['payment_status'] : 'Completed';
+        $voucher->payment_method = !empty($validated['payment_method']) ? $validated['payment_method'] : 'UPI';
+        $voucher->upi_txn_ref = !empty($validated['upi_txn_ref']) ? trim($validated['upi_txn_ref']) : null;
+        if (!empty($validated['recipient_qr_image'])) {
+            $voucher->recipient_qr_image = $validated['recipient_qr_image'];
+        }
+
         $voucher->save();
 
-        $discountValue = (float)($voucher->amount ?: $voucher->discount_amount ?: $voucher->discount_percent ?: 0);
-        $bill = (float)($validated['order_bill'] ?? $discountValue);
-        $finalPayable = max(0, $bill - $discountValue);
         $redeemedAtFormatted = $voucher->redeemed_at instanceof \DateTimeInterface ? $voucher->redeemed_at->format('d M Y, h:i A') : (string)$voucher->redeemed_at;
 
         return response()->json([
@@ -531,8 +650,13 @@ class QrController extends Controller
             'discount_value' => $discountValue,
             'original_bill' => $bill,
             'final_payable' => $finalPayable,
+            'recipient_upi_id' => $voucher->recipient_upi_id,
+            'recipient_name' => $voucher->recipient_name,
+            'payment_status' => $voucher->payment_status,
+            'payment_method' => $voucher->payment_method,
+            'upi_txn_ref' => $voucher->upi_txn_ref,
             'redeemed_at' => $redeemedAtFormatted,
-            'message' => "Discount of ₹{$discountValue} successfully claimed for {$phone}! Voucher is now redeemed."
+            'message' => "Payment of ₹" . number_format($finalPayable, 2) . " confirmed and recorded! Voucher {$voucher->voucher_code} (Discount: ₹" . number_format($discountValue, 2) . ") successfully redeemed."
         ]);
     }
 

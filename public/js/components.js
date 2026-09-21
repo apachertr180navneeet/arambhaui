@@ -444,7 +444,7 @@ const UI = {
       <body>
         <div style="margin-bottom:20px; border-bottom:2px solid #0f172a; padding-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
           <div>
-            <h2 style="margin:0; font-size:18px; color:#0f172a;">FashionWorks Pvt. Ltd. - GarmentERP</h2>
+            <h2 style="margin:0; font-size:18px; color:#0f172a;">${window.COMPANY_NAME || (window.COMPANY_SETTINGS && window.COMPANY_SETTINGS.company_name) || (window.ERPState && window.ERPState.data && window.ERPState.data.company && window.ERPState.data.company.name) || 'GarmentERP'}</h2>
             <p style="margin:4px 0 0 0; font-size:12px; color:#64748b;">Generated on ${new Date().toLocaleString()}</p>
           </div>
           <div style="font-size:14px; font-weight:700; color:#2563eb;">${title}</div>

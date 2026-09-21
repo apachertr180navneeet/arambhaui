@@ -16,4 +16,9 @@ class DispatchItem extends Model
     {
         return $this->belongsTo(DispatchChallan::class);
     }
+
+    public function item()
+    {
+        return $this->belongsTo(Item::class);
+    }
 }

@@ -722,7 +722,17 @@
                     {{ $v->redeemed_at ? (is_string($v->redeemed_at) ? $v->redeemed_at : $v->redeemed_at->format('d M Y, h:i A')) : 'Redeemed' }}
                   </div>
                   @if($v->customer_phone)
-                    <div style="font-size:0.75rem; color:var(--slate-600);">Phone: {{ $v->customer_phone }}</div>
+                    <div style="font-size:0.75rem; color:var(--slate-600);">Payer: {{ $v->customer_phone }}</div>
+                  @endif
+                  @if($v->recipient_upi_id)
+                    <div style="font-size:0.72rem; color:#4338ca; font-weight:700;" title="Receiver: {{ $v->recipient_name }}">
+                      Payee: {{ $v->recipient_upi_id }}
+                    </div>
+                  @endif
+                  @if($v->final_payable !== null)
+                    <div style="font-size:0.72rem; color:#059669; font-weight:700;">
+                      Paid: ₹{{ number_format($v->final_payable, 2) }} <span style="color:#64748b; font-weight:600;">({{ $v->payment_method ?: 'UPI' }})</span>
+                    </div>
                   @endif
                 @else
                   <span style="font-size:0.8rem; color:var(--slate-400);">— Not Claimed —</span>

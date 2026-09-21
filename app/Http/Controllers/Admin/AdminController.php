@@ -135,6 +135,10 @@ class AdminController extends Controller
             CompanySetting::updateOrCreate(['key' => $key], ['value' => $val]);
         }
 
+        try {
+            \Illuminate\Support\Facades\Artisan::call('view:clear');
+        } catch (\Throwable $e) {}
+
         if ($request->wantsJson() || $request->ajax()) {
             return response()->json(['success' => true, 'message' => 'Company settings saved.']);
         }

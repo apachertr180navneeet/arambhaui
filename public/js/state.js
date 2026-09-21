@@ -28,6 +28,15 @@ class ERPStateManager {
     if (typeof window !== 'undefined' && window.CURRENT_AUTH_USER) {
       this.data.currentUser = Object.assign({}, this.data.currentUser || {}, window.CURRENT_AUTH_USER);
     }
+
+    if (typeof window !== 'undefined' && window.COMPANY_SETTINGS) {
+      if (!this.data.company) this.data.company = {};
+      if (window.COMPANY_SETTINGS.company_name) this.data.company.name = window.COMPANY_SETTINGS.company_name;
+      if (window.COMPANY_SETTINGS.gstin) this.data.company.gstin = window.COMPANY_SETTINGS.gstin;
+      if (window.COMPANY_SETTINGS.company_phone) this.data.company.phone = window.COMPANY_SETTINGS.company_phone;
+      if (window.COMPANY_SETTINGS.company_email) this.data.company.email = window.COMPANY_SETTINGS.company_email;
+      if (window.COMPANY_SETTINGS.company_address) this.data.company.address = window.COMPANY_SETTINGS.company_address;
+    }
   }
 
   saveState() {
