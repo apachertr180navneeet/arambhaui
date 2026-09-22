@@ -347,7 +347,7 @@ class QrController extends Controller
 
         // Color Master behavior: If requested or user checked download_pdf
         if ($request->boolean('download_pdf', true)) {
-            $cols = (int)$request->input('cols', 10);
+            $cols = (int)$request->input('cols', 5);
             return $this->generatePdfFromVouchers($createdVouchers, $batchName, $cols);
         }
 
@@ -371,12 +371,6 @@ class QrController extends Controller
         $countInput = $request->input('count', 50);
         $batch = $request->input('batch_name') ?: $request->input('batch');
         $status = $request->input('status', 'Active');
-        $ids = $request->input('ids');
-        $cols = (int)$request->input('cols', 10);
-        if ($cols < 4 || $cols > 15) {
-            $cols = 10;
-        }
-
         $query = QrVoucher::query();
 
         if (!empty($ids)) {
@@ -401,6 +395,21 @@ class QrController extends Controller
             return redirect()->route('qr.history')->with('error', 'No QR vouchers found matching criteria to export.');
         }
 
+        // Smart column calculation: If not explicitly chosen or set to 'auto', choose optimal columns
+        $colsInput = $request->input('cols');
+        if (is_numeric($colsInput) && (int)$colsInput >= 3 && (int)$colsInput <= 10) {
+            $cols = (int)$colsInput;
+        } else {
+            $totalCount = $vouchers->count();
+            if ($totalCount <= 12) {
+                $cols = 4; // 4 columns x 3 rows = 12 vouchers (fills A4 page perfectly)
+            } elseif ($totalCount <= 20) {
+                $cols = 4; // 4 columns x 5 rows = 20 vouchers
+            } else {
+                $cols = 5; // 5 columns (standard 1.5" stickers, up to 35 per page)
+            }
+        }
+
         $batchName = $batch ?: ($vouchers->first()->batch_name ?? 'Aarambh Vouchers');
 
         if ($request->boolean('preview')) {
@@ -422,13 +431,14 @@ class QrController extends Controller
     /**
      * Helper to render and download DomPDF for vouchers
      */
-    private function generatePdfFromVouchers($vouchers, $batchName = 'Aarambh Vouchers', $cols = 10)
+    private function generatePdfFromVouchers($vouchers, $batchName = 'Aarambh Vouchers', $cols = 5)
     {
         $qrs = [];
         foreach ($vouchers as $v) {
             $code = $v->voucher_code;
             $claimUrl = url('/claim/' . $code);
             $svg = $this->getQrSvg($code, $claimUrl);
+            $cleanSvg = preg_replace('/<\?xml.*?\?>/i', '', $svg);
 
             $qrs[] = [
                 'id' => $v->id,
@@ -436,6 +446,7 @@ class QrController extends Controller
                 'batch_name' => $v->batch_name ?: $v->title ?: 'AARAMBH',
                 'amount' => $v->amount ?: $v->discount_amount ?: $v->discount_percent ?: 500,
                 'qr_base64' => base64_encode($svg),
+                'svg_clean' => $cleanSvg,
                 'claim_url' => $claimUrl,
             ];
         }
@@ -463,13 +474,14 @@ class QrController extends Controller
     /**
      * Helper to preview HTML in browser
      */
-    private function previewPdfFromVouchers($vouchers, $batchName = 'Aarambh Vouchers', $cols = 10)
+    private function previewPdfFromVouchers($vouchers, $batchName = 'Aarambh Vouchers', $cols = 5)
     {
         $qrs = [];
         foreach ($vouchers as $v) {
             $code = $v->voucher_code;
             $claimUrl = url('/claim/' . $code);
             $svg = $this->getQrSvg($code, $claimUrl);
+            $cleanSvg = preg_replace('/<\?xml.*?\?>/i', '', $svg);
 
             $qrs[] = [
                 'id' => $v->id,
@@ -477,6 +489,7 @@ class QrController extends Controller
                 'batch_name' => $v->batch_name ?: $v->title ?: 'AARAMBH',
                 'amount' => $v->amount ?: $v->discount_amount ?: $v->discount_percent ?: 500,
                 'qr_base64' => base64_encode($svg),
+                'svg_clean' => $cleanSvg,
                 'claim_url' => $claimUrl,
             ];
         }
@@ -486,7 +499,7 @@ class QrController extends Controller
     }
 
     /**
-     * Helper to safely load or generate QR Code SVG with fallbacks
+     * Helper to safely load or generate REAL, scannable QR Code SVG
      */
     private function getQrSvg($code, $claimUrl)
     {
@@ -496,42 +509,63 @@ class QrController extends Controller
         }
 
         $svgPath = $dirPath . "/qr_{$code}.svg";
-        if (file_exists($svgPath) && filesize($svgPath) > 0) {
+        if (file_exists($svgPath) && filesize($svgPath) > 500) {
             $content = @file_get_contents($svgPath);
-            if (!empty($content)) {
+            // Check if it's a real QR SVG (not an old placeholder badge)
+            if (!empty($content) && stripos($content, '<path') !== false) {
                 return $content;
             }
         }
 
         $svg = '';
+
+        // 1. Try SimpleSoftwareIO Facade
         try {
             if (class_exists(\SimpleSoftwareIO\QrCode\Facades\QrCode::class)) {
-                $svg = (string)\SimpleSoftwareIO\QrCode\Facades\QrCode::size(120)->margin(0)->generate($claimUrl);
+                $svg = (string)\SimpleSoftwareIO\QrCode\Facades\QrCode::size(150)->margin(0)->generate($claimUrl);
             }
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::warning("QrCode generation failed for {$code}: " . $e->getMessage());
+            \Illuminate\Support\Facades\Log::warning("SimpleSoftwareIO QrCode failed for {$code}: " . $e->getMessage());
         }
 
+        // 2. Try BaconQrCode directly
         if (empty($svg)) {
-            // Clean vector QR fallback badge
-            $safeCode = htmlspecialchars($code);
-            $svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">'
-                . '<rect width="120" height="120" fill="#ffffff" rx="8" stroke="#1e293b" stroke-width="2"/>'
-                . '<rect x="14" y="14" width="28" height="28" fill="none" stroke="#0f172a" stroke-width="4"/>'
-                . '<rect x="21" y="21" width="14" height="14" fill="#0f172a"/>'
-                . '<rect x="78" y="14" width="28" height="28" fill="none" stroke="#0f172a" stroke-width="4"/>'
-                . '<rect x="85" y="21" width="14" height="14" fill="#0f172a"/>'
-                . '<rect x="14" y="78" width="28" height="28" fill="none" stroke="#0f172a" stroke-width="4"/>'
-                . '<rect x="21" y="85" width="14" height="14" fill="#0f172a"/>'
-                . '<rect x="52" y="52" width="16" height="16" fill="#0f172a"/>'
-                . '<rect x="74" y="52" width="8" height="8" fill="#0f172a"/>'
-                . '<rect x="52" y="74" width="8" height="8" fill="#0f172a"/>'
-                . '<text x="60" y="106" text-anchor="middle" font-size="7" font-family="monospace" font-weight="bold" fill="#0f172a">' . $safeCode . '</text>'
-                . '</svg>';
+            try {
+                if (class_exists(\BaconQrCode\Renderer\Image\SvgImageBackEnd::class)) {
+                    $renderer = new \BaconQrCode\Renderer\ImageRenderer(
+                        new \BaconQrCode\Renderer\RendererStyle\RendererStyle(150, 0),
+                        new \BaconQrCode\Renderer\Image\SvgImageBackEnd()
+                    );
+                    $writer = new \BaconQrCode\Writer($renderer);
+                    $svg = $writer->writeString($claimUrl);
+                }
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning("BaconQrCode failed for {$code}: " . $e->getMessage());
+            }
         }
 
-        @file_put_contents($svgPath, $svg);
-        return $svg;
+        // 3. Try high-reliability QR SVG APIs (live cloud fallback)
+        if (empty($svg)) {
+            $encodedUrl = urlencode($claimUrl);
+            $apis = [
+                "https://api.qrserver.com/v1/create-qr-code/?size=150x150&margin=0&format=svg&data={$encodedUrl}",
+                "https://quickchart.io/qr?size=150&margin=0&format=svg&text={$encodedUrl}"
+            ];
+            $ctx = stream_context_create(['http' => ['timeout' => 3, 'ignore_errors' => true]]);
+            foreach ($apis as $apiUrl) {
+                $fetched = @file_get_contents($apiUrl, false, $ctx);
+                if ($fetched && stripos($fetched, '<svg') !== false) {
+                    $svg = $fetched;
+                    break;
+                }
+            }
+        }
+
+        if (!empty($svg)) {
+            @file_put_contents($svgPath, $svg);
+        }
+
+        return $svg ?: '';
     }
 
     public function validateVoucher(Request $request)

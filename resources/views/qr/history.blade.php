@@ -351,13 +351,18 @@
     color: #000;
   }
 
+  /* Hide print area on screen so it never causes page distortion */
+  #print-container-area {
+    display: none !important;
+  }
+
   /* ==========================================================================
-     COLOR MASTER A4 MULTI-QR SHEET PRINT STYLES (MAX QR CODES ON A4 PAPER)
+     AARAMBH A4 MULTI-QR SHEET PRINT STYLES (5 COLUMNS - 1.5" THERMAL/A4 STICKERS)
      ========================================================================== */
   @media print {
     @page {
       size: A4 portrait;
-      margin: 4mm 4mm 5mm 4mm;
+      margin: 6mm 5mm 6mm 5mm;
     }
 
     html, body {
@@ -367,7 +372,7 @@
       width: 100% !important;
       height: auto !important;
       overflow: visible !important;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif !important;
+      font-family: 'Helvetica', 'Arial', sans-serif !important;
     }
 
     body * {
@@ -387,12 +392,12 @@
       width: 100% !important;
       margin: 0 !important;
       padding: 0 !important;
-      background: #fff !important;
+      background: #ffffff !important;
     }
 
     .print-a4-header {
       text-align: center !important;
-      margin-bottom: 4px !important;
+      margin-bottom: 5px !important;
       padding-bottom: 3px !important;
       border-bottom: 0.8px solid #0f172a !important;
     }
@@ -403,77 +408,106 @@
       font-weight: 900 !important;
       text-transform: uppercase !important;
       letter-spacing: 0.5px !important;
-      color: #000 !important;
+      color: #000000 !important;
     }
 
     .print-a4-header p {
       margin: 1px 0 0 !important;
-      font-size: 7pt !important;
+      font-size: 7.5pt !important;
       color: #334155 !important;
     }
 
-    /* High-Density Grid: 10 columns across single A4 sheet */
-    .print-a4-grid {
-      display: grid !important;
-      grid-template-columns: repeat(10, 1fr) !important;
-      gap: 1.5mm !important;
+    /* Fixed Table Layout for 100% reliable print alignment without stretching */
+    .print-a4-table {
       width: 100% !important;
-      box-sizing: border-box !important;
+      border-collapse: collapse !important;
+      table-layout: fixed !important;
+      margin: 0 auto !important;
+      background: #ffffff !important;
     }
 
-    .print-qr-cell {
-      border: 0.8px dashed #64748b !important;
-      border-radius: 2px !important;
-      padding: 1.5mm 1mm !important;
-      text-align: center !important;
-      background: #fff !important;
-      display: flex !important;
-      flex-direction: column !important;
-      align-items: center !important;
-      justify-content: space-between !important;
-      box-sizing: border-box !important;
+    .print-a4-table tr {
       page-break-inside: avoid !important;
       break-inside: avoid !important;
-      height: 25mm !important;
-      max-height: 25mm !important;
+    }
+
+    .print-a4-table td {
+      width: 20% !important;
+      height: 38mm !important;
+      max-height: 38mm !important;
+      padding: 2.5mm 1.5mm !important;
+      text-align: center !important;
+      vertical-align: middle !important;
+      border: 0.7px dashed #94a3b8 !important;
+      box-sizing: border-box !important;
       overflow: hidden !important;
     }
 
-    .print-qr-cell .cell-brand {
-      font-size: 5.5pt !important;
-      font-weight: 800 !important;
-      color: #000 !important;
-      text-transform: uppercase !important;
-      line-height: 1 !important;
-      white-space: nowrap !important;
-      overflow: hidden !important;
-      width: 100% !important;
-    }
-
-    .print-qr-cell .cell-qr img,
-    .print-qr-cell .cell-qr canvas {
-      width: 44px !important;
-      height: 44px !important;
+    .print-qr-card {
       display: block !important;
+      width: 100% !important;
+      text-align: center !important;
       margin: 0 auto !important;
     }
 
-    .print-qr-cell .cell-amt {
-      font-size: 7pt !important;
-      font-weight: 900 !important;
-      color: #000 !important;
-      line-height: 1 !important;
-    }
-
-    .print-qr-cell .cell-code {
-      font-size: 4.8pt !important;
-      font-weight: 700 !important;
-      color: #000 !important;
-      font-family: monospace !important;
-      line-height: 1 !important;
+    .print-qr-card .cell-brand {
+      font-size: 7.5pt !important;
+      font-weight: 800 !important;
+      color: #0f172a !important;
+      text-transform: uppercase !important;
+      line-height: 1.1 !important;
+      margin-bottom: 1.5mm !important;
       white-space: nowrap !important;
       overflow: hidden !important;
-      width: 100% !important;
+      text-overflow: ellipsis !important;
+      max-width: 95% !important;
+      margin-left: auto !important;
+      margin-right: auto !important;
+    }
+
+    .print-qr-card .cell-qr-wrap {
+      width: 23mm !important;
+      height: 23mm !important;
+      margin: 0 auto !important;
+      display: block !important;
+      overflow: hidden !important;
+    }
+
+    .print-qr-card .cell-qr,
+    .print-qr-card .cell-qr img,
+    .print-qr-card .cell-qr canvas {
+      width: 23mm !important;
+      height: 23mm !important;
+      max-width: 23mm !important;
+      max-height: 23mm !important;
+      display: block !important;
+      margin: 0 auto !important;
+      aspect-ratio: 1 / 1 !important;
+      object-fit: contain !important;
+    }
+
+    .print-qr-card .cell-amt {
+      font-size: 9.5pt !important;
+      font-weight: 900 !important;
+      color: #047857 !important;
+      line-height: 1 !important;
+      margin-top: 1.5mm !important;
+      margin-bottom: 1mm !important;
+    }
+
+    .print-qr-card .cell-code {
+      font-size: 6.5pt !important;
+      font-weight: 700 !important;
+      color: #1e293b !important;
+      font-family: monospace !important;
+      line-height: 1 !important;
+      letter-spacing: 0.2px !important;
+      white-space: nowrap !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+      max-width: 95% !important;
+      margin-left: auto !important;
+      margin-right: auto !important;
     }
   }
 </style>
@@ -552,12 +586,18 @@
       </div>
 
       <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-        <!-- Color Master Export PDF Form -->
+        <!-- Color Master Export PDF Form with Column Selector -->
         <form action="{{ route('qr.exportPdf') }}" method="GET" style="display:inline-flex; align-items:center; gap:6px;">
-          <input type="number" name="count" value="50" min="1" max="1000" class="form-control form-control-sm" placeholder="No. of Records" style="width:105px; height:34px; font-weight:700;" title="Number of QR records to export on A4 sheet">
-          <button type="submit" class="btn btn-secondary btn-sm" style="height:34px; font-weight:700; display:inline-flex; align-items:center; gap:5px; background:#f1f5f9; color:#0f172a; border-color:#cbd5e1;" title="Download A4 Multi-QR PDF (Color Master Layout)">
+          <input type="number" name="count" value="50" min="1" max="1000" class="form-control form-control-sm" placeholder="No. of Records" style="width:90px; height:34px; font-weight:700;" title="Number of QR records to export on A4 sheet">
+          <select name="cols" class="form-select form-select-sm" style="height:34px; font-weight:700; width:125px; font-size:11px;" title="Sticker Columns per Row on A4">
+            <option value="auto" selected>Auto-Fit (Smart)</option>
+            <option value="4">4 Cols (2" Large)</option>
+            <option value="5">5 Cols (1.5" Standard)</option>
+            <option value="6">6 Cols (1.25" Compact)</option>
+          </select>
+          <button type="submit" class="btn btn-secondary btn-sm" style="height:34px; font-weight:700; display:inline-flex; align-items:center; gap:5px; background:#f1f5f9; color:#0f172a; border-color:#cbd5e1;" title="Download A4 Multi-QR PDF">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Export A4 PDF
+            Export PDF
           </button>
         </form>
 
@@ -1049,15 +1089,23 @@
       return;
     }
 
-    const vouchersList = visibleRows.map(r => ({
-      id: r.getAttribute('data-id'),
-      voucher_code: r.getAttribute('data-code'),
-      batch_name: r.getAttribute('data-batch'),
-      amount: r.getAttribute('data-amt'),
-      claim_url: r.getAttribute('data-url')
-    }));
-
-    renderAndPrintStickers(vouchersList);
+    const ids = visibleRows.map(r => r.getAttribute('data-id')).filter(Boolean).join(',');
+    const count = visibleRows.length;
+    const cols = count <= 12 ? 4 : 5;
+    // Open high-fidelity vector print preview with optimal columns
+    const url = `{{ route('qr.exportPdf') }}?ids=${ids}&cols=${cols}&preview=1`;
+    const win = window.open(url, '_blank');
+    if (!win) {
+      // If popup blocker intervened, render in-page table
+      const vouchersList = visibleRows.map(r => ({
+        id: r.getAttribute('data-id'),
+        voucher_code: r.getAttribute('data-code'),
+        batch_name: r.getAttribute('data-batch'),
+        amount: r.getAttribute('data-amt'),
+        claim_url: r.getAttribute('data-url')
+      }));
+      renderAndPrintStickers(vouchersList, cols);
+    }
   }
 
   // Legacy alias for batchPrintAllStickers
@@ -1106,15 +1154,23 @@
       return;
     }
 
-    const vouchersList = checkedBoxes.map(b => ({
-      id: b.value,
-      voucher_code: b.getAttribute('data-code'),
-      batch_name: b.getAttribute('data-batch'),
-      amount: b.getAttribute('data-amt'),
-      claim_url: b.getAttribute('data-url')
-    }));
-
-    renderAndPrintStickers(vouchersList);
+    const ids = checkedBoxes.map(b => b.value).join(',');
+    const count = checkedBoxes.length;
+    const cols = count <= 12 ? 4 : 5;
+    // Open high-fidelity vector print preview in a clean new tab
+    const url = `{{ route('qr.exportPdf') }}?ids=${ids}&cols=${cols}&preview=1`;
+    const win = window.open(url, '_blank');
+    if (!win) {
+      // If popup blocker intervened, render in-page table
+      const vouchersList = checkedBoxes.map(b => ({
+        id: b.value,
+        voucher_code: b.getAttribute('data-code'),
+        batch_name: b.getAttribute('data-batch'),
+        amount: b.getAttribute('data-amt'),
+        claim_url: b.getAttribute('data-url')
+      }));
+      renderAndPrintStickers(vouchersList, cols);
+    }
   }
 
   function exportSelectedPdf() {
@@ -1125,57 +1181,95 @@
     }
 
     const ids = checkedBoxes.map(b => b.value).join(',');
-    window.location.href = `{{ route('qr.exportPdf') }}?ids=${ids}`;
+    const count = checkedBoxes.length;
+    const cols = count <= 12 ? 4 : 5;
+    window.location.href = `{{ route('qr.exportPdf') }}?ids=${ids}&cols=${cols}`;
   }
 
-  // Render High Density Multi-QR Grid on A4 Sheet
-  function renderAndPrintStickers(vouchers) {
+  // Render High Density Multi-QR Grid on A4 Sheet (Auto-Columns - 4 for <=12, 5 for >12)
+  function renderAndPrintStickers(vouchers, targetCols) {
     const printArea = document.getElementById('print-container-area');
     printArea.innerHTML = '';
     printArea.style.display = 'block';
+
+    const totalCols = targetCols || (vouchers.length <= 12 ? 4 : 5);
+    const cellH = totalCols <= 4 ? '44mm' : '38mm';
+    const qrSize = totalCols <= 4 ? 26 : 23;
 
     const header = document.createElement('div');
     header.className = 'print-a4-header';
     header.innerHTML = `
       <h2>Aarambh Garments - QR Voucher Sheet</h2>
-      <p>Total QRs: <strong>${vouchers.length}</strong> | Printed: ${new Date().toLocaleString('en-IN')}</p>
+      <p>Total QRs: <strong>${vouchers.length}</strong> | Layout: <strong>${totalCols} Columns</strong> | Printed: ${new Date().toLocaleString('en-IN')}</p>
     `;
     printArea.appendChild(header);
 
-    const grid = document.createElement('div');
-    grid.className = 'print-a4-grid';
-    printArea.appendChild(grid);
+    const totalRows = Math.ceil(vouchers.length / totalCols);
 
-    vouchers.forEach((v, index) => {
-      const batch = v.batch_name || v.title || 'AARAMBH';
-      const amt = v.amount || v.discount_amount || v.discount_percent || 0;
-      const code = v.voucher_code;
-      const claimUrl = v.claim_url || `${baseUrl}/${code}`;
+    const table = document.createElement('table');
+    table.className = 'print-a4-table';
+    printArea.appendChild(table);
 
-      const cell = document.createElement('div');
-      cell.className = 'print-qr-cell';
-      cell.innerHTML = `
-        <div class="cell-brand">${batch}</div>
-        <div class="cell-qr" id="print-qr-slot-${index}"></div>
-        <div class="cell-amt">₹${amt}</div>
-        <div class="cell-code">${code}</div>
-      `;
-      grid.appendChild(cell);
+    let vIdx = 0;
+    for (let r = 0; r < totalRows; r++) {
+      const tr = document.createElement('tr');
+      for (let c = 0; c < totalCols; c++) {
+        const td = document.createElement('td');
+        td.style.width = (100 / totalCols) + '%';
+        td.style.height = cellH;
+        td.style.maxHeight = cellH;
 
-      const slot = document.getElementById(`print-qr-slot-${index}`);
-      new QRCode(slot, {
-        text: claimUrl,
-        width: 44,
-        height: 44,
-        colorDark: "#000000",
-        colorLight: "#ffffff",
-        correctLevel: QRCode.CorrectLevel.M
-      });
-    });
+        if (vIdx < vouchers.length) {
+          const v = vouchers[vIdx];
+          const batch = v.batch_name || v.title || 'AARAMBH';
+          const amt = v.amount || v.discount_amount || v.discount_percent || 500;
+          const code = v.voucher_code || '';
+          const claimUrl = v.claim_url || `${baseUrl}/${code}`;
+          const slotId = `print-qr-slot-${vIdx}`;
+
+          td.innerHTML = `
+            <div class="print-qr-card">
+              <div class="cell-brand">${batch}</div>
+              <div class="cell-qr-wrap" style="width:${qrSize}mm; height:${qrSize}mm;"><div class="cell-qr" id="${slotId}"></div></div>
+              <div class="cell-amt">₹${Number(amt).toLocaleString('en-IN')}</div>
+              <div class="cell-code">${code}</div>
+            </div>
+          `;
+          tr.appendChild(td);
+
+          setTimeout(((sId, url, qS) => () => {
+            const slot = document.getElementById(sId);
+            if (slot) {
+              slot.innerHTML = '';
+              new QRCode(slot, {
+                text: url,
+                width: 100,
+                height: 100,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.M
+              });
+            }
+          })(slotId, claimUrl, qrSize), 0);
+
+          vIdx++;
+        } else {
+          td.innerHTML = '&nbsp;';
+          td.style.border = 'none';
+          tr.appendChild(td);
+        }
+      }
+      table.appendChild(tr);
+    }
 
     setTimeout(() => {
       window.print();
-    }, 400);
+    }, 600);
+
+    window.onafterprint = () => {
+      printArea.style.display = 'none';
+      printArea.innerHTML = '';
+    };
   }
 
   // Open Edit Modal
