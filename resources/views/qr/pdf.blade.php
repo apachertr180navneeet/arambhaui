@@ -115,9 +115,80 @@
             border-top: 0.5px solid #e2e8f0;
             padding-top: 2px;
         }
+
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            body {
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+        }
+
+        .print-bar {
+            background: #1e293b;
+            color: #ffffff;
+            padding: 8px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-family: system-ui, -apple-system, sans-serif;
+            font-size: 12px;
+            position: sticky;
+            top: 0;
+            z-index: 9999;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+
+        .print-btn {
+            background: #2563eb;
+            color: #ffffff;
+            border: none;
+            padding: 6px 14px;
+            font-size: 12px;
+            font-weight: 700;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .print-btn:hover {
+            background: #1d4ed8;
+        }
+
+        .back-btn {
+            background: transparent;
+            color: #cbd5e1;
+            border: 1px solid #475569;
+            padding: 5px 12px;
+            font-size: 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            text-decoration: none;
+            margin-right: 8px;
+        }
     </style>
 </head>
 <body>
+
+    @if(!empty($isPrintFallback) || request()->boolean('preview'))
+    <div class="no-print print-bar">
+        <div>
+            <strong>A4 Voucher Sheet</strong> &bull; {{ count($qrs) }} Vouchers
+        </div>
+        <div>
+            <a href="javascript:history.back()" class="back-btn">&larr; Back</a>
+            <button onclick="window.print()" class="print-btn">🖨️ Print / Save as PDF</button>
+        </div>
+    </div>
+    @if(!empty($isPrintFallback))
+    <script>
+        window.addEventListener('load', function() {
+            setTimeout(function() { window.print(); }, 400);
+        });
+    </script>
+    @endif
+    @endif
 
     <div class="header">
         <div class="brand-title">Aarambh Garments &bull; QR Voucher Sheet</div>

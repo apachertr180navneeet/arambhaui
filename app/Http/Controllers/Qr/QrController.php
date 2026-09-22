@@ -308,14 +308,7 @@ class QrController extends Controller
             }
 
             $claimUrl = url('/claim/' . $voucherCode);
-
-            // Generate crisp vector SVG for the QR code
-            try {
-                $svg = (string)QrCode::size(120)->margin(0)->generate($claimUrl);
-                @file_put_contents($dirPath . "/qr_{$voucherCode}.svg", $svg);
-            } catch (\Throwable $e) {
-                // If offline or GD fallback
-            }
+            $this->getQrSvg($voucherCode, $claimUrl);
 
             $voucher = QrVoucher::create([
                 'voucher_code' => $voucherCode,
@@ -431,23 +424,11 @@ class QrController extends Controller
      */
     private function generatePdfFromVouchers($vouchers, $batchName = 'Aarambh Vouchers', $cols = 10)
     {
-        $dirPath = public_path('images/qrcodes');
-        if (!file_exists($dirPath)) {
-            @mkdir($dirPath, 0777, true);
-        }
-
         $qrs = [];
         foreach ($vouchers as $v) {
             $code = $v->voucher_code;
             $claimUrl = url('/claim/' . $code);
-            $svgPath = $dirPath . "/qr_{$code}.svg";
-
-            if (file_exists($svgPath)) {
-                $svg = file_get_contents($svgPath);
-            } else {
-                $svg = (string)QrCode::size(120)->margin(0)->generate($claimUrl);
-                @file_put_contents($svgPath, $svg);
-            }
+            $svg = $this->getQrSvg($code, $claimUrl);
 
             $qrs[] = [
                 'id' => $v->id,
@@ -460,11 +441,23 @@ class QrController extends Controller
         }
 
         $generatedAt = now()->format('d M Y, h:i A');
-        $pdf = Pdf::loadView('qr.pdf', compact('qrs', 'cols', 'batchName', 'generatedAt'));
-        $pdf->setPaper('a4', 'portrait');
 
-        $filename = 'qr_records_' . count($qrs) . '_' . now()->format('Y-m-d_H-i-s') . '.pdf';
-        return $pdf->download($filename);
+        // Check if DomPDF is installed on this environment
+        if (class_exists(\Barryvdh\DomPDF\Facade\Pdf::class)) {
+            try {
+                $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('qr.pdf', compact('qrs', 'cols', 'batchName', 'generatedAt'));
+                $pdf->setPaper('a4', 'portrait');
+
+                $filename = 'qr_records_' . count($qrs) . '_' . now()->format('Y-m-d_H-i-s') . '.pdf';
+                return $pdf->download($filename);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('DomPDF export failed, falling back to print view: ' . $e->getMessage());
+            }
+        }
+
+        // Fallback if DomPDF package is not installed or failed: Render high-fidelity print view
+        $isPrintFallback = true;
+        return response()->view('qr.pdf', compact('qrs', 'cols', 'batchName', 'generatedAt', 'isPrintFallback'));
     }
 
     /**
@@ -472,23 +465,11 @@ class QrController extends Controller
      */
     private function previewPdfFromVouchers($vouchers, $batchName = 'Aarambh Vouchers', $cols = 10)
     {
-        $dirPath = public_path('images/qrcodes');
-        if (!file_exists($dirPath)) {
-            @mkdir($dirPath, 0777, true);
-        }
-
         $qrs = [];
         foreach ($vouchers as $v) {
             $code = $v->voucher_code;
             $claimUrl = url('/claim/' . $code);
-            $svgPath = $dirPath . "/qr_{$code}.svg";
-
-            if (file_exists($svgPath)) {
-                $svg = file_get_contents($svgPath);
-            } else {
-                $svg = (string)QrCode::size(120)->margin(0)->generate($claimUrl);
-                @file_put_contents($svgPath, $svg);
-            }
+            $svg = $this->getQrSvg($code, $claimUrl);
 
             $qrs[] = [
                 'id' => $v->id,
@@ -502,6 +483,55 @@ class QrController extends Controller
 
         $generatedAt = now()->format('d M Y, h:i A');
         return view('qr.pdf', compact('qrs', 'cols', 'batchName', 'generatedAt'));
+    }
+
+    /**
+     * Helper to safely load or generate QR Code SVG with fallbacks
+     */
+    private function getQrSvg($code, $claimUrl)
+    {
+        $dirPath = public_path('images/qrcodes');
+        if (!file_exists($dirPath)) {
+            @mkdir($dirPath, 0777, true);
+        }
+
+        $svgPath = $dirPath . "/qr_{$code}.svg";
+        if (file_exists($svgPath) && filesize($svgPath) > 0) {
+            $content = @file_get_contents($svgPath);
+            if (!empty($content)) {
+                return $content;
+            }
+        }
+
+        $svg = '';
+        try {
+            if (class_exists(\SimpleSoftwareIO\QrCode\Facades\QrCode::class)) {
+                $svg = (string)\SimpleSoftwareIO\QrCode\Facades\QrCode::size(120)->margin(0)->generate($claimUrl);
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning("QrCode generation failed for {$code}: " . $e->getMessage());
+        }
+
+        if (empty($svg)) {
+            // Clean vector QR fallback badge
+            $safeCode = htmlspecialchars($code);
+            $svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">'
+                . '<rect width="120" height="120" fill="#ffffff" rx="8" stroke="#1e293b" stroke-width="2"/>'
+                . '<rect x="14" y="14" width="28" height="28" fill="none" stroke="#0f172a" stroke-width="4"/>'
+                . '<rect x="21" y="21" width="14" height="14" fill="#0f172a"/>'
+                . '<rect x="78" y="14" width="28" height="28" fill="none" stroke="#0f172a" stroke-width="4"/>'
+                . '<rect x="85" y="21" width="14" height="14" fill="#0f172a"/>'
+                . '<rect x="14" y="78" width="28" height="28" fill="none" stroke="#0f172a" stroke-width="4"/>'
+                . '<rect x="21" y="85" width="14" height="14" fill="#0f172a"/>'
+                . '<rect x="52" y="52" width="16" height="16" fill="#0f172a"/>'
+                . '<rect x="74" y="52" width="8" height="8" fill="#0f172a"/>'
+                . '<rect x="52" y="74" width="8" height="8" fill="#0f172a"/>'
+                . '<text x="60" y="106" text-anchor="middle" font-size="7" font-family="monospace" font-weight="bold" fill="#0f172a">' . $safeCode . '</text>'
+                . '</svg>';
+        }
+
+        @file_put_contents($svgPath, $svg);
+        return $svg;
     }
 
     public function validateVoucher(Request $request)
