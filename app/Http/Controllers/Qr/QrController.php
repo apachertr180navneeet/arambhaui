@@ -91,7 +91,12 @@ class QrController extends Controller
         $defaultRecipientName = $companySettings['recipient_name'] ?? ($companySettings['company_name'] ?? 'Aarambh Garments');
         $defaultRecipientQr = $companySettings['recipient_qr_image'] ?? '';
 
-        return view('qr.scanner', compact('code', 'defaultRecipientUpi', 'defaultRecipientName', 'defaultRecipientQr', 'companySettings'));
+        $voucher = null;
+        if (!empty($code)) {
+            $voucher = QrVoucher::where('voucher_code', $code)->orWhereRaw('UPPER(voucher_code) = ?', [$code])->first();
+        }
+
+        return view('qr.scanner', compact('code', 'voucher', 'defaultRecipientUpi', 'defaultRecipientName', 'defaultRecipientQr', 'companySettings'));
     }
 
     public function uploadRecipientQr(Request $request)

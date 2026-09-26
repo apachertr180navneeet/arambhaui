@@ -88,107 +88,221 @@ const QRView = {
   renderCustomerFrontEndPortal() {
     const coupons = ERPState.data.discountCoupons || [];
     const cust = this._customerState;
+    const selectedCoupon = coupons.find(c => c.code === cust.selectedCode) || coupons[0] || { amount: 500, code: 'ARM-500-0799A' };
 
     return `
-      <div class="customer-portal-container">
+      <div class="customer-portal-container" style="max-width:760px; margin:0 auto;">
         <!-- Branded Header Banner -->
-        <div class="customer-portal-hero">
+        <div class="customer-portal-hero" style="border-radius:18px 18px 0 0;">
           <div class="customer-portal-badge">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-            OFFICIAL CUSTOMER DISCOUNT & REWARD PORTAL
+            OFFICIAL VOUCHER CLAIM & PAYOUT PORTAL
           </div>
-          <h2 class="customer-portal-title">Redeem Your Exclusive Discount Voucher</h2>
+          <h2 class="customer-portal-title">Claim Voucher & Instant Transfer</h2>
           <p class="customer-portal-subtitle">
-            Enter your mobile number and upload or scan your unique QR voucher code to claim instant savings. Each QR voucher is single-use and automatically expires once redeemed.
+            Verify single-use voucher code to claim and receive instant payout directly to your UPI ID or payment QR.
           </p>
         </div>
 
-        <div class="customer-portal-card">
-          <!-- Step 1: Customer Phone Number Input -->
-          <div class="portal-step-section">
-            <div class="portal-step-header">
-              <div class="portal-step-number">1</div>
-              <div>
-                <h4 class="portal-step-title">Enter Customer Mobile Number <span class="required-star">*</span></h4>
-                <p class="portal-step-desc">Your 10-digit mobile number will be securely linked to this single-use voucher</p>
+        <div class="customer-portal-card" style="border-radius:0 0 18px 18px; padding:26px;">
+          
+          <!-- SECTION 1: CUSTOMER PHONE & BENEFICIARY PAYMENT DETAILS -->
+          <div style="display:flex; flex-direction:column; gap:16px;">
+            
+            <!-- 1. Customer Phone No. -->
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label" style="font-weight:700; font-size:0.92rem; color:var(--slate-800); display:flex; justify-content:space-between;">
+                <span>Customer Phone No. <span class="required-star">*</span></span>
+                <span style="font-size:0.75rem; color:var(--slate-500);">Linked Mobile</span>
+              </label>
+              <div class="portal-phone-input-row" style="margin-top:6px;">
+                <div class="portal-country-code">+91</div>
+                <input type="tel" class="form-control portal-phone-input" id="cust-phone-input" 
+                  value="${cust.phone.replace('+91 ', '')}" 
+                  placeholder="98201 12345" 
+                  maxlength="10"
+                  oninput="QRView.onPhoneChange(this.value)">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="QRView.setSamplePhone('+91 98201 12345')">Demo 1</button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="QRView.setSamplePhone('+91 98112 55678')">Demo 2</button>
               </div>
             </div>
 
-            <div class="portal-phone-input-row">
-              <div class="portal-country-code">+91</div>
-              <input type="tel" class="form-control portal-phone-input" id="cust-phone-input" 
-                value="${cust.phone.replace('+91 ', '')}" 
-                placeholder="98201 12345" 
-                maxlength="14"
-                oninput="QRView.onPhoneChange(this.value)">
+            <!-- 2. Your UPI ID -->
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label" style="font-weight:700; font-size:0.92rem; color:var(--slate-800); display:flex; justify-content:space-between;">
+                <span>Your UPI ID</span>
+                <span style="font-size:0.75rem; color:var(--slate-500);">For Payout</span>
+              </label>
+              <input type="text" class="form-control font-mono font-bold" id="cust-upi-input" 
+                value="${cust.upi || ''}" 
+                placeholder="e.g. name@okhdfcbank or 9876543210@paytm" 
+                style="margin-top:6px; font-size:0.95rem;"
+                oninput="QRView.onUpiChange(this.value)">
+            </div>
+
+            <!-- Stylized OR Divider -->
+            <div style="display:flex; align-items:center; gap:14px; margin:2px 0;">
+              <div style="flex:1; height:1px; background:var(--slate-200);"></div>
+              <span style="font-size:0.8rem; font-weight:800; color:var(--slate-500); background:var(--slate-50); padding:2px 12px; border-radius:20px; border:1px solid var(--slate-200); font-style:italic;">or.</span>
+              <div style="flex:1; height:1px; background:var(--slate-200);"></div>
+            </div>
+
+            <!-- 3. Enter your QR For Payment -->
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label" style="font-weight:700; font-size:0.92rem; color:var(--slate-800); display:flex; justify-content:space-between;">
+                <span>Enter your QR For Payment</span>
+                <span style="font-size:0.75rem; color:var(--slate-500);">Upload QR</span>
+              </label>
               
-              <button type="button" class="btn btn-secondary btn-sm" onclick="QRView.setSamplePhone('+91 98201 12345')">Demo Mobile 1</button>
-              <button type="button" class="btn btn-secondary btn-sm" onclick="QRView.setSamplePhone('+91 98112 55678')">Demo Mobile 2</button>
-            </div>
-          </div>
-
-          <!-- Step 2: Choose QR Input Mode -->
-          <div class="portal-step-section" style="margin-top:24px;">
-            <div class="portal-step-header">
-              <div class="portal-step-number">2</div>
-              <div>
-                <h4 class="portal-step-title">Provide Your QR Voucher Code <span class="required-star">*</span></h4>
-                <p class="portal-step-desc">Choose whether to upload a QR image, scan with camera, or enter the unique code</p>
+              <input type="file" id="cust-payment-qr-file" accept="image/*" style="display:none;" onchange="QRView.handlePaymentQrUpload(event)">
+              
+              <div onclick="document.getElementById('cust-payment-qr-file').click()" style="border:2px dashed var(--slate-300); background:var(--slate-50); border-radius:12px; padding:14px 18px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; margin-top:6px;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                  <div id="cust-payment-qr-preview" style="width:38px; height:38px; border-radius:8px; background:var(--slate-200); display:flex; align-items:center; justify-content:center; color:var(--slate-600); overflow:hidden;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  </div>
+                  <div>
+                    <div id="cust-qr-name" style="font-weight:700; font-size:0.88rem; color:var(--slate-800);">Upload Payment QR Screenshot</div>
+                    <div style="font-size:0.75rem; color:var(--slate-500);">GPay, PhonePe, Paytm, BHIM</div>
+                  </div>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm" style="pointer-events:none;">Upload</button>
               </div>
             </div>
 
-            <!-- Mode Selector Tabs -->
-            <div class="portal-mode-pills">
-              <button type="button" class="portal-mode-pill ${this.customerInputMode === 'upload' ? 'active' : ''}" onclick="QRView.setCustomerInputMode('upload')">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                Upload QR Image File
-              </button>
-              <button type="button" class="portal-mode-pill ${this.customerInputMode === 'camera' ? 'active' : ''}" onclick="QRView.setCustomerInputMode('camera')">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-                Live Camera Scanner
-              </button>
-              <button type="button" class="portal-mode-pill ${this.customerInputMode === 'code' ? 'active' : ''}" onclick="QRView.setCustomerInputMode('code')">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
-                Enter Unique Voucher Code
-              </button>
-            </div>
-
-            <!-- Mode Content Viewport -->
-            <div class="portal-mode-content">
-              ${this.renderCustomerModeContent()}
-            </div>
           </div>
 
-          <!-- Quick Test Vouchers Selection Bar -->
-          <div style="margin-top:20px; padding:14px; background:#f1f5f9; border-radius:var(--radius-lg); border:1px dashed var(--slate-300);">
-            <div style="font-size:0.75rem; font-weight:800; color:var(--slate-600); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:8px;">
-              💡 QUICK TEST CODES (CLICK TO LOAD ACTIVE OR EXPIRED CODES):
+          <!-- DIVIDER 1 -->
+          <div style="height:2px; background:linear-gradient(90deg, transparent, var(--slate-300), transparent); margin:24px 0;"></div>
+
+          <!-- SECTION 2: ENTER OUR UNIQUE NO OR OUR QR IMAGE -->
+          <div style="display:flex; flex-direction:column; gap:16px;">
+            
+            <!-- 4. ENTER OUR UNIQUE NO -->
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label" style="font-weight:800; font-size:0.92rem; color:var(--slate-900); display:flex; justify-content:space-between;">
+                <span>ENTER OUR UNIQUE NO <span class="required-star">*</span></span>
+                <span class="badge badge-primary">ARM-500-0799A</span>
+              </label>
+              <input type="text" class="form-control font-mono font-bold" id="cust-manual-code" 
+                value="${cust.selectedCode || 'ARM-500-0799A'}" 
+                placeholder="e.g. ARM-500-0799A" 
+                style="margin-top:6px; font-size:1.15rem; text-transform:uppercase; letter-spacing:1px; border:2px solid var(--primary-500); background:#faf5ff;"
+                oninput="QRView.onManualCodeChange(this.value)">
             </div>
-            <div style="display:flex; flex-wrap:wrap; gap:8px;">
-              ${coupons.map(c => `
-                <button type="button" class="quick-test-code-btn ${c.status === 'Active' ? 'active-code' : 'expired-code'}" onclick="QRView.selectQuickCoupon('${c.code}')">
-                  <span class="font-mono font-bold">${c.code}</span>
-                  <span class="quick-code-badge ${c.status === 'Active' ? 'badge-active' : 'badge-used'}">
-                    ${c.status === 'Active' ? `₹${c.amount} OFF (Active)` : (c.status === 'Redeemed / Expired' ? 'Used / Expired' : 'Expired Date')}
-                  </span>
+
+            <!-- Stylized OR Divider -->
+            <div style="display:flex; align-items:center; gap:14px; margin:2px 0;">
+              <div style="flex:1; height:1px; background:var(--slate-200);"></div>
+              <span style="font-size:0.8rem; font-weight:800; color:var(--slate-500); background:var(--slate-50); padding:2px 12px; border-radius:20px; border:1px solid var(--slate-200); font-style:italic;">or.</span>
+              <div style="flex:1; height:1px; background:var(--slate-200);"></div>
+            </div>
+
+            <!-- 5. OUR QR Image (Upload QR / Scan Camera) -->
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label" style="font-weight:700; font-size:0.92rem; color:var(--slate-800); display:flex; justify-content:space-between;">
+                <span>OUR QR Image</span>
+                <span style="font-size:0.75rem; color:var(--slate-500);">Upload / Scan</span>
+              </label>
+
+              <input type="file" id="qr-file-input" accept="image/*" style="display:none;" onchange="QRView.handleFileUpload(event)">
+
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:6px;">
+                <button type="button" class="btn btn-secondary" onclick="document.getElementById('qr-file-input').click()" style="font-weight:700; padding:12px; display:flex; align-items:center; justify-content:center; gap:8px;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  <span>Upload QR</span>
                 </button>
-              `).join('')}
+                <button type="button" class="btn btn-secondary" onclick="QRView.toggleCameraSim()" style="font-weight:700; padding:12px; background:#eff6ff; border-color:#bfdbfe; color:#1d4ed8; display:flex; align-items:center; justify-content:center; gap:8px;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                  <span>Scan Camera</span>
+                </button>
+              </div>
+
+              <!-- Camera Simulated Viewport -->
+              <div id="sim-camera-box" style="display:none; margin-top:12px; background:#0f172a; border-radius:12px; padding:16px; text-align:center; color:#fff;">
+                <div style="font-size:0.8rem; color:#94a3b8; margin-bottom:10px;">Camera Scanner Active</div>
+                <div style="background:#fff; display:inline-block; padding:8px; border-radius:8px;">
+                  ${QRManager.generateQRSVG(cust.selectedCode || 'ARM-500-0799A', 110)}
+                </div>
+                <div style="margin-top:10px;">
+                  <button type="button" class="btn btn-danger btn-xs" onclick="QRView.toggleCameraSim()">Close</button>
+                </div>
+              </div>
             </div>
+
           </div>
 
-          <!-- Action Submit Button -->
-          <div style="margin-top:28px;">
-            <button type="button" class="btn btn-primary w-full btn-lg" style="height:52px; font-size:1.05rem; font-weight:800;" onclick="QRView.submitCustomerRedemption()">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-              Verify Code & Redeem Discount Now
+          <!-- DIVIDER 2 -->
+          <div style="height:2px; background:linear-gradient(90deg, transparent, var(--slate-300), transparent); margin:24px 0;"></div>
+
+          <!-- SECTION 3: TRANSFER AMOUNT (Neeche transfer amount show krwana) -->
+          <div style="display:flex; flex-direction:column; gap:16px;">
+            
+            <div style="background:linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border:2px solid #86efac; border-radius:16px; padding:22px; position:relative;">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                  <div style="font-size:0.82rem; font-weight:800; text-transform:uppercase; letter-spacing:0.06em; color:#15803d;">TRANSFER AMOUNT</div>
+                  <div style="font-size:0.8rem; color:#166534; font-weight:600;">Instant cashback payout</div>
+                </div>
+                <span class="badge badge-success" style="font-size:0.8rem; font-weight:800; background:#bbf7d0; color:#14532d;">
+                  ● Active & Claimable
+                </span>
+              </div>
+
+              <div style="margin:16px 0 10px; display:flex; align-items:baseline; gap:6px;">
+                <span style="font-size:1.5rem; font-weight:900; color:#14532d;">₹</span>
+                <span style="font-size:2.6rem; font-weight:900; color:#14532d;" id="ui-transfer-amt-display">
+                  ${selectedCoupon.amount || 500}.00
+                </span>
+                <span style="font-size:0.9rem; font-weight:700; color:#166534;">INR</span>
+              </div>
+
+              <div style="background:rgba(255,255,255,0.7); border-radius:8px; padding:8px 12px; font-size:0.8rem; color:#166534; display:flex; justify-content:space-between;">
+                <span>Code: <strong class="font-mono">${cust.selectedCode || 'ARM-500-0799A'}</strong></span>
+                <span>Payout: <strong>Direct UPI / QR</strong></span>
+              </div>
+            </div>
+
+            <!-- Submit Claim Button -->
+            <button type="button" class="btn btn-primary w-full btn-lg" style="height:52px; font-size:1.05rem; font-weight:800; background:linear-gradient(135deg, #16a34a, #15803d); border:none; box-shadow:0 8px 20px -3px rgba(22, 163, 74, 0.4);" onclick="QRView.submitCustomerRedemption()">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              ⚡ Claim & Transfer Amount Now
             </button>
           </div>
+
         </div>
 
-        <!-- Live Dynamic Redemption Result Box (Success Celebration OR Single-Use Expired Warning) -->
+        <!-- Live Dynamic Redemption Result Box -->
         <div id="customer-redemption-result-box" style="margin-top:28px;"></div>
       </div>
     `;
+  },
+
+  onUpiChange(val) {
+    this._customerState.upi = val.trim();
+  },
+
+  handlePaymentQrUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const preview = document.getElementById("cust-payment-qr-preview");
+      if (preview) {
+        preview.innerHTML = `<img src="${e.target.result}" style="width:100%; height:100%; object-fit:cover;">`;
+      }
+      const label = document.getElementById("cust-qr-name");
+      if (label) label.innerText = file.name;
+      UI.showToast("Payment QR Attached", `Loaded ${file.name}`, "success");
+    };
+    reader.readAsDataURL(file);
+  },
+
+  toggleCameraSim() {
+    const box = document.getElementById("sim-camera-box");
+    if (box) {
+      box.style.display = box.style.display === "none" ? "block" : "none";
+    }
   },
 
   setCustomerInputMode(mode) {
