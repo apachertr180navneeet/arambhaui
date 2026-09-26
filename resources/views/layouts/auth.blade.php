@@ -99,29 +99,6 @@
       margin-top: 6px;
       margin-bottom: 0;
     }
-    .demo-box {
-      margin-top: 24px;
-      padding: 14px;
-      background: #f8fafc;
-      border: 1px dashed #cbd5e1;
-      border-radius: 10px;
-      font-size: 0.8rem;
-      color: #475569;
-    }
-    .demo-pill {
-      display: inline-block;
-      background: #e2e8f0;
-      color: #0f172a;
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.75rem;
-      font-weight: 600;
-      cursor: pointer;
-    }
-    .demo-pill:hover {
-      background: #cbd5e1;
-    }
     .alert {
       padding: 12px 16px;
       border-radius: 8px;

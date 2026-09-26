@@ -47,7 +47,7 @@
         name="email" 
         class="form-control" 
         placeholder="admin@garmenterp.com" 
-        value="{{ old('email', 'admin@garmenterp.com') }}" 
+        value="{{ old('email') }}" 
         required 
         autofocus
         style="width:100%; padding:10px 14px; border:1px solid #cbd5e1; border-radius:8px; font-size:0.9rem;"
@@ -57,7 +57,6 @@
     <div class="form-group" style="margin-bottom: 18px;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
         <label class="form-label" for="password" style="font-weight:600; font-size:0.875rem; color:#334155; margin-bottom:0;">Password</label>
-        <span style="font-size:0.75rem; color:#64748b;">Default: admin123</span>
       </div>
       <div style="position:relative; display:flex; align-items:center;">
         <input 
@@ -66,7 +65,7 @@
           name="password" 
           class="form-control font-mono" 
           placeholder="••••••••" 
-          value="admin123" 
+          value="" 
           required
           style="width:100%; padding:10px 40px 10px 14px; border:1px solid #cbd5e1; border-radius:8px; font-size:0.9rem; letter-spacing: 0.05em;"
         >
@@ -102,33 +101,11 @@
       <span>Sign In to Admin Portal</span>
     </button>
   </form>
-
-  <div class="demo-box" style="margin-top:20px; padding:14px; background:#f8fafc; border:1px dashed #cbd5e1; border-radius:10px; font-size:0.82rem; color:#475569;">
-    <div style="font-weight: 600; margin-bottom: 8px; color: #1e293b; display:flex; justify-content:space-between; align-items:center;">
-      <span>Quick Demo Accounts:</span>
-      <span style="font-size:0.75rem; color:#64748b;">Click to autofill</span>
-    </div>
-    <div style="display:flex; flex-direction:column; gap:6px;">
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <span>Admin:</span>
-        <button type="button" class="demo-pill" onclick="fillCreds('admin@garmenterp.com', 'admin123')">admin@garmenterp.com</button>
-      </div>
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <span>Supervisor:</span>
-        <button type="button" class="demo-pill" onclick="fillCreds('supervisor@garmenterp.com', 'admin123')">supervisor@garmenterp.com</button>
-      </div>
-    </div>
-  </div>
 </div>
 @endsection
 
 @section('scripts')
 <script>
-  function fillCreds(email, pass) {
-    document.getElementById('email').value = email;
-    document.getElementById('password').value = pass;
-  }
-
   function togglePasswordVisibility() {
     const passwordInput = document.getElementById('password');
     const eyeIcon = document.getElementById('eye-icon');
