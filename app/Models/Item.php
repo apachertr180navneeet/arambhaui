@@ -11,4 +11,11 @@ class Item extends Model
     use HasFactory, SoftDeletes;
 
     protected $guarded = [];
+
+    protected $casts = [
+        'raw_meter_per_piece' => 'float',
+        'unit_cost' => 'float',
+        'current_stock' => 'float',
+        'min_stock' => 'float',
+    ];
 }

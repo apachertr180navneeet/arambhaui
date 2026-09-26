@@ -536,6 +536,7 @@
             <th>Item SKU & Name</th>
             <th>Category</th>
             <th>UOM</th>
+            <th style="text-align: right;">Raw Meter / Pc</th>
             <th style="text-align: right;">Unit Cost</th>
             <th style="text-align: right;">Current Stock</th>
             <th style="text-align: right;">Reorder Min</th>
@@ -557,6 +558,7 @@
               elseif (str_contains($categoryLower, 'finish')) $catBadge = 'badge-success';
 
               $isLowStock = ($itm->current_stock <= $itm->min_stock);
+              $rawMeter = (float)($itm->raw_meter_per_piece ?? 0);
             @endphp
             <tr class="itm-row itm-row-transition" id="item-row-{{ $itm->id }}" data-id="{{ $itm->id }}" data-category="{{ $categoryLower }}" data-lowstock="{{ $isLowStock ? '1' : '0' }}" data-status="{{ strtolower($itm->status ?? 'active') }}">
               <td class="row-index" style="text-align: center; font-weight: 600; color: var(--slate-400);">{{ $index + 1 }}</td>
@@ -580,6 +582,15 @@
               </td>
               <td class="itm-unit-val" style="font-weight:600; color:var(--slate-700);">
                 {{ $itm->unit ?: 'Meters' }}
+              </td>
+              <td class="itm-rawmeter-val" style="text-align: right; font-weight: 600;">
+                @if($rawMeter > 0)
+                  <span style="display:inline-flex; align-items:center; gap:3px; font-weight:700; color:#1d4ed8; background:#eff6ff; padding:2px 8px; border-radius:6px; font-size:0.8rem; border:1px solid #bfdbfe;" title="Raw meter required per piece">
+                    {{ number_format($rawMeter, 2) }} m
+                  </span>
+                @else
+                  <span style="color:var(--slate-400); font-size:0.8rem;">—</span>
+                @endif
               </td>
               <td class="itm-cost-val" style="text-align: right; font-weight: 700; color: var(--slate-800);">
                 ₹{{ number_format($itm->unit_cost, 2) }}
@@ -648,7 +659,7 @@
         </div>
         <div>
           <h3 id="imodual-title" style="margin:0; font-size:1.1rem; font-weight:800; color:var(--slate-900);">Add Item SKU</h3>
-          <p style="margin:2px 0 0; font-size:0.75rem; color:var(--slate-500);">Complete raw material, fabric roll & accessories profile</p>
+          <p style="margin:2px 0 0; font-size:0.75rem; color:var(--slate-500);">Complete raw material, fabric roll & finished goods profile</p>
         </div>
       </div>
       <button type="button" onclick="closeItemModal()" style="background:none; border:none; color:var(--slate-400); cursor:pointer; font-size:1.4rem; line-height:1; padding:4px;">
@@ -673,7 +684,7 @@
         </div>
       </div>
 
-      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:14px; margin-bottom:12px;">
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:14px; margin-bottom:12px;">
         <div class="form-group" style="margin:0;">
           <label class="form-label required">Category</label>
           <select name="category" id="itm_category" class="form-control" required>
@@ -716,6 +727,17 @@
               <option value="Sets">Sets (set)</option>
             @endif
           </select>
+        </div>
+        <div class="form-group" id="raw_meter_group" style="margin:0;">
+          <label class="form-label" style="display:flex; justify-content:space-between; align-items:center;">
+            <span>Raw Meter Used (per Pc)</span>
+            <span style="font-size:0.7rem; color:var(--primary-600); font-weight:700;">Consumption</span>
+          </label>
+          <div style="position:relative;">
+            <input type="number" step="0.01" min="0" name="raw_meter_per_piece" id="itm_raw_meter" class="form-control" placeholder="0.00" value="0.00" style="padding-right:45px;">
+            <span style="position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:0.75rem; font-weight:700; color:var(--slate-400); pointer-events:none;">Mtr</span>
+          </div>
+          <small style="font-size:0.7rem; color:var(--slate-500); margin-top:2px; display:block;">Raw fabric used to make 1 finished item</small>
         </div>
       </div>
 
@@ -907,6 +929,7 @@
     document.getElementById('imodual-title').textContent = 'Add Item SKU';
     document.getElementById('save-itm-btn').textContent = 'Save Item SKU';
     document.getElementById('save-itm-btn').disabled = false;
+    document.getElementById('itm_raw_meter').value = '0.00';
     document.getElementById('itm_cost').value = '280.00';
     document.getElementById('itm_stock').value = '500.00';
     document.getElementById('itm_min_stock').value = '100.00';
@@ -957,6 +980,7 @@
 
     refreshUnitsDropdown(unitVal);
 
+    document.getElementById('itm_raw_meter').value = (itm.raw_meter_per_piece !== undefined && itm.raw_meter_per_piece !== null) ? itm.raw_meter_per_piece : '0.00';
     document.getElementById('itm_cost').value = itm.unit_cost !== undefined ? itm.unit_cost : 280;
     document.getElementById('itm_stock').value = itm.current_stock !== undefined ? itm.current_stock : 500;
     document.getElementById('itm_min_stock').value = itm.min_stock !== undefined ? itm.min_stock : 100;
@@ -1034,6 +1058,7 @@
       code: document.getElementById('itm_code').value.trim(),
       category: document.getElementById('itm_category').value,
       unit: document.getElementById('itm_unit').value,
+      raw_meter_per_piece: parseFloat(document.getElementById('itm_raw_meter').value) || 0,
       unit_cost: parseFloat(document.getElementById('itm_cost').value) || 0,
       current_stock: parseFloat(document.getElementById('itm_stock').value) || 0,
       min_stock: parseFloat(document.getElementById('itm_min_stock').value) || 0,
@@ -1173,6 +1198,11 @@
     const badgeClass = getItemCategoryBadgeClass(itm.category);
     const statusVal = (itm.status || 'Active');
     const statusLower = statusVal.toLowerCase();
+    const rawMeter = parseFloat(itm.raw_meter_per_piece || 0);
+
+    const rawMeterHtml = rawMeter > 0
+      ? '<span style="display:inline-flex; align-items:center; gap:3px; font-weight:700; color:#1d4ed8; background:#eff6ff; padding:2px 8px; border-radius:6px; font-size:0.8rem; border:1px solid #bfdbfe;" title="Raw meter required per piece">' + Number(rawMeter).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' m</span>'
+      : '<span style="color:var(--slate-400); font-size:0.8rem;">—</span>';
 
     tr.innerHTML = 
       '<td class="row-index" style="text-align: center; font-weight: 600; color: var(--slate-400);">1</td>' +
@@ -1194,6 +1224,9 @@
       '</td>' +
       '<td class="itm-unit-val" style="font-weight:600; color:var(--slate-700);">' +
         escapeHtml(itm.unit || 'Meters') +
+      '</td>' +
+      '<td class="itm-rawmeter-val" style="text-align: right; font-weight: 600;">' +
+        rawMeterHtml +
       '</td>' +
       '<td class="itm-cost-val" style="text-align: right; font-weight: 700; color: var(--slate-800);">' +
         '₹' + Number(itm.unit_cost || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}) +
@@ -1292,6 +1325,14 @@
 
     const unitCell = row.querySelector('.itm-unit-val');
     if (unitCell) unitCell.textContent = itm.unit || 'Meters';
+
+    const rawMeter = parseFloat(itm.raw_meter_per_piece || 0);
+    const rawMeterCell = row.querySelector('.itm-rawmeter-val');
+    if (rawMeterCell) {
+      rawMeterCell.innerHTML = rawMeter > 0
+        ? `<span style="display:inline-flex; align-items:center; gap:3px; font-weight:700; color:#1d4ed8; background:#eff6ff; padding:2px 8px; border-radius:6px; font-size:0.8rem; border:1px solid #bfdbfe;" title="Raw meter required per piece">${Number(rawMeter).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})} m</span>`
+        : `<span style="color:var(--slate-400); font-size:0.8rem;">—</span>`;
+    }
 
     const costCell = row.querySelector('.itm-cost-val');
     if (costCell) {

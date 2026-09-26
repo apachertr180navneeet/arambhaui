@@ -38,6 +38,17 @@ class PurchaseOrder extends Model
             $data = json_decode($this->notes, true);
             if (isset($data['thans']) && is_array($data['thans'])) return $data['thans'];
         }
+        // If items are loaded, collect all thans from items
+        if ($this->relationLoaded('items') && $this->items->isNotEmpty()) {
+            $allThans = [];
+            foreach ($this->items as $item) {
+                $thans = $item->than_list;
+                if (!empty($thans)) {
+                    $allThans = array_merge($allThans, $thans);
+                }
+            }
+            if (!empty($allThans)) return $allThans;
+        }
         return [];
     }
 
@@ -54,8 +65,37 @@ class PurchaseOrder extends Model
     public function getTotalThansCountAttribute()
     {
         if (!empty($this->total_thans)) return (int)$this->total_thans;
+        if ($this->relationLoaded('items') && $this->items->isNotEmpty()) {
+            $sum = $this->items->sum('than_count');
+            if ($sum > 0) return (int)$sum;
+        }
         $list = $this->than_list;
         if (!empty($list) && is_array($list)) return count($list);
         return 0;
+    }
+
+    public function getTotalMetersSumAttribute()
+    {
+        if ($this->relationLoaded('items') && $this->items->isNotEmpty()) {
+            return (float)$this->items->sum('ordered_qty');
+        }
+        $firstItem = $this->items()->first();
+        if ($firstItem) {
+            return (float)$firstItem->ordered_qty;
+        }
+        return 0.0;
+    }
+
+    public function getItemsSummaryAttribute()
+    {
+        if ($this->relationLoaded('items') && $this->items->isNotEmpty()) {
+            $names = $this->items->pluck('item_name')->filter()->unique()->values();
+            if ($names->count() === 1) {
+                return $names->first();
+            } elseif ($names->count() > 1) {
+                return $names->first() . ' (+' . ($names->count() - 1) . ' more)';
+            }
+        }
+        return 'Fabric Quality';
     }
 }

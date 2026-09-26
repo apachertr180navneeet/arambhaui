@@ -408,9 +408,13 @@
 
               <!-- Product / Fabric -->
               <td>
-                <div style="font-weight:700; color:var(--slate-800);">{{ $firstItem?->item_name ?: 'Fabric Quality' }}</div>
-                @if($firstItem && $firstItem->item_sku)
-                  <div style="font-size:0.725rem; color:var(--slate-500); font-family:monospace;">{{ $firstItem->item_sku }}</div>
+                <div style="font-weight:700; color:var(--slate-800);">{{ $po->items_summary }}</div>
+                @if($po->items->count() > 1)
+                  <div style="font-size:0.725rem; color:#2563eb; font-weight:600; margin-top:2px;">
+                    {{ $po->items->count() }} Fabric Items
+                  </div>
+                @elseif($firstItem && $firstItem->item_code)
+                  <div style="font-size:0.725rem; color:var(--slate-500); font-family:monospace;">{{ $firstItem->item_code }}</div>
                 @endif
               </td>
 
@@ -421,7 +425,7 @@
                     {{ $thansCount }} {{ Str::plural('Than', $thansCount) }}
                   </span>
                   <div style="font-weight:800; color:var(--slate-900); margin-top:4px; font-size:0.85rem;">
-                    {{ number_format($totalMeters, 2) }} {{ $firstItem?->unit ?: 'Mtr' }}
+                    {{ number_format($po->total_meters_sum ?: $totalMeters, 2) }} Mtr
                   </div>
                 </div>
               </td>
@@ -577,43 +581,109 @@
   }
 
   function printPurchaseOrder(po) {
-    // Determine thans list
-    let thans = po.than_list || [];
-    if (!thans.length && po.notes) {
-      try {
-        const parsed = JSON.parse(po.notes);
-        if (parsed.thans) thans = parsed.thans;
-      } catch(e) {}
-    }
-
-    const firstItem = (po.items && po.items.length) ? po.items[0] : null;
-    const itemName = firstItem ? firstItem.item_name : 'Fabric Quality';
-    const rate = firstItem ? Number(firstItem.rate) : 0;
     const challanNo = po.challan_number || po.challan_no || '—';
+    const items = (po.items && po.items.length) ? po.items : [];
 
-    // Split thans into two columns matching physical challan format
-    const half = Math.ceil(thans.length / 2);
-    const col1 = thans.slice(0, half);
-    const col2 = thans.slice(half);
+    let overallThansCount = 0;
+    let overallMetersTotal = 0;
+    let itemsHtml = '';
 
-    const sumCol1 = col1.reduce((acc, val) => acc + (parseFloat(val) || 0), 0);
-    const sumCol2 = col2.reduce((acc, val) => acc + (parseFloat(val) || 0), 0);
-    const totalMeters = sumCol1 + sumCol2;
+    if (items.length > 0) {
+      items.forEach((item, itemIdx) => {
+        let thans = [];
+        if (item.than_details) {
+          try {
+            thans = typeof item.than_details === 'string' ? JSON.parse(item.than_details) : item.than_details;
+          } catch(e) {}
+        }
+        if (!thans.length && item.than_list) {
+          thans = item.than_list;
+        }
+        if (!thans.length && item.ordered_qty > 0) {
+          thans = [parseFloat(item.ordered_qty)];
+        }
 
-    const maxRows = Math.max(col1.length, col2.length, 1);
+        const half = Math.ceil(thans.length / 2);
+        const col1 = thans.slice(0, half);
+        const col2 = thans.slice(half);
 
-    let rowsHtml = '';
-    for (let i = 0; i < maxRows; i++) {
-      const t1 = col1[i] !== undefined ? parseFloat(col1[i]).toFixed(2) : '';
-      const t2 = col2[i] !== undefined ? parseFloat(col2[i]).toFixed(2) : '';
-      rowsHtml += `
-        <tr>
-          <td style="padding:6px 12px; border:1px solid #cbd5e1; text-align:center; font-weight:600; color:#64748b;">${col1[i] !== undefined ? (i + 1) : ''}</td>
-          <td style="padding:6px 12px; border:1px solid #cbd5e1; text-align:right; font-weight:700; font-size:15px; font-family:monospace;">${t1}</td>
-          <td style="padding:6px 12px; border:1px solid #cbd5e1; text-align:center; font-weight:600; color:#64748b;">${col2[i] !== undefined ? (half + i + 1) : ''}</td>
-          <td style="padding:6px 12px; border:1px solid #cbd5e1; text-align:right; font-weight:700; font-size:15px; font-family:monospace;">${t2}</td>
-        </tr>
-      `;
+        const sumCol1 = col1.reduce((acc, val) => acc + (parseFloat(val) || 0), 0);
+        const sumCol2 = col2.reduce((acc, val) => acc + (parseFloat(val) || 0), 0);
+        const itemMeters = sumCol1 + sumCol2;
+        const itemRate = Number(item.rate || 0);
+        const itemSubtotal = itemMeters * itemRate;
+        const itemTaxPct = Number(item.tax_percent || 5);
+        const itemTax = (itemSubtotal * itemTaxPct) / 100;
+        const itemTotal = itemSubtotal + itemTax;
+
+        overallThansCount += thans.length;
+        overallMetersTotal += itemMeters;
+
+        const maxRows = Math.max(col1.length, col2.length, 1);
+        let rowsHtml = '';
+        for (let i = 0; i < maxRows; i++) {
+          const t1 = col1[i] !== undefined ? parseFloat(col1[i]).toFixed(2) : '';
+          const t2 = col2[i] !== undefined ? parseFloat(col2[i]).toFixed(2) : '';
+          rowsHtml += `
+            <tr>
+              <td style="padding:5px 8px; border:1px solid #cbd5e1; text-align:center; font-weight:600; color:#64748b; font-size:12px;">${col1[i] !== undefined ? (i + 1) : ''}</td>
+              <td style="padding:5px 8px; border:1px solid #cbd5e1; text-align:right; font-weight:700; font-size:13px; font-family:monospace;">${t1}</td>
+              <td style="padding:5px 8px; border:1px solid #cbd5e1; text-align:center; font-weight:600; color:#64748b; font-size:12px;">${col2[i] !== undefined ? (half + i + 1) : ''}</td>
+              <td style="padding:5px 8px; border:1px solid #cbd5e1; text-align:right; font-weight:700; font-size:13px; font-family:monospace;">${t2}</td>
+            </tr>
+          `;
+        }
+
+        itemsHtml += `
+          <div style="margin-bottom:18px; border:1px solid #cbd5e1; border-radius:8px; overflow:hidden;">
+            <!-- Product Banner -->
+            <div style="background:#eff6ff; border-bottom:1px solid #bfdbfe; padding:8px 12px; display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <span style="font-size:11px; font-weight:700; color:#1d4ed8; text-transform:uppercase;">Item #${itemIdx + 1}: ${item.item_name} ${item.item_code ? `[${item.item_code}]` : ''}</span>
+              </div>
+              <div style="text-align:right; font-size:12px; font-weight:700; color:#1e3a8a;">
+                Rate: ₹${itemRate.toFixed(2)}/Mtr | GST: ${itemTaxPct}% | Total: ₹${itemTotal.toFixed(2)}
+              </div>
+            </div>
+
+            <!-- Than List in 2 Columns -->
+            <table style="width:100%; border-collapse:collapse; font-size:12px;">
+              <thead>
+                <tr style="background:#f1f5f9;">
+                  <th style="padding:5px; border:1px solid #cbd5e1; width:12%;">Than #</th>
+                  <th style="padding:5px; border:1px solid #cbd5e1; width:38%; text-align:right;">Meters</th>
+                  <th style="padding:5px; border:1px solid #cbd5e1; width:12%;">Than #</th>
+                  <th style="padding:5px; border:1px solid #cbd5e1; width:38%; text-align:right;">Meters</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rowsHtml}
+              </tbody>
+              <tfoot>
+                <tr style="background:#f8fafc; font-weight:700; font-size:12px;">
+                  <td style="padding:5px; border:1px solid #cbd5e1; text-align:center;">Sub 1:</td>
+                  <td style="padding:5px; border:1px solid #cbd5e1; text-align:right; font-family:monospace; color:#2563eb;">${sumCol1.toFixed(2)} m</td>
+                  <td style="padding:5px; border:1px solid #cbd5e1; text-align:center;">Sub 2:</td>
+                  <td style="padding:5px; border:1px solid #cbd5e1; text-align:right; font-family:monospace; color:#2563eb;">${sumCol2.toFixed(2)} m</td>
+                </tr>
+                <tr style="background:#f1f5f9; font-weight:800; font-size:12px;">
+                  <td colspan="2" style="padding:6px 10px; border:1px solid #cbd5e1;">Item Total Thans: ${thans.length} Thans</td>
+                  <td colspan="2" style="padding:6px 10px; border:1px solid #cbd5e1; text-align:right;">Total Item Meters: ${itemMeters.toFixed(2)} Mtr</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        `;
+      });
+    } else {
+      let thans = po.than_list || [];
+      const half = Math.ceil(thans.length / 2);
+      const col1 = thans.slice(0, half);
+      const col2 = thans.slice(half);
+      const sumCol1 = col1.reduce((a, b) => a + (parseFloat(b) || 0), 0);
+      const sumCol2 = col2.reduce((a, b) => a + (parseFloat(b) || 0), 0);
+      overallThansCount = thans.length;
+      overallMetersTotal = sumCol1 + sumCol2;
     }
 
     const html = `
@@ -647,53 +717,25 @@
           </tr>
         </table>
 
-        <!-- Product Banner -->
-        <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:6px; padding:10px 14px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center;">
-          <div>
-            <span style="font-size:11px; font-weight:700; color:#1d4ed8; text-transform:uppercase;">Description of Goods / Fabric Quality:</span>
-            <div style="font-size:16px; font-weight:800; color:#1e3a8a;">${itemName}</div>
-          </div>
-          <div style="text-align:right;">
-            <span style="font-size:11px; font-weight:700; color:#1d4ed8; text-transform:uppercase;">Rate per Mtr:</span>
-            <div style="font-size:16px; font-weight:800; color:#1e3a8a;">₹${rate.toFixed(2)}</div>
-          </div>
-        </div>
-
-        <!-- Than List in 2 Columns matching paper slip -->
-        <table style="width:100%; border-collapse:collapse; font-size:13px; margin-bottom:16px;">
-          <thead>
-            <tr style="background:#f1f5f9;">
-              <th style="padding:6px; border:1px solid #cbd5e1; width:12%;">Than #</th>
-              <th style="padding:6px; border:1px solid #cbd5e1; width:38%; text-align:right;">Meters</th>
-              <th style="padding:6px; border:1px solid #cbd5e1; width:12%;">Than #</th>
-              <th style="padding:6px; border:1px solid #cbd5e1; width:38%; text-align:right;">Meters</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rowsHtml}
-          </tbody>
-          <tfoot>
-            <tr style="background:#f8fafc; font-weight:700;">
-              <td style="padding:6px; border:1px solid #cbd5e1; text-align:center;">Subtotal 1:</td>
-              <td style="padding:6px; border:1px solid #cbd5e1; text-align:right; font-family:monospace; color:#2563eb;">${sumCol1.toFixed(2)} m</td>
-              <td style="padding:6px; border:1px solid #cbd5e1; text-align:center;">Subtotal 2:</td>
-              <td style="padding:6px; border:1px solid #cbd5e1; text-align:right; font-family:monospace; color:#2563eb;">${sumCol2.toFixed(2)} m</td>
-            </tr>
-          </tfoot>
-        </table>
+        <!-- Items & Than Breakdown -->
+        ${itemsHtml}
 
         <!-- Summary & Financials Calculation -->
         <table style="width:100%; border-collapse:collapse; margin-bottom:20px; font-size:13px;">
           <tr>
             <td style="width:55%; vertical-align:top; padding:10px 14px; border:1px solid #cbd5e1; background:#f8fafc; border-radius:6px;">
-              <div style="font-weight:700; color:#334155; margin-bottom:6px;">Than Summary:</div>
+              <div style="font-weight:700; color:#334155; margin-bottom:6px;">Than Summary (Overall):</div>
+              <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                <span>Total Items:</span>
+                <strong style="font-size:14px;">${items.length || 1} Items</strong>
+              </div>
               <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
                 <span>Total Thans / Rolls:</span>
-                <strong style="font-size:14px;">${thans.length} Thans</strong>
+                <strong style="font-size:14px;">${overallThansCount} Thans</strong>
               </div>
               <div style="display:flex; justify-content:space-between;">
                 <span>Total Meters Aggregated:</span>
-                <strong style="font-size:15px; color:#0f172a;">${totalMeters.toFixed(2)} Mtr</strong>
+                <strong style="font-size:15px; color:#0f172a;">${overallMetersTotal.toFixed(2)} Mtr</strong>
               </div>
             </td>
             <td style="width:45%; vertical-align:top; padding:10px 14px; border:1px solid #cbd5e1; background:#ffffff; border-radius:6px;">

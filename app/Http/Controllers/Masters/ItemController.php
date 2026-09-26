@@ -88,6 +88,12 @@ class ItemController extends Controller
         if (!isset($data['hsn_code']) && isset($data['hsn'])) {
             $data['hsn_code'] = $data['hsn'];
         }
+        if (!isset($data['raw_meter_per_piece'])) {
+            if (isset($data['raw_meters'])) $data['raw_meter_per_piece'] = $data['raw_meters'];
+            elseif (isset($data['raw_meter'])) $data['raw_meter_per_piece'] = $data['raw_meter'];
+            elseif (isset($data['fabric_consumption'])) $data['raw_meter_per_piece'] = $data['fabric_consumption'];
+            elseif (isset($data['meter_raw'])) $data['raw_meter_per_piece'] = $data['meter_raw'];
+        }
 
         $validated = validator($data, [
             'code' => 'nullable|string|max:100',
@@ -99,6 +105,7 @@ class ItemController extends Controller
             'color' => 'nullable|string|max:100',
             'size' => 'nullable|string|max:50',
             'unit' => 'nullable|string|max:50',
+            'raw_meter_per_piece' => 'nullable|numeric|min:0',
             'unit_cost' => 'nullable|numeric|min:0',
             'current_stock' => 'nullable|numeric|min:0',
             'min_stock' => 'nullable|numeric|min:0',
@@ -110,6 +117,7 @@ class ItemController extends Controller
         $category = !empty($validated['category']) ? $validated['category'] : 'Fabric';
         $validated['category'] = $category;
         $validated['unit'] = !empty($validated['unit']) ? $validated['unit'] : 'Meters';
+        $validated['raw_meter_per_piece'] = isset($validated['raw_meter_per_piece']) ? floatval($validated['raw_meter_per_piece']) : 0.00;
         $validated['unit_cost'] = isset($validated['unit_cost']) ? floatval($validated['unit_cost']) : 0.00;
         $validated['current_stock'] = isset($validated['current_stock']) ? floatval($validated['current_stock']) : 0.00;
         $validated['min_stock'] = isset($validated['min_stock']) ? floatval($validated['min_stock']) : 100.00;
@@ -164,6 +172,12 @@ class ItemController extends Controller
         if (!isset($data['hsn_code']) && isset($data['hsn'])) {
             $data['hsn_code'] = $data['hsn'];
         }
+        if (!isset($data['raw_meter_per_piece'])) {
+            if (isset($data['raw_meters'])) $data['raw_meter_per_piece'] = $data['raw_meters'];
+            elseif (isset($data['raw_meter'])) $data['raw_meter_per_piece'] = $data['raw_meter'];
+            elseif (isset($data['fabric_consumption'])) $data['raw_meter_per_piece'] = $data['fabric_consumption'];
+            elseif (isset($data['meter_raw'])) $data['raw_meter_per_piece'] = $data['meter_raw'];
+        }
 
         $validated = validator($data, [
             'code' => 'sometimes|nullable|string|max:100',
@@ -175,6 +189,7 @@ class ItemController extends Controller
             'color' => 'nullable|string|max:100',
             'size' => 'nullable|string|max:50',
             'unit' => 'sometimes|nullable|string|max:50',
+            'raw_meter_per_piece' => 'sometimes|nullable|numeric|min:0',
             'unit_cost' => 'sometimes|nullable|numeric|min:0',
             'current_stock' => 'sometimes|nullable|numeric|min:0',
             'min_stock' => 'sometimes|nullable|numeric|min:0',
@@ -185,6 +200,9 @@ class ItemController extends Controller
 
         if (isset($validated['status'])) {
             $validated['status'] = ucfirst(strtolower($validated['status']));
+        }
+        if (isset($validated['raw_meter_per_piece'])) {
+            $validated['raw_meter_per_piece'] = floatval($validated['raw_meter_per_piece']);
         }
 
         $item->update($validated);
