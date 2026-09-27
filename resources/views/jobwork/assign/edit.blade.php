@@ -305,8 +305,15 @@
           </div>
         </div>
 
-      </div>
+    </div>
 
+    <!-- Bottom Action Bar -->
+    <div style="display:flex; justify-content:flex-end; align-items:center; gap:12px; padding:16px 24px; background:#ffffff; border:1px solid var(--slate-200, #e2e8f0); border-radius:var(--radius-xl, 16px); box-shadow:var(--shadow-sm); margin-top:4px;">
+      <a href="{{ route('jobwork.assign.index') }}" class="btn btn-secondary" style="font-weight:700; padding:10px 20px;">Cancel</a>
+      <button type="submit" id="update-jw-btn-bottom" class="btn btn-primary" style="display:inline-flex; align-items:center; gap:8px; font-weight:700; box-shadow:0 2px 8px rgba(79, 70, 229, 0.3); padding:10px 24px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Update Job Order
+      </button>
     </div>
 
   </div>

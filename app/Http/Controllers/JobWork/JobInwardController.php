@@ -66,14 +66,15 @@ class JobInwardController extends Controller
             $preselected = JobAssignment::with('items')->find($preselectedId);
         }
 
-        $count = JobInward::count() + 1;
-        $nextInwardNo = 'JINW-2026-' . str_pad($count, 4, '0', STR_PAD_LEFT);
-        while (JobInward::where('inward_number', $nextInwardNo)->exists()) {
+        $year = date('Y');
+        $count = JobInward::withTrashed()->count() + 1;
+        $nextInwardNo = 'JINW-' . $year . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+        while (JobInward::withTrashed()->where('inward_number', $nextInwardNo)->exists()) {
             $count++;
-            $nextInwardNo = 'JINW-2026-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+            $nextInwardNo = 'JINW-' . $year . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
         }
 
-        $nextChallanNo = 'JDC-' . date('Y') . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+        $nextChallanNo = 'JDC-' . $year . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
 
         return view('jobwork.inward.create', compact('activeAssignments', 'preselected', 'nextInwardNo', 'nextChallanNo', 'items'));
     }
@@ -97,11 +98,12 @@ class JobInwardController extends Controller
         return DB::transaction(function () use ($validated, $request) {
             $assignment = JobAssignment::lockForUpdate()->findOrFail($validated['job_assignment_id']);
 
-            $count = JobInward::count() + 1;
-            $inwardNo = 'JINW-2026-' . str_pad($count, 4, '0', STR_PAD_LEFT);
-            while (JobInward::where('inward_number', $inwardNo)->exists()) {
+            $year = date('Y');
+            $count = JobInward::withTrashed()->count() + 1;
+            $inwardNo = 'JINW-' . $year . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+            while (JobInward::withTrashed()->where('inward_number', $inwardNo)->exists()) {
                 $count++;
-                $inwardNo = 'JINW-2026-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+                $inwardNo = 'JINW-' . $year . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
             }
 
             $processedItems = $this->normalizeInwardItemsFromRequest($request, $assignment->rate_per_piece);

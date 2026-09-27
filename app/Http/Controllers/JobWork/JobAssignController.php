@@ -40,24 +40,57 @@ class JobAssignController extends Controller
     public static function generateNextLotNumber()
     {
         $year = date('Y');
-        $latest = JobAssignment::where('lot_number', 'LIKE', "LOT-{$year}-%")
-            ->orderBy('id', 'desc')
+        $prefix = "LOT-{$year}-";
+
+        $latest = JobAssignment::withTrashed()
+            ->where('lot_number', 'LIKE', "{$prefix}%")
+            ->orderByRaw('CAST(SUBSTRING_INDEX(lot_number, "-", -1) AS UNSIGNED) DESC')
             ->value('lot_number');
 
         if ($latest && preg_match('/LOT-\d{4}-(\d+)/', $latest, $m)) {
             $nextNum = (int)$m[1] + 1;
         } else {
-            $nextNum = JobAssignment::count() + 1;
+            $count = JobAssignment::withTrashed()->where('lot_number', 'LIKE', "{$prefix}%")->count();
+            $nextNum = $count + 1;
         }
 
-        return "LOT-{$year}-" . str_pad($nextNum, 3, '0', STR_PAD_LEFT);
+        do {
+            $candidate = $prefix . str_pad($nextNum, 3, '0', STR_PAD_LEFT);
+            $exists = JobAssignment::withTrashed()->where('lot_number', $candidate)->exists();
+            if ($exists) {
+                $nextNum++;
+            }
+        } while ($exists);
+
+        return $candidate;
     }
 
     public static function generateNextJobOrderNo()
     {
         $year = date('Y');
-        $count = JobAssignment::count() + 1;
-        return "JA-{$year}-" . str_pad($count, 3, '0', STR_PAD_LEFT);
+        $prefix = "JA-{$year}-";
+
+        $latest = JobAssignment::withTrashed()
+            ->where('job_order_no', 'LIKE', "{$prefix}%")
+            ->orderByRaw('CAST(SUBSTRING_INDEX(job_order_no, "-", -1) AS UNSIGNED) DESC')
+            ->value('job_order_no');
+
+        if ($latest && preg_match('/JA-\d{4}-(\d+)/', $latest, $m)) {
+            $nextNum = (int)$m[1] + 1;
+        } else {
+            $count = JobAssignment::withTrashed()->where('job_order_no', 'LIKE', "{$prefix}%")->count();
+            $nextNum = $count + 1;
+        }
+
+        do {
+            $candidate = $prefix . str_pad($nextNum, 3, '0', STR_PAD_LEFT);
+            $exists = JobAssignment::withTrashed()->where('job_order_no', $candidate)->exists();
+            if ($exists) {
+                $nextNum++;
+            }
+        } while ($exists);
+
+        return $candidate;
     }
 
     /**
