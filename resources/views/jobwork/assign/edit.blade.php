@@ -340,7 +340,13 @@
                           'meter' => $m,
                           'wastage' => round($w, 2),
                           'usable' => round($u, 2),
-                          'pieces' => $p
+                          'pieces' => $p,
+                          'unique_id' => $t['unique_id'] ?? null,
+                          'po_id' => $t['po_id'] ?? null,
+                          'po_item_id' => $t['po_item_id'] ?? null,
+                          'po_number' => $t['po_number'] ?? null,
+                          'challan_no' => $t['challan_no'] ?? null,
+                          'purchase_than_no' => $t['purchase_than_no'] ?? ($t['than_no'] ?? null),
                       ];
                   } else {
                       $m = (float)$t;
@@ -398,7 +404,13 @@
                       'meter' => $m,
                       'wastage' => round($w, 2),
                       'usable' => round($u, 2),
-                      'pieces' => $p
+                      'pieces' => $p,
+                      'unique_id' => $t['unique_id'] ?? null,
+                      'po_id' => $t['po_id'] ?? null,
+                      'po_item_id' => $t['po_item_id'] ?? null,
+                      'po_number' => $t['po_number'] ?? null,
+                      'challan_no' => $t['challan_no'] ?? null,
+                      'purchase_than_no' => $t['purchase_than_no'] ?? ($t['than_no'] ?? null),
                   ];
               } else {
                   $m = (float)$t;
@@ -583,23 +595,50 @@
       }
     }
 
-    // Recalculate all Thans with new consumption ratio
+    // Recalculate all Thans with new consumption ratio while preserving metadata
     const cons = itemsData[idx].consumption_per_pc;
-    itemsData[idx].thans = itemsData[idx].thans.map(t => calculateThanValues(t.meter, null, cons));
+    itemsData[idx].thans.forEach(t => {
+      const calcs = calculateThanValues(t.meter, null, cons);
+      Object.assign(t, calcs);
+    });
 
     renderAllRawItemCards();
     calculateOverallTotals();
   }
 
   // Add a purchased ton from the available list
-  function addPurchasedTon(itemIdx, meterVal) {
-    const val = parseFloat(meterVal);
-    if (isNaN(val) || val <= 0) return;
+  function addPurchasedTon(itemIdx, tonData) {
+    let meterVal = 0;
+    let tonMeta = {};
+    if (typeof tonData === 'object' && tonData !== null) {
+      meterVal = parseFloat(tonData.meter) || 0;
+      tonMeta = tonData;
+    } else {
+      meterVal = parseFloat(tonData) || 0;
+    }
+    if (isNaN(meterVal) || meterVal <= 0) return;
+
+    // Check if this than is already selected in this raw item card
+    if (tonMeta.unique_id) {
+      const alreadyExists = itemsData[itemIdx].thans.some(t => t.unique_id === tonMeta.unique_id);
+      if (alreadyExists) {
+        return;
+      }
+    }
+
     const cons = parseFloat(itemsData[itemIdx].consumption_per_pc) || 1.5;
-    const thanObj = calculateThanValues(val, null, cons);
+    const thanObj = calculateThanValues(meterVal, null, cons);
+    
+    if (tonMeta.unique_id) thanObj.unique_id = tonMeta.unique_id;
+    if (tonMeta.po_id) thanObj.po_id = tonMeta.po_id;
+    if (tonMeta.po_item_id) thanObj.po_item_id = tonMeta.po_item_id;
+    if (tonMeta.po_number) thanObj.po_number = tonMeta.po_number;
+    if (tonMeta.challan_no) thanObj.challan_no = tonMeta.challan_no;
+    if (tonMeta.than_no) thanObj.purchase_than_no = tonMeta.than_no;
+    if (tonMeta.unit) thanObj.unit = tonMeta.unit;
+
     itemsData[itemIdx].thans.push(thanObj);
-    renderTonsForCard(itemIdx);
-    recalcRawItemRow(itemIdx);
+    renderAllRawItemCards();
     calculateOverallTotals();
   }
 
@@ -611,14 +650,25 @@
     
     if (available.length === 0) return;
     const cons = parseFloat(itemsData[itemIdx].consumption_per_pc) || 1.5;
+    const currentUniqueIds = new Set(itemsData[itemIdx].thans.map(t => t.unique_id).filter(Boolean));
 
     available.forEach(t => {
+      if (t.unique_id && currentUniqueIds.has(t.unique_id)) {
+        return;
+      }
       const thanObj = calculateThanValues(t.meter, null, cons);
+      if (t.unique_id) thanObj.unique_id = t.unique_id;
+      if (t.po_id) thanObj.po_id = t.po_id;
+      if (t.po_item_id) thanObj.po_item_id = t.po_item_id;
+      if (t.po_number) thanObj.po_number = t.po_number;
+      if (t.challan_no) thanObj.challan_no = t.challan_no;
+      if (t.than_no) thanObj.purchase_than_no = t.than_no;
+      if (t.unit) thanObj.unit = t.unit;
+
       itemsData[itemIdx].thans.push(thanObj);
     });
 
-    renderTonsForCard(itemIdx);
-    recalcRawItemRow(itemIdx);
+    renderAllRawItemCards();
     calculateOverallTotals();
   }
 
@@ -626,15 +676,13 @@
     const cons = parseFloat(itemsData[itemIdx].consumption_per_pc) || 1.5;
     const thanObj = calculateThanValues(0, null, cons);
     itemsData[itemIdx].thans.push(thanObj);
-    renderTonsForCard(itemIdx);
-    recalcRawItemRow(itemIdx);
+    renderAllRawItemCards();
     calculateOverallTotals();
   }
 
   function removeTon(itemIdx, tonIdx) {
     itemsData[itemIdx].thans.splice(tonIdx, 1);
-    renderTonsForCard(itemIdx);
-    recalcRawItemRow(itemIdx);
+    renderAllRawItemCards();
     calculateOverallTotals();
   }
 
@@ -647,7 +695,7 @@
 
     const cons = parseFloat(item.consumption_per_pc) || 1.5;
     const updated = calculateThanValues(m, null, cons);
-    item.thans[tonIdx] = updated;
+    Object.assign(than, updated);
 
     const wastageInput = document.getElementById(`than-wastage-input-${itemIdx}-${tonIdx}`);
     const usableDisp = document.getElementById(`than-usable-display-${itemIdx}-${tonIdx}`);
@@ -674,7 +722,7 @@
 
     const cons = parseFloat(item.consumption_per_pc) || 1.5;
     const updated = calculateThanValues(than.meter, w, cons);
-    item.thans[tonIdx] = updated;
+    Object.assign(than, updated);
 
     const usableDisp = document.getElementById(`than-usable-display-${itemIdx}-${tonIdx}`);
     const pcsDisp = document.getElementById(`than-pcs-display-${itemIdx}-${tonIdx}`);
@@ -694,8 +742,7 @@
     if (itemsData[itemIdx].thans.length === 0) return;
     if (confirm(`Clear all selected thans for Raw Item #${itemIdx + 1}?`)) {
       itemsData[itemIdx].thans = [];
-      renderTonsForCard(itemIdx);
-      recalcRawItemRow(itemIdx);
+      renderAllRawItemCards();
       calculateOverallTotals();
     }
   }
@@ -706,7 +753,10 @@
     
     // Recalculate each Than's pieces and scrap under this new consumption
     const cons = itemsData[itemIdx].consumption_per_pc;
-    itemsData[itemIdx].thans = itemsData[itemIdx].thans.map(t => calculateThanValues(t.meter, null, cons));
+    itemsData[itemIdx].thans.forEach(t => {
+      const calcs = calculateThanValues(t.meter, null, cons);
+      Object.assign(t, calcs);
+    });
     
     renderTonsForCard(itemIdx);
     recalcRawItemRow(itemIdx);
@@ -806,6 +856,8 @@
       const rawId = item.raw_item_id;
       const rawName = (item.raw_item_name || '').toLowerCase().trim();
       const availablePurchases = (rawId && purchasedTonsMap[rawId]) ? purchasedTonsMap[rawId] : (rawName && purchasedTonsMap[rawName] ? purchasedTonsMap[rawName] : []);
+      const selectedUniqueIds = new Set(item.thans.map(t => t.unique_id).filter(Boolean));
+      const remainingAvailable = availablePurchases.filter(p => !p.unique_id || !selectedUniqueIds.has(p.unique_id));
 
       let purchasedTonsChipsHtml = '';
       if (!item.raw_item_name) {
@@ -819,16 +871,33 @@
           <div style="margin-top:10px; background:#ffffff; border:1px solid #cbd5e1; border-radius:10px; padding:12px 14px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
               <span style="font-size:0.75rem; font-weight:800; color:#1e293b; text-transform:uppercase; display:inline-flex; align-items:center; gap:5px;">
-                📦 Available Purchase Thans in Stock (${availablePurchases.length} available):
+                📦 Available Purchase Thans in Stock (${remainingAvailable.length} of ${availablePurchases.length} available):
               </span>
-              <button type="button" class="btn btn-secondary btn-xs" onclick="addAllPurchasedTons(${itemIdx})" style="font-size:0.725rem; font-weight:700;">+ Select All Available (${availablePurchases.length})</button>
+              ${remainingAvailable.length > 0 ? `
+                <button type="button" class="btn btn-secondary btn-xs" onclick="addAllPurchasedTons(${itemIdx})" style="font-size:0.725rem; font-weight:700;">+ Select Remaining (${remainingAvailable.length})</button>
+              ` : `
+                <span style="font-size:0.725rem; font-weight:700; color:#059669; background:#ecfdf5; border:1px solid #a7f3d0; padding:2px 8px; border-radius:6px;">✓ All Stock Thans Selected</span>
+              `}
             </div>
             <div style="display:flex; flex-wrap:wrap; gap:8px;">
-              ${availablePurchases.map(p => `
-                <button type="button" class="purchased-ton-chip" onclick="addPurchasedTon(${itemIdx}, ${p.meter})" title="Click to select ${p.meter} ${p.unit} from Challan #${p.challan_no}">
-                  <span>+ ${p.label}</span>
-                </button>
-              `).join('')}
+              ${availablePurchases.map(p => {
+                const isAdded = p.unique_id && selectedUniqueIds.has(p.unique_id);
+                const pJson = JSON.stringify(p).replace(/"/g, '&quot;');
+                if (isAdded) {
+                  return `
+                    <button type="button" class="purchased-ton-chip added" style="background:#ecfdf5; border-color:#6ee7b7; color:#065f46; cursor:default; font-weight:700;" title="Already added to this order" disabled>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="color:#059669;"><polyline points="20 6 9 17 4 12"/></svg>
+                      <span>${p.label} (Added)</span>
+                    </button>
+                  `;
+                } else {
+                  return `
+                    <button type="button" class="purchased-ton-chip" onclick="addPurchasedTon(${itemIdx}, ${pJson})" title="Click to select ${p.meter} ${p.unit} from Challan #${p.challan_no}">
+                      <span>+ ${p.label}</span>
+                    </button>
+                  `;
+                }
+              }).join('')}
             </div>
           </div>
         `;
@@ -1043,16 +1112,33 @@
     item.thans.forEach((than, tIdx) => {
       const row = document.createElement('div');
       row.className = 'than-item-card';
+      const challanBadge = than.challan_no ? `
+        <span style="background:#f1f5f9; color:#475569; font-size:0.75rem; font-weight:700; padding:2px 7px; border-radius:4px; border:1px solid #cbd5e1;" title="Purchase Challan Reference">
+          Challan #${than.challan_no}${than.purchase_than_no ? ` (Than #${than.purchase_than_no})` : ''}
+        </span>
+      ` : (than.po_number ? `
+        <span style="background:#f1f5f9; color:#475569; font-size:0.75rem; font-weight:700; padding:2px 7px; border-radius:4px; border:1px solid #cbd5e1;">
+          PO #${than.po_number}
+        </span>
+      ` : '');
+
       row.innerHTML = `
         <input type="hidden" id="than-no-hidden-${itemIdx}-${tIdx}" name="items[${itemIdx}][thans][${tIdx}][than_no]" value="${tIdx + 1}">
         <input type="hidden" id="than-usable-hidden-${itemIdx}-${tIdx}" name="items[${itemIdx}][thans][${tIdx}][usable]" value="${than.usable}">
         <input type="hidden" id="than-pieces-hidden-${itemIdx}-${tIdx}" name="items[${itemIdx}][thans][${tIdx}][pieces]" value="${than.pieces}">
+        <input type="hidden" name="items[${itemIdx}][thans][${tIdx}][unique_id]" value="${than.unique_id || ''}">
+        <input type="hidden" name="items[${itemIdx}][thans][${tIdx}][po_id]" value="${than.po_id || ''}">
+        <input type="hidden" name="items[${itemIdx}][thans][${tIdx}][po_item_id]" value="${than.po_item_id || ''}">
+        <input type="hidden" name="items[${itemIdx}][thans][${tIdx}][po_number]" value="${than.po_number || ''}">
+        <input type="hidden" name="items[${itemIdx}][thans][${tIdx}][challan_no]" value="${than.challan_no || ''}">
+        <input type="hidden" name="items[${itemIdx}][thans][${tIdx}][purchase_than_no]" value="${than.purchase_than_no || (than.than_no || '')}">
         
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-          <div style="display:flex; align-items:center; gap:8px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:6px;">
+          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
             <span style="background:#eef2ff; color:#4338ca; font-weight:800; font-size:0.85rem; padding:3px 9px; border-radius:6px; border:1px solid #c7d2fe;">
               Than #${tIdx + 1}
             </span>
+            ${challanBadge}
           </div>
           <div style="display:flex; align-items:center; gap:8px;">
             <div style="display:inline-flex; align-items:center; gap:5px; background:#ecfdf5; border:1px solid #a7f3d0; padding:3px 9px; border-radius:6px;">

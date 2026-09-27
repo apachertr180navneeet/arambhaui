@@ -61,12 +61,70 @@ class JobAssignController extends Controller
     }
 
     /**
-     * Get available purchase tons/thans mapped by raw item id & name
+     * Get available purchase tons/thans mapped by raw item id & name,
+     * filtering out any thans that have already been assigned to Job Work Orders.
      */
-    protected function getPurchasedTonsByItem()
+    protected function getPurchasedTonsByItem($excludeAssignmentId = null)
     {
         $purchasedTons = [];
         $purchaseOrders = PurchaseOrder::with('items')->latest()->get();
+
+        // 1. Gather all assigned purchase than references from active Job Assignments
+        $usedThanKeys = [];
+        $activeAssignments = JobAssignmentItem::whereHas('jobAssignment', function ($q) use ($excludeAssignmentId) {
+            if ($excludeAssignmentId) {
+                $q->where('id', '!=', $excludeAssignmentId);
+            }
+        })->get();
+
+        foreach ($activeAssignments as $aItm) {
+            $thans = $aItm->than_list;
+            if (!empty($thans) && is_array($thans)) {
+                foreach ($thans as $t) {
+                    if (is_array($t)) {
+                        if (!empty($t['unique_id'])) {
+                            $usedThanKeys[$t['unique_id']] = true;
+                        }
+                        if (!empty($t['po_id']) && !empty($t['purchase_than_no'])) {
+                            $usedThanKeys["po_{$t['po_id']}_than_{$t['purchase_than_no']}"] = true;
+                        }
+                        if (!empty($t['po_id']) && !empty($t['po_item_id']) && !empty($t['purchase_than_no'])) {
+                            $usedThanKeys["po_{$t['po_id']}_item_{$t['po_item_id']}_than_" . ($t['purchase_than_no'] - 1)] = true;
+                        }
+                        if (!empty($t['challan_no']) && !empty($t['purchase_than_no'])) {
+                            $usedThanKeys["challan_{$t['challan_no']}_than_{$t['purchase_than_no']}"] = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Also check job_assignments table directly
+        $legacyAssignments = JobAssignment::when($excludeAssignmentId, function ($q) use ($excludeAssignmentId) {
+            $q->where('id', '!=', $excludeAssignmentId);
+        })->get();
+
+        foreach ($legacyAssignments as $la) {
+            $thans = $la->than_list;
+            if (!empty($thans) && is_array($thans)) {
+                foreach ($thans as $t) {
+                    if (is_array($t)) {
+                        if (!empty($t['unique_id'])) {
+                            $usedThanKeys[$t['unique_id']] = true;
+                        }
+                        if (!empty($t['po_id']) && !empty($t['purchase_than_no'])) {
+                            $usedThanKeys["po_{$t['po_id']}_than_{$t['purchase_than_no']}"] = true;
+                        }
+                        if (!empty($t['po_id']) && !empty($t['po_item_id']) && !empty($t['purchase_than_no'])) {
+                            $usedThanKeys["po_{$t['po_id']}_item_{$t['po_item_id']}_than_" . ($t['purchase_than_no'] - 1)] = true;
+                        }
+                        if (!empty($t['challan_no']) && !empty($t['purchase_than_no'])) {
+                            $usedThanKeys["challan_{$t['challan_no']}_than_{$t['purchase_than_no']}"] = true;
+                        }
+                    }
+                }
+            }
+        }
 
         foreach ($purchaseOrders as $po) {
             $challanNo = $po->challan_no ?: $po->po_number;
@@ -82,15 +140,27 @@ class JobAssignController extends Controller
                     }
 
                     foreach ($thans as $tIdx => $tMtr) {
+                        $thanNo = $tIdx + 1;
+                        $uniqueKey = "po_{$po->id}_item_{$poItem->id}_than_{$tIdx}";
+                        $altKey1 = "po_{$po->id}_than_{$thanNo}";
+                        $altKey2 = "challan_{$challanNo}_than_{$thanNo}";
+
+                        // If already assigned to another job work order, skip it (reduce from available stock)
+                        if (!empty($usedThanKeys[$uniqueKey]) || !empty($usedThanKeys[$altKey1]) || !empty($usedThanKeys[$altKey2])) {
+                            continue;
+                        }
+
                         $tonObj = [
+                            'unique_id' => $uniqueKey,
                             'po_id' => $po->id,
+                            'po_item_id' => $poItem->id,
                             'po_number' => $po->po_number,
                             'challan_no' => $challanNo,
                             'date' => $po->po_date,
-                            'than_no' => $tIdx + 1,
+                            'than_no' => $thanNo,
                             'meter' => (float)$tMtr,
                             'unit' => $poItem->unit ?: 'Mtr',
-                            'label' => "Challan #{$challanNo} - Than #" . ($tIdx + 1) . " (" . number_format($tMtr, 2) . " " . ($poItem->unit ?: 'Mtr') . ")"
+                            'label' => "Challan #{$challanNo} - Than #{$thanNo} (" . number_format($tMtr, 2) . " " . ($poItem->unit ?: 'Mtr') . ")"
                         ];
 
                         foreach ($keys as $k) {
@@ -214,7 +284,13 @@ class JobAssignController extends Controller
                                     'meter' => round($m, 2),
                                     'wastage' => round($w, 2),
                                     'usable' => round($u, 2),
-                                    'pieces' => $p
+                                    'pieces' => $p,
+                                    'unique_id' => $t['unique_id'] ?? null,
+                                    'po_id' => $t['po_id'] ?? null,
+                                    'po_item_id' => $t['po_item_id'] ?? null,
+                                    'po_number' => $t['po_number'] ?? null,
+                                    'challan_no' => $t['challan_no'] ?? null,
+                                    'purchase_than_no' => $t['purchase_than_no'] ?? ($t['than_no'] ?? null),
                                 ];
                                 $itemThanMeters += $m;
                                 $itemWastage += $w;
@@ -370,6 +446,21 @@ class JobAssignController extends Controller
                 if ($hasItemThanDetails) $itemPayload['than_details'] = $pItem['than_details'];
 
                 JobAssignmentItem::create($itemPayload);
+
+                // Reduce Raw Item current stock in items table
+                $rItemId = $pItem['raw_item_id'] ?: $pItem['item_id'];
+                $rawItem = null;
+                if ($rItemId) {
+                    $rawItem = Item::find($rItemId);
+                }
+                if (!$rawItem && !empty($pItem['raw_item_name'])) {
+                    $rawItem = Item::where('name', $pItem['raw_item_name'])->first();
+                }
+                if ($rawItem) {
+                    $deductMtr = (float)($pItem['than_meters'] > 0 ? $pItem['than_meters'] : $pItem['qty']);
+                    $rawItem->current_stock = max(0, (float)$rawItem->current_stock - $deductMtr);
+                    $rawItem->save();
+                }
             }
 
             if ($request->wantsJson() || $request->ajax()) {
@@ -388,7 +479,7 @@ class JobAssignController extends Controller
     {
         $jobworkers = JobWorker::where('status', 'Active')->get();
         $items = Item::all();
-        $purchasedTonsByItem = $this->getPurchasedTonsByItem();
+        $purchasedTonsByItem = $this->getPurchasedTonsByItem($assign->id);
         $assign->load(['items.rawItem', 'items.finishedItem', 'jobWorker']);
 
         return view('jobwork.assign.edit', compact('assign', 'jobworkers', 'items', 'purchasedTonsByItem'));
@@ -489,7 +580,13 @@ class JobAssignController extends Controller
                                     'meter' => round($m, 2),
                                     'wastage' => round($w, 2),
                                     'usable' => round($u, 2),
-                                    'pieces' => $p
+                                    'pieces' => $p,
+                                    'unique_id' => $t['unique_id'] ?? null,
+                                    'po_id' => $t['po_id'] ?? null,
+                                    'po_item_id' => $t['po_item_id'] ?? null,
+                                    'po_number' => $t['po_number'] ?? null,
+                                    'challan_no' => $t['challan_no'] ?? null,
+                                    'purchase_than_no' => $t['purchase_than_no'] ?? ($t['than_no'] ?? null),
                                 ];
                                 $itemThanMeters += $m;
                                 $itemWastage += $w;
@@ -611,6 +708,23 @@ class JobAssignController extends Controller
 
             $assign->update($assignmentData);
 
+            // Restore previous raw item stock
+            foreach ($assign->items as $prevItem) {
+                $prevRId = $prevItem->raw_item_id ?: $prevItem->item_id;
+                $prevRawItem = null;
+                if ($prevRId) {
+                    $prevRawItem = Item::find($prevRId);
+                }
+                if (!$prevRawItem && !empty($prevItem->raw_item_name)) {
+                    $prevRawItem = Item::where('name', $prevItem->raw_item_name)->first();
+                }
+                if ($prevRawItem) {
+                    $restoreMtr = (float)($prevItem->than_meters > 0 ? $prevItem->than_meters : $prevItem->qty);
+                    $prevRawItem->current_stock = (float)$prevRawItem->current_stock + $restoreMtr;
+                    $prevRawItem->save();
+                }
+            }
+
             // Sync line items
             $assign->items()->delete();
 
@@ -646,6 +760,21 @@ class JobAssignController extends Controller
                 if ($hasItemThanDetails) $itemPayload['than_details'] = $pItem['than_details'];
 
                 JobAssignmentItem::create($itemPayload);
+
+                // Reduce Raw Item current stock
+                $rItemId = $pItem['raw_item_id'] ?: $pItem['item_id'];
+                $rawItem = null;
+                if ($rItemId) {
+                    $rawItem = Item::find($rItemId);
+                }
+                if (!$rawItem && !empty($pItem['raw_item_name'])) {
+                    $rawItem = Item::where('name', $pItem['raw_item_name'])->first();
+                }
+                if ($rawItem) {
+                    $deductMtr = (float)($pItem['than_meters'] > 0 ? $pItem['than_meters'] : $pItem['qty']);
+                    $rawItem->current_stock = max(0, (float)$rawItem->current_stock - $deductMtr);
+                    $rawItem->save();
+                }
             }
 
             if ($request->wantsJson() || $request->ajax()) {
@@ -668,6 +797,24 @@ class JobAssignController extends Controller
     public function destroy(JobAssignment $assign)
     {
         $no = $assign->job_order_no;
+
+        // Restore raw item stock
+        foreach ($assign->items as $prevItem) {
+            $prevRId = $prevItem->raw_item_id ?: $prevItem->item_id;
+            $prevRawItem = null;
+            if ($prevRId) {
+                $prevRawItem = Item::find($prevRId);
+            }
+            if (!$prevRawItem && !empty($prevItem->raw_item_name)) {
+                $prevRawItem = Item::where('name', $prevItem->raw_item_name)->first();
+            }
+            if ($prevRawItem) {
+                $restoreMtr = (float)($prevItem->than_meters > 0 ? $prevItem->than_meters : $prevItem->qty);
+                $prevRawItem->current_stock = (float)$prevRawItem->current_stock + $restoreMtr;
+                $prevRawItem->save();
+            }
+        }
+
         $assign->items()->delete();
         $assign->delete();
 
