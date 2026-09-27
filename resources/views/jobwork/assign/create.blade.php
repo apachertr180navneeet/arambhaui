@@ -743,8 +743,15 @@
       const rawId = item.raw_item_id;
       const rawName = (item.raw_item_name || '').toLowerCase().trim();
       const availablePurchases = (rawId && purchasedTonsMap[rawId]) ? purchasedTonsMap[rawId] : (rawName && purchasedTonsMap[rawName] ? purchasedTonsMap[rawName] : []);
-      const selectedUniqueIds = new Set(item.thans.map(t => t.unique_id).filter(Boolean));
-      const remainingAvailable = availablePurchases.filter(p => !p.unique_id || !selectedUniqueIds.has(p.unique_id));
+      
+      const allSelectedUniqueIds = new Set();
+      itemsData.forEach(itm => {
+        (itm.thans || []).forEach(t => {
+          if (t.unique_id) allSelectedUniqueIds.add(t.unique_id);
+        });
+      });
+
+      const remainingAvailable = availablePurchases.filter(p => !p.unique_id || !allSelectedUniqueIds.has(p.unique_id));
 
       let purchasedTonsChipsHtml = '';
       if (!item.raw_item_name) {
@@ -768,7 +775,7 @@
             </div>
             <div style="display:flex; flex-wrap:wrap; gap:8px;">
               ${availablePurchases.map(p => {
-                const isAdded = p.unique_id && selectedUniqueIds.has(p.unique_id);
+                const isAdded = p.unique_id && allSelectedUniqueIds.has(p.unique_id);
                 const pJson = JSON.stringify(p).replace(/"/g, '&quot;');
                 if (isAdded) {
                   return `
