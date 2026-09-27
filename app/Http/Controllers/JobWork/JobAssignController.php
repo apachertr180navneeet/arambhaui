@@ -93,7 +93,10 @@ class JobAssignController extends Controller
             'items' => 'nullable|array',
             'items.*.item_id' => 'nullable',
             'items.*.item_name' => 'nullable|string|max:255',
+            'items.*.item_code' => 'nullable|string|max:100',
             'items.*.than_meters' => 'nullable|numeric|min:0',
+            'items.*.thans' => 'nullable|array',
+            'items.*.thans.*' => 'nullable|numeric|min:0',
             'items.*.production_pcs' => 'nullable|numeric|min:0',
             'items.*.wastage_meters' => 'nullable|numeric|min:0',
             'items.*.rate_per_piece' => 'nullable|numeric|min:0',
@@ -114,26 +117,69 @@ class JobAssignController extends Controller
 
             // Calculate totals across all valid items
             $totalPcs = 0;
-            $totalThan = 0;
+            $totalThanMeters = 0;
+            $totalThansCount = 0;
             $totalWastage = 0;
             $totalAmount = 0;
             $styleNames = [];
+            $allThanDetails = [];
+            $processedItems = [];
 
             foreach ($cleanedItems as $it) {
                 $pcs = (float)($it['production_pcs'] ?? 0);
-                $than = (float)($it['than_meters'] ?? 0);
                 $wastage = (float)($it['wastage_meters'] ?? 0);
                 $rate = (float)($it['rate_per_piece'] ?? 0);
-                $lineTotal = $pcs * $rate;
+
+                // Process thans breakdown
+                $thans = [];
+                if (!empty($it['thans']) && is_array($it['thans'])) {
+                    foreach ($it['thans'] as $t) {
+                        $f = (float)$t;
+                        if ($f > 0) {
+                            $thans[] = round($f, 2);
+                        }
+                    }
+                }
+
+                $thanMeters = !empty($thans) ? array_sum($thans) : (float)($it['than_meters'] ?? 0);
+                if (empty($thans) && $thanMeters > 0) {
+                    $thans = [round($thanMeters, 2)];
+                }
+
+                $thanCount = count($thans);
+                $lineTotal = round($pcs * $rate, 2);
+                $netFabric = max(0, $thanMeters - $wastage);
+                $avgCons = $pcs > 0 ? ($netFabric / $pcs) : 0;
 
                 $totalPcs += $pcs;
-                $totalThan += $than;
+                $totalThanMeters += $thanMeters;
+                $totalThansCount += $thanCount;
                 $totalWastage += $wastage;
                 $totalAmount += $lineTotal;
 
-                if (!empty($it['item_name'])) {
-                    $styleNames[] = $it['item_name'];
+                if (!empty($thans)) {
+                    $allThanDetails = array_merge($allThanDetails, $thans);
                 }
+
+                $resolvedItemName = !empty($it['item_name']) ? $it['item_name'] : (!empty($it['item_id']) ? (Item::find($it['item_id'])?->name ?? 'Item') : 'Item');
+                $styleNames[] = $resolvedItemName;
+
+                $processedItems[] = [
+                    'item_id' => !empty($it['item_id']) ? (int)$it['item_id'] : null,
+                    'item_name' => $resolvedItemName,
+                    'than_meters' => $thanMeters,
+                    'than_count' => $thanCount,
+                    'than_details' => !empty($thans) ? json_encode($thans) : null,
+                    'production_pcs' => (int)$pcs,
+                    'wastage_meters' => $wastage,
+                    'avg_consumption' => round($avgCons, 4),
+                    'rate_per_piece' => $rate,
+                    'total_amount' => $lineTotal,
+                    'size' => $it['size'] ?? 'All Sizes',
+                    'color' => $it['color'] ?? 'Standard',
+                    'qty' => (int)$pcs,
+                    'remarks' => $it['remarks'] ?? null
+                ];
             }
 
             $avgRate = $totalPcs > 0 ? ($totalAmount / $totalPcs) : 0;
@@ -141,7 +187,7 @@ class JobAssignController extends Controller
                 ? $validated['style_name']
                 : (count($styleNames) > 0 ? implode(', ', array_unique($styleNames)) : 'Garment Lot');
 
-            $jobAssignment = JobAssignment::create([
+            $assignmentData = [
                 'job_order_no' => $jobOrderNo,
                 'job_worker_id' => $jobWorker ? $jobWorker->id : null,
                 'job_worker_name' => $validated['job_worker_name'],
@@ -151,39 +197,52 @@ class JobAssignController extends Controller
                 'issue_date' => $validated['issue_date'],
                 'due_date' => $validated['due_date'] ?? null,
                 'issued_qty' => (int)$totalPcs,
-                'total_than_meters' => $totalThan,
+                'total_than_meters' => $totalThanMeters,
                 'total_wastage_meters' => $totalWastage,
-                'rate_per_piece' => $avgRate,
-                'total_amount' => $totalAmount,
+                'rate_per_piece' => round($avgRate, 2),
+                'total_amount' => round($totalAmount, 2),
                 'status' => 'Issued',
                 'instructions' => $validated['instructions'] ?? null
-            ]);
+            ];
+
+            if (\Illuminate\Support\Facades\Schema::hasColumn('job_assignments', 'total_thans')) {
+                $assignmentData['total_thans'] = $totalThansCount;
+            }
+            if (\Illuminate\Support\Facades\Schema::hasColumn('job_assignments', 'than_details')) {
+                $assignmentData['than_details'] = !empty($allThanDetails) ? json_encode($allThanDetails) : null;
+            }
+
+            $jobAssignment = JobAssignment::create($assignmentData);
 
             // Save line items
-            foreach ($cleanedItems as $it) {
-                $pcs = (float)($it['production_pcs'] ?? 0);
-                $than = (float)($it['than_meters'] ?? 0);
-                $wastage = (float)($it['wastage_meters'] ?? 0);
-                $rate = (float)($it['rate_per_piece'] ?? 0);
-                $lineTotal = $pcs * $rate;
-                $avgCons = $pcs > 0 ? max(0, ($than - $wastage) / $pcs) : 0;
-                $resolvedItemName = !empty($it['item_name']) ? $it['item_name'] : (!empty($it['item_id']) ? (Item::find($it['item_id'])?->name ?? 'Item') : 'Item');
+            $hasItemThanCount = \Illuminate\Support\Facades\Schema::hasColumn('job_assignment_items', 'than_count');
+            $hasItemThanDetails = \Illuminate\Support\Facades\Schema::hasColumn('job_assignment_items', 'than_details');
 
-                JobAssignmentItem::create([
+            foreach ($processedItems as $pItem) {
+                $itemPayload = [
                     'job_assignment_id' => $jobAssignment->id,
-                    'item_id' => !empty($it['item_id']) ? (int)$it['item_id'] : null,
-                    'item_name' => $resolvedItemName,
-                    'than_meters' => $than,
-                    'production_pcs' => (int)$pcs,
-                    'wastage_meters' => $wastage,
-                    'avg_consumption' => $avgCons,
-                    'rate_per_piece' => $rate,
-                    'total_amount' => $lineTotal,
-                    'size' => $it['size'] ?? 'All Sizes',
-                    'color' => $it['color'] ?? 'Standard',
-                    'qty' => (int)$pcs,
-                    'remarks' => $it['remarks'] ?? null
-                ]);
+                    'item_id' => $pItem['item_id'],
+                    'item_name' => $pItem['item_name'],
+                    'than_meters' => $pItem['than_meters'],
+                    'production_pcs' => $pItem['production_pcs'],
+                    'wastage_meters' => $pItem['wastage_meters'],
+                    'avg_consumption' => $pItem['avg_consumption'],
+                    'rate_per_piece' => $pItem['rate_per_piece'],
+                    'total_amount' => $pItem['total_amount'],
+                    'size' => $pItem['size'],
+                    'color' => $pItem['color'],
+                    'qty' => $pItem['qty'],
+                    'remarks' => $pItem['remarks']
+                ];
+
+                if ($hasItemThanCount) {
+                    $itemPayload['than_count'] = $pItem['than_count'];
+                }
+                if ($hasItemThanDetails) {
+                    $itemPayload['than_details'] = $pItem['than_details'];
+                }
+
+                JobAssignmentItem::create($itemPayload);
             }
 
             if ($request->wantsJson() || $request->ajax()) {
@@ -214,7 +273,7 @@ class JobAssignController extends Controller
         $cleanedItems = [];
         if (is_array($rawItems)) {
             foreach ($rawItems as $it) {
-                if (!empty($it['item_id']) || !empty($it['item_name']) || (!empty($it['production_pcs']) && (float)$it['production_pcs'] > 0) || (!empty($it['than_meters']) && (float)$it['than_meters'] > 0)) {
+                if (!empty($it['item_id']) || !empty($it['item_name']) || (!empty($it['production_pcs']) && (float)$it['production_pcs'] > 0) || (!empty($it['than_meters']) && (float)$it['than_meters'] > 0) || !empty($it['thans'])) {
                     $cleanedItems[] = $it;
                 }
             }
@@ -234,7 +293,10 @@ class JobAssignController extends Controller
             'items' => 'nullable|array',
             'items.*.item_id' => 'nullable',
             'items.*.item_name' => 'nullable|string|max:255',
+            'items.*.item_code' => 'nullable|string|max:100',
             'items.*.than_meters' => 'nullable|numeric|min:0',
+            'items.*.thans' => 'nullable|array',
+            'items.*.thans.*' => 'nullable|numeric|min:0',
             'items.*.production_pcs' => 'nullable|numeric|min:0',
             'items.*.wastage_meters' => 'nullable|numeric|min:0',
             'items.*.rate_per_piece' => 'nullable|numeric|min:0',
@@ -253,26 +315,69 @@ class JobAssignController extends Controller
 
             // Calculate totals
             $totalPcs = 0;
-            $totalThan = 0;
+            $totalThanMeters = 0;
+            $totalThansCount = 0;
             $totalWastage = 0;
             $totalAmount = 0;
             $styleNames = [];
+            $allThanDetails = [];
+            $processedItems = [];
 
             foreach ($cleanedItems as $it) {
                 $pcs = (float)($it['production_pcs'] ?? 0);
-                $than = (float)($it['than_meters'] ?? 0);
                 $wastage = (float)($it['wastage_meters'] ?? 0);
                 $rate = (float)($it['rate_per_piece'] ?? 0);
-                $lineTotal = $pcs * $rate;
+
+                // Process thans breakdown
+                $thans = [];
+                if (!empty($it['thans']) && is_array($it['thans'])) {
+                    foreach ($it['thans'] as $t) {
+                        $f = (float)$t;
+                        if ($f > 0) {
+                            $thans[] = round($f, 2);
+                        }
+                    }
+                }
+
+                $thanMeters = !empty($thans) ? array_sum($thans) : (float)($it['than_meters'] ?? 0);
+                if (empty($thans) && $thanMeters > 0) {
+                    $thans = [round($thanMeters, 2)];
+                }
+
+                $thanCount = count($thans);
+                $lineTotal = round($pcs * $rate, 2);
+                $netFabric = max(0, $thanMeters - $wastage);
+                $avgCons = $pcs > 0 ? ($netFabric / $pcs) : 0;
 
                 $totalPcs += $pcs;
-                $totalThan += $than;
+                $totalThanMeters += $thanMeters;
+                $totalThansCount += $thanCount;
                 $totalWastage += $wastage;
                 $totalAmount += $lineTotal;
 
-                if (!empty($it['item_name'])) {
-                    $styleNames[] = $it['item_name'];
+                if (!empty($thans)) {
+                    $allThanDetails = array_merge($allThanDetails, $thans);
                 }
+
+                $resolvedItemName = !empty($it['item_name']) ? $it['item_name'] : (!empty($it['item_id']) ? (Item::find($it['item_id'])?->name ?? 'Item') : 'Item');
+                $styleNames[] = $resolvedItemName;
+
+                $processedItems[] = [
+                    'item_id' => !empty($it['item_id']) ? (int)$it['item_id'] : null,
+                    'item_name' => $resolvedItemName,
+                    'than_meters' => $thanMeters,
+                    'than_count' => $thanCount,
+                    'than_details' => !empty($thans) ? json_encode($thans) : null,
+                    'production_pcs' => (int)$pcs,
+                    'wastage_meters' => $wastage,
+                    'avg_consumption' => round($avgCons, 4),
+                    'rate_per_piece' => $rate,
+                    'total_amount' => $lineTotal,
+                    'size' => $it['size'] ?? 'All Sizes',
+                    'color' => $it['color'] ?? 'Standard',
+                    'qty' => (int)$pcs,
+                    'remarks' => $it['remarks'] ?? null
+                ];
             }
 
             $avgRate = $totalPcs > 0 ? ($totalAmount / $totalPcs) : 0;
@@ -280,7 +385,7 @@ class JobAssignController extends Controller
                 ? $validated['style_name']
                 : (count($styleNames) > 0 ? implode(', ', array_unique($styleNames)) : $assign->style_name);
 
-            $assign->update([
+            $assignmentData = [
                 'job_worker_id' => $jobWorker ? $jobWorker->id : $assign->job_worker_id,
                 'job_worker_name' => $validated['job_worker_name'],
                 'process_name' => $validated['process_name'],
@@ -289,40 +394,54 @@ class JobAssignController extends Controller
                 'issue_date' => $validated['issue_date'],
                 'due_date' => $validated['due_date'] ?? null,
                 'issued_qty' => (int)$totalPcs,
-                'total_than_meters' => $totalThan,
+                'total_than_meters' => $totalThanMeters,
                 'total_wastage_meters' => $totalWastage,
-                'rate_per_piece' => $avgRate,
-                'total_amount' => $totalAmount,
+                'rate_per_piece' => round($avgRate, 2),
+                'total_amount' => round($totalAmount, 2),
                 'status' => $validated['status'] ?? $assign->status,
                 'instructions' => $validated['instructions'] ?? null
-            ]);
+            ];
+
+            if (\Illuminate\Support\Facades\Schema::hasColumn('job_assignments', 'total_thans')) {
+                $assignmentData['total_thans'] = $totalThansCount;
+            }
+            if (\Illuminate\Support\Facades\Schema::hasColumn('job_assignments', 'than_details')) {
+                $assignmentData['than_details'] = !empty($allThanDetails) ? json_encode($allThanDetails) : null;
+            }
+
+            $assign->update($assignmentData);
 
             // Sync line items
             $assign->items()->delete();
-            foreach ($cleanedItems as $it) {
-                $pcs = (float)($it['production_pcs'] ?? 0);
-                $than = (float)($it['than_meters'] ?? 0);
-                $wastage = (float)($it['wastage_meters'] ?? 0);
-                $rate = (float)($it['rate_per_piece'] ?? 0);
-                $lineTotal = $pcs * $rate;
-                $avgCons = $pcs > 0 ? max(0, ($than - $wastage) / $pcs) : 0;
-                $resolvedItemName = !empty($it['item_name']) ? $it['item_name'] : (!empty($it['item_id']) ? (Item::find($it['item_id'])?->name ?? 'Item') : 'Item');
 
-                JobAssignmentItem::create([
+            $hasItemThanCount = \Illuminate\Support\Facades\Schema::hasColumn('job_assignment_items', 'than_count');
+            $hasItemThanDetails = \Illuminate\Support\Facades\Schema::hasColumn('job_assignment_items', 'than_details');
+
+            foreach ($processedItems as $pItem) {
+                $itemPayload = [
                     'job_assignment_id' => $assign->id,
-                    'item_id' => !empty($it['item_id']) ? (int)$it['item_id'] : null,
-                    'item_name' => $resolvedItemName,
-                    'than_meters' => $than,
-                    'production_pcs' => (int)$pcs,
-                    'wastage_meters' => $wastage,
-                    'avg_consumption' => $avgCons,
-                    'rate_per_piece' => $rate,
-                    'total_amount' => $lineTotal,
-                    'size' => $it['size'] ?? 'All Sizes',
-                    'color' => $it['color'] ?? 'Standard',
-                    'qty' => (int)$pcs,
-                    'remarks' => $it['remarks'] ?? null
-                ]);
+                    'item_id' => $pItem['item_id'],
+                    'item_name' => $pItem['item_name'],
+                    'than_meters' => $pItem['than_meters'],
+                    'production_pcs' => $pItem['production_pcs'],
+                    'wastage_meters' => $pItem['wastage_meters'],
+                    'avg_consumption' => $pItem['avg_consumption'],
+                    'rate_per_piece' => $pItem['rate_per_piece'],
+                    'total_amount' => $pItem['total_amount'],
+                    'size' => $pItem['size'],
+                    'color' => $pItem['color'],
+                    'qty' => $pItem['qty'],
+                    'remarks' => $pItem['remarks']
+                ];
+
+                if ($hasItemThanCount) {
+                    $itemPayload['than_count'] = $pItem['than_count'];
+                }
+                if ($hasItemThanDetails) {
+                    $itemPayload['than_details'] = $pItem['than_details'];
+                }
+
+                JobAssignmentItem::create($itemPayload);
             }
 
             if ($request->wantsJson() || $request->ajax()) {

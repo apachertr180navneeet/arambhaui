@@ -21,4 +21,16 @@ class JobAssignmentItem extends Model
     {
         return $this->belongsTo(Item::class);
     }
+
+    public function getThanListAttribute(): array
+    {
+        if (!empty($this->than_details)) {
+            $decoded = is_string($this->than_details) ? json_decode($this->than_details, true) : $this->than_details;
+            if (is_array($decoded)) return $decoded;
+        }
+        if ($this->than_meters > 0) {
+            return [(float)$this->than_meters];
+        }
+        return [];
+    }
 }

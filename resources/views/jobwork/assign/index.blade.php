@@ -457,11 +457,16 @@
                 @endif
               </td>
 
-              <!-- Than Fabric Meters -->
+              <!-- Than Fabric Meters & Rolls -->
               <td>
                 <div style="font-weight:700; color:var(--slate-900);">
                   {{ $than > 0 ? number_format($than, 1) . ' Mtr' : '—' }}
                 </div>
+                @if($ja->total_thans_count > 0)
+                  <span class="badge" style="background:#f1f5f9; color:#475569; font-size:0.7rem; padding:1px 5px; border:1px solid #cbd5e1; font-weight:700; margin-top:2px; display:inline-block;">
+                    {{ $ja->total_thans_count }} {{ $ja->total_thans_count == 1 ? 'Than' : 'Thans' }}
+                  </span>
+                @endif
               </td>
 
               <!-- Target Output Pcs -->
@@ -732,10 +737,26 @@
       const itRate = parseFloat(it.rate_per_piece || 0);
       const itTotal = parseFloat(it.total_amount || (itPcs * itRate));
 
+      let thans = [];
+      if (it.than_details) {
+        try {
+          thans = typeof it.than_details === 'string' ? JSON.parse(it.than_details) : it.than_details;
+        } catch (e) {
+          thans = [];
+        }
+      } else if (it.than_list && Array.isArray(it.than_list)) {
+        thans = it.than_list;
+      }
+
+      let thanInfoHtml = `${itThan.toFixed(1)} Mtr`;
+      if (thans && thans.length > 0) {
+        thanInfoHtml += ` <div style="font-size:0.7rem; color:#4338ca; font-weight:700;">${thans.length} Thans: [${thans.join(', ')}]</div>`;
+      }
+
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td><strong>${it.item_name || ja.style_name}</strong></td>
-        <td>${itThan.toFixed(1)} Mtr</td>
+        <td>${thanInfoHtml}</td>
         <td><strong>${itPcs} Pcs</strong></td>
         <td style="color:#dc2626;">${itWastage.toFixed(1)} Mtr</td>
         <td><span class="badge" style="background:#f1f5f9; color:#334155;">${itAvg.toFixed(2)} M/Pc</span></td>
