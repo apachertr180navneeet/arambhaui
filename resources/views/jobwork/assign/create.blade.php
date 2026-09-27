@@ -69,16 +69,17 @@
   .ton-row {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 6px 10px;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 8px 12px;
     transition: all 0.15s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   }
   .ton-row:hover {
-    border-color: #cbd5e1;
-    background: #fafafa;
+    border-color: #4338ca;
+    box-shadow: 0 2px 8px rgba(67, 56, 202, 0.1);
   }
 </style>
 @endpush
@@ -760,7 +761,7 @@
           </div>
 
           <!-- Selected Thans Grid List -->
-          <div id="tons-list-box-${itemIdx}" style="${item.thans.length > 0 ? 'display:grid;' : 'display:none;'} grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:10px; margin-top:12px; margin-bottom:12px;"></div>
+          <div id="tons-list-box-${itemIdx}" style="${item.thans.length > 0 ? 'display:grid;' : 'display:none;'} grid-template-columns:repeat(auto-fill, minmax(290px, 1fr)); gap:12px; margin-top:14px; margin-bottom:14px;"></div>
 
           <!-- Total Raw Quantity Footer under this Raw Item -->
           <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px dashed #cbd5e1; padding-top:10px; margin-top:8px; font-size:0.875rem;">
@@ -851,16 +852,16 @@
       const row = document.createElement('div');
       row.className = 'ton-row';
       row.innerHTML = `
-        <span style="font-weight:700; font-size:0.75rem; color:#4338ca; width:64px;">Than #${tIdx + 1}</span>
-        <div style="flex:1;">
+        <span style="font-weight:800; font-size:0.875rem; color:#4338ca; white-space:nowrap; min-width:68px;">Than #${tIdx + 1}</span>
+        <div style="flex:1; min-width:110px;">
           <input type="number" step="0.01" min="0" value="${meter}" name="items[${itemIdx}][thans][]" 
-            class="form-control form-control-sm" 
-            style="font-weight:700; font-size:0.85rem; padding:3px 6px; height:28px;"
+            class="form-control" 
+            style="font-weight:800; font-size:1.05rem; padding:6px 12px; height:42px; border-radius:8px; border:1.5px solid #cbd5e1; text-align:right; width:100%; color:#0f172a;"
             oninput="updateTonValue(${itemIdx}, ${tIdx}, this.value)"
             onfocus="this.select()">
         </div>
-        <span style="font-size:0.7rem; color:#64748b; font-weight:600;">Mtr/KG</span>
-        <button type="button" onclick="removeTon(${itemIdx}, ${tIdx})" title="Remove than" style="background:none; border:none; color:#ef4444; font-size:1.15rem; cursor:pointer; line-height:1; padding:0 3px;">&times;</button>
+        <span style="font-size:0.8rem; color:#64748b; font-weight:700; white-space:nowrap;">Mtr/KG</span>
+        <button type="button" onclick="removeTon(${itemIdx}, ${tIdx})" title="Remove than" style="background:#fee2e2; border:none; color:#dc2626; width:30px; height:30px; border-radius:6px; display:inline-flex; align-items:center; justify-content:center; font-size:1.2rem; font-weight:700; cursor:pointer; line-height:1; padding:0; flex-shrink:0;">&times;</button>
       `;
 
       listBox.appendChild(row);
