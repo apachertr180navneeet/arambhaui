@@ -608,11 +608,6 @@
     recalcRawItemRow(itemIdx);
     calculateOverallTotals();
   }
-    
-    renderTonsForCard(itemIdx);
-    recalcRawItemRow(itemIdx);
-    calculateOverallTotals();
-  }
 
   function onRateChange(itemIdx, val) {
     const r = parseFloat(val);
