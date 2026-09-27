@@ -49,7 +49,15 @@ class PurchaseOrderController extends Controller
         $count = PurchaseOrder::count() + 1;
         $nextPoNumber = 'PE-2026-' . str_pad($count, 4, '0', STR_PAD_LEFT);
 
-        return view('purchase.orders.create', compact('vendors', 'items', 'units', 'nextPoNumber'));
+        // Generate Next Auto Challan Number
+        $year = date('Y');
+        $nextChallanNo = 'CH-' . $year . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+        while (PurchaseOrder::where('challan_no', $nextChallanNo)->exists()) {
+            $count++;
+            $nextChallanNo = 'CH-' . $year . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+        }
+
+        return view('purchase.orders.create', compact('vendors', 'items', 'units', 'nextPoNumber', 'nextChallanNo'));
     }
 
     public function edit(PurchaseOrder $order)
@@ -147,7 +155,15 @@ class PurchaseOrderController extends Controller
             }
 
             $grandTotal = round($subtotal + $taxTotal, 2);
-            $challanNo = $request->input('challan_no');
+            $challanNo = trim((string) $request->input('challan_no', ''));
+            if (empty($challanNo)) {
+                $cCount = PurchaseOrder::count() + 1;
+                $challanNo = 'CH-' . date('Y') . '-' . str_pad($cCount, 4, '0', STR_PAD_LEFT);
+                while (PurchaseOrder::where('challan_no', $challanNo)->exists()) {
+                    $cCount++;
+                    $challanNo = 'CH-' . date('Y') . '-' . str_pad($cCount, 4, '0', STR_PAD_LEFT);
+                }
+            }
 
             $notesPayload = [
                 'challan_no' => $challanNo,

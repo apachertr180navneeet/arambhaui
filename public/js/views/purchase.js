@@ -371,8 +371,21 @@ const PurchaseView = {
 
               <!-- Supplier Challan / Bill No -->
               <div class="form-group" style="margin-bottom:0;">
-                <label class="form-label" style="font-weight:700; color:var(--slate-800);">Supplier Challan / Bill No. <span style="color:#ef4444;">*</span></label>
-                <input type="text" class="form-control" id="pe-challan-no" required placeholder="e.g. 1076 / CH-9821" style="font-weight:700;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                  <label class="form-label" style="font-weight:700; color:var(--slate-800); margin:0;">Supplier Challan / Bill No. <span style="color:#ef4444;">*</span></label>
+                  <button type="button" onclick="PurchaseView.autoGenerateChallan('pe-challan-no')" style="font-size:0.75rem; color:#2563eb; background:#eff6ff; border:1px solid #bfdbfe; border-radius:6px; padding:2px 8px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:all 0.2s ease;" title="Auto generate unique challan number">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                    Auto Generate
+                  </button>
+                </div>
+                <div style="position:relative; display:flex; align-items:center;">
+                  <input type="text" class="form-control" id="pe-challan-no" required value="${this.generateChallanNumber()}" placeholder="e.g. 1076 / CH-9821" style="font-weight:700; letter-spacing:0.5px; padding-right:75px;">
+                  <button type="button" onclick="PurchaseView.autoGenerateChallan('pe-challan-no')" class="btn btn-secondary btn-sm" style="position:absolute; right:4px; height:calc(100% - 8px); padding:0 10px; font-size:0.75rem; font-weight:700; display:inline-flex; align-items:center; gap:4px; border-radius:6px; background:#f8fafc; color:#334155; border:1px solid #cbd5e1;" title="Regenerate Challan Number">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                    Auto
+                  </button>
+                </div>
+                <small style="font-size:0.72rem; color:var(--slate-500); margin-top:4px; display:block;">Auto-generated sequence or enter vendor's bill #</small>
               </div>
 
               <!-- Entry Date -->
@@ -648,8 +661,21 @@ const PurchaseView = {
               </div>
 
               <div class="form-group" style="margin-bottom:0;">
-                <label class="form-label" style="font-weight:700; color:var(--slate-800);">Supplier Challan / Bill No. <span style="color:#ef4444;">*</span></label>
-                <input type="text" class="form-control" id="pe-challan-no" required value="${challanNo}" style="font-weight:700;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                  <label class="form-label" style="font-weight:700; color:var(--slate-800); margin:0;">Supplier Challan / Bill No. <span style="color:#ef4444;">*</span></label>
+                  <button type="button" onclick="PurchaseView.autoGenerateChallan('pe-challan-no')" style="font-size:0.75rem; color:#2563eb; background:#eff6ff; border:1px solid #bfdbfe; border-radius:6px; padding:2px 8px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:all 0.2s ease;" title="Auto generate unique challan number">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                    Auto Generate
+                  </button>
+                </div>
+                <div style="position:relative; display:flex; align-items:center;">
+                  <input type="text" class="form-control" id="pe-challan-no" required value="${challanNo}" placeholder="e.g. 1076 / CH-9821" style="font-weight:700; letter-spacing:0.5px; padding-right:75px;">
+                  <button type="button" onclick="PurchaseView.autoGenerateChallan('pe-challan-no')" class="btn btn-secondary btn-sm" style="position:absolute; right:4px; height:calc(100% - 8px); padding:0 10px; font-size:0.75rem; font-weight:700; display:inline-flex; align-items:center; gap:4px; border-radius:6px; background:#f8fafc; color:#334155; border:1px solid #cbd5e1;" title="Regenerate Challan Number">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                    Auto
+                  </button>
+                </div>
+                <small style="font-size:0.72rem; color:var(--slate-500); margin-top:4px; display:block;">Auto-generated sequence or enter vendor's bill #</small>
               </div>
 
               <div class="form-group" style="margin-bottom:0;">
@@ -1029,6 +1055,34 @@ const PurchaseView = {
     if (sGrand) sGrand.textContent = UI.formatCurrency(grandTotal);
   },
 
+  // AUTO GENERATE CHALLAN HELPER
+  generateChallanNumber() {
+    const year = new Date().getFullYear();
+    const rand = Math.floor(1000 + Math.random() * 9000);
+    return `CH-${year}-${rand}`;
+  },
+
+  autoGenerateChallan(inputId = 'pe-challan-no') {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    const genNo = this.generateChallanNumber();
+    input.value = genNo;
+
+    input.style.transition = 'all 0.25s ease';
+    input.style.borderColor = '#2563eb';
+    input.style.backgroundColor = '#eff6ff';
+    input.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.2)';
+    setTimeout(() => {
+      input.style.borderColor = '';
+      input.style.backgroundColor = '';
+      input.style.boxShadow = '';
+    }, 500);
+
+    if (window.UI && typeof UI.showToast === 'function') {
+      UI.showToast("Challan Generated", `Assigned Challan #: ${genNo}`, "success");
+    }
+  },
+
   // 6. SUBMIT PURCHASE ENTRY
   submitPurchaseEntry() {
     const vendorSelect = document.getElementById('pe-vendor');
@@ -1036,7 +1090,12 @@ const PurchaseView = {
     const vendorOpt = vendorSelect ? vendorSelect.options[vendorSelect.selectedIndex] : null;
     const vendorId = vendorOpt ? vendorOpt.getAttribute('data-id') : null;
 
-    const challanNo = document.getElementById('pe-challan-no')?.value.trim();
+    let challanNo = document.getElementById('pe-challan-no')?.value.trim();
+    if (!challanNo) {
+      challanNo = this.generateChallanNumber();
+      const inputEl = document.getElementById('pe-challan-no');
+      if (inputEl) inputEl.value = challanNo;
+    }
     const poDate = document.getElementById('pe-date')?.value;
 
     const itemSelect = document.getElementById('pe-item');
@@ -1051,9 +1110,6 @@ const PurchaseView = {
 
     if (!vendorName) {
       return UI.showToast("Required Field", "Please select a vendor / supplier", "error");
-    }
-    if (!challanNo) {
-      return UI.showToast("Required Field", "Please enter the Supplier Challan / Bill No", "error");
     }
     if (!poDate) {
       return UI.showToast("Required Field", "Please enter the Challan date", "error");
