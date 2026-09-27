@@ -12,6 +12,17 @@ class JobAssignmentItem extends Model
 
     protected $guarded = [];
 
+    protected $casts = [
+        'than_meters' => 'float',
+        'production_pcs' => 'integer',
+        'wastage_meters' => 'float',
+        'avg_consumption' => 'float',
+        'rate_per_piece' => 'float',
+        'total_amount' => 'float',
+        'than_count' => 'integer',
+        'qty' => 'integer'
+    ];
+
     public function jobAssignment()
     {
         return $this->belongsTo(JobAssignment::class);
@@ -20,6 +31,16 @@ class JobAssignmentItem extends Model
     public function item()
     {
         return $this->belongsTo(Item::class);
+    }
+
+    public function rawItem()
+    {
+        return $this->belongsTo(Item::class, 'raw_item_id');
+    }
+
+    public function finishedItem()
+    {
+        return $this->belongsTo(Item::class, 'finished_item_id');
     }
 
     public function getThanListAttribute(): array

@@ -7,14 +7,17 @@ use App\Models\JobAssignment;
 use App\Models\JobAssignmentItem;
 use App\Models\JobWorker;
 use App\Models\Item;
+use App\Models\PurchaseOrder;
+use App\Models\PurchaseOrderItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class JobAssignController extends Controller
 {
     public function index(Request $request)
     {
-        $assignments = JobAssignment::with(['items', 'jobWorker'])->latest()->get();
+        $assignments = JobAssignment::with(['items.rawItem', 'items.finishedItem', 'jobWorker'])->latest()->get();
 
         if ($request->wantsJson() || $request->ajax()) {
             return response()->json($assignments);
@@ -57,14 +60,62 @@ class JobAssignController extends Controller
         return "JA-{$year}-" . str_pad($count, 3, '0', STR_PAD_LEFT);
     }
 
+    /**
+     * Get available purchase tons/thans mapped by raw item id & name
+     */
+    protected function getPurchasedTonsByItem()
+    {
+        $purchasedTons = [];
+        $purchaseOrders = PurchaseOrder::with('items')->latest()->get();
+
+        foreach ($purchaseOrders as $po) {
+            $challanNo = $po->challan_no ?: $po->po_number;
+            foreach ($po->items as $poItem) {
+                $thans = $poItem->than_list;
+                if (!empty($thans)) {
+                    $keys = [];
+                    if (!empty($poItem->item_id)) {
+                        $keys[] = (string)$poItem->item_id;
+                    }
+                    if (!empty($poItem->item_name)) {
+                        $keys[] = strtolower(trim($poItem->item_name));
+                    }
+
+                    foreach ($thans as $tIdx => $tMtr) {
+                        $tonObj = [
+                            'po_id' => $po->id,
+                            'po_number' => $po->po_number,
+                            'challan_no' => $challanNo,
+                            'date' => $po->po_date,
+                            'than_no' => $tIdx + 1,
+                            'meter' => (float)$tMtr,
+                            'unit' => $poItem->unit ?: 'Mtr',
+                            'label' => "Challan #{$challanNo} - Roll/Ton #" . ($tIdx + 1) . " (" . number_format($tMtr, 2) . " " . ($poItem->unit ?: 'Mtr') . ")"
+                        ];
+
+                        foreach ($keys as $k) {
+                            if (!isset($purchasedTons[$k])) {
+                                $purchasedTons[$k] = [];
+                            }
+                            $purchasedTons[$k][] = $tonObj;
+                        }
+                    }
+                }
+            }
+        }
+
+        return $purchasedTons;
+    }
+
     public function create()
     {
         $jobworkers = JobWorker::where('status', 'Active')->get();
         $items = Item::all();
         $nextJobOrderNo = self::generateNextJobOrderNo();
         $nextLotNumber = self::generateNextLotNumber();
+        $purchasedTonsByItem = $this->getPurchasedTonsByItem();
 
-        return view('jobwork.assign.create', compact('jobworkers', 'items', 'nextJobOrderNo', 'nextLotNumber'));
+        return view('jobwork.assign.create', compact('jobworkers', 'items', 'nextJobOrderNo', 'nextLotNumber', 'purchasedTonsByItem'));
     }
 
     public function store(Request $request)
@@ -74,7 +125,9 @@ class JobAssignController extends Controller
         $cleanedItems = [];
         if (is_array($rawItems)) {
             foreach ($rawItems as $it) {
-                if (!empty($it['item_id']) || !empty($it['item_name']) || (!empty($it['production_pcs']) && (float)$it['production_pcs'] > 0) || (!empty($it['than_meters']) && (float)$it['than_meters'] > 0)) {
+                $hasRaw = !empty($it['raw_item_id']) || !empty($it['raw_item_name']) || !empty($it['item_id']) || !empty($it['item_name']);
+                $hasQty = (!empty($it['production_pcs']) && (float)$it['production_pcs'] > 0) || (!empty($it['than_meters']) && (float)$it['than_meters'] > 0) || !empty($it['thans']);
+                if ($hasRaw || $hasQty) {
                     $cleanedItems[] = $it;
                 }
             }
@@ -91,6 +144,10 @@ class JobAssignController extends Controller
             'due_date' => 'nullable|date',
             'instructions' => 'nullable|string',
             'items' => 'nullable|array',
+            'items.*.raw_item_id' => 'nullable',
+            'items.*.raw_item_name' => 'nullable|string|max:255',
+            'items.*.finished_item_id' => 'nullable',
+            'items.*.finished_item_name' => 'nullable|string|max:255',
             'items.*.item_id' => 'nullable',
             'items.*.item_name' => 'nullable|string|max:255',
             'items.*.item_code' => 'nullable|string|max:100',
@@ -100,6 +157,7 @@ class JobAssignController extends Controller
             'items.*.production_pcs' => 'nullable|numeric|min:0',
             'items.*.wastage_meters' => 'nullable|numeric|min:0',
             'items.*.rate_per_piece' => 'nullable|numeric|min:0',
+            'items.*.avg_consumption' => 'nullable|numeric|min:0',
             'items.*.size' => 'nullable|string|max:50',
             'items.*.color' => 'nullable|string|max:50',
             'items.*.remarks' => 'nullable|string|max:255'
@@ -149,7 +207,9 @@ class JobAssignController extends Controller
                 $thanCount = count($thans);
                 $lineTotal = round($pcs * $rate, 2);
                 $netFabric = max(0, $thanMeters - $wastage);
-                $avgCons = $pcs > 0 ? ($netFabric / $pcs) : 0;
+                $avgCons = !empty($it['avg_consumption']) && (float)$it['avg_consumption'] > 0
+                    ? (float)$it['avg_consumption']
+                    : ($pcs > 0 ? ($netFabric / $pcs) : 0);
 
                 $totalPcs += $pcs;
                 $totalThanMeters += $thanMeters;
@@ -161,12 +221,23 @@ class JobAssignController extends Controller
                     $allThanDetails = array_merge($allThanDetails, $thans);
                 }
 
-                $resolvedItemName = !empty($it['item_name']) ? $it['item_name'] : (!empty($it['item_id']) ? (Item::find($it['item_id'])?->name ?? 'Item') : 'Item');
-                $styleNames[] = $resolvedItemName;
+                // Resolve Raw Item and Finished Item
+                $rawItemId = !empty($it['raw_item_id']) ? (int)$it['raw_item_id'] : (!empty($it['item_id']) ? (int)$it['item_id'] : null);
+                $rawItemName = !empty($it['raw_item_name']) ? $it['raw_item_name'] : ($rawItemId ? (Item::find($rawItemId)?->name ?? 'Raw Material') : ($it['item_name'] ?? 'Raw Material'));
+
+                $finishedItemId = !empty($it['finished_item_id']) ? (int)$it['finished_item_id'] : null;
+                $finishedItemName = !empty($it['finished_item_name']) ? $it['finished_item_name'] : ($finishedItemId ? (Item::find($finishedItemId)?->name ?? 'Finished Product') : ($it['item_name'] ?? 'Finished Product'));
+
+                $primaryItemName = $finishedItemName . ($rawItemName ? " (from {$rawItemName})" : '');
+                $styleNames[] = $finishedItemName ?: $rawItemName;
 
                 $processedItems[] = [
-                    'item_id' => !empty($it['item_id']) ? (int)$it['item_id'] : null,
-                    'item_name' => $resolvedItemName,
+                    'raw_item_id' => $rawItemId,
+                    'raw_item_name' => $rawItemName,
+                    'finished_item_id' => $finishedItemId,
+                    'finished_item_name' => $finishedItemName,
+                    'item_id' => $finishedItemId ?: $rawItemId,
+                    'item_name' => $primaryItemName,
                     'than_meters' => $thanMeters,
                     'than_count' => $thanCount,
                     'than_details' => !empty($thans) ? json_encode($thans) : null,
@@ -205,18 +276,22 @@ class JobAssignController extends Controller
                 'instructions' => $validated['instructions'] ?? null
             ];
 
-            if (\Illuminate\Support\Facades\Schema::hasColumn('job_assignments', 'total_thans')) {
+            if (Schema::hasColumn('job_assignments', 'total_thans')) {
                 $assignmentData['total_thans'] = $totalThansCount;
             }
-            if (\Illuminate\Support\Facades\Schema::hasColumn('job_assignments', 'than_details')) {
+            if (Schema::hasColumn('job_assignments', 'than_details')) {
                 $assignmentData['than_details'] = !empty($allThanDetails) ? json_encode($allThanDetails) : null;
             }
 
             $jobAssignment = JobAssignment::create($assignmentData);
 
             // Save line items
-            $hasItemThanCount = \Illuminate\Support\Facades\Schema::hasColumn('job_assignment_items', 'than_count');
-            $hasItemThanDetails = \Illuminate\Support\Facades\Schema::hasColumn('job_assignment_items', 'than_details');
+            $hasRawId = Schema::hasColumn('job_assignment_items', 'raw_item_id');
+            $hasRawName = Schema::hasColumn('job_assignment_items', 'raw_item_name');
+            $hasFinId = Schema::hasColumn('job_assignment_items', 'finished_item_id');
+            $hasFinName = Schema::hasColumn('job_assignment_items', 'finished_item_name');
+            $hasItemThanCount = Schema::hasColumn('job_assignment_items', 'than_count');
+            $hasItemThanDetails = Schema::hasColumn('job_assignment_items', 'than_details');
 
             foreach ($processedItems as $pItem) {
                 $itemPayload = [
@@ -235,12 +310,12 @@ class JobAssignController extends Controller
                     'remarks' => $pItem['remarks']
                 ];
 
-                if ($hasItemThanCount) {
-                    $itemPayload['than_count'] = $pItem['than_count'];
-                }
-                if ($hasItemThanDetails) {
-                    $itemPayload['than_details'] = $pItem['than_details'];
-                }
+                if ($hasRawId) $itemPayload['raw_item_id'] = $pItem['raw_item_id'];
+                if ($hasRawName) $itemPayload['raw_item_name'] = $pItem['raw_item_name'];
+                if ($hasFinId) $itemPayload['finished_item_id'] = $pItem['finished_item_id'];
+                if ($hasFinName) $itemPayload['finished_item_name'] = $pItem['finished_item_name'];
+                if ($hasItemThanCount) $itemPayload['than_count'] = $pItem['than_count'];
+                if ($hasItemThanDetails) $itemPayload['than_details'] = $pItem['than_details'];
 
                 JobAssignmentItem::create($itemPayload);
             }
@@ -261,9 +336,10 @@ class JobAssignController extends Controller
     {
         $jobworkers = JobWorker::where('status', 'Active')->get();
         $items = Item::all();
-        $assign->load(['items', 'jobWorker']);
+        $purchasedTonsByItem = $this->getPurchasedTonsByItem();
+        $assign->load(['items.rawItem', 'items.finishedItem', 'jobWorker']);
 
-        return view('jobwork.assign.edit', compact('assign', 'jobworkers', 'items'));
+        return view('jobwork.assign.edit', compact('assign', 'jobworkers', 'items', 'purchasedTonsByItem'));
     }
 
     public function update(Request $request, JobAssignment $assign)
@@ -273,7 +349,9 @@ class JobAssignController extends Controller
         $cleanedItems = [];
         if (is_array($rawItems)) {
             foreach ($rawItems as $it) {
-                if (!empty($it['item_id']) || !empty($it['item_name']) || (!empty($it['production_pcs']) && (float)$it['production_pcs'] > 0) || (!empty($it['than_meters']) && (float)$it['than_meters'] > 0) || !empty($it['thans'])) {
+                $hasRaw = !empty($it['raw_item_id']) || !empty($it['raw_item_name']) || !empty($it['item_id']) || !empty($it['item_name']);
+                $hasQty = (!empty($it['production_pcs']) && (float)$it['production_pcs'] > 0) || (!empty($it['than_meters']) && (float)$it['than_meters'] > 0) || !empty($it['thans']);
+                if ($hasRaw || $hasQty) {
                     $cleanedItems[] = $it;
                 }
             }
@@ -291,6 +369,10 @@ class JobAssignController extends Controller
             'status' => 'nullable|string',
             'instructions' => 'nullable|string',
             'items' => 'nullable|array',
+            'items.*.raw_item_id' => 'nullable',
+            'items.*.raw_item_name' => 'nullable|string|max:255',
+            'items.*.finished_item_id' => 'nullable',
+            'items.*.finished_item_name' => 'nullable|string|max:255',
             'items.*.item_id' => 'nullable',
             'items.*.item_name' => 'nullable|string|max:255',
             'items.*.item_code' => 'nullable|string|max:100',
@@ -300,6 +382,7 @@ class JobAssignController extends Controller
             'items.*.production_pcs' => 'nullable|numeric|min:0',
             'items.*.wastage_meters' => 'nullable|numeric|min:0',
             'items.*.rate_per_piece' => 'nullable|numeric|min:0',
+            'items.*.avg_consumption' => 'nullable|numeric|min:0',
             'items.*.size' => 'nullable|string|max:50',
             'items.*.color' => 'nullable|string|max:50',
             'items.*.remarks' => 'nullable|string|max:255'
@@ -347,7 +430,9 @@ class JobAssignController extends Controller
                 $thanCount = count($thans);
                 $lineTotal = round($pcs * $rate, 2);
                 $netFabric = max(0, $thanMeters - $wastage);
-                $avgCons = $pcs > 0 ? ($netFabric / $pcs) : 0;
+                $avgCons = !empty($it['avg_consumption']) && (float)$it['avg_consumption'] > 0
+                    ? (float)$it['avg_consumption']
+                    : ($pcs > 0 ? ($netFabric / $pcs) : 0);
 
                 $totalPcs += $pcs;
                 $totalThanMeters += $thanMeters;
@@ -359,12 +444,23 @@ class JobAssignController extends Controller
                     $allThanDetails = array_merge($allThanDetails, $thans);
                 }
 
-                $resolvedItemName = !empty($it['item_name']) ? $it['item_name'] : (!empty($it['item_id']) ? (Item::find($it['item_id'])?->name ?? 'Item') : 'Item');
-                $styleNames[] = $resolvedItemName;
+                // Resolve Raw Item and Finished Item
+                $rawItemId = !empty($it['raw_item_id']) ? (int)$it['raw_item_id'] : (!empty($it['item_id']) ? (int)$it['item_id'] : null);
+                $rawItemName = !empty($it['raw_item_name']) ? $it['raw_item_name'] : ($rawItemId ? (Item::find($rawItemId)?->name ?? 'Raw Material') : ($it['item_name'] ?? 'Raw Material'));
+
+                $finishedItemId = !empty($it['finished_item_id']) ? (int)$it['finished_item_id'] : null;
+                $finishedItemName = !empty($it['finished_item_name']) ? $it['finished_item_name'] : ($finishedItemId ? (Item::find($finishedItemId)?->name ?? 'Finished Product') : ($it['item_name'] ?? 'Finished Product'));
+
+                $primaryItemName = $finishedItemName . ($rawItemName ? " (from {$rawItemName})" : '');
+                $styleNames[] = $finishedItemName ?: $rawItemName;
 
                 $processedItems[] = [
-                    'item_id' => !empty($it['item_id']) ? (int)$it['item_id'] : null,
-                    'item_name' => $resolvedItemName,
+                    'raw_item_id' => $rawItemId,
+                    'raw_item_name' => $rawItemName,
+                    'finished_item_id' => $finishedItemId,
+                    'finished_item_name' => $finishedItemName,
+                    'item_id' => $finishedItemId ?: $rawItemId,
+                    'item_name' => $primaryItemName,
                     'than_meters' => $thanMeters,
                     'than_count' => $thanCount,
                     'than_details' => !empty($thans) ? json_encode($thans) : null,
@@ -402,10 +498,10 @@ class JobAssignController extends Controller
                 'instructions' => $validated['instructions'] ?? null
             ];
 
-            if (\Illuminate\Support\Facades\Schema::hasColumn('job_assignments', 'total_thans')) {
+            if (Schema::hasColumn('job_assignments', 'total_thans')) {
                 $assignmentData['total_thans'] = $totalThansCount;
             }
-            if (\Illuminate\Support\Facades\Schema::hasColumn('job_assignments', 'than_details')) {
+            if (Schema::hasColumn('job_assignments', 'than_details')) {
                 $assignmentData['than_details'] = !empty($allThanDetails) ? json_encode($allThanDetails) : null;
             }
 
@@ -414,8 +510,12 @@ class JobAssignController extends Controller
             // Sync line items
             $assign->items()->delete();
 
-            $hasItemThanCount = \Illuminate\Support\Facades\Schema::hasColumn('job_assignment_items', 'than_count');
-            $hasItemThanDetails = \Illuminate\Support\Facades\Schema::hasColumn('job_assignment_items', 'than_details');
+            $hasRawId = Schema::hasColumn('job_assignment_items', 'raw_item_id');
+            $hasRawName = Schema::hasColumn('job_assignment_items', 'raw_item_name');
+            $hasFinId = Schema::hasColumn('job_assignment_items', 'finished_item_id');
+            $hasFinName = Schema::hasColumn('job_assignment_items', 'finished_item_name');
+            $hasItemThanCount = Schema::hasColumn('job_assignment_items', 'than_count');
+            $hasItemThanDetails = Schema::hasColumn('job_assignment_items', 'than_details');
 
             foreach ($processedItems as $pItem) {
                 $itemPayload = [
@@ -434,12 +534,12 @@ class JobAssignController extends Controller
                     'remarks' => $pItem['remarks']
                 ];
 
-                if ($hasItemThanCount) {
-                    $itemPayload['than_count'] = $pItem['than_count'];
-                }
-                if ($hasItemThanDetails) {
-                    $itemPayload['than_details'] = $pItem['than_details'];
-                }
+                if ($hasRawId) $itemPayload['raw_item_id'] = $pItem['raw_item_id'];
+                if ($hasRawName) $itemPayload['raw_item_name'] = $pItem['raw_item_name'];
+                if ($hasFinId) $itemPayload['finished_item_id'] = $pItem['finished_item_id'];
+                if ($hasFinName) $itemPayload['finished_item_name'] = $pItem['finished_item_name'];
+                if ($hasItemThanCount) $itemPayload['than_count'] = $pItem['than_count'];
+                if ($hasItemThanDetails) $itemPayload['than_details'] = $pItem['than_details'];
 
                 JobAssignmentItem::create($itemPayload);
             }
@@ -458,7 +558,7 @@ class JobAssignController extends Controller
 
     public function show(JobAssignment $assign)
     {
-        return response()->json($assign->load(['items', 'jobWorker']));
+        return response()->json($assign->load(['items.rawItem', 'items.finishedItem', 'jobWorker']));
     }
 
     public function destroy(JobAssignment $assign)

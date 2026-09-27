@@ -748,18 +748,24 @@
         thans = it.than_list;
       }
 
-      let thanInfoHtml = `${itThan.toFixed(1)} Mtr`;
+      let thanInfoHtml = `${itThan.toFixed(1)} Mtr/KG`;
       if (thans && thans.length > 0) {
-        thanInfoHtml += ` <div style="font-size:0.7rem; color:#4338ca; font-weight:700;">${thans.length} Thans: [${thans.join(', ')}]</div>`;
+        thanInfoHtml += ` <div style="font-size:0.7rem; color:#4338ca; font-weight:700; margin-top:2px;">${thans.length} Tons: [${thans.map((t, idx) => `Ton ${idx+1}: ${t}`).join(', ')}]</div>`;
       }
+
+      const rawLabel = it.raw_item_name || (it.raw_item ? it.raw_item.name : '');
+      const finLabel = it.finished_item_name || (it.finished_item ? it.finished_item.name : (it.item_name || ja.style_name));
 
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td><strong>${it.item_name || ja.style_name}</strong></td>
+        <td>
+          <strong>${finLabel}</strong>
+          ${rawLabel ? `<div style="font-size:0.725rem; color:#64748b;">Raw: <span style="font-weight:700; color:#334155;">${rawLabel}</span></div>` : ''}
+        </td>
         <td>${thanInfoHtml}</td>
         <td><strong>${itPcs} Pcs</strong></td>
-        <td style="color:#dc2626;">${itWastage.toFixed(1)} Mtr</td>
-        <td><span class="badge" style="background:#f1f5f9; color:#334155;">${itAvg.toFixed(2)} M/Pc</span></td>
+        <td style="color:#dc2626;">${itWastage.toFixed(1)} Mtr/KG</td>
+        <td><span class="badge" style="background:#f1f5f9; color:#334155;">${itAvg.toFixed(2)} /Pc</span></td>
         <td>₹${itRate.toFixed(2)}</td>
         <td style="text-align:right; font-weight:700; color:#059669;">₹${itTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
       `;

@@ -10,7 +10,7 @@
 
 @push('styles')
 <style>
-  .item-card-box {
+  .raw-item-card {
     background: #ffffff;
     border-radius: var(--radius-xl, 16px);
     border: 1px solid var(--slate-200, #e2e8f0);
@@ -18,9 +18,40 @@
     padding: 22px;
     transition: all 0.2s ease;
   }
-  .item-card-box:hover {
+  .raw-item-card:hover {
     border-color: #cbd5e1;
-    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.07);
+  }
+  .tons-container {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 16px;
+  }
+  .purchased-ton-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    padding: 5px 10px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #334155;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .purchased-ton-chip:hover {
+    border-color: #4338ca;
+    background: #eef2ff;
+    color: #4338ca;
+    transform: translateY(-1px);
+  }
+  .purchased-ton-chip.added {
+    background: #ecfdf5;
+    border-color: #a7f3d0;
+    color: #065f46;
   }
   .calc-badge {
     background: #ecfdf5;
@@ -35,10 +66,19 @@
     gap: 4px;
     white-space: nowrap;
   }
-  .than-input:focus {
-    background: #eff6ff;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+  .ton-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 6px 10px;
+    transition: all 0.15s ease;
+  }
+  .ton-row:hover {
+    border-color: #cbd5e1;
+    background: #fafafa;
   }
 </style>
 @endpush
@@ -61,7 +101,7 @@
           </span>
         </div>
         <p style="margin:4px 0 0; font-size:0.85rem; color:var(--slate-500);">
-          Issue fabric rolls to external contractor with auto-assigned Lot Reference, multi-item Than breakdown & piece yield calculations.
+          Select Raw Material & Purchase Tons/Thans, assign Finished Items, and auto-calculate expected finished pieces and wastage.
         </p>
       </div>
 
@@ -82,7 +122,7 @@
           Contractor & Manufacturing Schedule
         </h3>
         <span style="font-size:0.75rem; background:#ecfdf5; color:#059669; font-weight:700; padding:3px 10px; border-radius:9999px; border:1px solid #a7f3d0;">
-          Auto-Lot Generator Active
+          ⚡ Auto Lot Generator Active
         </span>
       </div>
 
@@ -114,8 +154,8 @@
           </label>
           <select name="process_name" id="ja_process" class="form-control" required>
             <option value="Cutting">Fabric Cutting</option>
-            <option value="Stitching" selected>Stitching</option>
-            <option value="Embroidery">Embroidery</option>
+            <option value="Stitching" selected>Stitching & Assembly</option>
+            <option value="Embroidery">Embroidery & Design</option>
             <option value="Washing & Finishing">Washing & Finishing</option>
             <option value="Ironing & Packing">Ironing & Packing</option>
           </select>
@@ -161,49 +201,49 @@
       </div>
     </div>
 
-    <!-- 2. Multi-Item Than Breakdown & Finished Pieces Yield Section -->
+    <!-- 2. Raw Items, Purchase Tons & Finished Output Section -->
     <div style="display:flex; flex-direction:column; gap:16px;">
       
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
         <div>
           <h3 style="font-size:1.05rem; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; margin:0; color:var(--slate-900); display:flex; align-items:center; gap:8px;">
             <span style="width:26px; height:26px; border-radius:6px; background:#ecfdf5; color:#059669; display:inline-flex; align-items:center; justify-content:center; font-size:0.8rem; font-weight:800;">2</span>
-            Product Items, Than Rolls & Finished Pcs Yield
+            Raw Materials, Purchase Tons & Finished Product Yield
           </h3>
           <p style="margin:3px 0 0; font-size:0.825rem; color:var(--slate-500);">
-            Add one or more fabric qualities with independent Than/Roll meter readings, production pieces yield, wastage and contractor rate.
+            Select Raw Material & choose from purchased tons/rolls, pick the target Finished Item, and view automated wastage & finished pieces calculation.
           </p>
         </div>
 
-        <button type="button" class="btn btn-primary btn-sm" onclick="addNewItem()" style="display:inline-flex; align-items:center; gap:6px; font-weight:700; box-shadow:0 2px 6px rgba(79, 70, 229, 0.25);">
+        <button type="button" class="btn btn-primary btn-sm" onclick="addNewRawItemCard()" style="display:inline-flex; align-items:center; gap:6px; font-weight:700; box-shadow:0 2px 6px rgba(79, 70, 229, 0.25);">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          + Add Another Item
+          + Add Another Raw Material
         </button>
       </div>
 
-      <!-- Container where Item Cards are dynamically rendered -->
-      <div id="items-container" style="display:flex; flex-direction:column; gap:20px;"></div>
+      <!-- Dynamic Raw Items Container -->
+      <div id="raw-items-container" style="display:flex; flex-direction:column; gap:22px;"></div>
 
-      <!-- Add Item Large Footer Trigger Button -->
-      <div style="text-align:center; padding:10px 0;">
-        <button type="button" class="btn btn-secondary" onclick="addNewItem()" style="border:2px dashed #cbd5e1; background:#f8fafc; color:#334155; font-weight:700; width:100%; padding:14px; display:inline-flex; align-items:center; justify-content:center; gap:8px; border-radius:12px; transition:all 0.2s ease;">
+      <!-- Add Raw Item Button -->
+      <div style="text-align:center; padding:8px 0;">
+        <button type="button" class="btn btn-secondary" onclick="addNewRawItemCard()" style="border:2px dashed #cbd5e1; background:#f8fafc; color:#334155; font-weight:700; width:100%; padding:14px; display:inline-flex; align-items:center; justify-content:center; gap:8px; border-radius:12px; transition:all 0.2s ease;">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Add Another Product / Fabric Quality (Multi-Item Job Order)
+          Add Another Raw Item (Multi-Material Job Order)
         </button>
       </div>
 
     </div>
 
-    <!-- 3. Overall Financial Calculation Summary & Instructions Card -->
+    <!-- 3. Instructions & Overall Order Summary -->
     <div class="card" style="background:#fff; border-radius:var(--radius-xl, 16px); border:1px solid var(--slate-200, #e2e8f0); box-shadow:var(--shadow-sm); padding:24px;">
       <h3 style="font-size:0.95rem; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; margin-top:0; margin-bottom:18px; color:var(--slate-800); border-bottom:1px solid var(--slate-100, #f1f5f9); padding-bottom:10px; display:flex; align-items:center; gap:8px;">
         <span style="width:24px; height:24px; border-radius:6px; background:#f5f3ff; color:#7c3aed; display:inline-flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:800;">3</span>
-        Production Yield & Contract Labor Terms
+        Production Yield & Contract Terms Summary
       </h3>
 
       <div style="display:grid; grid-template-columns: 1.2fr 1fr; gap:24px;">
         
-        <!-- Notes & Instructions -->
+        <!-- Instructions -->
         <div>
           <label class="form-label" style="font-weight:700; color:var(--slate-800); margin-bottom:6px;">
             Job Work Instructions & Quality Standards
@@ -214,42 +254,37 @@
         <!-- Calculated Summary Box -->
         <div style="background:#f8fafc; border:1px solid var(--slate-200, #e2e8f0); border-radius:14px; padding:20px; display:flex; flex-direction:column; gap:12px;">
           <div style="display:flex; justify-content:space-between; font-size:0.9rem; color:#64748b;">
-            <span>Total Fabric Items:</span>
+            <span>Total Raw Materials:</span>
             <span style="font-weight:700; color:#0f172a;" id="summary-items-count">1 Item</span>
           </div>
 
           <div style="display:flex; justify-content:space-between; font-size:0.9rem; color:#64748b;">
-            <span>Total Than Rolls:</span>
-            <span style="font-weight:700; color:#0f172a;" id="summary-than-count">0 Thans</span>
+            <span>Total Purchase Tons/Thans:</span>
+            <span style="font-weight:700; color:#0f172a;" id="summary-than-count">0 Tons</span>
           </div>
 
           <div style="display:flex; justify-content:space-between; font-size:0.9rem; color:#64748b;">
-            <span>Total Than Fabric Issued:</span>
-            <span style="font-weight:700; color:#0f172a; font-size:0.95rem;" id="summary-total-meters">0.00 Mtr</span>
+            <span>Total Raw Quantity Issued:</span>
+            <span style="font-weight:700; color:#0f172a; font-size:0.95rem;" id="summary-total-raw-qty">0.00 Mtr/KG</span>
           </div>
 
           <div style="display:flex; justify-content:space-between; font-size:0.9rem; color:#64748b;">
-            <span>Expected Wastage:</span>
-            <span style="font-weight:700; color:#dc2626;" id="summary-total-wastage">0.00 Mtr</span>
+            <span>Total Expected Wastage:</span>
+            <span style="font-weight:700; color:#dc2626;" id="summary-total-wastage">0.00 Mtr/KG</span>
           </div>
 
           <div style="display:flex; justify-content:space-between; font-size:0.9rem; color:#64748b;">
-            <span>Net Fabric Consumption:</span>
-            <span style="font-weight:700; color:#059669;" id="summary-net-fabric">0.00 Mtr</span>
+            <span>Net Raw Material Used:</span>
+            <span style="font-weight:700; color:#059669;" id="summary-net-raw">0.00 Mtr/KG</span>
           </div>
 
           <div style="display:flex; justify-content:space-between; font-size:0.9rem; color:#64748b; border-top:1px dashed #cbd5e1; padding-top:10px;">
-            <span>Total Target Finished Pieces:</span>
-            <span style="font-weight:800; color:#4338ca; font-size:1.05rem;" id="summary-total-pcs">0 Pcs</span>
-          </div>
-
-          <div style="display:flex; justify-content:space-between; font-size:0.9rem; color:#64748b;">
-            <span>Overall Avg Consumption / Pc:</span>
-            <span style="font-weight:700; color:#0f172a;" id="summary-avg-cons">0.00 Mtr / Pc</span>
+            <span>Total Expected Finished Pieces:</span>
+            <span style="font-weight:800; color:#4338ca; font-size:1.15rem;" id="summary-total-pcs">0 Pcs</span>
           </div>
 
           <div style="border-top:2px solid #cbd5e1; padding-top:12px; margin-top:4px; display:flex; justify-content:space-between; align-items:baseline;">
-            <span style="font-weight:800; font-size:1.05rem; color:var(--slate-900);">Contract Total Amount:</span>
+            <span style="font-weight:800; font-size:1.05rem; color:var(--slate-900);">Contract Labor Total Amount:</span>
             <span style="font-weight:800; font-size:1.4rem; color:#059669;" id="summary-grand-amount">₹0.00</span>
           </div>
         </div>
@@ -258,44 +293,29 @@
 
     </div>
 
+
   </div>
 </form>
-
-<!-- Modal: Quick Paste Multiple Thans -->
-<div id="paste-modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(15,23,42,0.6); z-index:99999; align-items:center; justify-content:center; padding:16px;">
-  <div style="background:#fff; border-radius:16px; max-width:480px; width:100%; padding:24px; box-shadow:0 20px 40px rgba(0,0,0,0.2);">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-      <h4 style="margin:0; font-weight:800; font-size:1.1rem; color:#0f172a;" id="paste-modal-title">Paste Than Meter Readings</h4>
-      <button type="button" onclick="closePasteModal()" style="background:none; border:none; font-size:1.4rem; cursor:pointer; color:#94a3b8;">&times;</button>
-    </div>
-    <p style="font-size:0.8rem; color:#64748b; margin:0 0 12px;">
-      Paste numbers separated by space, comma, or new line (e.g. from WhatsApp or Challan sheet):
-    </p>
-    <textarea id="paste-textarea" class="form-control" rows="6" placeholder="148, 72.50, 112.50, 103.50, 110.50, 105&#10;99.50, 116.00, 126.50, 89.50, 117.50, 98, 117, 99.50" style="font-family:monospace; font-size:0.9rem;"></textarea>
-    <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
-      <button type="button" class="btn btn-secondary" onclick="closePasteModal()">Cancel</button>
-      <button type="button" class="btn btn-primary" onclick="applyPastedThans()" style="font-weight:700;">Add to Fabric Item</button>
-    </div>
-  </div>
-</div>
 
 @endsection
 
 @push('scripts')
 <script>
   const masterItems = @json($items);
-  let activePasteItemIndex = 0;
+  const purchasedTonsMap = @json($purchasedTonsByItem);
 
-  // Multi-item array state
+  // Multi-Item State
   let itemsData = [
     {
-      item_id: '',
-      item_name: '',
-      item_code: '',
-      production_pcs: 500,
+      raw_item_id: '',
+      raw_item_name: '',
+      finished_item_id: '',
+      finished_item_name: '',
+      consumption_per_pc: 1.50,
       wastage_meters: 0,
       rate_per_piece: 25.00,
-      thans: []
+      expected_pieces: 0,
+      thans: [] // Array of tons/thans (e.g. [500, 750, 600])
     }
   ];
 
@@ -307,7 +327,6 @@
     const rand = Math.floor(100 + Math.random() * 900);
     input.value = `LOT-${year}-${rand}`;
 
-    // Visual pulse feedback
     input.style.transition = 'all 0.25s ease';
     input.style.borderColor = '#4338ca';
     input.style.backgroundColor = '#eef2ff';
@@ -330,12 +349,12 @@
     }
 
     if (rate && parseFloat(rate) > 0) {
-      itemsData.forEach((item, idx) => {
+      itemsData.forEach((item) => {
         if (!item.rate_per_piece || parseFloat(item.rate_per_piece) === 0 || item.rate_per_piece === 25.00) {
           item.rate_per_piece = parseFloat(rate);
         }
       });
-      renderAllItems();
+      renderAllRawItemCards();
       calculateOverallTotals();
     }
 
@@ -352,7 +371,7 @@
     }
   }
 
-  function addNewItem() {
+  function addNewRawItemCard() {
     const workerSelect = document.getElementById('ja_worker');
     let defaultRate = 25.00;
     if (workerSelect && workerSelect.selectedIndex > 0) {
@@ -362,502 +381,577 @@
     }
 
     itemsData.push({
-      item_id: '',
-      item_name: '',
-      item_code: '',
-      production_pcs: 500,
+      raw_item_id: '',
+      raw_item_name: '',
+      finished_item_id: '',
+      finished_item_name: '',
+      consumption_per_pc: 1.50,
       wastage_meters: 0,
       rate_per_piece: defaultRate,
+      expected_pieces: 0,
       thans: []
     });
-    renderAllItems();
+
+    renderAllRawItemCards();
     calculateOverallTotals();
   }
 
-  function removeItem(itemIdx) {
+  function removeRawItemCard(idx) {
     if (itemsData.length <= 1) {
-      alert('A job work order must contain at least one fabric item.');
+      alert('A job work order must contain at least one raw item.');
       return;
     }
-    const item = itemsData[itemIdx];
+    const item = itemsData[idx];
     if (item.thans.length > 0) {
-      if (!confirm(`Remove Item #${itemIdx + 1} (${item.item_name || 'Fabric'}) and its ${item.thans.length} than readings?`)) {
+      if (!confirm(`Remove Raw Item #${idx + 1} (${item.raw_item_name || 'Item'}) and its ${item.thans.length} tons/thans?`)) {
         return;
       }
     }
-    itemsData.splice(itemIdx, 1);
-    renderAllItems();
+    itemsData.splice(idx, 1);
+    renderAllRawItemCards();
     calculateOverallTotals();
   }
 
-  function onItemSelectChange(itemIdx, select) {
+  // 1. Raw Item Selection Change
+  function onRawItemChange(idx, select) {
     const opt = select.options[select.selectedIndex];
     if (!opt || !opt.value) {
-      itemsData[itemIdx].item_id = '';
-      itemsData[itemIdx].item_name = '';
-      itemsData[itemIdx].item_code = '';
+      itemsData[idx].raw_item_id = '';
+      itemsData[idx].raw_item_name = '';
     } else {
-      itemsData[itemIdx].item_id = opt.getAttribute('data-id') || '';
-      itemsData[itemIdx].item_name = opt.value;
-      itemsData[itemIdx].item_code = opt.getAttribute('data-code') || '';
+      itemsData[idx].raw_item_id = opt.getAttribute('data-id') || '';
+      itemsData[idx].raw_item_name = opt.value;
     }
-    updateItemSummaryHeader(itemIdx);
+
+    renderAllRawItemCards();
     calculateOverallTotals();
   }
 
-  function onItemPcsChange(itemIdx, val) {
-    const p = parseInt(val);
-    itemsData[itemIdx].production_pcs = !isNaN(p) && p >= 0 ? p : 0;
-    updateItemSummaryHeader(itemIdx);
+  // 2. Finished Item Selection Change
+  function onFinishedItemChange(idx, select) {
+    const opt = select.options[select.selectedIndex];
+    if (!opt || !opt.value) {
+      itemsData[idx].finished_item_id = '';
+      itemsData[idx].finished_item_name = '';
+    } else {
+      itemsData[idx].finished_item_id = opt.getAttribute('data-id') || '';
+      itemsData[idx].finished_item_name = opt.value;
+      const rawMtr = parseFloat(opt.getAttribute('data-raw-meter'));
+      if (rawMtr && rawMtr > 0) {
+        itemsData[idx].consumption_per_pc = rawMtr;
+      }
+    }
+
+    recalcRawItemRow(idx);
     calculateOverallTotals();
   }
 
-  function onItemWastageChange(itemIdx, val) {
-    const w = parseFloat(val);
-    itemsData[itemIdx].wastage_meters = !isNaN(w) && w >= 0 ? w : 0;
-    updateItemSummaryHeader(itemIdx);
-    calculateOverallTotals();
-  }
-
-  function onItemRateChange(itemIdx, val) {
-    const r = parseFloat(val);
-    itemsData[itemIdx].rate_per_piece = !isNaN(r) && r >= 0 ? r : 0;
-    updateItemSummaryHeader(itemIdx);
-    calculateOverallTotals();
-  }
-
-  function addThanToItem(itemIdx, meterValue) {
-    const val = parseFloat(meterValue);
+  // Add a purchased ton from the available list
+  function addPurchasedTon(itemIdx, meterVal) {
+    const val = parseFloat(meterVal);
     if (isNaN(val) || val <= 0) return;
     itemsData[itemIdx].thans.push(Math.round(val * 100) / 100);
-    renderItemThans(itemIdx);
+    renderTonsForCard(itemIdx);
+    recalcRawItemRow(itemIdx);
     calculateOverallTotals();
   }
 
-  function addSingleThanFromInput(itemIdx) {
-    const input = document.getElementById(`quick-than-input-${itemIdx}`);
-    if (!input) return;
-    const val = input.value.trim();
-    if (val) {
-      addThanToItem(itemIdx, val);
-      input.value = '';
-      input.focus();
-    }
-  }
+  // Add all available purchased tons for this raw item
+  function addAllPurchasedTons(itemIdx) {
+    const rawId = itemsData[itemIdx].raw_item_id;
+    const rawName = (itemsData[itemIdx].raw_item_name || '').toLowerCase().trim();
+    const available = (rawId && purchasedTonsMap[rawId]) ? purchasedTonsMap[rawId] : (rawName && purchasedTonsMap[rawName] ? purchasedTonsMap[rawName] : []);
+    
+    if (available.length === 0) return;
 
-  function removeThan(itemIdx, thanIdx) {
-    itemsData[itemIdx].thans.splice(thanIdx, 1);
-    renderItemThans(itemIdx);
+    available.forEach(t => {
+      itemsData[itemIdx].thans.push(Math.round(t.meter * 100) / 100);
+    });
+
+    renderTonsForCard(itemIdx);
+    recalcRawItemRow(itemIdx);
     calculateOverallTotals();
   }
 
-  function updateThanMeter(itemIdx, thanIdx, newMeter) {
+  function removeTon(itemIdx, tonIdx) {
+    itemsData[itemIdx].thans.splice(tonIdx, 1);
+    renderTonsForCard(itemIdx);
+    recalcRawItemRow(itemIdx);
+    calculateOverallTotals();
+  }
+
+  function updateTonValue(itemIdx, tonIdx, newMeter) {
     const val = parseFloat(newMeter);
     if (!isNaN(val) && val >= 0) {
-      itemsData[itemIdx].thans[thanIdx] = Math.round(val * 100) / 100;
-      updateItemThansSubtotals(itemIdx);
+      itemsData[itemIdx].thans[tonIdx] = Math.round(val * 100) / 100;
+      recalcRawItemRow(itemIdx);
       calculateOverallTotals();
     }
   }
 
-  function clearItemThans(itemIdx) {
+  function clearAllTons(itemIdx) {
     if (itemsData[itemIdx].thans.length === 0) return;
-    if (confirm(`Clear all than roll readings for Item #${itemIdx + 1}?`)) {
+    if (confirm(`Clear all selected tons for Raw Item #${itemIdx + 1}?`)) {
       itemsData[itemIdx].thans = [];
-      renderItemThans(itemIdx);
+      renderTonsForCard(itemIdx);
+      recalcRawItemRow(itemIdx);
       calculateOverallTotals();
     }
   }
 
-  function loadSampleThansForItem(itemIdx) {
-    itemsData[itemIdx].thans = [148, 72.50, 112.50, 103.50, 110.50, 105, 99.50, 116, 126.50, 89.50, 117.50, 98, 117, 99.50];
-    renderItemThans(itemIdx);
+  function onConsumptionChange(itemIdx, val) {
+    const c = parseFloat(val);
+    itemsData[itemIdx].consumption_per_pc = !isNaN(c) && c > 0 ? c : 1.5;
+    recalcRawItemRow(itemIdx, 'from_consumption');
     calculateOverallTotals();
   }
 
-  function openPasteModalForItem(itemIdx) {
-    activePasteItemIndex = itemIdx;
-    document.getElementById('paste-modal-title').textContent = `Paste Thans for Item #${itemIdx + 1} (${itemsData[itemIdx].item_name || 'Fabric'})`;
-    document.getElementById('paste-modal').style.display = 'flex';
-    document.getElementById('paste-textarea').focus();
+  function onWastageChange(itemIdx, val) {
+    const w = parseFloat(val);
+    itemsData[itemIdx].wastage_meters = !isNaN(w) && w >= 0 ? w : 0;
+    recalcRawItemRow(itemIdx, 'from_wastage');
+    calculateOverallTotals();
   }
 
-  function closePasteModal() {
-    document.getElementById('paste-modal').style.display = 'none';
-    document.getElementById('paste-textarea').value = '';
-  }
-
-  function applyPastedThans() {
-    const text = document.getElementById('paste-textarea').value;
-    if (!text) {
-      closePasteModal();
-      return;
+  function onExpectedPiecesChange(itemIdx, val) {
+    const p = parseInt(val);
+    itemsData[itemIdx].expected_pieces = !isNaN(p) && p >= 0 ? p : 0;
+    
+    // If pieces manually changed, recompute consumption ratio
+    const totalRaw = itemsData[itemIdx].thans.reduce((a, b) => a + (parseFloat(b) || 0), 0);
+    const netRaw = Math.max(0, totalRaw - itemsData[itemIdx].wastage_meters);
+    if (p > 0) {
+      itemsData[itemIdx].consumption_per_pc = Math.round((netRaw / p) * 1000) / 1000;
+      const consInput = document.getElementById(`cons-input-${itemIdx}`);
+      if (consInput) consInput.value = itemsData[itemIdx].consumption_per_pc;
     }
-    const matches = text.match(/\d+(?:\.\d+)?/g);
-    if (matches && matches.length > 0) {
-      matches.forEach(m => {
-        const val = parseFloat(m);
-        if (val > 0) itemsData[activePasteItemIndex].thans.push(Math.round(val * 100) / 100);
-      });
-      renderItemThans(activePasteItemIndex);
-      calculateOverallTotals();
-    }
-    closePasteModal();
+
+    recalcRawItemRow(itemIdx, 'from_pieces');
+    calculateOverallTotals();
   }
 
-  function renderAllItems() {
-    const container = document.getElementById('items-container');
+  function onRateChange(itemIdx, val) {
+    const r = parseFloat(val);
+    itemsData[itemIdx].rate_per_piece = !isNaN(r) && r >= 0 ? r : 0;
+    recalcRawItemRow(itemIdx, 'from_rate');
+    calculateOverallTotals();
+  }
+
+  // Main Yield and Quantity Recalculation for Card
+  function recalcRawItemRow(itemIdx, trigger = 'general') {
+    const item = itemsData[itemIdx];
+    if (!item) return;
+
+    const totalRaw = item.thans.reduce((a, b) => a + (parseFloat(b) || 0), 0);
+    const wastage = parseFloat(item.wastage_meters) || 0;
+    const netRaw = Math.max(0, totalRaw - wastage);
+    const cons = parseFloat(item.consumption_per_pc) || 1.5;
+
+    // Auto-calculate expected pieces if not manually forced
+    if (trigger !== 'from_pieces') {
+      if (cons > 0 && netRaw > 0) {
+        item.expected_pieces = Math.floor(netRaw / cons);
+      } else if (netRaw === 0) {
+        item.expected_pieces = 0;
+      }
+    }
+
+    const pcs = item.expected_pieces || 0;
+    const rate = parseFloat(item.rate_per_piece) || 0;
+    const lineTotal = Math.round(pcs * rate * 100) / 100;
+
+    // Update form input values
+    const pcsInput = document.getElementById(`pieces-input-${itemIdx}`);
+    if (pcsInput && trigger !== 'from_pieces') {
+      pcsInput.value = pcs;
+    }
+
+    // Update Display Badges
+    const bRawQty = document.getElementById(`card-badge-raw-qty-${itemIdx}`);
+    const bTonsCount = document.getElementById(`card-badge-tons-count-${itemIdx}`);
+    const bPcs = document.getElementById(`card-badge-pcs-${itemIdx}`);
+    const bNet = document.getElementById(`card-badge-net-${itemIdx}`);
+    const bTotal = document.getElementById(`card-badge-total-${itemIdx}`);
+    const titleDisp = document.getElementById(`card-title-display-${itemIdx}`);
+
+    if (bRawQty) bRawQty.textContent = `${totalRaw.toFixed(2)} Mtr/KG`;
+    if (bTonsCount) bTonsCount.textContent = `${item.thans.length} Tons/Thans`;
+    if (bPcs) bPcs.textContent = `${pcs} Pcs`;
+    if (bNet) bNet.textContent = `${netRaw.toFixed(2)} Net Mtr/KG`;
+    if (bTotal) bTotal.textContent = `₹${lineTotal.toFixed(2)}`;
+    if (titleDisp) {
+      titleDisp.textContent = item.raw_item_name || `Raw Material #${itemIdx + 1}`;
+    }
+
+    const footerRawTotal = document.getElementById(`tons-total-display-${itemIdx}`);
+    if (footerRawTotal) {
+      footerRawTotal.textContent = `${totalRaw.toFixed(2)} Mtr/KG (${item.thans.length} Tons)`;
+    }
+  }
+
+  function renderAllRawItemCards() {
+    const container = document.getElementById('raw-items-container');
     if (!container) return;
 
     container.innerHTML = '';
 
     itemsData.forEach((item, itemIdx) => {
-      const itemCard = document.createElement('div');
-      itemCard.className = 'card item-card-box';
-      itemCard.id = `item-card-${itemIdx}`;
+      const card = document.createElement('div');
+      card.className = 'card raw-item-card';
+      card.id = `raw-card-${itemIdx}`;
 
-      let itemOptions = `<option value="">-- Select Fabric / Raw Material SKU --</option>`;
+      // Options for Raw Items
+      let rawOptions = `<option value="">-- Select Raw Item / Fabric --</option>`;
       masterItems.forEach(itm => {
-        const isSel = (item.item_name && (itm.name === item.item_name || itm.id == item.item_id)) ? 'selected' : '';
-        itemOptions += `<option value="${itm.name}" data-id="${itm.id}" data-code="${itm.code || ''}" ${isSel}>${itm.name} [${itm.code || 'ITEM'}] (${itm.category || 'Fabric'})</option>`;
+        const isSel = (item.raw_item_name && (itm.name === item.raw_item_name || itm.id == item.raw_item_id)) ? 'selected' : '';
+        rawOptions += `<option value="${itm.name}" data-id="${itm.id}" data-code="${itm.code || ''}" ${isSel}>${itm.name} [${itm.code || 'ITEM'}] (${itm.category || 'Raw Material'})</option>`;
       });
 
-      const totalMeters = item.thans.reduce((a, b) => a + (parseFloat(b) || 0), 0);
+      // Options for Finished Items
+      let finishedOptions = `<option value="">-- Select Target Finished Product --</option>`;
+      masterItems.forEach(itm => {
+        const isSel = (item.finished_item_name && (itm.name === item.finished_item_name || itm.id == item.finished_item_id)) ? 'selected' : '';
+        const rawMtr = itm.raw_meter_per_piece || 0;
+        finishedOptions += `<option value="${itm.name}" data-id="${itm.id}" data-code="${itm.code || ''}" data-raw-meter="${rawMtr}" ${isSel}>${itm.name} [${itm.code || 'STYLE'}] ${rawMtr > 0 ? `(${rawMtr} Mtr/Pc)` : ''}</option>`;
+      });
+
+      // Available Purchase Tons for this raw item
+      const rawId = item.raw_item_id;
+      const rawName = (item.raw_item_name || '').toLowerCase().trim();
+      const availablePurchases = (rawId && purchasedTonsMap[rawId]) ? purchasedTonsMap[rawId] : (rawName && purchasedTonsMap[rawName] ? purchasedTonsMap[rawName] : []);
+
+      let purchasedTonsChipsHtml = '';
+      if (!item.raw_item_name) {
+        purchasedTonsChipsHtml = `
+          <div style="margin-top:10px; background:#f8fafc; border:1px dashed #cbd5e1; border-radius:10px; padding:12px; text-align:center; color:#64748b; font-size:0.8rem;">
+            Please select a <strong>Raw Item</strong> above to load available Purchase Tons from stock.
+          </div>
+        `;
+      } else if (availablePurchases.length > 0) {
+        purchasedTonsChipsHtml = `
+          <div style="margin-top:10px; background:#ffffff; border:1px solid #cbd5e1; border-radius:10px; padding:12px 14px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
+              <span style="font-size:0.75rem; font-weight:800; color:#1e293b; text-transform:uppercase; display:inline-flex; align-items:center; gap:5px;">
+                📦 Available Purchase Tons in Stock (${availablePurchases.length} available):
+              </span>
+              <button type="button" class="btn btn-secondary btn-xs" onclick="addAllPurchasedTons(${itemIdx})" style="font-size:0.725rem; font-weight:700;">+ Select All Available (${availablePurchases.length})</button>
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+              ${availablePurchases.map(p => `
+                <button type="button" class="purchased-ton-chip" onclick="addPurchasedTon(${itemIdx}, ${p.meter})" title="Click to select ${p.meter} ${p.unit} from Challan #${p.challan_no}">
+                  <span>+ ${p.label}</span>
+                </button>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      } else {
+        purchasedTonsChipsHtml = `
+          <div style="margin-top:10px; background:#fffbeb; border:1px solid #fde68a; border-radius:10px; padding:10px 14px; color:#92400e; font-size:0.8rem;">
+            No purchase tons in stock found for <strong>${item.raw_item_name}</strong>.
+          </div>
+        `;
+      }
+
+      const totalRaw = item.thans.reduce((a, b) => a + (parseFloat(b) || 0), 0);
       const wastage = parseFloat(item.wastage_meters) || 0;
-      const pcs = parseInt(item.production_pcs) || 0;
+      const netRaw = Math.max(0, totalRaw - wastage);
+      const pcs = item.expected_pieces || 0;
       const rate = parseFloat(item.rate_per_piece) || 0;
-      const netFabric = Math.max(0, totalMeters - wastage);
-      const avgCons = pcs > 0 ? (netFabric / pcs) : 0;
       const lineTotal = Math.round(pcs * rate * 100) / 100;
 
-      itemCard.innerHTML = `
+      card.innerHTML = `
+        <!-- Card Header -->
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--slate-100, #f1f5f9); padding-bottom:12px; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
           <div style="display:flex; align-items:center; gap:10px;">
-            <span style="width:26px; height:26px; border-radius:8px; background:#eef2ff; color:#4338ca; display:inline-flex; align-items:center; justify-content:center; font-size:0.85rem; font-weight:800;">
+            <span style="width:28px; height:28px; border-radius:8px; background:#eef2ff; color:#4338ca; display:inline-flex; align-items:center; justify-content:center; font-size:0.85rem; font-weight:800;">
               #${itemIdx + 1}
             </span>
-            <span style="font-weight:800; font-size:1rem; color:var(--slate-900);" id="item-title-display-${itemIdx}">
-              ${item.item_name || 'Fabric Item ' + (itemIdx + 1)}
-            </span>
-            ${item.item_code ? `<span style="font-family:monospace; font-size:0.75rem; background:#f1f5f9; padding:2px 6px; border-radius:6px; color:#475569;">${item.item_code}</span>` : ''}
+            <div>
+              <div style="font-weight:800; font-size:1.05rem; color:var(--slate-900);" id="card-title-display-${itemIdx}">
+                ${item.raw_item_name || 'Raw Material #' + (itemIdx + 1)}
+              </div>
+              <div style="font-size:0.75rem; color:var(--slate-500);">
+                Output: <strong style="color:#4338ca;">${item.finished_item_name || 'Select Finished Product'}</strong>
+              </div>
+            </div>
           </div>
 
-          <div style="display:flex; align-items:center; gap:10px;">
-            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-              <span class="badge" style="background:#f1f5f9; color:#334155; border:1px solid #cbd5e1; font-weight:700; font-size:0.8rem;" id="item-badge-thans-${itemIdx}">
-                ${item.thans.length} Thans
-              </span>
-              <span class="badge" style="background:#f0fdf4; color:#166534; border:1px solid #bbf7d0; font-weight:800; font-size:0.85rem;" id="item-badge-meters-${itemIdx}">
-                ${totalMeters.toFixed(2)} Mtr
-              </span>
-              <span class="badge" style="background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; font-weight:800; font-size:0.85rem;" id="item-badge-pcs-${itemIdx}">
-                ${pcs} Pcs
-              </span>
-              <span class="calc-badge" id="item-badge-avg-${itemIdx}">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                <span class="val">${avgCons.toFixed(2)} Mtr/Pc</span>
-              </span>
-              <span class="badge" style="background:#ecfdf5; color:#059669; border:1px solid #a7f3d0; font-weight:800; font-size:0.85rem;" id="item-badge-total-${itemIdx}">
-                ₹${lineTotal.toFixed(2)}
-              </span>
-            </div>
+          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <span class="badge" style="background:#f1f5f9; color:#334155; border:1px solid #cbd5e1; font-weight:700; font-size:0.8rem;" id="card-badge-tons-count-${itemIdx}">
+              ${item.thans.length} Tons/Thans
+            </span>
+            <span class="badge" style="background:#eef2ff; color:#4338ca; border:1px solid #c7d2fe; font-weight:800; font-size:0.85rem;" id="card-badge-raw-qty-${itemIdx}">
+              ${totalRaw.toFixed(2)} Mtr/KG
+            </span>
+            <span class="badge" style="background:#ecfdf5; color:#059669; border:1px solid #a7f3d0; font-weight:800; font-size:0.85rem;" id="card-badge-pcs-${itemIdx}">
+              ${pcs} Pcs
+            </span>
+            <span class="badge" style="background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; font-weight:800; font-size:0.85rem;" id="card-badge-total-${itemIdx}">
+              ₹${lineTotal.toFixed(2)}
+            </span>
 
             ${itemsData.length > 1 ? `
-              <button type="button" class="btn btn-secondary btn-sm" onclick="removeItem(${itemIdx})" style="color:#ef4444; font-weight:700; padding:4px 8px; border-color:#fecaca;" title="Remove this entire fabric item">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="removeRawItemCard(${itemIdx})" style="color:#ef4444; font-weight:700; padding:4px 8px; border-color:#fecaca;" title="Remove this entire raw material block">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                Remove Item
+                Remove
               </button>
             ` : ''}
           </div>
         </div>
 
-        <input type="hidden" name="items[${itemIdx}][item_id]" id="item-id-input-${itemIdx}" value="${item.item_id}">
-        <input type="hidden" name="items[${itemIdx}][item_code]" id="item-code-input-${itemIdx}" value="${item.item_code}">
+        <input type="hidden" name="items[${itemIdx}][raw_item_id]" value="${item.raw_item_id}">
+        <input type="hidden" name="items[${itemIdx}][finished_item_id]" value="${item.finished_item_id}">
 
-        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:16px; margin-bottom:18px;">
+        <!-- Row 1: Raw Item Select & Finished Item Select -->
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-bottom:14px;">
           
-          <!-- SKU Select -->
-          <div class="form-group" style="margin-bottom:0; grid-column:span 2;">
+          <!-- Step 1: Select Raw Item -->
+          <div class="form-group" style="margin-bottom:0;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
               <label class="form-label" style="font-weight:700; color:var(--slate-800); margin:0;">
-                Fabric Quality / Item SKU <span style="color:#ef4444;">*</span>
+                1. Select Raw Item <span style="color:#ef4444;">*</span>
               </label>
-              <a href="{{ route('masters.items.index') }}" target="_blank" style="font-size:0.75rem; color:#4338ca; text-decoration:none; font-weight:600;">+ Manage Items</a>
+              <a href="{{ route('masters.items.index') }}" target="_blank" style="font-size:0.75rem; color:#4338ca; text-decoration:none; font-weight:600;">+ Items Master</a>
             </div>
-            <select name="items[${itemIdx}][item_name]" class="form-control item-sku-select" required onchange="onItemSelectChange(${itemIdx}, this)">
-              ${itemOptions}
+            <select name="items[${itemIdx}][raw_item_name]" class="form-control" required onchange="onRawItemChange(${itemIdx}, this)">
+              ${rawOptions}
             </select>
           </div>
 
-          <!-- Production Pcs -->
+          <!-- Step 2: Select Finished Item -->
           <div class="form-group" style="margin-bottom:0;">
-            <label class="form-label" style="font-weight:700; color:var(--slate-800); margin-bottom:6px;">
-              Target Production (Pcs) <span style="color:#ef4444;">*</span>
-            </label>
-            <div style="position:relative;">
-              <input type="number" step="1" min="1" name="items[${itemIdx}][production_pcs]" class="form-control" required value="${item.production_pcs}" style="font-weight:800; color:#4338ca; padding-right:38px;" oninput="onItemPcsChange(${itemIdx}, this.value)">
-              <span style="position:absolute; right:10px; top:50%; transform:translateY(-50%); font-size:0.75rem; color:#64748b; font-weight:700;">Pcs</span>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <label class="form-label" style="font-weight:700; color:var(--slate-800); margin:0;">
+                2. Select Target Finished Item <span style="color:#ef4444;">*</span>
+              </label>
+              <span style="font-size:0.725rem; color:var(--slate-500);">Auto loads consumption ratio</span>
             </div>
-          </div>
-
-          <!-- Wastage Meters -->
-          <div class="form-group" style="margin-bottom:0;">
-            <label class="form-label" style="font-weight:700; color:var(--slate-800); margin-bottom:6px;">
-              Expected Wastage (Mtr)
-            </label>
-            <div style="position:relative;">
-              <input type="number" step="0.01" min="0" name="items[${itemIdx}][wastage_meters]" class="form-control" value="${item.wastage_meters}" style="font-weight:700; color:#dc2626; padding-right:38px;" oninput="onItemWastageChange(${itemIdx}, this.value)">
-              <span style="position:absolute; right:10px; top:50%; transform:translateY(-50%); font-size:0.75rem; color:#64748b; font-weight:700;">Mtr</span>
-            </div>
-          </div>
-
-          <!-- Rate Per Piece -->
-          <div class="form-group" style="margin-bottom:0;">
-            <label class="form-label" style="font-weight:700; color:var(--slate-800); margin-bottom:6px;">
-              Contractor Rate / Pc (₹) <span style="color:#ef4444;">*</span>
-            </label>
-            <div style="position:relative;">
-              <span style="position:absolute; left:12px; top:50%; transform:translateY(-50%); font-weight:700; color:#64748b;">₹</span>
-              <input type="number" step="0.5" min="0" name="items[${itemIdx}][rate_per_piece]" class="form-control" required value="${parseFloat(item.rate_per_piece).toFixed(2)}" style="padding-left:28px; font-weight:700; font-size:0.95rem;" oninput="onItemRateChange(${itemIdx}, this.value)">
-            </div>
+            <select name="items[${itemIdx}][finished_item_name]" class="form-control" required onchange="onFinishedItemChange(${itemIdx}, this)">
+              ${finishedOptions}
+            </select>
           </div>
 
         </div>
 
-        <!-- Than Breakdown Panel -->
-        <div style="background:#fafafa; border:1px solid #e2e8f0; border-radius:14px; padding:16px;">
+        <!-- Section A: Multiple Purchase Tons / Thans Container -->
+        <div class="tons-container" style="margin-top:14px;">
           
-          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
-            <div style="font-weight:800; font-size:0.85rem; color:#475569; text-transform:uppercase; letter-spacing:0.04em;">
-              Than / Roll Breakdown for Item #${itemIdx + 1}
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
+            <div style="font-weight:800; font-size:0.85rem; color:#334155; text-transform:uppercase; letter-spacing:0.04em; display:flex; align-items:center; gap:6px;">
+              <span>3. Select Purchase Tons for ${item.raw_item_name || 'Raw Material'}</span>
+              <span class="calc-badge" style="font-size:0.75rem;">${item.thans.length} Selected</span>
             </div>
             
-            <div style="display:flex; gap:8px;">
-              <button type="button" class="btn btn-secondary btn-sm" onclick="openPasteModalForItem(${itemIdx})" style="font-weight:700; font-size:0.8rem; display:inline-flex; align-items:center; gap:5px;">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
-                Paste Multi-Thans
+            ${item.thans.length > 0 ? `
+              <button type="button" class="btn btn-secondary btn-xs" onclick="clearAllTons(${itemIdx})" style="font-weight:700; font-size:0.75rem; color:#dc2626;">
+                Clear All Tons
               </button>
-              <button type="button" class="btn btn-secondary btn-sm" onclick="clearItemThans(${itemIdx})" style="font-weight:700; font-size:0.8rem; color:#dc2626;" title="Clear thans for this item">
-                Clear Thans
-              </button>
+            ` : ''}
+          </div>
+
+          <!-- Available Purchases Tons Chip List -->
+          ${purchasedTonsChipsHtml}
+
+          <!-- Empty State Box -->
+          <div id="tons-empty-box-${itemIdx}" style="text-align:center; padding:18px 14px; color:#64748b; border:2px dashed #cbd5e1; border-radius:10px; background:#ffffff; margin-top:10px; ${item.thans.length > 0 ? 'display:none;' : 'display:block;'}">
+            <div style="font-weight:700; font-size:0.85rem; color:#475569; margin-bottom:2px;">No Purchase Tons selected yet</div>
+            <p style="font-size:0.75rem; color:#94a3b8; margin:0;">Click on the available purchase tons in stock above to select tons for this order.</p>
+          </div>
+
+          <!-- Selected Tons Grid List -->
+          <div id="tons-list-box-${itemIdx}" style="${item.thans.length > 0 ? 'display:grid;' : 'display:none;'} grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:10px; margin-top:12px; margin-bottom:12px;"></div>
+
+          <!-- Total Raw Quantity Footer under this Raw Item -->
+          <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px dashed #cbd5e1; padding-top:10px; margin-top:8px; font-size:0.875rem;">
+            <span style="font-weight:700; color:#475569;">Total Raw Quantity (${item.raw_item_name || 'Raw Item'}):</span>
+            <strong id="tons-total-display-${itemIdx}" style="color:#0f172a; font-size:1.05rem;">
+              ${totalRaw.toFixed(2)} Mtr/KG (${item.thans.length} Tons)
+            </strong>
+          </div>
+
+        </div>
+
+        <!-- Section B: Output Specification, Wastage & Expected Pieces Calculation -->
+        <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:16px; margin-top:16px;">
+          <div style="font-weight:800; font-size:0.85rem; color:#334155; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:12px;">
+            4. Output Specifications, Expected Finished Pieces & Wastage
+          </div>
+
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(170px, 1fr)); gap:14px;">
+            
+            <!-- Consumption per Piece -->
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label" style="font-weight:700; color:var(--slate-800); font-size:0.8rem; margin-bottom:4px;">
+                Consumption / Ratio (Mtr/KG per Pc)
+              </label>
+              <input type="number" step="0.001" min="0.001" id="cons-input-${itemIdx}" name="items[${itemIdx}][avg_consumption]" class="form-control" value="${item.consumption_per_pc}" style="font-weight:700;" oninput="onConsumptionChange(${itemIdx}, this.value)">
             </div>
-          </div>
 
-          <div style="display:flex; gap:8px; margin-bottom:14px;">
-            <input type="number" step="0.01" min="0" id="quick-than-input-${itemIdx}" class="form-control" placeholder="Type meter reading (e.g. 148) and press Enter" style="font-size:0.9rem; font-weight:600;" onkeydown="if(event.key==='Enter'){event.preventDefault();addSingleThanFromInput(${itemIdx});}">
-            <button type="button" class="btn btn-primary btn-sm" onclick="addSingleThanFromInput(${itemIdx})" style="font-weight:700; white-space:nowrap; display:inline-flex; align-items:center; gap:6px;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              Add Than
-            </button>
-          </div>
+            <!-- Expected Wastage -->
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label" style="font-weight:700; color:var(--slate-800); font-size:0.8rem; margin-bottom:4px;">
+                Expected Wastage (Mtr / KG)
+              </label>
+              <input type="number" step="0.01" min="0" name="items[${itemIdx}][wastage_meters]" class="form-control" value="${item.wastage_meters}" style="font-weight:700; color:#dc2626;" oninput="onWastageChange(${itemIdx}, this.value)">
+            </div>
 
-          <div id="than-empty-box-${itemIdx}" style="text-align:center; padding:24px 14px; color:#94a3b8; border:2px dashed #cbd5e1; border-radius:10px; background:#ffffff; ${item.thans.length > 0 ? 'display:none;' : 'display:block;'}">
-            <div style="font-weight:700; font-size:0.9rem; color:#64748b; margin-bottom:3px;">No Thans added for this item yet</div>
-            <p style="font-size:0.775rem; margin:0 0 10px;">Type meter reading above or paste multiple readings.</p>
-            <button type="button" class="btn btn-secondary btn-xs" onclick="loadSampleThansForItem(${itemIdx})">+ Load Sample Than Readings (14 Thans)</button>
-          </div>
-
-          <div id="than-sheet-box-${itemIdx}" style="${item.thans.length > 0 ? 'display:grid;' : 'display:none;'} grid-template-columns:1fr 1fr; gap:14px;">
-            <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:10px; padding:12px;">
-              <div style="font-weight:700; font-size:0.75rem; color:#64748b; text-transform:uppercase; border-bottom:1px solid #e2e8f0; padding-bottom:6px; margin-bottom:8px; display:flex; justify-content:space-between;">
-                <span>Column 1</span>
-                <span id="col1-badge-${itemIdx}" style="color:#4338ca; font-weight:800;">0.00 Mtr</span>
+            <!-- Expected Finished Pieces -->
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label" style="font-weight:700; color:#4338ca; font-size:0.8rem; margin-bottom:4px;">
+                Expected Finished Pieces <span style="color:#ef4444;">*</span>
+              </label>
+              <div style="position:relative;">
+                <input type="number" step="1" min="1" id="pieces-input-${itemIdx}" name="items[${itemIdx}][production_pcs]" class="form-control" required value="${pcs}" style="font-weight:800; color:#4338ca; padding-right:38px; background:#f8fafc;" oninput="onExpectedPiecesChange(${itemIdx}, this.value)">
+                <span style="position:absolute; right:10px; top:50%; transform:translateY(-50%); font-size:0.75rem; color:#64748b; font-weight:700;">Pcs</span>
               </div>
-              <div id="col1-thans-${itemIdx}" style="display:flex; flex-direction:column; gap:6px;"></div>
             </div>
 
-            <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:10px; padding:12px;">
-              <div style="font-weight:700; font-size:0.75rem; color:#64748b; text-transform:uppercase; border-bottom:1px solid #e2e8f0; padding-bottom:6px; margin-bottom:8px; display:flex; justify-content:space-between;">
-                <span>Column 2</span>
-                <span id="col2-badge-${itemIdx}" style="color:#4338ca; font-weight:800;">0.00 Mtr</span>
+            <!-- Contractor Rate -->
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label" style="font-weight:700; color:var(--slate-800); font-size:0.8rem; margin-bottom:4px;">
+                Contractor Rate / Pc (₹) <span style="color:#ef4444;">*</span>
+              </label>
+              <div style="position:relative;">
+                <span style="position:absolute; left:10px; top:50%; transform:translateY(-50%); font-weight:700; color:#64748b;">₹</span>
+                <input type="number" step="0.5" min="0" name="items[${itemIdx}][rate_per_piece]" class="form-control" required value="${parseFloat(item.rate_per_piece).toFixed(2)}" style="padding-left:24px; font-weight:700;" oninput="onRateChange(${itemIdx}, this.value)">
               </div>
-              <div id="col2-thans-${itemIdx}" style="display:flex; flex-direction:column; gap:6px;"></div>
             </div>
-          </div>
 
+          </div>
         </div>
       `;
 
-      container.appendChild(itemCard);
-      renderItemThans(itemIdx);
+      container.appendChild(card);
+      renderTonsForCard(itemIdx);
     });
   }
 
-  function renderItemThans(itemIdx) {
+  function renderTonsForCard(itemIdx) {
     const item = itemsData[itemIdx];
     if (!item) return;
 
-    const emptyBox = document.getElementById(`than-empty-box-${itemIdx}`);
-    const sheetBox = document.getElementById(`than-sheet-box-${itemIdx}`);
-    const col1 = document.getElementById(`col1-thans-${itemIdx}`);
-    const col2 = document.getElementById(`col2-thans-${itemIdx}`);
+    const emptyBox = document.getElementById(`tons-empty-box-${itemIdx}`);
+    const listBox = document.getElementById(`tons-list-box-${itemIdx}`);
 
-    if (!emptyBox || !sheetBox || !col1 || !col2) return;
+    if (!emptyBox || !listBox) return;
 
-    col1.innerHTML = '';
-    col2.innerHTML = '';
+    listBox.innerHTML = '';
 
     if (item.thans.length === 0) {
       emptyBox.style.display = 'block';
-      sheetBox.style.display = 'none';
-      updateItemSummaryHeader(itemIdx);
+      listBox.style.display = 'none';
       return;
     }
 
     emptyBox.style.display = 'none';
-    sheetBox.style.display = 'grid';
-
-    const midpoint = Math.ceil(item.thans.length / 2);
+    listBox.style.display = 'grid';
 
     item.thans.forEach((meter, tIdx) => {
       const row = document.createElement('div');
-      row.style.cssText = 'display:flex; align-items:center; gap:6px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:4px 8px;';
+      row.className = 'ton-row';
       row.innerHTML = `
-        <span style="font-weight:700; font-size:0.725rem; color:#64748b; width:54px;">Than #${tIdx + 1}</span>
+        <span style="font-weight:700; font-size:0.75rem; color:#4338ca; width:64px;">Ton #${tIdx + 1}</span>
         <div style="flex:1;">
           <input type="number" step="0.01" min="0" value="${meter}" name="items[${itemIdx}][thans][]" 
-            class="form-control form-control-sm than-input" 
+            class="form-control form-control-sm" 
             style="font-weight:700; font-size:0.85rem; padding:3px 6px; height:28px;"
-            oninput="updateThanMeter(${itemIdx}, ${tIdx}, this.value)"
+            oninput="updateTonValue(${itemIdx}, ${tIdx}, this.value)"
             onfocus="this.select()">
         </div>
-        <span style="font-size:0.7rem; color:#94a3b8; font-weight:600;">Mtr</span>
-        <button type="button" onclick="removeThan(${itemIdx}, ${tIdx})" title="Remove than" style="background:none; border:none; color:#ef4444; font-size:1.1rem; cursor:pointer; line-height:1; padding:0 3px;">&times;</button>
+        <span style="font-size:0.7rem; color:#64748b; font-weight:600;">Mtr/KG</span>
+        <button type="button" onclick="removeTon(${itemIdx}, ${tIdx})" title="Remove ton" style="background:none; border:none; color:#ef4444; font-size:1.15rem; cursor:pointer; line-height:1; padding:0 3px;">&times;</button>
       `;
 
-      if (tIdx < midpoint) {
-        col1.appendChild(row);
-      } else {
-        col2.appendChild(row);
-      }
+      listBox.appendChild(row);
     });
-
-    updateItemThansSubtotals(itemIdx);
-    updateItemSummaryHeader(itemIdx);
-  }
-
-  function updateItemThansSubtotals(itemIdx) {
-    const item = itemsData[itemIdx];
-    if (!item) return;
-
-    const midpoint = Math.ceil(item.thans.length / 2);
-    let c1 = 0;
-    let c2 = 0;
-    item.thans.forEach((m, i) => {
-      if (i < midpoint) c1 += (parseFloat(m) || 0);
-      else c2 += (parseFloat(m) || 0);
-    });
-
-    const b1 = document.getElementById(`col1-badge-${itemIdx}`);
-    const b2 = document.getElementById(`col2-badge-${itemIdx}`);
-    if (b1) b1.textContent = c1.toFixed(2) + ' Mtr (' + Math.min(midpoint, item.thans.length) + ')';
-    if (b2) b2.textContent = c2.toFixed(2) + ' Mtr (' + Math.max(0, item.thans.length - midpoint) + ')';
-  }
-
-  function updateItemSummaryHeader(itemIdx) {
-    const item = itemsData[itemIdx];
-    if (!item) return;
-
-    const totalMeters = item.thans.reduce((a, b) => a + (parseFloat(b) || 0), 0);
-    const wastage = parseFloat(item.wastage_meters) || 0;
-    const pcs = parseInt(item.production_pcs) || 0;
-    const rate = parseFloat(item.rate_per_piece) || 0;
-    const netFabric = Math.max(0, totalMeters - wastage);
-    const avgCons = pcs > 0 ? (netFabric / pcs) : 0;
-    const lineTotal = Math.round(pcs * rate * 100) / 100;
-
-    const thansBadge = document.getElementById(`item-badge-thans-${itemIdx}`);
-    const metersBadge = document.getElementById(`item-badge-meters-${itemIdx}`);
-    const pcsBadge = document.getElementById(`item-badge-pcs-${itemIdx}`);
-    const avgBadge = document.getElementById(`item-badge-avg-${itemIdx}`);
-    const totalBadge = document.getElementById(`item-badge-total-${itemIdx}`);
-    const titleDisplay = document.getElementById(`item-title-display-${itemIdx}`);
-
-    if (thansBadge) thansBadge.textContent = `${item.thans.length} Thans`;
-    if (metersBadge) metersBadge.textContent = `${totalMeters.toFixed(2)} Mtr`;
-    if (pcsBadge) pcsBadge.textContent = `${pcs} Pcs`;
-    if (avgBadge) avgBadge.querySelector('.val').textContent = `${avgCons.toFixed(2)} Mtr/Pc`;
-    if (totalBadge) totalBadge.textContent = `₹${lineTotal.toFixed(2)}`;
-    if (titleDisplay && item.item_name) titleDisplay.textContent = item.item_name;
   }
 
   function calculateOverallTotals() {
-    let grandTotalMeters = 0;
-    let grandTotalThans = 0;
+    let grandTotalRaw = 0;
+    let grandTotalTons = 0;
     let grandTotalWastage = 0;
     let grandTotalPcs = 0;
     let grandTotalAmount = 0;
 
     itemsData.forEach(item => {
-      const itemMeters = item.thans.reduce((a, b) => a + (parseFloat(b) || 0), 0);
+      const itemRaw = item.thans.reduce((a, b) => a + (parseFloat(b) || 0), 0);
       const itemWastage = parseFloat(item.wastage_meters) || 0;
-      const itemPcs = parseInt(item.production_pcs) || 0;
+      const itemPcs = parseInt(item.expected_pieces) || 0;
       const itemRate = parseFloat(item.rate_per_piece) || 0;
 
-      grandTotalMeters += itemMeters;
-      grandTotalThans += item.thans.length;
+      grandTotalRaw += itemRaw;
+      grandTotalTons += item.thans.length;
       grandTotalWastage += itemWastage;
       grandTotalPcs += itemPcs;
       grandTotalAmount += (itemPcs * itemRate);
     });
 
-    const netFabric = Math.max(0, grandTotalMeters - grandTotalWastage);
-    const overallAvg = grandTotalPcs > 0 ? (netFabric / grandTotalPcs) : 0;
+    const netRaw = Math.max(0, grandTotalRaw - grandTotalWastage);
 
     document.getElementById('summary-items-count').textContent = itemsData.length + (itemsData.length === 1 ? ' Item' : ' Items');
-    document.getElementById('summary-than-count').textContent = grandTotalThans + ' Thans';
-    document.getElementById('summary-total-meters').textContent = grandTotalMeters.toFixed(2) + ' Mtr';
-    document.getElementById('summary-total-wastage').textContent = grandTotalWastage.toFixed(2) + ' Mtr';
-    document.getElementById('summary-net-fabric').textContent = netFabric.toFixed(2) + ' Mtr';
+    document.getElementById('summary-than-count').textContent = grandTotalTons + ' Tons/Thans';
+    document.getElementById('summary-total-raw-qty').textContent = grandTotalRaw.toFixed(2) + ' Mtr/KG';
+    document.getElementById('summary-total-wastage').textContent = grandTotalWastage.toFixed(2) + ' Mtr/KG';
+    document.getElementById('summary-net-raw').textContent = netRaw.toFixed(2) + ' Mtr/KG';
     document.getElementById('summary-total-pcs').textContent = grandTotalPcs.toLocaleString('en-IN') + ' Pcs';
-    document.getElementById('summary-avg-cons').textContent = overallAvg.toFixed(2) + ' Mtr / Pc';
     document.getElementById('summary-grand-amount').textContent = '₹' + grandTotalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
   document.getElementById('jw-form')?.addEventListener('submit', function(e) {
     if (itemsData.length === 0) {
       e.preventDefault();
-      alert('Please add at least one fabric item to this job work order.');
+      alert('Please add at least one raw item to this job work order.');
       return false;
     }
 
-    let hasMissingSku = false;
-    let hasZeroThans = false;
+    let hasMissingRaw = false;
+    let hasMissingFinished = false;
+    let hasZeroTons = false;
     let hasZeroPcs = false;
 
     itemsData.forEach((item, idx) => {
-      if (!item.item_name) {
-        hasMissingSku = true;
+      if (!item.raw_item_name) {
+        hasMissingRaw = true;
+      }
+      if (!item.finished_item_name) {
+        hasMissingFinished = true;
       }
       if (item.thans.length === 0) {
-        hasZeroThans = true;
+        hasZeroTons = true;
       }
-      if (!item.production_pcs || parseInt(item.production_pcs) <= 0) {
+      if (!item.expected_pieces || parseInt(item.expected_pieces) <= 0) {
         hasZeroPcs = true;
       }
     });
 
-    if (hasMissingSku) {
+    if (hasMissingRaw) {
       e.preventDefault();
-      alert('Please select a Fabric Quality / Item SKU for all item entries.');
+      alert('Please select a Raw Item for all entries.');
       return false;
     }
 
-    if (hasZeroThans) {
+    if (hasMissingFinished) {
       e.preventDefault();
-      alert('Please enter at least one Than / Roll meter reading for each fabric item before saving.');
+      alert('Please select a Target Finished Item for all entries.');
+      return false;
+    }
+
+    if (hasZeroTons) {
+      e.preventDefault();
+      alert('Please select or add at least one purchase Ton/Than for each raw item.');
       return false;
     }
 
     if (hasZeroPcs) {
       e.preventDefault();
-      alert('Please enter a valid target production quantity (Pcs > 0) for each item.');
+      alert('Please verify expected finished pieces quantity (Pcs > 0) for each item.');
       return false;
     }
   });
 
   document.addEventListener('DOMContentLoaded', () => {
-    renderAllItems();
+    renderAllRawItemCards();
     calculateOverallTotals();
   });
 </script>
