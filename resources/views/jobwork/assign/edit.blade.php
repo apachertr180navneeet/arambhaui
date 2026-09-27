@@ -61,6 +61,18 @@
     gap: 4px;
     white-space: nowrap;
   }
+  .than-item-card {
+    background: #ffffff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 12px 14px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+    transition: all 0.15s ease;
+  }
+  .than-item-card:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+  }
   .ton-row {
     display: flex;
     align-items: center;
@@ -306,7 +318,45 @@
   $formattedExistingItems = [];
   if ($assign->items && count($assign->items) > 0) {
       foreach ($assign->items as $it) {
-          $thans = $it->than_list;
+          $rawThans = $it->than_list;
+          $cons = (float)($it->avg_consumption ?: 1.5);
+          $thans = [];
+          if (!empty($rawThans) && is_array($rawThans)) {
+              foreach ($rawThans as $t) {
+                  if (is_array($t)) {
+                      $m = (float)($t['meter'] ?? $t['meters'] ?? 0);
+                      $w = isset($t['wastage']) ? (float)$t['wastage'] : (isset($t['wastage_meters']) ? (float)$t['wastage_meters'] : null);
+                      if ($w !== null && $w > 0) {
+                          $avail = max(0, $m - $w);
+                          $p = isset($t['pieces']) ? (int)$t['pieces'] : ($cons > 0 ? (int)floor($avail / $cons) : 0);
+                          $u = isset($t['usable']) ? (float)$t['usable'] : ($p * $cons);
+                          $w = max(0, $m - $u);
+                      } else {
+                          $p = isset($t['pieces']) ? (int)$t['pieces'] : ($cons > 0 ? (int)floor($m / $cons) : 0);
+                          $u = isset($t['usable']) ? (float)$t['usable'] : ($p * $cons);
+                          $w = max(0, $m - $u);
+                      }
+                      $thans[] = [
+                          'meter' => $m,
+                          'wastage' => round($w, 2),
+                          'usable' => round($u, 2),
+                          'pieces' => $p
+                      ];
+                  } else {
+                      $m = (float)$t;
+                      $p = $cons > 0 ? (int)floor($m / $cons) : 0;
+                      $u = $p * $cons;
+                      $w = max(0, $m - $u);
+                      $thans[] = [
+                          'meter' => $m,
+                          'wastage' => round($w, 2),
+                          'usable' => round($u, 2),
+                          'pieces' => $p
+                      ];
+                  }
+              }
+          }
+
           $rawName = $it->raw_item_name ?: ($it->rawItem ? $it->rawItem->name : ($it->item_name ?: ''));
           $rawId = $it->raw_item_id ?: ($it->rawItem ? $it->rawItem->id : ($it->item_id ?: ''));
           $finName = $it->finished_item_name ?: ($it->finishedItem ? $it->finishedItem->name : ($it->item_name ?: ''));
@@ -317,17 +367,52 @@
               'raw_item_name' => $rawName,
               'finished_item_id' => $finId ? (string)$finId : '',
               'finished_item_name' => $finName,
-              'consumption_per_pc' => (float)($it->avg_consumption ?: 1.5),
-              'wastage_meters' => (float)($it->wastage_meters ?: 0),
+              'consumption_per_pc' => $cons,
               'rate_per_piece' => (float)($it->rate_per_piece ?: ($assign->rate_per_piece ?: 25.0)),
-              'expected_pieces' => (int)($it->production_pcs ?: ($it->qty ?: ($assign->issued_qty ?: 0))),
               'thans' => $thans
           ];
       }
   } else {
-      $thans = $assign->than_list;
-      if (empty($thans) && $assign->total_than_meters > 0) {
-          $thans = [(float)$assign->total_than_meters];
+      $rawThans = $assign->than_list;
+      if (empty($rawThans) && $assign->total_than_meters > 0) {
+          $rawThans = [(float)$assign->total_than_meters];
+      }
+      $cons = 1.5;
+      $thans = [];
+      if (!empty($rawThans) && is_array($rawThans)) {
+          foreach ($rawThans as $t) {
+              if (is_array($t)) {
+                  $m = (float)($t['meter'] ?? $t['meters'] ?? 0);
+                  $w = isset($t['wastage']) ? (float)$t['wastage'] : (isset($t['wastage_meters']) ? (float)$t['wastage_meters'] : null);
+                  if ($w !== null && $w > 0) {
+                      $avail = max(0, $m - $w);
+                      $p = isset($t['pieces']) ? (int)$t['pieces'] : ($cons > 0 ? (int)floor($avail / $cons) : 0);
+                      $u = isset($t['usable']) ? (float)$t['usable'] : ($p * $cons);
+                      $w = max(0, $m - $u);
+                  } else {
+                      $p = isset($t['pieces']) ? (int)$t['pieces'] : ($cons > 0 ? (int)floor($m / $cons) : 0);
+                      $u = isset($t['usable']) ? (float)$t['usable'] : ($p * $cons);
+                      $w = max(0, $m - $u);
+                  }
+                  $thans[] = [
+                      'meter' => $m,
+                      'wastage' => round($w, 2),
+                      'usable' => round($u, 2),
+                      'pieces' => $p
+                  ];
+              } else {
+                  $m = (float)$t;
+                  $p = $cons > 0 ? (int)floor($m / $cons) : 0;
+                  $u = $p * $cons;
+                  $w = max(0, $m - $u);
+                  $thans[] = [
+                      'meter' => $m,
+                      'wastage' => round($w, 2),
+                      'usable' => round($u, 2),
+                      'pieces' => $p
+                  ];
+              }
+          }
       }
       $formattedExistingItems[] = [
           'raw_item_id' => '',
@@ -335,9 +420,7 @@
           'finished_item_id' => '',
           'finished_item_name' => $assign->style_name ?: '',
           'consumption_per_pc' => 1.5,
-          'wastage_meters' => (float)($assign->total_wastage_meters ?: 0),
           'rate_per_piece' => (float)($assign->rate_per_piece ?: 25.0),
-          'expected_pieces' => (int)($assign->issued_qty ?: 0),
           'thans' => $thans
       ];
   }
@@ -350,6 +433,34 @@
 
   // Multi-Item State Preloaded from Database
   let itemsData = @json($formattedExistingItems);
+
+  function calculateThanValues(meter, manualWastage = null, consumption = 1.5) {
+    const m = Math.max(0, parseFloat(meter) || 0);
+    const c = Math.max(0.0001, parseFloat(consumption) || 1.5);
+    
+    let p = 0;
+    let u = 0;
+    let w = 0;
+
+    if (manualWastage !== null && manualWastage !== undefined && manualWastage !== '' && !isNaN(parseFloat(manualWastage))) {
+      const mw = Math.max(0, parseFloat(manualWastage) || 0);
+      const avail = Math.max(0, m - mw);
+      p = c > 0 ? Math.floor(avail / c) : 0;
+      u = p * c;
+      w = Math.max(0, m - u);
+    } else {
+      p = c > 0 ? Math.floor(m / c) : 0;
+      u = p * c;
+      w = Math.max(0, m - u);
+    }
+
+    return {
+      meter: Math.round(m * 100) / 100,
+      wastage: Math.round(w * 100) / 100,
+      usable: Math.round(u * 100) / 100,
+      pieces: p
+    };
+  }
 
   function autoGenerateLotNo() {
     const input = document.getElementById('ja_lot_number');
@@ -418,9 +529,7 @@
       finished_item_id: '',
       finished_item_name: '',
       consumption_per_pc: 1.50,
-      wastage_meters: 0,
       rate_per_piece: defaultRate,
-      expected_pieces: 0,
       thans: []
     });
 
@@ -435,7 +544,7 @@
     }
     const item = itemsData[idx];
     if (item.thans.length > 0) {
-      if (!confirm(`Remove Raw Item #${idx + 1} (${item.raw_item_name || 'Item'}) and its ${item.thans.length} tons/thans?`)) {
+      if (!confirm(`Remove Raw Item #${idx + 1} (${item.raw_item_name || 'Item'}) and its ${item.thans.length} thans?`)) {
         return;
       }
     }
@@ -474,7 +583,11 @@
       }
     }
 
-    recalcRawItemRow(idx);
+    // Recalculate all Thans with new consumption ratio
+    const cons = itemsData[idx].consumption_per_pc;
+    itemsData[idx].thans = itemsData[idx].thans.map(t => calculateThanValues(t.meter, null, cons));
+
+    renderAllRawItemCards();
     calculateOverallTotals();
   }
 
@@ -482,7 +595,9 @@
   function addPurchasedTon(itemIdx, meterVal) {
     const val = parseFloat(meterVal);
     if (isNaN(val) || val <= 0) return;
-    itemsData[itemIdx].thans.push(Math.round(val * 100) / 100);
+    const cons = parseFloat(itemsData[itemIdx].consumption_per_pc) || 1.5;
+    const thanObj = calculateThanValues(val, null, cons);
+    itemsData[itemIdx].thans.push(thanObj);
     renderTonsForCard(itemIdx);
     recalcRawItemRow(itemIdx);
     calculateOverallTotals();
@@ -495,11 +610,22 @@
     const available = (rawId && purchasedTonsMap[rawId]) ? purchasedTonsMap[rawId] : (rawName && purchasedTonsMap[rawName] ? purchasedTonsMap[rawName] : []);
     
     if (available.length === 0) return;
+    const cons = parseFloat(itemsData[itemIdx].consumption_per_pc) || 1.5;
 
     available.forEach(t => {
-      itemsData[itemIdx].thans.push(Math.round(t.meter * 100) / 100);
+      const thanObj = calculateThanValues(t.meter, null, cons);
+      itemsData[itemIdx].thans.push(thanObj);
     });
 
+    renderTonsForCard(itemIdx);
+    recalcRawItemRow(itemIdx);
+    calculateOverallTotals();
+  }
+
+  function addManualThan(itemIdx) {
+    const cons = parseFloat(itemsData[itemIdx].consumption_per_pc) || 1.5;
+    const thanObj = calculateThanValues(0, null, cons);
+    itemsData[itemIdx].thans.push(thanObj);
     renderTonsForCard(itemIdx);
     recalcRawItemRow(itemIdx);
     calculateOverallTotals();
@@ -512,18 +638,61 @@
     calculateOverallTotals();
   }
 
-  function updateTonValue(itemIdx, tonIdx, newMeter) {
+  function updateThanMeter(itemIdx, tonIdx, newMeter) {
     const val = parseFloat(newMeter);
-    if (!isNaN(val) && val >= 0) {
-      itemsData[itemIdx].thans[tonIdx] = Math.round(val * 100) / 100;
-      recalcRawItemRow(itemIdx);
-      calculateOverallTotals();
-    }
+    const m = (!isNaN(val) && val >= 0) ? val : 0;
+    const item = itemsData[itemIdx];
+    const than = item.thans[tonIdx];
+    if (!than) return;
+
+    const cons = parseFloat(item.consumption_per_pc) || 1.5;
+    const updated = calculateThanValues(m, null, cons);
+    item.thans[tonIdx] = updated;
+
+    const wastageInput = document.getElementById(`than-wastage-input-${itemIdx}-${tonIdx}`);
+    const usableDisp = document.getElementById(`than-usable-display-${itemIdx}-${tonIdx}`);
+    const pcsDisp = document.getElementById(`than-pcs-display-${itemIdx}-${tonIdx}`);
+    const usableHidden = document.getElementById(`than-usable-hidden-${itemIdx}-${tonIdx}`);
+    const pcsHidden = document.getElementById(`than-pieces-hidden-${itemIdx}-${tonIdx}`);
+
+    if (wastageInput) wastageInput.value = updated.wastage;
+    if (usableDisp) usableDisp.textContent = `${updated.usable.toFixed(2)} Mtr`;
+    if (pcsDisp) pcsDisp.textContent = `${updated.pieces} Pcs`;
+    if (usableHidden) usableHidden.value = updated.usable;
+    if (pcsHidden) pcsHidden.value = updated.pieces;
+
+    recalcRawItemRow(itemIdx);
+    calculateOverallTotals();
+  }
+
+  function updateThanWastage(itemIdx, tonIdx, newWastage) {
+    const val = parseFloat(newWastage);
+    const w = (!isNaN(val) && val >= 0) ? val : 0;
+    const item = itemsData[itemIdx];
+    const than = item.thans[tonIdx];
+    if (!than) return;
+
+    const cons = parseFloat(item.consumption_per_pc) || 1.5;
+    const updated = calculateThanValues(than.meter, w, cons);
+    item.thans[tonIdx] = updated;
+
+    const usableDisp = document.getElementById(`than-usable-display-${itemIdx}-${tonIdx}`);
+    const pcsDisp = document.getElementById(`than-pcs-display-${itemIdx}-${tonIdx}`);
+    const usableHidden = document.getElementById(`than-usable-hidden-${itemIdx}-${tonIdx}`);
+    const pcsHidden = document.getElementById(`than-pieces-hidden-${itemIdx}-${tonIdx}`);
+
+    if (usableDisp) usableDisp.textContent = `${updated.usable.toFixed(2)} Mtr`;
+    if (pcsDisp) pcsDisp.textContent = `${updated.pieces} Pcs`;
+    if (usableHidden) usableHidden.value = updated.usable;
+    if (pcsHidden) pcsHidden.value = updated.pieces;
+
+    recalcRawItemRow(itemIdx);
+    calculateOverallTotals();
   }
 
   function clearAllTons(itemIdx) {
     if (itemsData[itemIdx].thans.length === 0) return;
-    if (confirm(`Clear all selected tons for Raw Item #${itemIdx + 1}?`)) {
+    if (confirm(`Clear all selected thans for Raw Item #${itemIdx + 1}?`)) {
       itemsData[itemIdx].thans = [];
       renderTonsForCard(itemIdx);
       recalcRawItemRow(itemIdx);
@@ -534,86 +703,84 @@
   function onConsumptionChange(itemIdx, val) {
     const c = parseFloat(val);
     itemsData[itemIdx].consumption_per_pc = !isNaN(c) && c > 0 ? c : 1.5;
-    recalcRawItemRow(itemIdx, 'from_consumption');
-    calculateOverallTotals();
-  }
-
-  function onWastageChange(itemIdx, val) {
-    const w = parseFloat(val);
-    itemsData[itemIdx].wastage_meters = !isNaN(w) && w >= 0 ? w : 0;
-    recalcRawItemRow(itemIdx, 'from_wastage');
-    calculateOverallTotals();
-  }
-
-  function onExpectedPiecesChange(itemIdx, val) {
-    const p = parseInt(val);
-    itemsData[itemIdx].expected_pieces = !isNaN(p) && p >= 0 ? p : 0;
     
-    // If pieces manually changed, recompute consumption ratio
-    const totalRaw = itemsData[itemIdx].thans.reduce((a, b) => a + (parseFloat(b) || 0), 0);
-    const netRaw = Math.max(0, totalRaw - itemsData[itemIdx].wastage_meters);
-    if (p > 0) {
-      itemsData[itemIdx].consumption_per_pc = Math.round((netRaw / p) * 1000) / 1000;
-      const consInput = document.getElementById(`cons-input-${itemIdx}`);
-      if (consInput) consInput.value = itemsData[itemIdx].consumption_per_pc;
-    }
-
-    recalcRawItemRow(itemIdx, 'from_pieces');
+    // Recalculate each Than's pieces and scrap under this new consumption
+    const cons = itemsData[itemIdx].consumption_per_pc;
+    itemsData[itemIdx].thans = itemsData[itemIdx].thans.map(t => calculateThanValues(t.meter, null, cons));
+    
+    renderTonsForCard(itemIdx);
+    recalcRawItemRow(itemIdx);
+    calculateOverallTotals();
+  }
+    
+    renderTonsForCard(itemIdx);
+    recalcRawItemRow(itemIdx);
     calculateOverallTotals();
   }
 
   function onRateChange(itemIdx, val) {
     const r = parseFloat(val);
     itemsData[itemIdx].rate_per_piece = !isNaN(r) && r >= 0 ? r : 0;
-    recalcRawItemRow(itemIdx, 'from_rate');
+    recalcRawItemRow(itemIdx);
     calculateOverallTotals();
   }
 
-  function recalcRawItemRow(itemIdx, trigger = 'general') {
+  // Main Yield and Quantity Recalculation for Card
+  function recalcRawItemRow(itemIdx) {
     const item = itemsData[itemIdx];
     if (!item) return;
 
-    const totalRaw = item.thans.reduce((a, b) => a + (parseFloat(b) || 0), 0);
-    const wastage = parseFloat(item.wastage_meters) || 0;
-    const netRaw = Math.max(0, totalRaw - wastage);
-    const cons = parseFloat(item.consumption_per_pc) || 1.5;
+    let totalRaw = 0;
+    let totalWastage = 0;
+    let totalUsable = 0;
+    let totalPcs = 0;
 
-    if (trigger !== 'from_pieces') {
-      if (cons > 0 && netRaw > 0) {
-        item.expected_pieces = Math.floor(netRaw / cons);
-      } else if (netRaw === 0) {
-        item.expected_pieces = 0;
-      }
-    }
+    item.thans.forEach(t => {
+      totalRaw += (parseFloat(t.meter) || 0);
+      totalWastage += (parseFloat(t.wastage) || 0);
+      totalUsable += (parseFloat(t.usable) || 0);
+      totalPcs += (parseInt(t.pieces) || 0);
+    });
 
-    const pcs = item.expected_pieces || 0;
     const rate = parseFloat(item.rate_per_piece) || 0;
-    const lineTotal = Math.round(pcs * rate * 100) / 100;
+    const lineTotal = Math.round(totalPcs * rate * 100) / 100;
 
+    // Update form elements
     const pcsInput = document.getElementById(`pieces-input-${itemIdx}`);
-    if (pcsInput && trigger !== 'from_pieces') {
-      pcsInput.value = pcs;
-    }
+    if (pcsInput) pcsInput.value = totalPcs;
 
+    const wastageInput = document.getElementById(`wastage-input-${itemIdx}`);
+    if (wastageInput) wastageInput.value = totalWastage.toFixed(2);
+
+    const hiddenRawQty = document.getElementById(`hidden-raw-qty-${itemIdx}`);
+    if (hiddenRawQty) hiddenRawQty.value = totalRaw.toFixed(2);
+
+    // Update Display Badges
     const bRawQty = document.getElementById(`card-badge-raw-qty-${itemIdx}`);
-    const bTonsCount = document.getElementById(`card-badge-tons-count-${itemIdx}`);
+    const bThansCount = document.getElementById(`card-badge-tons-count-${itemIdx}`);
     const bPcs = document.getElementById(`card-badge-pcs-${itemIdx}`);
-    const bNet = document.getElementById(`card-badge-net-${itemIdx}`);
     const bTotal = document.getElementById(`card-badge-total-${itemIdx}`);
     const titleDisp = document.getElementById(`card-title-display-${itemIdx}`);
+    const countBadge = document.getElementById(`card-step3-count-badge-${itemIdx}`);
 
     if (bRawQty) bRawQty.textContent = `${totalRaw.toFixed(2)} Mtr/KG`;
-    if (bTonsCount) bTonsCount.textContent = `${item.thans.length} Tons/Thans`;
-    if (bPcs) bPcs.textContent = `${pcs} Pcs`;
-    if (bNet) bNet.textContent = `${netRaw.toFixed(2)} Net Mtr/KG`;
+    if (bThansCount) bThansCount.textContent = `${item.thans.length} Thans`;
+    if (bPcs) bPcs.textContent = `${totalPcs} Pcs`;
     if (bTotal) bTotal.textContent = `₹${lineTotal.toFixed(2)}`;
-    if (titleDisp) {
-      titleDisp.textContent = item.raw_item_name || `Raw Material #${itemIdx + 1}`;
-    }
+    if (titleDisp) titleDisp.textContent = item.raw_item_name || `Raw Material #${itemIdx + 1}`;
+    if (countBadge) countBadge.textContent = `${item.thans.length} Selected`;
 
     const footerRawTotal = document.getElementById(`tons-total-display-${itemIdx}`);
     if (footerRawTotal) {
-      footerRawTotal.textContent = `${totalRaw.toFixed(2)} Mtr/KG (${item.thans.length} Tons)`;
+      footerRawTotal.innerHTML = `
+        <span style="font-weight:800; color:#0f172a;">${totalRaw.toFixed(2)} Mtr/KG <span style="font-size:0.8rem; color:#64748b; font-weight:600;">(${item.thans.length} Thans)</span></span>
+        <span style="color:#cbd5e1;">•</span>
+        <span style="font-weight:700; color:#dc2626; font-size:0.85rem;">Wastage: ${totalWastage.toFixed(2)} Mtr</span>
+        <span style="color:#cbd5e1;">•</span>
+        <span style="font-weight:700; color:#059669; font-size:0.85rem;">Usable: ${totalUsable.toFixed(2)} Mtr</span>
+        <span style="color:#cbd5e1;">•</span>
+        <span style="font-weight:800; color:#4338ca; font-size:0.95rem;">Yield: ${totalPcs} Pcs</span>
+      `;
     }
   }
 
@@ -673,16 +840,21 @@
       } else {
         purchasedTonsChipsHtml = `
           <div style="margin-top:10px; background:#fffbeb; border:1px solid #fde68a; border-radius:10px; padding:10px 14px; color:#92400e; font-size:0.8rem;">
-            No purchase thans in stock found for <strong>${item.raw_item_name}</strong>.
+            No purchase thans in stock found for <strong>${item.raw_item_name}</strong>. You can click <strong>+ Add Custom Than</strong> to enter thans manually.
           </div>
         `;
       }
 
-      const totalRaw = item.thans.reduce((a, b) => a + (parseFloat(b) || 0), 0);
-      const wastage = parseFloat(item.wastage_meters) || 0;
-      const pcs = item.expected_pieces || 0;
+      let totalRaw = 0;
+      let totalWastage = 0;
+      let totalPcs = 0;
+      item.thans.forEach(t => {
+        totalRaw += (parseFloat(t.meter) || 0);
+        totalWastage += (parseFloat(t.wastage) || 0);
+        totalPcs += (parseInt(t.pieces) || 0);
+      });
       const rate = parseFloat(item.rate_per_piece) || 0;
-      const lineTotal = Math.round(pcs * rate * 100) / 100;
+      const lineTotal = Math.round(totalPcs * rate * 100) / 100;
 
       card.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--slate-100, #f1f5f9); padding-bottom:12px; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
@@ -708,7 +880,7 @@
               ${totalRaw.toFixed(2)} Mtr/KG
             </span>
             <span class="badge" style="background:#ecfdf5; color:#059669; border:1px solid #a7f3d0; font-weight:800; font-size:0.85rem;" id="card-badge-pcs-${itemIdx}">
-              ${pcs} Pcs
+              ${totalPcs} Pcs
             </span>
             <span class="badge" style="background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; font-weight:800; font-size:0.85rem;" id="card-badge-total-${itemIdx}">
               ₹${lineTotal.toFixed(2)}
@@ -725,6 +897,7 @@
 
         <input type="hidden" name="items[${itemIdx}][raw_item_id]" value="${item.raw_item_id}">
         <input type="hidden" name="items[${itemIdx}][finished_item_id]" value="${item.finished_item_id}">
+        <input type="hidden" id="hidden-raw-qty-${itemIdx}" name="items[${itemIdx}][than_meters]" value="${totalRaw.toFixed(2)}">
 
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-bottom:14px;">
           
@@ -756,17 +929,22 @@
 
         <div class="tons-container" style="margin-top:14px;">
           
-          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:gap; gap:10px; margin-bottom:10px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
             <div style="font-weight:800; font-size:0.85rem; color:#334155; text-transform:uppercase; letter-spacing:0.04em; display:flex; align-items:center; gap:6px;">
               <span>3. Select Purchase Thans for ${item.raw_item_name || 'Raw Material'}</span>
-              <span class="calc-badge" style="font-size:0.75rem;">${item.thans.length} Selected</span>
+              <span class="calc-badge" style="font-size:0.75rem;" id="card-step3-count-badge-${itemIdx}">${item.thans.length} Selected</span>
             </div>
             
-            ${item.thans.length > 0 ? `
-              <button type="button" class="btn btn-secondary btn-xs" onclick="clearAllTons(${itemIdx})" style="font-weight:700; font-size:0.75rem; color:#dc2626;">
-                Clear All Thans
+            <div style="display:flex; gap:8px; align-items:center;">
+              <button type="button" class="btn btn-secondary btn-xs" onclick="addManualThan(${itemIdx})" style="font-weight:700; font-size:0.75rem; color:#4338ca; border-color:#c7d2fe; background:#eef2ff;">
+                + Add Custom Than
               </button>
-            ` : ''}
+              ${item.thans.length > 0 ? `
+                <button type="button" class="btn btn-secondary btn-xs" onclick="clearAllTons(${itemIdx})" style="font-weight:700; font-size:0.75rem; color:#dc2626;">
+                  Clear All Thans
+                </button>
+              ` : ''}
+            </div>
           </div>
 
           <!-- Available Purchases Thans Chip List -->
@@ -775,51 +953,55 @@
           <!-- Empty State Box -->
           <div id="tons-empty-box-${itemIdx}" style="text-align:center; padding:18px 14px; color:#64748b; border:2px dashed #cbd5e1; border-radius:10px; background:#ffffff; margin-top:10px; ${item.thans.length > 0 ? 'display:none;' : 'display:block;'}">
             <div style="font-weight:700; font-size:0.85rem; color:#475569; margin-bottom:2px;">No Purchase Thans selected yet</div>
-            <p style="font-size:0.75rem; color:#94a3b8; margin:0;">Click on the available purchase thans in stock above to select thans for this order.</p>
+            <p style="font-size:0.75rem; color:#94a3b8; margin:0;">Click on the available purchase thans in stock above or click <strong>+ Add Custom Than</strong> to enter thans.</p>
           </div>
 
           <!-- Selected Thans Grid List -->
-          <div id="tons-list-box-${itemIdx}" style="${item.thans.length > 0 ? 'display:grid;' : 'display:none;'} grid-template-columns:repeat(auto-fill, minmax(290px, 1fr)); gap:12px; margin-top:14px; margin-bottom:14px;"></div>
+          <div id="tons-list-box-${itemIdx}" style="${item.thans.length > 0 ? 'display:grid;' : 'display:none;'} grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:14px; margin-top:14px; margin-bottom:14px;"></div>
 
           <!-- Total Raw Quantity Footer under this Raw Item -->
-          <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px dashed #cbd5e1; padding-top:10px; margin-top:8px; font-size:0.875rem;">
-            <span style="font-weight:700; color:#475569;">Total Raw Quantity (${item.raw_item_name || 'Raw Item'}):</span>
-            <strong id="tons-total-display-${itemIdx}" style="color:#0f172a; font-size:1.05rem;">
-              ${totalRaw.toFixed(2)} Mtr/KG (${item.thans.length} Thans)
-            </strong>
+          <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px dashed #cbd5e1; padding-top:12px; margin-top:8px; font-size:0.875rem; flex-wrap:wrap; gap:8px;">
+            <span style="font-weight:700; color:#475569;">Raw Material Summary (${item.raw_item_name || 'Raw Item'}):</span>
+            <div id="tons-total-display-${itemIdx}" style="display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
+              <!-- Handled by recalcRawItemRow -->
+            </div>
           </div>
 
         </div>
 
         <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:16px; margin-top:16px;">
-          <div style="font-weight:800; font-size:0.85rem; color:#334155; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:12px;">
-            4. Output Specifications, Expected Finished Pieces & Wastage
+          <div style="font-weight:800; font-size:0.85rem; color:#334155; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+            <span>4. Output Specifications & Contract Labor Rate</span>
+            <span style="font-size:0.75rem; color:#64748b; font-weight:600; text-transform:none;">Formula: FLOOR(Usable / Requirement) per Than</span>
           </div>
 
           <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(170px, 1fr)); gap:14px;">
             
             <div class="form-group" style="margin-bottom:0;">
               <label class="form-label" style="font-weight:700; color:var(--slate-800); font-size:0.8rem; margin-bottom:4px;">
-                Consumption / Ratio (Mtr/KG per Pc)
+                Finished Product Req. (Mtr/Pc) <span style="color:#ef4444;">*</span>
               </label>
-              <input type="number" step="0.001" min="0.001" id="cons-input-${itemIdx}" name="items[${itemIdx}][avg_consumption]" class="form-control" value="${item.consumption_per_pc}" style="font-weight:700;" oninput="onConsumptionChange(${itemIdx}, this.value)">
+              <input type="number" step="0.001" min="0.001" id="cons-input-${itemIdx}" name="items[${itemIdx}][avg_consumption]" class="form-control" value="${item.consumption_per_pc}" style="font-weight:700; height:40px;" oninput="onConsumptionChange(${itemIdx}, this.value)">
+              <small style="font-size:0.7rem; color:#64748b; margin-top:2px; display:block;">Meters required per 1 finished item</small>
             </div>
 
             <div class="form-group" style="margin-bottom:0;">
-              <label class="form-label" style="font-weight:700; color:var(--slate-800); font-size:0.8rem; margin-bottom:4px;">
-                Expected Wastage (Mtr / KG)
+              <label class="form-label" style="font-weight:700; color:#dc2626; font-size:0.8rem; margin-bottom:4px;">
+                Total Expected Wastage (Mtr)
               </label>
-              <input type="number" step="0.01" min="0" name="items[${itemIdx}][wastage_meters]" class="form-control" value="${item.wastage_meters}" style="font-weight:700; color:#dc2626;" oninput="onWastageChange(${itemIdx}, this.value)">
+              <input type="number" step="0.01" min="0" id="wastage-input-${itemIdx}" name="items[${itemIdx}][wastage_meters]" class="form-control" readonly value="${totalWastage.toFixed(2)}" style="font-weight:800; color:#dc2626; height:40px; background:#fff1f2; border-color:#fecaca;" title="Sum of all individual than wastages">
+              <small style="font-size:0.7rem; color:#64748b; margin-top:2px; display:block;">Auto-summed from all thans</small>
             </div>
 
             <div class="form-group" style="margin-bottom:0;">
               <label class="form-label" style="font-weight:700; color:#4338ca; font-size:0.8rem; margin-bottom:4px;">
-                Expected Finished Pieces <span style="color:#ef4444;">*</span>
+                Total Expected Finished Pieces <span style="color:#ef4444;">*</span>
               </label>
               <div style="position:relative;">
-                <input type="number" step="1" min="1" id="pieces-input-${itemIdx}" name="items[${itemIdx}][production_pcs]" class="form-control" required value="${pcs}" style="font-weight:800; color:#4338ca; padding-right:38px; background:#f8fafc;" oninput="onExpectedPiecesChange(${itemIdx}, this.value)">
-                <span style="position:absolute; right:10px; top:50%; transform:translateY(-50%); font-size:0.75rem; color:#64748b; font-weight:700;">Pcs</span>
+                <input type="number" step="1" min="0" id="pieces-input-${itemIdx}" name="items[${itemIdx}][production_pcs]" class="form-control" readonly value="${totalPcs}" style="font-weight:800; color:#4338ca; padding-right:38px; background:#eef2ff; border-color:#c7d2fe; height:40px;" title="Sum of finished products from all thans">
+                <span style="position:absolute; right:10px; top:50%; transform:translateY(-50%); font-size:0.75rem; color:#4338ca; font-weight:800;">Pcs</span>
               </div>
+              <small style="font-size:0.7rem; color:#64748b; margin-top:2px; display:block;">Auto-summed from all thans</small>
             </div>
 
             <div class="form-group" style="margin-bottom:0;">
@@ -828,8 +1010,9 @@
               </label>
               <div style="position:relative;">
                 <span style="position:absolute; left:10px; top:50%; transform:translateY(-50%); font-weight:700; color:#64748b;">₹</span>
-                <input type="number" step="0.5" min="0" name="items[${itemIdx}][rate_per_piece]" class="form-control" required value="${parseFloat(item.rate_per_piece).toFixed(2)}" style="padding-left:24px; font-weight:700;" oninput="onRateChange(${itemIdx}, this.value)">
+                <input type="number" step="0.5" min="0" name="items[${itemIdx}][rate_per_piece]" class="form-control" required value="${parseFloat(item.rate_per_piece).toFixed(2)}" style="padding-left:24px; font-weight:700; height:40px;" oninput="onRateChange(${itemIdx}, this.value)">
               </div>
+              <small style="font-size:0.7rem; color:#64748b; margin-top:2px; display:block;">Rate per finished piece</small>
             </div>
 
           </div>
@@ -838,6 +1021,7 @@
 
       container.appendChild(card);
       renderTonsForCard(itemIdx);
+      recalcRawItemRow(itemIdx);
     });
   }
 
@@ -861,20 +1045,55 @@
     emptyBox.style.display = 'none';
     listBox.style.display = 'grid';
 
-    item.thans.forEach((meter, tIdx) => {
+    item.thans.forEach((than, tIdx) => {
       const row = document.createElement('div');
-      row.className = 'ton-row';
+      row.className = 'than-item-card';
       row.innerHTML = `
-        <span style="font-weight:800; font-size:0.875rem; color:#4338ca; white-space:nowrap; min-width:68px;">Than #${tIdx + 1}</span>
-        <div style="flex:1; min-width:110px;">
-          <input type="number" step="0.01" min="0" value="${meter}" name="items[${itemIdx}][thans][]" 
-            class="form-control" 
-            style="font-weight:800; font-size:1.05rem; padding:6px 12px; height:42px; border-radius:8px; border:1.5px solid #cbd5e1; text-align:right; width:100%; color:#0f172a;"
-            oninput="updateTonValue(${itemIdx}, ${tIdx}, this.value)"
-            onfocus="this.select()">
+        <input type="hidden" id="than-no-hidden-${itemIdx}-${tIdx}" name="items[${itemIdx}][thans][${tIdx}][than_no]" value="${tIdx + 1}">
+        <input type="hidden" id="than-usable-hidden-${itemIdx}-${tIdx}" name="items[${itemIdx}][thans][${tIdx}][usable]" value="${than.usable}">
+        <input type="hidden" id="than-pieces-hidden-${itemIdx}-${tIdx}" name="items[${itemIdx}][thans][${tIdx}][pieces]" value="${than.pieces}">
+        
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="background:#eef2ff; color:#4338ca; font-weight:800; font-size:0.85rem; padding:3px 9px; border-radius:6px; border:1px solid #c7d2fe;">
+              Than #${tIdx + 1}
+            </span>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <div style="display:inline-flex; align-items:center; gap:5px; background:#ecfdf5; border:1px solid #a7f3d0; padding:3px 9px; border-radius:6px;">
+              <span style="font-size:0.75rem; color:#065f46; font-weight:700;">Output:</span>
+              <strong style="font-size:0.9rem; color:#047857;" id="than-pcs-display-${itemIdx}-${tIdx}">${than.pieces} Pcs</strong>
+            </div>
+            <button type="button" onclick="removeTon(${itemIdx}, ${tIdx})" title="Remove than" style="background:#fee2e2; border:none; color:#dc2626; width:26px; height:26px; border-radius:6px; display:inline-flex; align-items:center; justify-content:center; font-size:1.15rem; font-weight:700; cursor:pointer; line-height:1; padding:0; flex-shrink:0;">&times;</button>
+          </div>
         </div>
-        <span style="font-size:0.8rem; color:#64748b; font-weight:700; white-space:nowrap;">Mtr/KG</span>
-        <button type="button" onclick="removeTon(${itemIdx}, ${tIdx})" title="Remove than" style="background:#fee2e2; border:none; color:#dc2626; width:30px; height:30px; border-radius:6px; display:inline-flex; align-items:center; justify-content:center; font-size:1.2rem; font-weight:700; cursor:pointer; line-height:1; padding:0; flex-shrink:0;">&times;</button>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:8px; align-items:flex-end;">
+          <div>
+            <label style="font-size:0.725rem; font-weight:700; color:#334155; margin-bottom:3px; display:block;">Than Qty (Mtr)</label>
+            <input type="number" step="0.01" min="0" value="${than.meter}" name="items[${itemIdx}][thans][${tIdx}][meter]" 
+              id="than-meter-input-${itemIdx}-${tIdx}"
+              class="form-control" 
+              style="font-weight:800; font-size:0.95rem; padding:5px 8px; height:38px; border-radius:6px; border:1.5px solid #cbd5e1; text-align:right; width:100%; color:#0f172a;"
+              oninput="updateThanMeter(${itemIdx}, ${tIdx}, this.value)"
+              onfocus="this.select()">
+          </div>
+          <div>
+            <label style="font-size:0.725rem; font-weight:700; color:#dc2626; margin-bottom:3px; display:block;">Wastage (Mtr)</label>
+            <input type="number" step="0.01" min="0" value="${than.wastage}" name="items[${itemIdx}][thans][${tIdx}][wastage]" 
+              id="than-wastage-input-${itemIdx}-${tIdx}"
+              class="form-control" 
+              style="font-weight:800; font-size:0.95rem; padding:5px 8px; height:38px; border-radius:6px; border:1.5px solid #fecaca; background:#fffbfb; text-align:right; width:100%; color:#dc2626;"
+              oninput="updateThanWastage(${itemIdx}, ${tIdx}, this.value)"
+              onfocus="this.select()">
+          </div>
+          <div>
+            <label style="font-size:0.725rem; font-weight:700; color:#059669; margin-bottom:3px; display:block;">Usable Qty</label>
+            <div id="than-usable-display-${itemIdx}-${tIdx}" style="height:38px; background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:6px; display:flex; align-items:center; justify-content:flex-end; padding:0 8px; font-weight:800; color:#065f46; font-size:0.875rem;">
+              ${than.usable.toFixed(2)} Mtr
+            </div>
+          </div>
+        </div>
       `;
 
       listBox.appendChild(row);
@@ -883,19 +1102,26 @@
 
   function calculateOverallTotals() {
     let grandTotalRaw = 0;
-    let grandTotalTons = 0;
+    let grandTotalThans = 0;
     let grandTotalWastage = 0;
     let grandTotalPcs = 0;
     let grandTotalAmount = 0;
 
     itemsData.forEach(item => {
-      const itemRaw = item.thans.reduce((a, b) => a + (parseFloat(b) || 0), 0);
-      const itemWastage = parseFloat(item.wastage_meters) || 0;
-      const itemPcs = parseInt(item.expected_pieces) || 0;
+      let itemRaw = 0;
+      let itemWastage = 0;
+      let itemPcs = 0;
+
+      item.thans.forEach(t => {
+        itemRaw += (parseFloat(t.meter) || 0);
+        itemWastage += (parseFloat(t.wastage) || 0);
+        itemPcs += (parseInt(t.pieces) || 0);
+      });
+
       const itemRate = parseFloat(item.rate_per_piece) || 0;
 
       grandTotalRaw += itemRaw;
-      grandTotalTons += item.thans.length;
+      grandTotalThans += item.thans.length;
       grandTotalWastage += itemWastage;
       grandTotalPcs += itemPcs;
       grandTotalAmount += (itemPcs * itemRate);
@@ -903,13 +1129,21 @@
 
     const netRaw = Math.max(0, grandTotalRaw - grandTotalWastage);
 
-    document.getElementById('summary-items-count').textContent = itemsData.length + (itemsData.length === 1 ? ' Item' : ' Items');
-    document.getElementById('summary-than-count').textContent = grandTotalTons + ' Thans';
-    document.getElementById('summary-total-raw-qty').textContent = grandTotalRaw.toFixed(2) + ' Mtr/KG';
-    document.getElementById('summary-total-wastage').textContent = grandTotalWastage.toFixed(2) + ' Mtr/KG';
-    document.getElementById('summary-net-raw').textContent = netRaw.toFixed(2) + ' Mtr/KG';
-    document.getElementById('summary-total-pcs').textContent = grandTotalPcs.toLocaleString('en-IN') + ' Pcs';
-    document.getElementById('summary-grand-amount').textContent = '₹' + grandTotalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const elItems = document.getElementById('summary-items-count');
+    const elThans = document.getElementById('summary-than-count');
+    const elRaw = document.getElementById('summary-total-raw-qty');
+    const elWastage = document.getElementById('summary-total-wastage');
+    const elNet = document.getElementById('summary-net-raw');
+    const elPcs = document.getElementById('summary-total-pcs');
+    const elAmount = document.getElementById('summary-grand-amount');
+
+    if (elItems) elItems.textContent = itemsData.length + (itemsData.length === 1 ? ' Item' : ' Items');
+    if (elThans) elThans.textContent = grandTotalThans + ' Thans';
+    if (elRaw) elRaw.textContent = grandTotalRaw.toFixed(2) + ' Mtr/KG';
+    if (elWastage) elWastage.textContent = grandTotalWastage.toFixed(2) + ' Mtr/KG';
+    if (elNet) elNet.textContent = netRaw.toFixed(2) + ' Mtr/KG';
+    if (elPcs) elPcs.textContent = grandTotalPcs.toLocaleString('en-IN') + ' Pcs';
+    if (elAmount) elAmount.textContent = '₹' + grandTotalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
   document.getElementById('jw-form')?.addEventListener('submit', function(e) {
@@ -934,7 +1168,12 @@
       if (item.thans.length === 0) {
         hasZeroTons = true;
       }
-      if (!item.expected_pieces || parseInt(item.expected_pieces) <= 0) {
+      
+      let itemTotalPcs = 0;
+      item.thans.forEach(t => {
+        itemTotalPcs += (parseInt(t.pieces) || 0);
+      });
+      if (itemTotalPcs <= 0 && item.thans.length > 0) {
         hasZeroPcs = true;
       }
     });
@@ -953,13 +1192,13 @@
 
     if (hasZeroTons) {
       e.preventDefault();
-      alert('Please select at least one purchase Than for each raw item.');
+      alert('Please select or add at least one Than for each raw item.');
       return false;
     }
 
     if (hasZeroPcs) {
       e.preventDefault();
-      alert('Please verify expected finished pieces quantity (Pcs > 0) for each item.');
+      alert('Please verify expected finished pieces quantity (Yield Pcs > 0) for each Than.');
       return false;
     }
   });

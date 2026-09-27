@@ -153,7 +153,7 @@ class JobAssignController extends Controller
             'items.*.item_code' => 'nullable|string|max:100',
             'items.*.than_meters' => 'nullable|numeric|min:0',
             'items.*.thans' => 'nullable|array',
-            'items.*.thans.*' => 'nullable|numeric|min:0',
+            'items.*.thans.*' => 'nullable',
             'items.*.production_pcs' => 'nullable|numeric|min:0',
             'items.*.wastage_meters' => 'nullable|numeric|min:0',
             'items.*.rate_per_piece' => 'nullable|numeric|min:0',
@@ -184,32 +184,84 @@ class JobAssignController extends Controller
             $processedItems = [];
 
             foreach ($cleanedItems as $it) {
-                $pcs = (float)($it['production_pcs'] ?? 0);
-                $wastage = (float)($it['wastage_meters'] ?? 0);
                 $rate = (float)($it['rate_per_piece'] ?? 0);
+                $cons = !empty($it['avg_consumption']) && (float)$it['avg_consumption'] > 0 ? (float)$it['avg_consumption'] : 1.5;
 
-                // Process thans breakdown
+                // Process thans breakdown independently per Than
                 $thans = [];
+                $itemThanMeters = 0;
+                $itemWastage = 0;
+                $itemPcs = 0;
+
                 if (!empty($it['thans']) && is_array($it['thans'])) {
                     foreach ($it['thans'] as $t) {
-                        $f = (float)$t;
-                        if ($f > 0) {
-                            $thans[] = round($f, 2);
+                        if (is_array($t)) {
+                            $m = (float)($t['meter'] ?? $t['meters'] ?? 0);
+                            $w = isset($t['wastage']) ? (float)$t['wastage'] : (isset($t['wastage_meters']) ? (float)$t['wastage_meters'] : null);
+                            if ($w !== null && $w > 0) {
+                                $avail = max(0, $m - $w);
+                                $p = isset($t['pieces']) ? (int)$t['pieces'] : ($cons > 0 ? (int)floor($avail / $cons) : 0);
+                                $u = isset($t['usable']) ? (float)$t['usable'] : ($p * $cons);
+                                $w = max(0, $m - $u);
+                            } else {
+                                $p = isset($t['pieces']) ? (int)$t['pieces'] : ($cons > 0 ? (int)floor($m / $cons) : 0);
+                                $u = isset($t['usable']) ? (float)$t['usable'] : ($p * $cons);
+                                $w = max(0, $m - $u);
+                            }
+                            if ($m > 0 || $w > 0 || $p > 0) {
+                                $thans[] = [
+                                    'than_no' => count($thans) + 1,
+                                    'meter' => round($m, 2),
+                                    'wastage' => round($w, 2),
+                                    'usable' => round($u, 2),
+                                    'pieces' => $p
+                                ];
+                                $itemThanMeters += $m;
+                                $itemWastage += $w;
+                                $itemPcs += $p;
+                            }
+                        } elseif (is_numeric($t)) {
+                            $m = (float)$t;
+                            if ($m > 0) {
+                                $p = $cons > 0 ? (int)floor($m / $cons) : 0;
+                                $u = $p * $cons;
+                                $w = max(0, $m - $u);
+                                $thans[] = [
+                                    'than_no' => count($thans) + 1,
+                                    'meter' => round($m, 2),
+                                    'wastage' => round($w, 2),
+                                    'usable' => round($u, 2),
+                                    'pieces' => $p
+                                ];
+                                $itemThanMeters += $m;
+                                $itemWastage += $w;
+                                $itemPcs += $p;
+                            }
                         }
                     }
                 }
 
-                $thanMeters = !empty($thans) ? array_sum($thans) : (float)($it['than_meters'] ?? 0);
-                if (empty($thans) && $thanMeters > 0) {
-                    $thans = [round($thanMeters, 2)];
+                if (empty($thans)) {
+                    $itemThanMeters = (float)($it['than_meters'] ?? 0);
+                    $itemWastage = (float)($it['wastage_meters'] ?? 0);
+                    $itemPcs = (int)($it['production_pcs'] ?? 0);
+                    if ($itemThanMeters > 0 || $itemPcs > 0) {
+                        $u = max(0, $itemThanMeters - $itemWastage);
+                        $thans = [[
+                            'than_no' => 1,
+                            'meter' => round($itemThanMeters, 2),
+                            'wastage' => round($itemWastage, 2),
+                            'usable' => round($u, 2),
+                            'pieces' => $itemPcs > 0 ? $itemPcs : ($cons > 0 ? (int)floor($u / $cons) : 0)
+                        ]];
+                    }
                 }
 
                 $thanCount = count($thans);
+                $pcs = !empty($thans) ? $itemPcs : (int)($it['production_pcs'] ?? 0);
+                $wastage = !empty($thans) ? $itemWastage : (float)($it['wastage_meters'] ?? 0);
+                $thanMeters = !empty($thans) ? $itemThanMeters : (float)($it['than_meters'] ?? 0);
                 $lineTotal = round($pcs * $rate, 2);
-                $netFabric = max(0, $thanMeters - $wastage);
-                $avgCons = !empty($it['avg_consumption']) && (float)$it['avg_consumption'] > 0
-                    ? (float)$it['avg_consumption']
-                    : ($pcs > 0 ? ($netFabric / $pcs) : 0);
 
                 $totalPcs += $pcs;
                 $totalThanMeters += $thanMeters;
@@ -378,7 +430,7 @@ class JobAssignController extends Controller
             'items.*.item_code' => 'nullable|string|max:100',
             'items.*.than_meters' => 'nullable|numeric|min:0',
             'items.*.thans' => 'nullable|array',
-            'items.*.thans.*' => 'nullable|numeric|min:0',
+            'items.*.thans.*' => 'nullable',
             'items.*.production_pcs' => 'nullable|numeric|min:0',
             'items.*.wastage_meters' => 'nullable|numeric|min:0',
             'items.*.rate_per_piece' => 'nullable|numeric|min:0',
@@ -407,32 +459,84 @@ class JobAssignController extends Controller
             $processedItems = [];
 
             foreach ($cleanedItems as $it) {
-                $pcs = (float)($it['production_pcs'] ?? 0);
-                $wastage = (float)($it['wastage_meters'] ?? 0);
                 $rate = (float)($it['rate_per_piece'] ?? 0);
+                $cons = !empty($it['avg_consumption']) && (float)$it['avg_consumption'] > 0 ? (float)$it['avg_consumption'] : 1.5;
 
-                // Process thans breakdown
+                // Process thans breakdown independently per Than
                 $thans = [];
+                $itemThanMeters = 0;
+                $itemWastage = 0;
+                $itemPcs = 0;
+
                 if (!empty($it['thans']) && is_array($it['thans'])) {
                     foreach ($it['thans'] as $t) {
-                        $f = (float)$t;
-                        if ($f > 0) {
-                            $thans[] = round($f, 2);
+                        if (is_array($t)) {
+                            $m = (float)($t['meter'] ?? $t['meters'] ?? 0);
+                            $w = isset($t['wastage']) ? (float)$t['wastage'] : (isset($t['wastage_meters']) ? (float)$t['wastage_meters'] : null);
+                            if ($w !== null && $w > 0) {
+                                $avail = max(0, $m - $w);
+                                $p = isset($t['pieces']) ? (int)$t['pieces'] : ($cons > 0 ? (int)floor($avail / $cons) : 0);
+                                $u = isset($t['usable']) ? (float)$t['usable'] : ($p * $cons);
+                                $w = max(0, $m - $u);
+                            } else {
+                                $p = isset($t['pieces']) ? (int)$t['pieces'] : ($cons > 0 ? (int)floor($m / $cons) : 0);
+                                $u = isset($t['usable']) ? (float)$t['usable'] : ($p * $cons);
+                                $w = max(0, $m - $u);
+                            }
+                            if ($m > 0 || $w > 0 || $p > 0) {
+                                $thans[] = [
+                                    'than_no' => count($thans) + 1,
+                                    'meter' => round($m, 2),
+                                    'wastage' => round($w, 2),
+                                    'usable' => round($u, 2),
+                                    'pieces' => $p
+                                ];
+                                $itemThanMeters += $m;
+                                $itemWastage += $w;
+                                $itemPcs += $p;
+                            }
+                        } elseif (is_numeric($t)) {
+                            $m = (float)$t;
+                            if ($m > 0) {
+                                $p = $cons > 0 ? (int)floor($m / $cons) : 0;
+                                $u = $p * $cons;
+                                $w = max(0, $m - $u);
+                                $thans[] = [
+                                    'than_no' => count($thans) + 1,
+                                    'meter' => round($m, 2),
+                                    'wastage' => round($w, 2),
+                                    'usable' => round($u, 2),
+                                    'pieces' => $p
+                                ];
+                                $itemThanMeters += $m;
+                                $itemWastage += $w;
+                                $itemPcs += $p;
+                            }
                         }
                     }
                 }
 
-                $thanMeters = !empty($thans) ? array_sum($thans) : (float)($it['than_meters'] ?? 0);
-                if (empty($thans) && $thanMeters > 0) {
-                    $thans = [round($thanMeters, 2)];
+                if (empty($thans)) {
+                    $itemThanMeters = (float)($it['than_meters'] ?? 0);
+                    $itemWastage = (float)($it['wastage_meters'] ?? 0);
+                    $itemPcs = (int)($it['production_pcs'] ?? 0);
+                    if ($itemThanMeters > 0 || $itemPcs > 0) {
+                        $u = max(0, $itemThanMeters - $itemWastage);
+                        $thans = [[
+                            'than_no' => 1,
+                            'meter' => round($itemThanMeters, 2),
+                            'wastage' => round($itemWastage, 2),
+                            'usable' => round($u, 2),
+                            'pieces' => $itemPcs > 0 ? $itemPcs : ($cons > 0 ? (int)floor($u / $cons) : 0)
+                        ]];
+                    }
                 }
 
                 $thanCount = count($thans);
+                $pcs = !empty($thans) ? $itemPcs : (int)($it['production_pcs'] ?? 0);
+                $wastage = !empty($thans) ? $itemWastage : (float)($it['wastage_meters'] ?? 0);
+                $thanMeters = !empty($thans) ? $itemThanMeters : (float)($it['than_meters'] ?? 0);
                 $lineTotal = round($pcs * $rate, 2);
-                $netFabric = max(0, $thanMeters - $wastage);
-                $avgCons = !empty($it['avg_consumption']) && (float)$it['avg_consumption'] > 0
-                    ? (float)$it['avg_consumption']
-                    : ($pcs > 0 ? ($netFabric / $pcs) : 0);
 
                 $totalPcs += $pcs;
                 $totalThanMeters += $thanMeters;
