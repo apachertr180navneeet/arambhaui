@@ -62,64 +62,76 @@ class JobAssignController extends Controller
 
     /**
      * Get available purchase tons/thans mapped by raw item id & name,
-     * filtering out any thans that have already been assigned to Job Work Orders.
+     * calculating remaining meters available after deducting meters assigned to prior Job Work Orders.
      */
     protected function getPurchasedTonsByItem($excludeAssignmentId = null)
     {
         $purchasedTons = [];
         $purchaseOrders = PurchaseOrder::with('items')->latest()->get();
 
-        // 1. Gather all assigned purchase than references from active Job Assignments
-        $usedThanKeys = [];
-        $activeAssignments = JobAssignmentItem::whereHas('jobAssignment', function ($q) use ($excludeAssignmentId) {
-            if ($excludeAssignmentId) {
+        // 1. Gather all assigned purchase than meters from active Job Assignments
+        $usedThanMeters = [];
+        $assignments = JobAssignment::with('items')
+            ->when($excludeAssignmentId, function ($q) use ($excludeAssignmentId) {
                 $q->where('id', '!=', $excludeAssignmentId);
-            }
-        })->get();
+            })
+            ->get();
 
-        foreach ($activeAssignments as $aItm) {
-            $thans = $aItm->than_list;
-            if (!empty($thans) && is_array($thans)) {
-                foreach ($thans as $t) {
-                    if (is_array($t)) {
-                        if (!empty($t['unique_id'])) {
-                            $usedThanKeys[$t['unique_id']] = true;
-                        }
-                        if (!empty($t['po_id']) && !empty($t['purchase_than_no'])) {
-                            $usedThanKeys["po_{$t['po_id']}_than_{$t['purchase_than_no']}"] = true;
-                        }
-                        if (!empty($t['po_id']) && !empty($t['po_item_id']) && !empty($t['purchase_than_no'])) {
-                            $usedThanKeys["po_{$t['po_id']}_item_{$t['po_item_id']}_than_" . ($t['purchase_than_no'] - 1)] = true;
-                        }
-                        if (!empty($t['challan_no']) && !empty($t['purchase_than_no'])) {
-                            $usedThanKeys["challan_{$t['challan_no']}_than_{$t['purchase_than_no']}"] = true;
+        foreach ($assignments as $ja) {
+            $hasItemThans = false;
+            if ($ja->items && $ja->items->count() > 0) {
+                foreach ($ja->items as $aItm) {
+                    $thans = $aItm->than_list;
+                    if (!empty($thans) && is_array($thans)) {
+                        $hasItemThans = true;
+                        foreach ($thans as $t) {
+                            if (is_array($t)) {
+                                $usedMtr = (float)($t['meter'] ?? $t['meters'] ?? 0);
+                                if ($usedMtr <= 0) continue;
+
+                                $canonicalKey = null;
+                                if (!empty($t['unique_id'])) {
+                                    $canonicalKey = $t['unique_id'];
+                                } elseif (!empty($t['po_id']) && !empty($t['po_item_id']) && !empty($t['purchase_than_no'])) {
+                                    $canonicalKey = "po_{$t['po_id']}_item_{$t['po_item_id']}_than_" . ($t['purchase_than_no'] - 1);
+                                } elseif (!empty($t['po_id']) && !empty($t['purchase_than_no'])) {
+                                    $canonicalKey = "po_{$t['po_id']}_than_{$t['purchase_than_no']}";
+                                } elseif (!empty($t['challan_no']) && !empty($t['purchase_than_no'])) {
+                                    $canonicalKey = "challan_{$t['challan_no']}_than_{$t['purchase_than_no']}";
+                                }
+
+                                if ($canonicalKey) {
+                                    $usedThanMeters[$canonicalKey] = ($usedThanMeters[$canonicalKey] ?? 0) + $usedMtr;
+                                }
+                            }
                         }
                     }
                 }
             }
-        }
 
-        // Also check job_assignments table directly
-        $legacyAssignments = JobAssignment::when($excludeAssignmentId, function ($q) use ($excludeAssignmentId) {
-            $q->where('id', '!=', $excludeAssignmentId);
-        })->get();
+            // Fallback for legacy assignments if line items didn't store than_details
+            if (!$hasItemThans) {
+                $thans = $ja->than_list;
+                if (!empty($thans) && is_array($thans)) {
+                    foreach ($thans as $t) {
+                        if (is_array($t)) {
+                            $usedMtr = (float)($t['meter'] ?? $t['meters'] ?? 0);
+                            if ($usedMtr <= 0) continue;
 
-        foreach ($legacyAssignments as $la) {
-            $thans = $la->than_list;
-            if (!empty($thans) && is_array($thans)) {
-                foreach ($thans as $t) {
-                    if (is_array($t)) {
-                        if (!empty($t['unique_id'])) {
-                            $usedThanKeys[$t['unique_id']] = true;
-                        }
-                        if (!empty($t['po_id']) && !empty($t['purchase_than_no'])) {
-                            $usedThanKeys["po_{$t['po_id']}_than_{$t['purchase_than_no']}"] = true;
-                        }
-                        if (!empty($t['po_id']) && !empty($t['po_item_id']) && !empty($t['purchase_than_no'])) {
-                            $usedThanKeys["po_{$t['po_id']}_item_{$t['po_item_id']}_than_" . ($t['purchase_than_no'] - 1)] = true;
-                        }
-                        if (!empty($t['challan_no']) && !empty($t['purchase_than_no'])) {
-                            $usedThanKeys["challan_{$t['challan_no']}_than_{$t['purchase_than_no']}"] = true;
+                            $canonicalKey = null;
+                            if (!empty($t['unique_id'])) {
+                                $canonicalKey = $t['unique_id'];
+                            } elseif (!empty($t['po_id']) && !empty($t['po_item_id']) && !empty($t['purchase_than_no'])) {
+                                $canonicalKey = "po_{$t['po_id']}_item_{$t['po_item_id']}_than_" . ($t['purchase_than_no'] - 1);
+                            } elseif (!empty($t['po_id']) && !empty($t['purchase_than_no'])) {
+                                $canonicalKey = "po_{$t['po_id']}_than_{$t['purchase_than_no']}";
+                            } elseif (!empty($t['challan_no']) && !empty($t['purchase_than_no'])) {
+                                $canonicalKey = "challan_{$t['challan_no']}_than_{$t['purchase_than_no']}";
+                            }
+
+                            if ($canonicalKey) {
+                                $usedThanMeters[$canonicalKey] = ($usedThanMeters[$canonicalKey] ?? 0) + $usedMtr;
+                            }
                         }
                     }
                 }
@@ -141,14 +153,30 @@ class JobAssignController extends Controller
 
                     foreach ($thans as $tIdx => $tMtr) {
                         $thanNo = $tIdx + 1;
+                        $origMtr = (float)$tMtr;
+                        if ($origMtr <= 0) continue;
+
                         $uniqueKey = "po_{$po->id}_item_{$poItem->id}_than_{$tIdx}";
                         $altKey1 = "po_{$po->id}_than_{$thanNo}";
                         $altKey2 = "challan_{$challanNo}_than_{$thanNo}";
 
-                        // If already assigned to another job work order, skip it (reduce from available stock)
-                        if (!empty($usedThanKeys[$uniqueKey]) || !empty($usedThanKeys[$altKey1]) || !empty($usedThanKeys[$altKey2])) {
+                        // Compute used meters from prior assignments
+                        $usedMtr = ($usedThanMeters[$uniqueKey] ?? 0)
+                                 + ($usedThanMeters[$altKey1] ?? 0)
+                                 + ($usedThanMeters[$altKey2] ?? 0);
+
+                        $remainMtr = round(max(0, $origMtr - $usedMtr), 2);
+
+                        // If fully consumed, do not show in available stock chips
+                        if ($remainMtr <= 0.001) {
                             continue;
                         }
+
+                        $isPartiallyUsed = ($usedMtr > 0.001 && $remainMtr < $origMtr);
+
+                        $label = $isPartiallyUsed
+                            ? "Challan #{$challanNo} - Than #{$thanNo} (" . number_format($remainMtr, 2) . " " . ($poItem->unit ?: 'Mtr') . " rem / " . number_format($origMtr, 2) . ")"
+                            : "Challan #{$challanNo} - Than #{$thanNo} (" . number_format($remainMtr, 2) . " " . ($poItem->unit ?: 'Mtr') . ")";
 
                         $tonObj = [
                             'unique_id' => $uniqueKey,
@@ -158,9 +186,11 @@ class JobAssignController extends Controller
                             'challan_no' => $challanNo,
                             'date' => $po->po_date,
                             'than_no' => $thanNo,
-                            'meter' => (float)$tMtr,
+                            'meter' => (float)$remainMtr,
+                            'original_meter' => (float)$origMtr,
+                            'used_meter' => round($usedMtr, 2),
                             'unit' => $poItem->unit ?: 'Mtr',
-                            'label' => "Challan #{$challanNo} - Than #{$thanNo} (" . number_format($tMtr, 2) . " " . ($poItem->unit ?: 'Mtr') . ")"
+                            'label' => $label
                         ];
 
                         foreach ($keys as $k) {

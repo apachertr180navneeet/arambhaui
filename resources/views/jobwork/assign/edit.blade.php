@@ -336,12 +336,13 @@
                           $u = isset($t['usable']) ? (float)$t['usable'] : ($p * $cons);
                           $w = max(0, $m - $u);
                       }
+                      $uid = $t['unique_id'] ?? (!empty($t['po_id']) && !empty($t['po_item_id']) && !empty($t['purchase_than_no']) ? "po_{$t['po_id']}_item_{$t['po_item_id']}_than_" . ($t['purchase_than_no'] - 1) : null);
                       $thans[] = [
                           'meter' => $m,
                           'wastage' => round($w, 2),
                           'usable' => round($u, 2),
                           'pieces' => $p,
-                          'unique_id' => $t['unique_id'] ?? null,
+                          'unique_id' => $uid,
                           'po_id' => $t['po_id'] ?? null,
                           'po_item_id' => $t['po_item_id'] ?? null,
                           'po_number' => $t['po_number'] ?? null,
@@ -400,12 +401,13 @@
                       $u = isset($t['usable']) ? (float)$t['usable'] : ($p * $cons);
                       $w = max(0, $m - $u);
                   }
+                  $uid = $t['unique_id'] ?? (!empty($t['po_id']) && !empty($t['po_item_id']) && !empty($t['purchase_than_no']) ? "po_{$t['po_id']}_item_{$t['po_item_id']}_than_" . ($t['purchase_than_no'] - 1) : null);
                   $thans[] = [
                       'meter' => $m,
                       'wastage' => round($w, 2),
                       'usable' => round($u, 2),
                       'pieces' => $p,
-                      'unique_id' => $t['unique_id'] ?? null,
+                      'unique_id' => $uid,
                       'po_id' => $t['po_id'] ?? null,
                       'po_item_id' => $t['po_item_id'] ?? null,
                       'po_number' => $t['po_number'] ?? null,
