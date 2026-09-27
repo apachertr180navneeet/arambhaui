@@ -750,7 +750,7 @@
 
       let thanInfoHtml = `${itThan.toFixed(1)} Mtr/KG`;
       if (thans && thans.length > 0) {
-        thanInfoHtml += ` <div style="font-size:0.7rem; color:#4338ca; font-weight:700; margin-top:2px;">${thans.length} Tons: [${thans.map((t, idx) => `Ton ${idx+1}: ${t}`).join(', ')}]</div>`;
+        thanInfoHtml += ` <div style="font-size:0.7rem; color:#4338ca; font-weight:700; margin-top:2px;">${thans.length} Thans: [${thans.map((t, idx) => `Than ${idx+1}: ${t}`).join(', ')}]</div>`;
       }
 
       const rawLabel = it.raw_item_name || (it.raw_item ? it.raw_item.name : '');

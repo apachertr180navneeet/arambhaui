@@ -101,7 +101,7 @@
           </span>
         </div>
         <p style="margin:4px 0 0; font-size:0.85rem; color:var(--slate-500);">
-          Select Raw Material & Purchase Tons/Thans, assign Finished Items, and auto-calculate expected finished pieces and wastage.
+          Select Raw Material & Purchase Thans, assign Finished Items, and auto-calculate expected finished pieces and wastage.
         </p>
       </div>
 
@@ -201,17 +201,17 @@
       </div>
     </div>
 
-    <!-- 2. Raw Items, Purchase Tons & Finished Output Section -->
+    <!-- 2. Raw Items, Purchase Thans & Finished Output Section -->
     <div style="display:flex; flex-direction:column; gap:16px;">
       
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
         <div>
           <h3 style="font-size:1.05rem; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; margin:0; color:var(--slate-900); display:flex; align-items:center; gap:8px;">
             <span style="width:26px; height:26px; border-radius:6px; background:#ecfdf5; color:#059669; display:inline-flex; align-items:center; justify-content:center; font-size:0.8rem; font-weight:800;">2</span>
-            Raw Materials, Purchase Tons & Finished Product Yield
+            Raw Materials, Purchase Thans & Finished Product Yield
           </h3>
           <p style="margin:3px 0 0; font-size:0.825rem; color:var(--slate-500);">
-            Select Raw Material & choose from purchased tons/rolls, pick the target Finished Item, and view automated wastage & finished pieces calculation.
+            Select Raw Material & choose from purchased thans/rolls, pick the target Finished Item, and view automated wastage & finished pieces calculation.
           </p>
         </div>
 
@@ -259,8 +259,8 @@
           </div>
 
           <div style="display:flex; justify-content:space-between; font-size:0.9rem; color:#64748b;">
-            <span>Total Purchase Tons/Thans:</span>
-            <span style="font-weight:700; color:#0f172a;" id="summary-than-count">0 Tons</span>
+            <span>Total Purchase Thans:</span>
+            <span style="font-weight:700; color:#0f172a;" id="summary-than-count">0 Thans</span>
           </div>
 
           <div style="display:flex; justify-content:space-between; font-size:0.9rem; color:#64748b;">
@@ -615,7 +615,7 @@
         finishedOptions += `<option value="${itm.name}" data-id="${itm.id}" data-code="${itm.code || ''}" data-raw-meter="${rawMtr}" ${isSel}>${itm.name} [${itm.code || 'STYLE'}] ${rawMtr > 0 ? `(${rawMtr} Mtr/Pc)` : ''}</option>`;
       });
 
-      // Available Purchase Tons for this raw item
+      // Available Purchase Thans for this raw item
       const rawId = item.raw_item_id;
       const rawName = (item.raw_item_name || '').toLowerCase().trim();
       const availablePurchases = (rawId && purchasedTonsMap[rawId]) ? purchasedTonsMap[rawId] : (rawName && purchasedTonsMap[rawName] ? purchasedTonsMap[rawName] : []);
@@ -624,7 +624,7 @@
       if (!item.raw_item_name) {
         purchasedTonsChipsHtml = `
           <div style="margin-top:10px; background:#f8fafc; border:1px dashed #cbd5e1; border-radius:10px; padding:12px; text-align:center; color:#64748b; font-size:0.8rem;">
-            Please select a <strong>Raw Item</strong> above to load available Purchase Tons from stock.
+            Please select a <strong>Raw Item</strong> above to load available Purchase Thans from stock.
           </div>
         `;
       } else if (availablePurchases.length > 0) {
@@ -632,7 +632,7 @@
           <div style="margin-top:10px; background:#ffffff; border:1px solid #cbd5e1; border-radius:10px; padding:12px 14px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
               <span style="font-size:0.75rem; font-weight:800; color:#1e293b; text-transform:uppercase; display:inline-flex; align-items:center; gap:5px;">
-                📦 Available Purchase Tons in Stock (${availablePurchases.length} available):
+                📦 Available Purchase Thans in Stock (${availablePurchases.length} available):
               </span>
               <button type="button" class="btn btn-secondary btn-xs" onclick="addAllPurchasedTons(${itemIdx})" style="font-size:0.725rem; font-weight:700;">+ Select All Available (${availablePurchases.length})</button>
             </div>
@@ -648,7 +648,7 @@
       } else {
         purchasedTonsChipsHtml = `
           <div style="margin-top:10px; background:#fffbeb; border:1px solid #fde68a; border-radius:10px; padding:10px 14px; color:#92400e; font-size:0.8rem;">
-            No purchase tons in stock found for <strong>${item.raw_item_name}</strong>.
+            No purchase thans in stock found for <strong>${item.raw_item_name}</strong>.
           </div>
         `;
       }
@@ -679,7 +679,7 @@
 
           <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
             <span class="badge" style="background:#f1f5f9; color:#334155; border:1px solid #cbd5e1; font-weight:700; font-size:0.8rem;" id="card-badge-tons-count-${itemIdx}">
-              ${item.thans.length} Tons/Thans
+              ${item.thans.length} Thans
             </span>
             <span class="badge" style="background:#eef2ff; color:#4338ca; border:1px solid #c7d2fe; font-weight:800; font-size:0.85rem;" id="card-badge-raw-qty-${itemIdx}">
               ${totalRaw.toFixed(2)} Mtr/KG
@@ -734,39 +734,39 @@
 
         </div>
 
-        <!-- Section A: Multiple Purchase Tons / Thans Container -->
+        <!-- Section A: Multiple Purchase Thans Container -->
         <div class="tons-container" style="margin-top:14px;">
           
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
             <div style="font-weight:800; font-size:0.85rem; color:#334155; text-transform:uppercase; letter-spacing:0.04em; display:flex; align-items:center; gap:6px;">
-              <span>3. Select Purchase Tons for ${item.raw_item_name || 'Raw Material'}</span>
+              <span>3. Select Purchase Thans for ${item.raw_item_name || 'Raw Material'}</span>
               <span class="calc-badge" style="font-size:0.75rem;">${item.thans.length} Selected</span>
             </div>
             
             ${item.thans.length > 0 ? `
               <button type="button" class="btn btn-secondary btn-xs" onclick="clearAllTons(${itemIdx})" style="font-weight:700; font-size:0.75rem; color:#dc2626;">
-                Clear All Tons
+                Clear All Thans
               </button>
             ` : ''}
           </div>
 
-          <!-- Available Purchases Tons Chip List -->
+          <!-- Available Purchases Thans Chip List -->
           ${purchasedTonsChipsHtml}
 
           <!-- Empty State Box -->
           <div id="tons-empty-box-${itemIdx}" style="text-align:center; padding:18px 14px; color:#64748b; border:2px dashed #cbd5e1; border-radius:10px; background:#ffffff; margin-top:10px; ${item.thans.length > 0 ? 'display:none;' : 'display:block;'}">
-            <div style="font-weight:700; font-size:0.85rem; color:#475569; margin-bottom:2px;">No Purchase Tons selected yet</div>
-            <p style="font-size:0.75rem; color:#94a3b8; margin:0;">Click on the available purchase tons in stock above to select tons for this order.</p>
+            <div style="font-weight:700; font-size:0.85rem; color:#475569; margin-bottom:2px;">No Purchase Thans selected yet</div>
+            <p style="font-size:0.75rem; color:#94a3b8; margin:0;">Click on the available purchase thans in stock above to select thans for this order.</p>
           </div>
 
-          <!-- Selected Tons Grid List -->
+          <!-- Selected Thans Grid List -->
           <div id="tons-list-box-${itemIdx}" style="${item.thans.length > 0 ? 'display:grid;' : 'display:none;'} grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:10px; margin-top:12px; margin-bottom:12px;"></div>
 
           <!-- Total Raw Quantity Footer under this Raw Item -->
           <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px dashed #cbd5e1; padding-top:10px; margin-top:8px; font-size:0.875rem;">
             <span style="font-weight:700; color:#475569;">Total Raw Quantity (${item.raw_item_name || 'Raw Item'}):</span>
             <strong id="tons-total-display-${itemIdx}" style="color:#0f172a; font-size:1.05rem;">
-              ${totalRaw.toFixed(2)} Mtr/KG (${item.thans.length} Tons)
+              ${totalRaw.toFixed(2)} Mtr/KG (${item.thans.length} Thans)
             </strong>
           </div>
 
@@ -851,7 +851,7 @@
       const row = document.createElement('div');
       row.className = 'ton-row';
       row.innerHTML = `
-        <span style="font-weight:700; font-size:0.75rem; color:#4338ca; width:64px;">Ton #${tIdx + 1}</span>
+        <span style="font-weight:700; font-size:0.75rem; color:#4338ca; width:64px;">Than #${tIdx + 1}</span>
         <div style="flex:1;">
           <input type="number" step="0.01" min="0" value="${meter}" name="items[${itemIdx}][thans][]" 
             class="form-control form-control-sm" 
@@ -860,7 +860,7 @@
             onfocus="this.select()">
         </div>
         <span style="font-size:0.7rem; color:#64748b; font-weight:600;">Mtr/KG</span>
-        <button type="button" onclick="removeTon(${itemIdx}, ${tIdx})" title="Remove ton" style="background:none; border:none; color:#ef4444; font-size:1.15rem; cursor:pointer; line-height:1; padding:0 3px;">&times;</button>
+        <button type="button" onclick="removeTon(${itemIdx}, ${tIdx})" title="Remove than" style="background:none; border:none; color:#ef4444; font-size:1.15rem; cursor:pointer; line-height:1; padding:0 3px;">&times;</button>
       `;
 
       listBox.appendChild(row);
@@ -890,7 +890,7 @@
     const netRaw = Math.max(0, grandTotalRaw - grandTotalWastage);
 
     document.getElementById('summary-items-count').textContent = itemsData.length + (itemsData.length === 1 ? ' Item' : ' Items');
-    document.getElementById('summary-than-count').textContent = grandTotalTons + ' Tons/Thans';
+    document.getElementById('summary-than-count').textContent = grandTotalTons + ' Thans';
     document.getElementById('summary-total-raw-qty').textContent = grandTotalRaw.toFixed(2) + ' Mtr/KG';
     document.getElementById('summary-total-wastage').textContent = grandTotalWastage.toFixed(2) + ' Mtr/KG';
     document.getElementById('summary-net-raw').textContent = netRaw.toFixed(2) + ' Mtr/KG';
@@ -939,7 +939,7 @@
 
     if (hasZeroTons) {
       e.preventDefault();
-      alert('Please select or add at least one purchase Ton/Than for each raw item.');
+      alert('Please select at least one purchase Than for each raw item.');
       return false;
     }
 

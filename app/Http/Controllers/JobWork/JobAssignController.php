@@ -90,7 +90,7 @@ class JobAssignController extends Controller
                             'than_no' => $tIdx + 1,
                             'meter' => (float)$tMtr,
                             'unit' => $poItem->unit ?: 'Mtr',
-                            'label' => "Challan #{$challanNo} - Roll/Ton #" . ($tIdx + 1) . " (" . number_format($tMtr, 2) . " " . ($poItem->unit ?: 'Mtr') . ")"
+                            'label' => "Challan #{$challanNo} - Than #" . ($tIdx + 1) . " (" . number_format($tMtr, 2) . " " . ($poItem->unit ?: 'Mtr') . ")"
                         ];
 
                         foreach ($keys as $k) {
