@@ -67,4 +67,16 @@ class JobInward extends Model
         }
         return (float)($this->wastage_returned_meters ?? 0);
     }
+
+    public function getUserRemarksAttribute(): string
+    {
+        if (!empty($this->remarks) && is_string($this->remarks)) {
+            $data = json_decode($this->remarks, true);
+            if (is_array($data) && isset($data['user_remarks'])) {
+                return (string)$data['user_remarks'];
+            }
+            return $this->remarks;
+        }
+        return '';
+    }
 }

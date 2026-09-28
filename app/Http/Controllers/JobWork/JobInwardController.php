@@ -52,9 +52,13 @@ class JobInwardController extends Controller
     /**
      * Compute item-wise and Than-wise assigned, previously received, and pending quantities for a Job Assignment.
      */
-    public function formatAssignmentTracking(JobAssignment $ja): array
+    public function formatAssignmentTracking(JobAssignment $ja, $excludeInwardId = null): array
     {
-        $previousInwards = JobInward::where('job_assignment_id', $ja->id)->get();
+        $query = JobInward::where('job_assignment_id', $ja->id);
+        if ($excludeInwardId) {
+            $query->where('id', '!=', $excludeInwardId);
+        }
+        $previousInwards = $query->get();
 
         $prevReceivedByJaiId = [];
         $prevReceivedByItemId = [];
@@ -63,6 +67,8 @@ class JobInwardController extends Controller
         $prevDefectByItemId = [];
         $prevDefectByName = [];
         $prevReceivedByThanKey = [];
+        $prevWastageByThanKey = [];
+        $prevWastageByJaiId = [];
 
         foreach ($previousInwards as $inw) {
             $inwItems = $inw->items_list;
@@ -70,11 +76,13 @@ class JobInwardController extends Controller
                 foreach ($inwItems as $inwItm) {
                     $qty = (int)($inwItm['received_qty'] ?? 0);
                     $def = (int)($inwItm['defect_qty'] ?? 0);
+                    $wMtr = (float)($inwItm['wastage_returned_meters'] ?? 0);
                     
                     if (!empty($inwItm['job_assignment_item_id'])) {
                         $k = (string)$inwItm['job_assignment_item_id'];
                         $prevReceivedByJaiId[$k] = ($prevReceivedByJaiId[$k] ?? 0) + $qty;
                         $prevDefectByJaiId[$k] = ($prevDefectByJaiId[$k] ?? 0) + $def;
+                        $prevWastageByJaiId[$k] = ($prevWastageByJaiId[$k] ?? 0) + $wMtr;
                     }
                     if (!empty($inwItm['item_id'])) {
                         $k = (string)$inwItm['item_id'];
@@ -87,19 +95,24 @@ class JobInwardController extends Controller
                         $prevDefectByName[$k] = ($prevDefectByName[$k] ?? 0) + $def;
                     }
 
-                    // Track than-wise received quantities from previous inwards
+                    // Track than-wise received quantities and returned wastage from previous inwards
                     if (!empty($inwItm['assigned_thans']) && is_array($inwItm['assigned_thans'])) {
                         foreach ($inwItm['assigned_thans'] as $t) {
                             $thRecPcs = (int)($t['received_pcs'] ?? ($t['received_qty'] ?? 0));
+                            $thWastage = (float)($t['wastage_returned'] ?? ($t['wastage_returned_meters'] ?? 0));
+
                             if (!empty($t['unique_id'])) {
                                 $prevReceivedByThanKey[(string)$t['unique_id']] = ($prevReceivedByThanKey[(string)$t['unique_id']] ?? 0) + $thRecPcs;
+                                $prevWastageByThanKey[(string)$t['unique_id']] = ($prevWastageByThanKey[(string)$t['unique_id']] ?? 0) + $thWastage;
                             }
                             if (!empty($t['than_key'])) {
                                 $prevReceivedByThanKey[(string)$t['than_key']] = ($prevReceivedByThanKey[(string)$t['than_key']] ?? 0) + $thRecPcs;
+                                $prevWastageByThanKey[(string)$t['than_key']] = ($prevWastageByThanKey[(string)$t['than_key']] ?? 0) + $thWastage;
                             }
                             if (!empty($inwItm['job_assignment_item_id']) && isset($t['than_no'])) {
                                 $tk = $inwItm['job_assignment_item_id'] . '_than_' . $t['than_no'];
                                 $prevReceivedByThanKey[$tk] = ($prevReceivedByThanKey[$tk] ?? 0) + $thRecPcs;
+                                $prevWastageByThanKey[$tk] = ($prevWastageByThanKey[$tk] ?? 0) + $thWastage;
                             }
                         }
                     }
@@ -107,6 +120,7 @@ class JobInwardController extends Controller
             } else {
                 $qty = (int)$inw->received_qty;
                 $def = (int)$inw->defect_qty;
+                $wMtr = (float)($inw->wastage_returned_meters ?? 0);
                 if (!empty($inw->style_name)) {
                     $k = strtolower(trim($inw->style_name));
                     $prevReceivedByName[$k] = ($prevReceivedByName[$k] ?? 0) + $qty;
@@ -165,16 +179,18 @@ class JobInwardController extends Controller
 
                             $thanKey = $uniqueId ?: ($aItm->id . '_than_' . $thanNo);
                             
-                            // Determine previously received pieces for this Than
+                            // Determine previously received pieces and returned wastage for this Than
                             if (isset($prevReceivedByThanKey[$thanKey])) {
                                 $thPrevRec = (int)$prevReceivedByThanKey[$thanKey];
                             } elseif ($uniqueId && isset($prevReceivedByThanKey[$uniqueId])) {
                                 $thPrevRec = (int)$prevReceivedByThanKey[$uniqueId];
                             } else {
-                                // Sequential allocation from total previous pool for backward compatibility
                                 $thPrevRec = min($pcs, max(0, $allocatedPrevPool));
                                 $allocatedPrevPool = max(0, $allocatedPrevPool - $thPrevRec);
                             }
+
+                            $thPrevWastage = isset($prevWastageByThanKey[$thanKey]) ? (float)$prevWastageByThanKey[$thanKey] : ($uniqueId && isset($prevWastageByThanKey[$uniqueId]) ? (float)$prevWastageByThanKey[$uniqueId] : 0);
+                            $thRemWastage = max(0, $wastage - $thPrevWastage);
 
                             $thRemPcs = max(0, $pcs - $thPrevRec);
                             $thStatus = 'Pending';
@@ -194,6 +210,8 @@ class JobInwardController extends Controller
                                 'meter' => round($meter, 2),
                                 'usable' => round($usable, 2),
                                 'wastage' => round($wastage, 2),
+                                'previously_returned_wastage' => round($thPrevWastage, 2),
+                                'remaining_wastage' => round($thRemWastage, 2),
                                 'assigned_pcs' => $pcs,
                                 'previously_received_pcs' => $thPrevRec,
                                 'remaining_pcs' => $thRemPcs,
@@ -217,6 +235,8 @@ class JobInwardController extends Controller
                                 'meter' => round($meter, 2),
                                 'usable' => round($meter, 2),
                                 'wastage' => 0,
+                                'previously_returned_wastage' => 0,
+                                'remaining_wastage' => 0,
                                 'assigned_pcs' => $pcs,
                                 'previously_received_pcs' => $thPrevRec,
                                 'remaining_pcs' => $thRemPcs,
@@ -231,6 +251,7 @@ class JobInwardController extends Controller
                     $basePcs = $aItm->production_pcs > 0 ? (int)$aItm->production_pcs : ($aItm->qty > 0 ? (int)$aItm->qty : (int)$ja->issued_qty);
                     if ($basePcs <= 0) $basePcs = 1;
                     $thRemPcs = max(0, $basePcs - $prevQty);
+                    $wMtr = (float)$aItm->wastage_meters;
 
                     $assignedThans[] = [
                         'than_key' => $aItm->id . '_than_1',
@@ -241,7 +262,9 @@ class JobInwardController extends Controller
                         'purchase_than_no' => null,
                         'meter' => (float)$aItm->than_meters,
                         'usable' => (float)$aItm->than_meters,
-                        'wastage' => (float)$aItm->wastage_meters,
+                        'wastage' => $wMtr,
+                        'previously_returned_wastage' => 0,
+                        'remaining_wastage' => $wMtr,
                         'assigned_pcs' => $basePcs,
                         'previously_received_pcs' => $prevQty,
                         'remaining_pcs' => $thRemPcs,
@@ -267,6 +290,8 @@ class JobInwardController extends Controller
                 $totalPrevReceived += $prevQty;
                 $totalRemaining += $remQty;
 
+                $totalThanWastage = array_sum(array_column($assignedThans, 'wastage'));
+
                 $items[] = [
                     'job_assignment_item_id' => $aItm->id,
                     'raw_item_id' => $aItm->raw_item_id,
@@ -286,7 +311,7 @@ class JobInwardController extends Controller
                     'status' => $status,
                     'than_meters' => (float)$aItm->than_meters,
                     'than_count' => count($assignedThans),
-                    'wastage_meters' => (float)$aItm->wastage_meters,
+                    'wastage_meters' => $totalThanWastage > 0 ? $totalThanWastage : (float)$aItm->wastage_meters,
                     'assigned_thans' => $assignedThans
                 ];
             }
@@ -319,6 +344,8 @@ class JobInwardController extends Controller
                 'meter' => (float)$ja->total_than_meters,
                 'usable' => (float)$ja->total_than_meters,
                 'wastage' => (float)$ja->total_wastage_meters,
+                'previously_returned_wastage' => 0,
+                'remaining_wastage' => (float)$ja->total_wastage_meters,
                 'assigned_pcs' => $assignedQty,
                 'previously_received_pcs' => $prevQty,
                 'remaining_pcs' => $remQty,
@@ -509,6 +536,7 @@ class JobInwardController extends Controller
                     $processedAssignedThans = [];
                     $sumThanReceivedPcs = 0;
                     $sumThanDefectPcs = 0;
+                    $sumThanWastage = 0;
 
                     if (is_array($rawAssignedThans) && count($rawAssignedThans) > 0) {
                         foreach ($rawAssignedThans as $at) {
@@ -517,14 +545,20 @@ class JobInwardController extends Controller
                             $thMaxAllowed = max(0, $thAssignedPcs - $thPrevRecPcs);
                             $thRecPcs = (int)($at['received_pcs'] ?? 0);
                             $thDefPcs = (int)($at['defect_pcs'] ?? 0);
+                            $thWastage = (float)($at['wastage'] ?? 0);
+                            $thPrevWastage = (float)($at['previously_returned_wastage'] ?? 0);
+                            $thRetWastage = isset($at['wastage_returned']) ? (float)$at['wastage_returned'] : (float)($at['wastage_returned_meters'] ?? 0);
 
                             if ($thMaxAllowed > 0 && $thRecPcs > $thMaxAllowed) {
                                 $thRecPcs = $thMaxAllowed;
                             }
 
                             $thRemPcs = max(0, $thAssignedPcs - ($thPrevRecPcs + $thRecPcs));
+                            $thRemWastage = max(0, $thWastage - ($thPrevWastage + $thRetWastage));
+
                             $sumThanReceivedPcs += $thRecPcs;
                             $sumThanDefectPcs += $thDefPcs;
+                            $sumThanWastage += $thRetWastage;
 
                             $processedAssignedThans[] = [
                                 'than_key' => $at['than_key'] ?? null,
@@ -535,7 +569,10 @@ class JobInwardController extends Controller
                                 'purchase_than_no' => $at['purchase_than_no'] ?? null,
                                 'meter' => (float)($at['meter'] ?? 0),
                                 'usable' => (float)($at['usable'] ?? 0),
-                                'wastage' => (float)($at['wastage'] ?? 0),
+                                'wastage' => $thWastage,
+                                'previously_returned_wastage' => $thPrevWastage,
+                                'wastage_returned' => $thRetWastage,
+                                'remaining_wastage' => $thRemWastage,
                                 'assigned_pcs' => $thAssignedPcs,
                                 'previously_received_pcs' => $thPrevRecPcs,
                                 'received_pcs' => $thRecPcs,
@@ -551,6 +588,9 @@ class JobInwardController extends Controller
                     }
                     if (!empty($processedAssignedThans) && $sumThanDefectPcs > 0 && $defectQty <= 0) {
                         $defectQty = $sumThanDefectPcs;
+                    }
+                    if (!empty($processedAssignedThans) && $sumThanWastage > 0) {
+                        $wastageMeters = $sumThanWastage;
                     }
 
                     // Enforce remaining limit on item overall
@@ -704,7 +744,7 @@ class JobInwardController extends Controller
             if ($pending <= 0) {
                 $assignment->status = 'Completed';
             } elseif ($totReceived > 0) {
-                $assignment->status = 'Partially Received';
+                $assignment->status = 'Partial Ready';
             } else {
                 $assignment->status = 'Issued';
             }
@@ -720,6 +760,355 @@ class JobInwardController extends Controller
 
             return redirect()->route('jobwork.inward.index')
                 ->with('success', "Job Inward Receipt {$inwardNo} recorded successfully! Received {$overallReceivedQty} pieces / {$overallTotalThans} thans from {$assignment->job_worker_name}.");
+        });
+    }
+
+    public function edit($id)
+    {
+        $inward = JobInward::with(['jobAssignment.items.finishedItem', 'jobAssignment.items.rawItem', 'jobAssignment.items.item', 'jobWorker'])->findOrFail($id);
+        $jobworkers = JobWorker::where('status', 'Active')->orderBy('name')->get();
+        
+        $ja = $inward->jobAssignment;
+        $items = Item::whereRaw('LOWER(status) = ?', ['active'])->orderBy('name')->get();
+        if ($items->isEmpty()) {
+            $items = Item::orderBy('name')->get();
+        }
+
+        // Format tracking for this assignment, excluding this inward itself from previous inward sums
+        $tracking = $ja ? $this->formatAssignmentTracking($ja, $inward->id) : null;
+        
+        // Also get all assignments for worker selection if needed
+        $assignments = JobAssignment::with(['items.finishedItem', 'items.rawItem', 'items.item', 'jobWorker'])
+            ->whereNotIn('status', ['Cancelled'])
+            ->orderBy('id', 'desc')
+            ->get();
+
+        $formattedAssignments = [];
+        $assignmentsByWorker = [];
+
+        foreach ($assignments as $a) {
+            $t = ($ja && $a->id == $ja->id) ? $tracking : $this->formatAssignmentTracking($a);
+            $formattedAssignments[$a->id] = $t;
+
+            $wKey = $a->job_worker_id ? (string)$a->job_worker_id : 'name_' . md5($a->job_worker_name);
+            if (!isset($assignmentsByWorker[$wKey])) {
+                $assignmentsByWorker[$wKey] = [];
+            }
+            $assignmentsByWorker[$wKey][] = $t;
+        }
+
+        return view('jobwork.inward.edit', compact(
+            'inward',
+            'jobworkers',
+            'formattedAssignments',
+            'assignmentsByWorker',
+            'items'
+        ));
+    }
+
+    public function update(Request $request, $id)
+    {
+        $inward = JobInward::findOrFail($id);
+
+        $validated = $request->validate([
+            'job_assignment_id' => 'required|exists:job_assignments,id',
+            'inward_date' => 'required|date',
+            'challan_no' => 'nullable|string|max:100',
+            'received_qty' => 'nullable|integer|min:0',
+            'defect_qty' => 'nullable|integer|min:0',
+            'rate_per_piece' => 'nullable|numeric|min:0',
+            'qc_status' => 'required|string|max:100',
+            'storage_location' => 'nullable|string|max:100',
+            'remarks' => 'nullable|string',
+            'items' => 'nullable|array'
+        ]);
+
+        return DB::transaction(function () use ($validated, $request, $inward) {
+            // 1. Revert previous stock changes for this inward
+            $oldInwItems = $inward->items_list;
+            if (!empty($oldInwItems)) {
+                foreach ($oldInwItems as $it) {
+                    $oldItemId = $it['item_id'] ?? null;
+                    $oldQty = (int)($it['received_qty'] ?? 0);
+                    if ($oldItemId && $oldQty > 0) {
+                        $stockItem = Item::find($oldItemId);
+                        if ($stockItem) {
+                            $stockItem->current_stock = max(0, (float)$stockItem->current_stock - $oldQty);
+                            $stockItem->save();
+                        }
+                    }
+                }
+            }
+
+            $assignment = JobAssignment::lockForUpdate()->findOrFail($validated['job_assignment_id']);
+            $currentTracking = $this->formatAssignmentTracking($assignment, $inward->id);
+
+            $rawItems = $request->input('items', []);
+            $processedItems = [];
+            $overallReceivedQty = 0;
+            $overallDefectQty = 0;
+            $overallTotalThans = 0;
+            $overallTotalMeters = 0;
+            $allThansCombined = [];
+            $totalAmount = 0;
+
+            // Map tracking items for remaining validation
+            $trackingItemsMap = [];
+            foreach ($currentTracking['items'] as $ti) {
+                if (!empty($ti['job_assignment_item_id'])) {
+                    $trackingItemsMap['jai_' . $ti['job_assignment_item_id']] = $ti;
+                }
+                if (!empty($ti['item_id'])) {
+                    $trackingItemsMap['itm_' . $ti['item_id']] = $ti;
+                }
+                if (!empty($ti['item_name'])) {
+                    $trackingItemsMap['name_' . strtolower(trim($ti['item_name']))] = $ti;
+                }
+            }
+
+            if (is_array($rawItems) && count($rawItems) > 0) {
+                foreach ($rawItems as $itm) {
+                    if (empty($itm) || !is_array($itm)) continue;
+
+                    $itemName = trim($itm['item_name'] ?? '');
+                    if (empty($itemName)) continue;
+
+                    $jaiId = !empty($itm['job_assignment_item_id']) ? (int)$itm['job_assignment_item_id'] : null;
+                    $itemId = !empty($itm['item_id']) ? (int)$itm['item_id'] : null;
+
+                    // Match tracking data
+                    $matchedTracking = null;
+                    if ($jaiId && isset($trackingItemsMap['jai_' . $jaiId])) {
+                        $matchedTracking = $trackingItemsMap['jai_' . $jaiId];
+                    } elseif ($itemId && isset($trackingItemsMap['itm_' . $itemId])) {
+                        $matchedTracking = $trackingItemsMap['itm_' . $itemId];
+                    } elseif (isset($trackingItemsMap['name_' . strtolower(trim($itemName))])) {
+                        $matchedTracking = $trackingItemsMap['name_' . strtolower(trim($itemName))];
+                    }
+
+                    $assignedQty = $matchedTracking ? (int)$matchedTracking['assigned_qty'] : (int)($itm['assigned_qty'] ?? 0);
+                    $prevReceivedQty = $matchedTracking ? (int)$matchedTracking['previously_received_qty'] : (int)($itm['previously_received_qty'] ?? 0);
+                    $maxAllowed = $matchedTracking ? (int)$matchedTracking['remaining_qty'] : $assignedQty;
+
+                    $receivedQty = (int)($itm['received_qty'] ?? 0);
+                    $defectQty = (int)($itm['defect_qty'] ?? 0);
+                    $rate = isset($itm['rate']) && $itm['rate'] !== '' ? (float)$itm['rate'] : (float)$assignment->rate_per_piece;
+
+                    // Process Than-wise inward entries if present
+                    $rawAssignedThans = $itm['assigned_thans'] ?? [];
+                    $processedAssignedThans = [];
+                    $sumThanReceivedPcs = 0;
+                    $sumThanDefectPcs = 0;
+
+                    if (is_array($rawAssignedThans) && count($rawAssignedThans) > 0) {
+                        foreach ($rawAssignedThans as $at) {
+                            $thAssignedPcs = (int)($at['assigned_pcs'] ?? 0);
+                            $thPrevRecPcs = (int)($at['previously_received_pcs'] ?? 0);
+                            $thMaxAllowed = max(0, $thAssignedPcs - $thPrevRecPcs);
+                            $thRecPcs = (int)($at['received_pcs'] ?? 0);
+                            $thDefPcs = (int)($at['defect_pcs'] ?? 0);
+
+                            if ($thMaxAllowed > 0 && $thRecPcs > $thMaxAllowed) {
+                                $thRecPcs = $thMaxAllowed;
+                            }
+
+                            $thRemPcs = max(0, $thAssignedPcs - ($thPrevRecPcs + $thRecPcs));
+
+                            $sumThanReceivedPcs += $thRecPcs;
+                            $sumThanDefectPcs += $thDefPcs;
+
+                            $processedAssignedThans[] = [
+                                'than_key' => $at['than_key'] ?? null,
+                                'than_no' => $at['than_no'] ?? null,
+                                'unique_id' => $at['unique_id'] ?? null,
+                                'challan_no' => $at['challan_no'] ?? null,
+                                'po_number' => $at['po_number'] ?? null,
+                                'purchase_than_no' => $at['purchase_than_no'] ?? null,
+                                'meter' => (float)($at['meter'] ?? 0),
+                                'usable' => (float)($at['usable'] ?? 0),
+                                'assigned_pcs' => $thAssignedPcs,
+                                'previously_received_pcs' => $thPrevRecPcs,
+                                'received_pcs' => $thRecPcs,
+                                'defect_pcs' => $thDefPcs,
+                                'remaining_pcs' => $thRemPcs,
+                                'status' => ($thRemPcs <= 0 && ($thPrevRecPcs + $thRecPcs) > 0) ? 'Completed' : ((($thPrevRecPcs + $thRecPcs) > 0) ? 'Partial Ready' : 'Pending')
+                            ];
+                        }
+                    }
+
+                    if (!empty($processedAssignedThans) && $sumThanReceivedPcs > 0) {
+                        $receivedQty = $sumThanReceivedPcs;
+                    }
+                    if (!empty($processedAssignedThans) && $sumThanDefectPcs > 0 && $defectQty <= 0) {
+                        $defectQty = $sumThanDefectPcs;
+                    }
+
+                    // Enforce remaining limit on item overall
+                    if ($maxAllowed > 0 && $receivedQty > $maxAllowed) {
+                        $receivedQty = $maxAllowed;
+                    }
+
+                    $thansRaw = $itm['thans'] ?? [];
+                    $cleanThans = [];
+                    if (is_string($thansRaw)) {
+                        $thansRaw = explode(',', $thansRaw);
+                    }
+                    if (is_array($thansRaw)) {
+                        foreach ($thansRaw as $t) {
+                            $t = (float)trim((string)$t);
+                            if ($t > 0) {
+                                $cleanThans[] = $t;
+                                $overallTotalMeters += $t;
+                                $overallTotalThans++;
+                                $allThansCombined[] = [
+                                    'than_no' => count($cleanThans),
+                                    'item_name' => $itemName,
+                                    'meter' => $t
+                                ];
+                            }
+                        }
+                    }
+
+                    if (empty($cleanThans) && !empty($processedAssignedThans)) {
+                        foreach ($processedAssignedThans as $pat) {
+                            if (($pat['received_pcs'] ?? 0) > 0) {
+                                $m = (float)($pat['meter'] ?? 0);
+                                $cleanThans[] = $m;
+                                $overallTotalMeters += $m;
+                                $overallTotalThans++;
+                                $allThansCombined[] = [
+                                    'than_no' => $pat['than_no'] ?? count($cleanThans),
+                                    'item_name' => $itemName,
+                                    'meter' => $m,
+                                    'received_pcs' => $pat['received_pcs'],
+                                    'challan_no' => $pat['challan_no'] ?? ''
+                                ];
+                            }
+                        }
+                    }
+
+                    $itemAmount = round($receivedQty * $rate, 2);
+                    $totalAmount += $itemAmount;
+
+                    $overallReceivedQty += $receivedQty;
+                    $overallDefectQty += $defectQty;
+
+                    $processedItems[] = [
+                        'job_assignment_item_id' => $jaiId,
+                        'item_id' => $itemId,
+                        'item_name' => $itemName,
+                        'item_code' => $itm['item_code'] ?? '',
+                        'unit' => $itm['unit'] ?? 'Pcs',
+                        'assigned_qty' => $assignedQty,
+                        'previously_received_qty' => $prevReceivedQty,
+                        'received_qty' => $receivedQty,
+                        'defect_qty' => $defectQty,
+                        'rate' => $rate,
+                        'total_amount' => $itemAmount,
+                        'remaining_qty' => max(0, $assignedQty - ($prevReceivedQty + $receivedQty)),
+                        'status' => (max(0, $assignedQty - ($prevReceivedQty + $receivedQty)) <= 0 && ($prevReceivedQty + $receivedQty) > 0) ? 'Completed' : ((($prevReceivedQty + $receivedQty) > 0) ? 'Partial Ready' : 'Pending'),
+                        'thans' => $cleanThans,
+                        'assigned_thans' => $processedAssignedThans
+                    ];
+
+                    // Increment finished item stock in inventory
+                    if ($itemId && $receivedQty > 0) {
+                        $stockItem = Item::find($itemId);
+                        if ($stockItem) {
+                            $stockItem->current_stock = (float)$stockItem->current_stock + $receivedQty;
+                            $stockItem->save();
+                        }
+                    }
+                }
+            }
+
+            if ($overallReceivedQty <= 0) {
+                $overallReceivedQty = (int)($validated['received_qty'] ?? 0);
+            }
+            if ($overallDefectQty <= 0) {
+                $overallDefectQty = (int)($validated['defect_qty'] ?? 0);
+            }
+
+            $rate = isset($validated['rate_per_piece']) && $validated['rate_per_piece'] !== '' ? (float)$validated['rate_per_piece'] : (float)$assignment->rate_per_piece;
+            if ($totalAmount <= 0) {
+                $totalAmount = $overallReceivedQty * $rate;
+            }
+
+            $challanNo = !empty($validated['challan_no']) ? trim($validated['challan_no']) : $inward->challan_no;
+
+            $notesPayload = [
+                'user_remarks' => $request->input('remarks'),
+                'total_items' => count($processedItems),
+                'total_thans' => $overallTotalThans,
+                'total_meters' => round($overallTotalMeters, 2),
+                'thans' => $allThansCombined,
+                'items' => $processedItems
+            ];
+
+            $updateData = [
+                'job_assignment_id' => $assignment->id,
+                'job_order_no' => $assignment->job_order_no,
+                'lot_number' => $assignment->lot_number,
+                'job_worker_id' => $assignment->job_worker_id,
+                'job_worker_name' => $assignment->job_worker_name,
+                'process_name' => $assignment->process_name,
+                'style_name' => $assignment->style_name,
+                'inward_date' => $validated['inward_date'],
+                'challan_no' => $challanNo,
+                'received_qty' => $overallReceivedQty,
+                'defect_qty' => $overallDefectQty,
+                'rate_per_piece' => $rate,
+                'total_amount' => round($totalAmount, 2),
+                'qc_status' => $validated['qc_status'] ?? 'Passed QC',
+                'storage_location' => $validated['storage_location'] ?? 'Finished Goods Stock',
+                'remarks' => json_encode($notesPayload)
+            ];
+
+            if (Schema::hasColumn('job_inwards', 'total_thans')) {
+                $updateData['total_thans'] = $overallTotalThans;
+            }
+            if (Schema::hasColumn('job_inwards', 'total_meters')) {
+                $updateData['total_meters'] = round($overallTotalMeters, 2);
+            }
+            if (Schema::hasColumn('job_inwards', 'than_details')) {
+                $updateData['than_details'] = !empty($allThansCombined) ? json_encode($allThansCombined) : null;
+            }
+            if (Schema::hasColumn('job_inwards', 'items_data')) {
+                $updateData['items_data'] = !empty($processedItems) ? json_encode($processedItems) : null;
+            }
+
+            $inward->update($updateData);
+
+            // Recompute total received on parent Job Assignment across all inwards
+            $allAssignmentInwards = JobInward::where('job_assignment_id', $assignment->id)->get();
+            $totReceived = $allAssignmentInwards->sum('received_qty');
+            $totDefect = $allAssignmentInwards->sum('defect_qty');
+
+            $assignment->received_qty = (int)$totReceived;
+            $assignment->rejected_qty = (int)$totDefect;
+
+            $totalIssued = (int)$assignment->issued_qty;
+            $pending = max(0, $totalIssued - $totReceived);
+
+            if ($pending <= 0) {
+                $assignment->status = 'Completed';
+            } elseif ($totReceived > 0) {
+                $assignment->status = 'Partial Ready';
+            } else {
+                $assignment->status = 'Issued';
+            }
+            $assignment->save();
+
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => "Job Inward {$inward->inward_number} updated successfully!",
+                    'inward' => $inward
+                ]);
+            }
+
+            return redirect()->route('jobwork.inward.index')
+                ->with('success', "Job Inward Receipt {$inward->inward_number} updated successfully! Received {$overallReceivedQty} pieces / {$overallTotalThans} thans from {$assignment->job_worker_name}.");
         });
     }
 
@@ -762,7 +1151,7 @@ class JobInwardController extends Controller
                 if ($pending <= 0 && $totalIssued > 0) {
                     $assignment->status = 'Completed';
                 } elseif ($totReceived > 0) {
-                    $assignment->status = 'Partially Received';
+                    $assignment->status = 'Partial Ready';
                 } else {
                     $assignment->status = 'Issued';
                 }

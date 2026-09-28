@@ -275,14 +275,6 @@
           </div>
         </div>
       </div>
-
-      <!-- Sidebar Status Footer -->
-      <div class="sidebar-footer">
-        <div class="system-status-pill">
-          <div class="status-indicator-dot"></div>
-          <span>{{ $companyName ?? 'GarmentERP' }} Active</span>
-        </div>
-      </div>
     </aside>
 
     <!-- Sidebar Backdrop for Mobile Overlay -->

@@ -1,13 +1,13 @@
 @extends('layouts.app')
 
-@section('title', 'Record Job Work Inward Receipt - GarmentERP')
+@section('title', 'Edit Job Work Inward Receipt - ' . $inward->inward_number . ' - GarmentERP')
 
 @section('breadcrumb')
   <div class="breadcrumb-item"><a href="{{ route('jobwork.assign.index') }}" style="color:inherit; text-decoration:none;">Job Work & Assign</a></div>
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
   <div class="breadcrumb-item"><a href="{{ route('jobwork.inward.index') }}" style="color:inherit; text-decoration:none;">Job Inward Entries</a></div>
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-  <div class="breadcrumb-item active"><span>New Inward Receipt</span></div>
+  <div class="breadcrumb-item active"><span>Edit {{ $inward->inward_number }}</span></div>
 @endsection
 
 @push('styles')
@@ -72,8 +72,9 @@
 @endpush
 
 @section('content')
-<form action="{{ route('jobwork.inward.store') }}" method="POST" id="inward-form">
+<form action="{{ route('jobwork.inward.update', $inward->id) }}" method="POST" id="inward-form">
   @csrf
+  @method('PUT')
 
   <div style="display:flex; flex-direction:column; gap:22px;">
 
@@ -82,14 +83,14 @@
       <div>
         <div style="display:flex; align-items:center; gap:10px;">
           <h2 style="margin:0; font-size:1.45rem; font-weight:800; color:var(--slate-900); letter-spacing:-0.02em;">
-            Record Job Work Inward Receipt
+            Edit Job Work Inward Receipt
           </h2>
-          <span style="font-family:var(--font-mono, monospace); font-weight:800; font-size:0.9rem; background:#ecfdf5; color:#059669; padding:3px 10px; border-radius:8px; border:1px solid #a7f3d0;">
-            {{ $nextInwardNo }}
+          <span style="font-family:var(--font-mono, monospace); font-weight:800; font-size:0.9rem; background:#eff6ff; color:#2563eb; padding:3px 10px; border-radius:8px; border:1px solid #bfdbfe;">
+            {{ $inward->inward_number }}
           </span>
         </div>
         <p style="margin:4px 0 0; font-size:0.85rem; color:var(--slate-500);">
-          Select Job Worker, choose assigned Job Order, and record inward quantities per item with live balance tracking.
+          Update received quantities, DC / challan info, inspection status, and piece tracking for this inward entry.
         </p>
       </div>
 
@@ -97,7 +98,7 @@
         <a href="{{ route('jobwork.inward.index') }}" class="btn btn-secondary" style="font-weight:700;">Cancel</a>
         <button type="submit" id="save-inward-btn-top" class="btn btn-primary" style="display:inline-flex; align-items:center; gap:8px; font-weight:700; box-shadow:0 2px 8px rgba(5, 150, 105, 0.3); background:#059669; border-color:#059669; padding:10px 22px;">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-          Confirm Inward & Update Stock
+          Update Inward & Stock
         </button>
       </div>
     </div>
@@ -107,10 +108,10 @@
       <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--slate-100, #f1f5f9); padding-bottom:12px; margin-bottom:18px;">
         <h3 style="font-size:0.95rem; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; margin:0; color:var(--slate-800); display:flex; align-items:center; gap:8px;">
           <span style="width:24px; height:24px; border-radius:6px; background:#eff6ff; color:#2563eb; display:inline-flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:800;">1</span>
-          Select Contractor & Job Assignment
+          Contractor & Job Assignment
         </h3>
         <span style="font-size:0.75rem; background:#eff6ff; color:#1d4ed8; font-weight:700; padding:3px 10px; border-radius:9999px; border:1px solid #bfdbfe;">
-          Step 1: Contractor &rarr; Step 2: Job Order
+          Active Order: Lot {{ $inward->lot_number ?? '—' }} ({{ $inward->job_order_no }})
         </span>
       </div>
 
@@ -120,9 +121,9 @@
         <div class="form-group" style="margin-bottom:0;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
             <label class="form-label" style="font-weight:700; color:var(--slate-800); margin:0;">
-              1. Select Job Worker / Contractor <span style="color:#ef4444;">*</span>
+              1. Job Worker / Contractor <span style="color:#ef4444;">*</span>
             </label>
-            <span style="font-size:0.75rem; color:var(--slate-500);">Filters active assignments</span>
+            <span style="font-size:0.75rem; color:var(--slate-500);">Assigned contractor</span>
           </div>
           <select id="worker_select" name="job_worker_id" class="form-control" required onchange="onWorkerSelectChange(this)" style="font-size:0.95rem; font-weight:700;">
             <option value="">-- Select Job Worker / Contractor --</option>
@@ -130,7 +131,7 @@
               @php
                 $wKey = (string)$jw->id;
                 $activeCount = isset($assignmentsByWorker[$wKey]) ? count($assignmentsByWorker[$wKey]) : 0;
-                $isWorkerSel = ($preselectedWorkerId && $preselectedWorkerId == $jw->id);
+                $isWorkerSel = ($inward->job_worker_id == $jw->id);
               @endphp
               <option value="{{ $jw->id }}" data-name="{{ $jw->name }}" data-process="{{ $jw->process_type }}" {{ $isWorkerSel ? 'selected' : '' }}>
                 {{ $jw->name }} [{{ $jw->process_type ?? 'Contractor' }}] — {{ $activeCount }} Active Job(s)
@@ -143,12 +144,12 @@
         <div class="form-group" style="margin-bottom:0;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
             <label class="form-label" style="font-weight:700; color:var(--slate-800); margin:0;">
-              2. Select Job Assignment (Order / Lot) <span style="color:#ef4444;">*</span>
+              2. Job Assignment (Order / Lot) <span style="color:#ef4444;">*</span>
             </label>
-            <span style="font-size:0.75rem; color:var(--slate-500);">Auto-loads assigned items</span>
+            <span style="font-size:0.75rem; color:var(--slate-500);">Assigned lot order</span>
           </div>
           <select name="job_assignment_id" id="ja_select" class="form-control" required onchange="onJobOrderChange(this)" style="font-size:0.95rem; font-weight:700;">
-            <option value="">-- First select a Job Worker above --</option>
+            <option value="">-- Select Job Assignment --</option>
           </select>
         </div>
 
@@ -158,19 +159,19 @@
       <div id="job-order-preview-box" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px; display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:14px;">
         <div>
           <span style="font-size:0.75rem; color:#64748b; font-weight:700; text-transform:uppercase;">Contractor:</span>
-          <div id="pv-worker" style="font-weight:800; color:var(--slate-800); font-size:0.95rem;">—</div>
+          <div id="pv-worker" style="font-weight:800; color:var(--slate-800); font-size:0.95rem;">{{ $inward->job_worker_name }}</div>
         </div>
         <div>
           <span style="font-size:0.75rem; color:#64748b; font-weight:700; text-transform:uppercase;">Process:</span>
-          <div id="pv-process" style="font-weight:700; color:var(--slate-700);">—</div>
+          <div id="pv-process" style="font-weight:700; color:var(--slate-700);">{{ $inward->process_name }}</div>
         </div>
         <div>
           <span style="font-size:0.75rem; color:#64748b; font-weight:700; text-transform:uppercase;">Lot / Batch #:</span>
-          <div id="pv-lot" style="font-family:var(--font-mono, monospace); font-weight:800; color:#4338ca;">—</div>
+          <div id="pv-lot" style="font-family:var(--font-mono, monospace); font-weight:800; color:#4338ca;">{{ $inward->lot_number }}</div>
         </div>
         <div>
           <span style="font-size:0.75rem; color:#64748b; font-weight:700; text-transform:uppercase;">Style / Primary Item:</span>
-          <div id="pv-style" style="font-weight:700; color:var(--slate-700);">—</div>
+          <div id="pv-style" style="font-weight:700; color:var(--slate-700);">{{ $inward->style_name }}</div>
         </div>
         <div>
           <span style="font-size:0.75rem; color:#64748b; font-weight:700; text-transform:uppercase;">Total Assigned:</span>
@@ -188,17 +189,17 @@
 
     </div>
 
-    <!-- 2. Step 3: Assigned Items & Inward Quantity Tracking -->
+    <!-- 2. Step 2: Assigned Items & Inward Quantity Tracking -->
     <div style="display:flex; flex-direction:column; gap:16px;">
       
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
         <div>
           <h3 style="font-size:1.05rem; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; margin:0; color:var(--slate-900); display:flex; align-items:center; gap:8px;">
             <span style="width:26px; height:26px; border-radius:6px; background:#ecfdf5; color:#059669; display:inline-flex; align-items:center; justify-content:center; font-size:0.8rem; font-weight:800;">2</span>
-            Assigned Items & Current Inward Quantities
+            Assigned Items & Inward Quantities
           </h3>
           <p style="margin:3px 0 0; font-size:0.825rem; color:var(--slate-500);">
-            Live tracking of Assigned Quantity, Previously Received Quantity, and Remaining Balance per item.
+            Live tracking of Assigned Quantity, Other Receipts, and Current Inward Pieces.
           </p>
         </div>
 
@@ -210,8 +211,7 @@
       <!-- Container where Item Cards are dynamically rendered -->
       <div id="items-container" style="display:flex; flex-direction:column; gap:18px;">
         <div style="text-align:center; padding:32px 18px; color:#64748b; border:2px dashed #cbd5e1; border-radius:16px; background:#ffffff;">
-          <div style="font-weight:700; font-size:0.95rem; color:#475569; margin-bottom:4px;">No Job Assignment Selected</div>
-          <p style="font-size:0.8rem; color:#94a3b8; margin:0;">Please select a <strong>Job Worker</strong> and <strong>Job Assignment</strong> above to load assigned items and quantities.</p>
+          <div style="font-weight:700; font-size:0.95rem; color:#475569; margin-bottom:4px;">Loading Assigned Items...</div>
         </div>
       </div>
 
@@ -231,7 +231,7 @@
           <label class="form-label" style="font-weight:700; color:var(--slate-800); margin-bottom:6px;">
             Inward Receipt Date <span style="color:#ef4444;">*</span>
           </label>
-          <input type="date" name="inward_date" class="form-control" required value="{{ date('Y-m-d') }}">
+          <input type="date" name="inward_date" class="form-control" required value="{{ old('inward_date', $inward->inward_date) }}">
         </div>
 
         <!-- Contractor Return DC / Challan No with Auto Generate -->
@@ -246,7 +246,7 @@
             </button>
           </div>
           <div style="position:relative; display:flex; align-items:center;">
-            <input type="text" name="challan_no" id="challan_no" class="form-control" required value="{{ $nextChallanNo ?? '' }}" placeholder="e.g. DC-984 / CH-104" style="font-weight:700; letter-spacing:0.5px; padding-right:75px;">
+            <input type="text" name="challan_no" id="challan_no" class="form-control" required value="{{ old('challan_no', $inward->challan_no) }}" placeholder="e.g. DC-984 / CH-104" style="font-weight:700; letter-spacing:0.5px; padding-right:75px;">
             <button type="button" onclick="autoGenerateChallanNo()" class="btn btn-secondary btn-sm" style="position:absolute; right:4px; height:calc(100% - 8px); padding:0 10px; font-size:0.75rem; font-weight:700; display:inline-flex; align-items:center; gap:4px; border-radius:6px; background:#f8fafc; color:#334155; border:1px solid #cbd5e1;" title="Regenerate Challan Number">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
               Auto
@@ -261,10 +261,10 @@
             Quality Inspection (QC) Status <span style="color:#ef4444;">*</span>
           </label>
           <select name="qc_status" id="inw_qc_status" class="form-control" required>
-            <option value="Passed QC" selected>Passed Quality Inspection (Ready for Stock)</option>
-            <option value="Minor Touchup">Passed with Minor Iron/Thread Touchup</option>
-            <option value="Under Lab QC">Under Lab QC Review</option>
-            <option value="Rejected">Batch Rejected / Sent for Rework</option>
+            <option value="Passed QC" {{ $inward->qc_status === 'Passed QC' ? 'selected' : '' }}>Passed Quality Inspection (Ready for Stock)</option>
+            <option value="Minor Touchup" {{ $inward->qc_status === 'Minor Touchup' ? 'selected' : '' }}>Passed with Minor Iron/Thread Touchup</option>
+            <option value="Under Lab QC" {{ $inward->qc_status === 'Under Lab QC' ? 'selected' : '' }}>Under Lab QC Review</option>
+            <option value="Rejected" {{ $inward->qc_status === 'Rejected' ? 'selected' : '' }}>Batch Rejected / Sent for Rework</option>
           </select>
         </div>
 
@@ -273,7 +273,7 @@
           <label class="form-label" style="font-weight:700; color:var(--slate-800); margin-bottom:6px;">
             Destination Stock Location
           </label>
-          <input type="text" name="storage_location" class="form-control" value="Finished Goods Stock" placeholder="e.g. Finished Goods Stock / Packing Hub">
+          <input type="text" name="storage_location" class="form-control" value="{{ old('storage_location', $inward->storage_location ?? 'Finished Goods Stock') }}" placeholder="e.g. Finished Goods Stock / Packing Hub">
         </div>
 
       </div>
@@ -287,7 +287,7 @@
         <h4 style="font-size:0.9rem; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; margin-top:0; margin-bottom:10px; color:var(--slate-800);">
           Inward Remarks & Inspection Notes
         </h4>
-        <textarea name="remarks" id="inw-remarks" class="form-control" rows="5" placeholder="Finished goods received in good condition, stitching and finishing verified, ready for ironing & dispatch..."></textarea>
+        <textarea name="remarks" id="inw-remarks" class="form-control" rows="5" placeholder="Finished goods received in good condition, stitching and finishing verified, ready for ironing & dispatch...">{{ old('remarks', $inward->user_remarks) }}</textarea>
       </div>
 
       <!-- Live Calculation Card: Yield & Contractor Payable -->
@@ -304,7 +304,7 @@
         </div>
 
         <div style="display:flex; justify-content:space-between; font-size:0.85rem;">
-          <span style="color:var(--slate-600);">Total Previously Received:</span>
+          <span style="color:var(--slate-600);">Other Receipts (Excl. this):</span>
           <strong id="summary-prev-received" style="color:#059669;">0 Pcs</strong>
         </div>
 
@@ -325,7 +325,7 @@
 
         <div style="border-top:2px dashed #cbd5e1; padding-top:10px; display:flex; justify-content:space-between; align-items:baseline; font-size:1.15rem;">
           <span style="font-weight:800; color:var(--slate-900);">Contractor Payable:</span>
-          <span style="font-weight:800; color:#059669;" id="summary-grand">₹0.00</span>
+          <span style="font-weight:800; color:#059669;" id="summary-grand">₹{{ number_format($inward->total_amount, 2) }}</span>
         </div>
 
       </div>
@@ -337,30 +337,12 @@
       <a href="{{ route('jobwork.inward.index') }}" class="btn btn-secondary" style="font-weight:700; padding:10px 20px;">Cancel</a>
       <button type="submit" id="save-inward-btn-bottom" class="btn btn-primary" style="display:inline-flex; align-items:center; gap:8px; font-weight:700; box-shadow:0 2px 8px rgba(5, 150, 105, 0.3); background:#059669; border-color:#059669; padding:10px 24px;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-        Confirm Inward & Update Stock
+        Update Inward & Stock
       </button>
     </div>
 
   </div>
 </form>
-
-<!-- Modal: Paste Than Meter Readings (Bulk) -->
-<div id="paste-modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(15, 23, 42, 0.6); z-index:9999; align-items:center; justify-content:center; backdrop-filter:blur(3px);">
-  <div style="background:#fff; border-radius:16px; padding:24px; width:90%; max-width:520px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.2);">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-      <h4 style="margin:0; font-weight:800; font-size:1.1rem; color:#0f172a;" id="paste-modal-title">Paste Than Meter Readings</h4>
-      <button type="button" onclick="closePasteModal()" style="background:none; border:none; font-size:1.4rem; cursor:pointer; color:#94a3b8;">&times;</button>
-    </div>
-    <p style="font-size:0.8rem; color:#64748b; margin:0 0 12px;">
-      Paste numbers separated by space, comma, or new line (e.g. from WhatsApp or Challan sheet):
-    </p>
-    <textarea id="paste-textarea" class="form-control" rows="6" placeholder="148, 72.50, 112.50, 103.50, 110.50, 105&#10;99.50, 116.00, 126.50, 89.50, 117.50, 98, 117, 99.50" style="font-family:monospace; font-size:0.9rem;"></textarea>
-    <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
-      <button type="button" class="btn btn-secondary" onclick="closePasteModal()">Cancel</button>
-      <button type="button" class="btn btn-primary" onclick="applyPastedThans()" style="font-weight:700; background:#059669; border-color:#059669;">Add to Item Thans</button>
-    </div>
-  </div>
-</div>
 
 @endsection
 
@@ -369,10 +351,11 @@
   const masterItems = @json($items);
   const formattedAssignmentsMap = @json($formattedAssignments);
   const assignmentsByWorkerMap = @json($assignmentsByWorker);
-  const initialPreselectedId = @json($preselectedId);
-  const initialPreselectedWorkerId = @json($preselectedWorkerId);
+  const existingInwardData = @json($inward);
+  const existingInwardItems = @json($inward->items_list);
+  const initialAssignmentId = @json($inward->job_assignment_id);
+  const initialWorkerId = @json($inward->job_worker_id);
 
-  let activePasteItemIndex = 0;
   let currentAssignmentData = null;
   let itemsData = [];
 
@@ -416,7 +399,7 @@
     const workerAssignments = assignmentsByWorkerMap[wKey] || [];
 
     if (workerAssignments.length === 0) {
-      jaSelect.innerHTML = '<option value="">-- No active/pending job orders found for this contractor --</option>';
+      jaSelect.innerHTML = '<option value="">-- No active job orders found for this contractor --</option>';
       resetJobOrderView();
       return;
     }
@@ -425,12 +408,15 @@
     workerAssignments.forEach(ja => {
       const opt = document.createElement('option');
       opt.value = ja.id;
+      const isSel = (ja.id == initialAssignmentId);
       opt.textContent = `Lot: ${ja.lot_number} | ${ja.job_order_no} — ${ja.style_name} (${ja.total_remaining_qty} Pcs Pending / Assigned: ${ja.total_assigned_qty})`;
+      if (isSel) opt.selected = true;
       jaSelect.appendChild(opt);
     });
 
-    // If only 1 assignment exists, auto select it!
-    if (workerAssignments.length === 1) {
+    if (jaSelect.value) {
+      onJobOrderChange(jaSelect);
+    } else if (workerAssignments.length === 1) {
       jaSelect.selectedIndex = 1;
       onJobOrderChange(jaSelect);
     } else {
@@ -472,18 +458,48 @@
     document.getElementById('pv-received').innerText = currentAssignmentData.total_previously_received_qty + ' Pcs';
     document.getElementById('pv-pending').innerText = currentAssignmentData.total_remaining_qty + ' Pcs';
 
-    // Populate items Data from Job Assignment
+    // Populate items Data from Job Assignment & existing Inward values
     itemsData = [];
     (currentAssignmentData.items || []).forEach(it => {
-      const initInward = it.remaining_qty > 0 ? it.remaining_qty : 0;
+      // Find matching saved item from this existing inward if matching assignment
+      let matchedSavedItem = null;
+      if (jaId == initialAssignmentId && Array.isArray(existingInwardItems)) {
+        matchedSavedItem = existingInwardItems.find(ei => {
+          if (it.job_assignment_item_id && ei.job_assignment_item_id && ei.job_assignment_item_id == it.job_assignment_item_id) return true;
+          if (it.item_id && ei.item_id && ei.item_id == it.item_id) return true;
+          if (it.item_name && ei.item_name && ei.item_name.toLowerCase().trim() === it.item_name.toLowerCase().trim()) return true;
+          return false;
+        });
+      }
 
-      let remToDistribute = initInward;
+      let savedInwardQty = matchedSavedItem ? (parseInt(matchedSavedItem.received_qty) || 0) : (it.remaining_qty > 0 ? it.remaining_qty : 0);
+      let savedDefectQty = matchedSavedItem ? (parseInt(matchedSavedItem.defect_qty) || 0) : 0;
+      let savedRate = matchedSavedItem && matchedSavedItem.rate ? parseFloat(matchedSavedItem.rate) : (it.rate || currentAssignmentData.rate_per_piece || 0);
+
+      let remToDistribute = savedInwardQty;
       let thansList = [];
 
       (it.assigned_thans || []).forEach((at, atIdx) => {
         let thInward = 0;
         const thRem = parseInt(at.remaining_pcs) || 0;
-        if (remToDistribute > 0 && thRem > 0) {
+
+        // Check if there's a saved than in existing inward item
+        let savedThanPcs = null;
+        if (matchedSavedItem && Array.isArray(matchedSavedItem.assigned_thans)) {
+          const matchedThan = matchedSavedItem.assigned_thans.find(st => {
+            if (at.unique_id && st.unique_id && st.unique_id == at.unique_id) return true;
+            if (at.than_key && st.than_key && st.than_key == at.than_key) return true;
+            if (at.than_no && st.than_no && st.than_no == at.than_no) return true;
+            return false;
+          });
+          if (matchedThan) {
+            savedThanPcs = parseInt(matchedThan.received_pcs) || 0;
+          }
+        }
+
+        if (savedThanPcs !== null) {
+          thInward = savedThanPcs;
+        } else if (remToDistribute > 0 && thRem > 0) {
           thInward = Math.min(remToDistribute, thRem);
           remToDistribute -= thInward;
         }
@@ -517,12 +533,12 @@
         item_code: it.item_code || '',
         unit: 'Pcs',
         fabric_unit: 'Meter',
-        rate: it.rate || currentAssignmentData.rate_per_piece || 0,
+        rate: savedRate,
         assigned_qty: it.assigned_qty || 0,
         previously_received_qty: it.previously_received_qty || 0,
         remaining_qty: it.remaining_qty || 0,
-        current_inward_qty: initInward,
-        defect_qty: 0,
+        current_inward_qty: savedInwardQty,
+        defect_qty: savedDefectQty,
         status: it.status || 'Pending',
         assigned_thans: thansList,
         thans: [],
@@ -552,7 +568,7 @@
     container.innerHTML = '';
 
     itemsData.forEach((item, itemIdx) => {
-      const isCompleted = item.remaining_qty <= 0 && item.previously_received_qty > 0;
+      const isCompleted = item.remaining_qty <= 0 && item.previously_received_qty > 0 && (parseFloat(item.current_inward_qty) || 0) <= 0;
       const isPartial = item.previously_received_qty > 0 && item.remaining_qty > 0;
 
       let statusBadge = '';
@@ -577,7 +593,7 @@
       // Build Than-wise Table Rows
       let thansTableRowsHtml = '';
       (item.assigned_thans || []).forEach((th, tIdx) => {
-        const isThanCompleted = th.remaining_pcs <= 0 && th.previously_received_pcs > 0;
+        const isThanCompleted = th.remaining_pcs <= 0 && th.previously_received_pcs > 0 && (parseInt(th.current_inward_pcs) || 0) <= 0;
         const isThanPartial = th.previously_received_pcs > 0 && th.remaining_pcs > 0;
         const thNewRemaining = Math.max(0, th.remaining_pcs - (parseInt(th.current_inward_pcs) || 0));
 
@@ -627,7 +643,7 @@
                   name="items[${itemIdx}][assigned_thans][${tIdx}][received_pcs]" 
                   class="form-control" 
                   value="${th.current_inward_pcs}" 
-                  ${isThanCompleted ? 'readonly disabled style="background:#f1f5f9; color:#94a3b8; font-weight:800; text-align:center; height:36px;"' : 'style="font-weight:800; color:#059669; font-size:1rem; text-align:center; height:36px; border-color:#6ee7b7; background:#f0fdf4;"'}
+                  style="font-weight:800; color:#059669; font-size:1rem; text-align:center; height:36px; border-color:#6ee7b7; background:#f0fdf4;"
                   oninput="onThanInwardPcsChange(${itemIdx}, ${tIdx}, this.value)"
                   onfocus="this.select()">
               </div>
@@ -666,8 +682,8 @@
             <span class="tracking-badge assigned" title="Total pieces and fabric assigned in Job Order">
               Assigned: <strong>${item.assigned_qty} Pcs</strong> (${totalFabricMeters.toFixed(1)} Mtr Fabric)
             </span>
-            <span class="tracking-badge received" title="Total pieces previously received across past receipts">
-              Prev Rec: <strong>${item.previously_received_qty} Pcs</strong>
+            <span class="tracking-badge received" title="Total pieces previously received across other receipts">
+              Other Rec: <strong>${item.previously_received_qty} Pcs</strong>
             </span>
             <span class="tracking-badge remaining" title="Pending pieces available to receive">
               Pending: <strong>${item.remaining_qty} Pcs</strong>
@@ -710,7 +726,7 @@
                   <th style="padding:8px 12px; font-size:0.75rem; text-transform:uppercase;">Than # / Challan</th>
                   <th style="padding:8px 12px; font-size:0.75rem; text-transform:uppercase; text-align:right;">Than Fabric</th>
                   <th style="padding:8px 12px; font-size:0.75rem; text-transform:uppercase; text-align:right;">Assigned Pcs</th>
-                  <th style="padding:8px 12px; font-size:0.75rem; text-transform:uppercase; text-align:right;">Prev Received</th>
+                  <th style="padding:8px 12px; font-size:0.75rem; text-transform:uppercase; text-align:right;">Other Receipts</th>
                   <th style="padding:8px 12px; font-size:0.75rem; text-transform:uppercase; text-align:right;">Pending Pcs</th>
                   <th style="padding:8px 12px; font-size:0.75rem; text-transform:uppercase; text-align:center; min-width:130px;">Current Inward (Pcs)</th>
                   <th style="padding:8px 12px; font-size:0.75rem; text-transform:uppercase; text-align:right;">Balance After Inward</th>
@@ -741,10 +757,10 @@
                 name="items[${itemIdx}][received_qty]" 
                 class="form-control" 
                 value="${item.current_inward_qty}" 
-                ${isCompleted ? 'readonly disabled style="background:#f1f5f9; color:#94a3b8; font-weight:800; height:42px;"' : 'style="font-weight:800; color:#059669; font-size:1.05rem; height:42px; border-color:#6ee7b7; background:#f0fdf4;"'}
+                style="font-weight:800; color:#059669; font-size:1.05rem; height:42px; border-color:#6ee7b7; background:#f0fdf4;"
                 oninput="onItemInwardQtyChange(${itemIdx}, this.value)"
                 onfocus="this.select()">
-              <span style="position:absolute; right:10px; top:50%; transform:translateY(-50%); font-size:0.75rem; font-weight:700; color:${isCompleted ? '#94a3b8' : '#059669'};">
+              <span style="position:absolute; right:10px; top:50%; transform:translateY(-50%); font-size:0.75rem; font-weight:700; color:#059669;">
                 Pcs
               </span>
             </div>
@@ -1121,19 +1137,7 @@
   // Initial Load Trigger
   document.addEventListener('DOMContentLoaded', () => {
     const workerSelect = document.getElementById('worker_select');
-
-    if (initialPreselectedId && formattedAssignmentsMap[initialPreselectedId]) {
-      const preData = formattedAssignmentsMap[initialPreselectedId];
-      if (preData.job_worker_id && workerSelect) {
-        workerSelect.value = preData.job_worker_id;
-        onWorkerSelectChange(workerSelect);
-        const jaSelect = document.getElementById('ja_select');
-        if (jaSelect) {
-          jaSelect.value = initialPreselectedId;
-          onJobOrderChange(jaSelect);
-        }
-      }
-    } else if (workerSelect && workerSelect.value) {
+    if (workerSelect && workerSelect.value) {
       onWorkerSelectChange(workerSelect);
     }
   });
