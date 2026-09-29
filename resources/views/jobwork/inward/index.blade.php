@@ -101,6 +101,7 @@
         <tbody>
           @forelse($inwards as $inw)
             @php
+              $thanList = $inw->than_list ?: [];
               $thanCount = $inw->total_thans_count;
               $totalMeters = $inw->total_meters_count;
             @endphp
@@ -153,7 +154,7 @@
                   <a href="{{ route('jobwork.inward.edit', $inw->id) }}" class="action-icon-btn edit" title="Edit Inward Entry">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                   </a>
-                  <button type="button" class="action-icon-btn" onclick='printInwardSlip(@json($inw), @json($thanList), @json($inw->items_list))' title="Print Inward Slip & Than Matrix">
+                  <button type="button" class="action-icon-btn" onclick='printInwardSlip(@json($inw), @json($thanList), @json($inw->items_list ?: []))' title="Print Inward Slip & Than Matrix">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
                   </button>
                   <form action="{{ route('jobwork.inward.destroy', $inw->id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this inward entry? Pending quantities on the Job Order will be restored.')">
@@ -235,7 +236,9 @@
     if (thans && thans.length > 0) {
       let pills = '';
       thans.forEach((t, i) => {
-        pills += `<span style="display:inline-block; margin:3px; padding:3px 8px; background:#f1f5f9; border:1px solid #cbd5e1; border-radius:6px; font-family:monospace; font-size:0.8rem; font-weight:700;"><span style="color:#64748b; font-size:0.7rem;">#${i+1}:</span> ${t} M</span>`;
+        const meterVal = (typeof t === 'object' && t !== null) ? (t.meters || t.meter || t.qty || '') : t;
+        const thanNum = (typeof t === 'object' && t !== null && t.than_no) ? t.than_no : (i + 1);
+        pills += `<span style="display:inline-block; margin:3px; padding:3px 8px; background:#f1f5f9; border:1px solid #cbd5e1; border-radius:6px; font-family:monospace; font-size:0.8rem; font-weight:700;"><span style="color:#64748b; font-size:0.7rem;">#${thanNum}:</span> ${meterVal} M</span>`;
       });
       thanMatrix = `
         <div style="margin-top:16px; border:1px solid #cbd5e1; border-radius:10px; padding:12px; background:#fafafa;">
