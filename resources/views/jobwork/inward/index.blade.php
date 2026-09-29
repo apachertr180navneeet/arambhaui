@@ -101,9 +101,8 @@
         <tbody>
           @forelse($inwards as $inw)
             @php
-              $thanList = $inw->than_list;
-              $thanCount = count($thanList);
-              $totalMeters = $thanCount > 0 ? array_sum($thanList) : 0;
+              $thanCount = $inw->total_thans_count;
+              $totalMeters = $inw->total_meters_count;
             @endphp
             <tr>
               <td style="font-family:var(--font-mono, monospace); font-weight:800; color:var(--primary-700);">

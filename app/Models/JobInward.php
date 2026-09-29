@@ -53,7 +53,8 @@ class JobInward extends Model
         if (isset($this->attributes['total_thans']) && (int)$this->attributes['total_thans'] > 0) {
             return (int)$this->attributes['total_thans'];
         }
-        return count($this->than_list);
+        $thans = $this->than_list;
+        return is_array($thans) ? count($thans) : 0;
     }
 
     public function getTotalMetersCountAttribute(): float
@@ -62,8 +63,19 @@ class JobInward extends Model
             return (float)$this->attributes['total_meters'];
         }
         $thans = $this->than_list;
-        if (!empty($thans)) {
-            return (float)array_sum($thans);
+        if (!empty($thans) && is_array($thans)) {
+            $sum = 0.0;
+            foreach ($thans as $t) {
+                if (is_array($t)) {
+                    $val = $t['meters'] ?? ($t['meter'] ?? ($t['qty'] ?? ($t['ordered_qty'] ?? 0)));
+                    $sum += (float)$val;
+                } elseif (is_numeric($t)) {
+                    $sum += (float)$t;
+                }
+            }
+            if ($sum > 0) {
+                return (float)$sum;
+            }
         }
         return (float)($this->wastage_returned_meters ?? 0);
     }
