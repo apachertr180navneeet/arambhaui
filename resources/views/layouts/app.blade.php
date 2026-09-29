@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>@yield('title', 'GarmentERP - Manufacturing & Supply Chain Management | ' . ($companyName ?? 'GarmentERP'))</title>
-  <meta name="description" content="Production-ready Garment Manufacturing ERP for customer orders, raw materials, job worker outward/inward, QR lot tracking, quality check, finished goods dispatch, and accounts settlement.">
+  <title>@yield('title', ($companyName ?? 'Nathmal Amarchand') . ' - Manufacturing & Supply Chain Management')</title>
+  <meta name="description" content="Production-ready Manufacturing ERP for customer orders, raw materials, job worker outward/inward, QR lot tracking, quality check, finished goods dispatch, and accounts settlement.">
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <meta name="base-url" content="{{ url('/') }}">
 
@@ -13,7 +13,7 @@
     window.APP_URL = "{{ rtrim(url('/'), '/') }}";
     window.API_BASE_URL = window.APP_URL;
     window.COMPANY_SETTINGS = {!! json_encode($companySettings ?? []) !!};
-    window.COMPANY_NAME = {!! json_encode($companyName ?? 'GarmentERP') !!};
+    window.COMPANY_NAME = {!! json_encode($companyName ?? 'Nathmal Amarchand') !!};
 
     // Helper to resolve relative routes to the full application base URL
     window.apiUrl = function(path) {
@@ -89,13 +89,22 @@
          ========================================== -->
     <aside class="app-sidebar">
       <!-- Sidebar Header & Brand -->
+      @php
+        $cName = $companyName ?? 'Nathmal Amarchand';
+        $words = preg_split('/\s+/', trim($cName));
+        $brandInitials = '';
+        foreach ($words as $w) {
+          if (!empty($w)) $brandInitials .= mb_strtoupper(mb_substr($w, 0, 1));
+          if (strlen($brandInitials) >= 2) break;
+        }
+        if (empty($brandInitials)) $brandInitials = 'NA';
+      @endphp
       <div class="sidebar-header">
-        <a href="{{ route('dashboard') }}" style="display:flex; align-items:center; gap:12px; text-decoration:none;">
-          <div class="brand-logo-icon">G</div>
-          <div class="brand-text">
-            <div class="brand-title">
-              GarmentERP
-              <span class="brand-badge">SaaS</span>
+        <a href="{{ route('dashboard') }}" style="display:flex; align-items:center; gap:10px; text-decoration:none; min-width:0; overflow:hidden;">
+          <div class="brand-logo-icon" style="font-size:0.92rem; font-weight:800; letter-spacing:0.5px;">{{ $brandInitials }}</div>
+          <div class="brand-text" style="min-width:0; overflow:hidden;">
+            <div class="brand-title" title="{{ $cName }}" style="font-size:1.02rem; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+              {{ $cName }}
             </div>
             <div class="brand-subtitle">Manufacturing Management</div>
           </div>
@@ -308,7 +317,7 @@
         <div class="header-right">
           <div class="header-company-badge">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>
-            {{ $companyName ?? 'GarmentERP' }}
+            {{ $companyName ?? 'Nathmal Amarchand' }}
           </div>
 
           <div class="header-actions">

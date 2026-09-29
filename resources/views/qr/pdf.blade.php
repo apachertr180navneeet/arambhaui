@@ -338,7 +338,7 @@
         </table>
 
         <div class="footer">
-            {{ config('app.name', 'Aarambh GarmentERP') }} &copy; {{ date('Y') }} &bull; Confidential Single-Use Promotional QR Vouchers
+            {{ config('app.name', 'Nathmal Amarchand') }} &copy; {{ date('Y') }} &bull; Confidential Single-Use Promotional QR Vouchers
         </div>
     </div>
 

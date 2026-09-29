@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Company Settings - GarmentERP')
+@section('title', 'Company Settings - Nathmal Amarchand')
 
 @section('breadcrumb')
   <div class="breadcrumb-item"><span>Administration</span></div>
@@ -14,7 +14,7 @@
   <div class="card" style="background:#fff; border-radius:var(--radius-xl); border:1px solid var(--slate-200); box-shadow:var(--shadow-sm); padding:24px;">
     
     <div style="margin-bottom:20px; border-bottom:1px solid var(--slate-200); padding-bottom:12px;">
-      <h3 style="margin:0; font-size:1.15rem; font-weight:800; color:var(--slate-900);">GarmentERP Enterprise Company Profile</h3>
+      <h3 style="margin:0; font-size:1.15rem; font-weight:800; color:var(--slate-900);">Enterprise Company Profile</h3>
       <p style="margin:2px 0 0; font-size:0.8rem; color:var(--slate-500);">Configure organization profile, GSTIN tax registration, invoice numbering prefixes, and currency</p>
     </div>
 
@@ -24,7 +24,7 @@
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
         <div class="form-group" style="grid-column:1/-1;">
           <label class="form-label">Company / Legal Entity Name <span style="color:red;">*</span></label>
-          <input type="text" name="company_name" class="form-control" required value="{{ $settings['company_name'] ?? config('app.name', 'GarmentERP') }}">
+          <input type="text" name="company_name" class="form-control" required value="{{ $settings['company_name'] ?? config('app.name', 'Nathmal Amarchand') }}">
         </div>
 
         <div class="form-group">
@@ -44,7 +44,7 @@
 
         <div class="form-group">
           <label class="form-label">Official Billing Email</label>
-          <input type="email" name="company_email" class="form-control" value="{{ $settings['company_email'] ?? 'accounts@garmenterp.com' }}">
+          <input type="email" name="company_email" class="form-control" value="{{ $settings['company_email'] ?? 'accounts@Nathmal Amarchand.com' }}">
         </div>
 
         <div class="form-group">

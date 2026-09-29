@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'System Audit & Activity Logs - GarmentERP')
+@section('title', 'System Audit & Activity Logs - Nathmal Amarchand')
 
 @section('breadcrumb')
   <div class="breadcrumb-item"><span>Administration</span></div>

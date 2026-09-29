@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'New Purchase Entry - GarmentERP')
+@section('title', 'New Purchase Entry - Nathmal Amarchand')
 
 @section('breadcrumb')
   <div class="breadcrumb-item"><a href="{{ route('purchase.orders.index') }}" style="color:inherit; text-decoration:none;">Purchase Entries</a></div>

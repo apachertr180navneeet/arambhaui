@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Edit Job Work Order - GarmentERP')
+@section('title', 'Edit Job Work Order - Nathmal Amarchand')
 
 @section('breadcrumb')
   <div class="breadcrumb-item"><a href="{{ route('jobwork.assign.index') }}" style="color:inherit; text-decoration:none;">Job Work & Assign</a></div>

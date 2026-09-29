@@ -182,7 +182,7 @@ Route::get('/run-migration', function (\Illuminate\Http\Request $request) {
 <head>
     <meta charset='UTF-8'>
     <meta name='viewport' content='width=device-width, initial-scale=1.0'>
-    <title>Migration Status - GarmentERP</title>
+    <title>Migration Status - Nathmal Amarchand</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #f8fafc; padding: 40px 20px; margin: 0; }
         .container { max-width: 760px; margin: 0 auto; background: #1e293b; border-radius: 16px; border: 1px solid #334155; padding: 30px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); }
@@ -226,7 +226,7 @@ Route::get('/run-migration', function (\Illuminate\Http\Request $request) {
 <html lang='en'>
 <head>
     <meta charset='UTF-8'>
-    <title>Migration Error - GarmentERP</title>
+    <title>Migration Error - Nathmal Amarchand</title>
     <style>
         body { font-family: sans-serif; background: #0f172a; color: #f8fafc; padding: 40px 20px; }
         .container { max-width: 760px; margin: 0 auto; background: #1e293b; border-radius: 16px; border: 1px solid #ef4444; padding: 30px; }
@@ -270,7 +270,7 @@ Route::get('/clear-cache', function (\Illuminate\Http\Request $request) {
 <html lang='en'>
 <head>
     <meta charset='UTF-8'>
-    <title>Cache Cleared - GarmentERP</title>
+    <title>Cache Cleared - Nathmal Amarchand</title>
     <style>
         body { font-family: sans-serif; background: #0f172a; color: #f8fafc; padding: 40px 20px; }
         .container { max-width: 760px; margin: 0 auto; background: #1e293b; border-radius: 16px; border: 1px solid #334155; padding: 30px; }
@@ -413,7 +413,7 @@ Route::match(['get', 'post'], '/composer-update', function (\Illuminate\Http\Req
 <html lang='en'>
 <head>
     <meta charset='UTF-8'>
-    <title>Composer Executed - GarmentERP</title>
+    <title>Composer Executed - Nathmal Amarchand</title>
     <style>
         body { font-family: system-ui, -apple-system, sans-serif; background: #0f172a; color: #f8fafc; padding: 40px 20px; }
         .container { max-width: 880px; margin: 0 auto; background: #1e293b; border-radius: 16px; border: 1px solid #334155; padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); }

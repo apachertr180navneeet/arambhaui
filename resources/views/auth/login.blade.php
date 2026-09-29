@@ -4,9 +4,19 @@
 
 @section('content')
 <div class="auth-card">
+  @php
+    $cName = $companyName ?? 'Nathmal Amarchand';
+    $words = preg_split('/\s+/', trim($cName));
+    $brandInitials = '';
+    foreach ($words as $w) {
+      if (!empty($w)) $brandInitials .= mb_strtoupper(mb_substr($w, 0, 1));
+      if (strlen($brandInitials) >= 2) break;
+    }
+    if (empty($brandInitials)) $brandInitials = 'NA';
+  @endphp
   <div class="auth-brand">
-    <div class="logo-icon">G</div>
-    <h1>GarmentERP</h1>
+    <div class="logo-icon" style="font-size:1.25rem; font-weight:800; letter-spacing:0.5px;">{{ $brandInitials }}</div>
+    <h1>{{ $cName }}</h1>
     <p>Sign in to access your Manufacturing & Supply Chain Portal</p>
   </div>
 
@@ -46,7 +56,7 @@
         id="email" 
         name="email" 
         class="form-control" 
-        placeholder="admin@garmenterp.com" 
+        placeholder="admin@Nathmal Amarchand.com" 
         value="{{ old('email') }}" 
         required 
         autofocus

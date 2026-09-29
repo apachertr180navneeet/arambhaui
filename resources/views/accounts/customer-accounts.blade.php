@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Customer Accounts & Settlements - GarmentERP')
+@section('title', 'Customer Accounts & Settlements - Nathmal Amarchand')
 
 @section('breadcrumb')
   <div class="breadcrumb-item"><span>Accounts & Settlements</span></div>

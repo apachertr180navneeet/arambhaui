@@ -1,6 +1,6 @@
 @extends('layouts.public')
 
-@section('title', 'Claim Voucher & Transfer Amount - ' . ($companyName ?? 'GarmentERP'))
+@section('title', 'Claim Voucher & Transfer Amount - ' . ($companyName ?? 'Nathmal Amarchand'))
 
 @section('content')
 <div style="max-width:760px; margin:0 auto; padding:15px 12px 50px;">
@@ -12,14 +12,24 @@
     <div style="background:linear-gradient(135deg, #1e293b 0%, #0f172a 100%); padding:24px 28px; color:#ffffff; position:relative; overflow:hidden;">
       <div style="position:absolute; top:-20px; right:-20px; width:130px; height:130px; background:radial-gradient(circle, rgba(99,102,241,0.25) 0%, rgba(99,102,241,0) 70%); border-radius:50%; pointer-events:none;"></div>
       
+      @php
+        $cName = $companyName ?? 'Nathmal Amarchand';
+        $words = preg_split('/\s+/', trim($cName));
+        $brandInitials = '';
+        foreach ($words as $w) {
+          if (!empty($w)) $brandInitials .= mb_strtoupper(mb_substr($w, 0, 1));
+          if (strlen($brandInitials) >= 2) break;
+        }
+        if (empty($brandInitials)) $brandInitials = 'NA';
+      @endphp
       <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
         <div style="display:flex; align-items:center; gap:14px;">
-          <div style="width:48px; height:48px; border-radius:14px; background:linear-gradient(135deg, #2563eb, #4f46e5); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:1.3rem; box-shadow:0 6px 16px -2px rgba(37,99,235,0.4); flex-shrink:0;">
-            G
+          <div style="width:48px; height:48px; border-radius:14px; background:linear-gradient(135deg, #2563eb, #4f46e5); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:1.15rem; box-shadow:0 6px 16px -2px rgba(37,99,235,0.4); flex-shrink:0;">
+            {{ $brandInitials }}
           </div>
           <div>
             <h1 style="margin:0; font-size:1.35rem; font-weight:800; letter-spacing:-0.02em; color:#ffffff;">
-              {{ $companyName ?? 'GarmentERP' }}
+              {{ $cName }}
             </h1>
             <p style="margin:3px 0 0; font-size:0.85rem; color:#94a3b8;">
               Customer Reward & Voucher Claim Portal

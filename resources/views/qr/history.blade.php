@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'QR Vouchers Listing & A4 Sheet Printing - GarmentERP')
+@section('title', 'QR Vouchers Listing & A4 Sheet Printing - Nathmal Amarchand')
 
 @section('breadcrumb')
   <div class="breadcrumb-item"><span>Barcodes & QR</span></div>
