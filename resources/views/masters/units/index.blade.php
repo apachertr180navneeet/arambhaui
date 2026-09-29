@@ -532,9 +532,11 @@
           @foreach($units as $index => $u)
             @php
               $isDerived = !empty($u->parent_id);
-              $conversionText = '1.0000 (Base)';
+              $conversionText = '1 (Base)';
               if ($isDerived && $u->conversion_factor && $u->parent) {
-                $conversionText = '1 ' . $u->code . ' = ' . $u->conversion_factor . ' ' . ($u->parent->symbol ?: $u->parent->code);
+                $factor = (float)$u->conversion_factor;
+                $factorFormatted = ($factor == (int)$factor) ? (int)$factor : rtrim(rtrim(number_format($factor, 4, '.', ''), '0'), '.');
+                $conversionText = '1 ' . $u->code . ' = ' . $factorFormatted . ' ' . ($u->parent->symbol ?: $u->parent->code);
               }
             @endphp
             <tr class="uom-row uom-row-transition" id="unit-row-{{ $u->id }}" data-id="{{ $u->id }}" data-type="{{ $isDerived ? 'derived' : 'base' }}" data-status="{{ strtolower($u->status ?? 'active') }}">
@@ -567,7 +569,7 @@
                 {{ $conversionText }}
               </td>
               <td class="unit-decimals-val" style="text-align: center; font-weight:600; color:var(--slate-600);">
-                {{ $u->decimal_places ?? 2 }} Places
+                {{ (int)($u->decimal_places ?? 0) }} Places
               </td>
               <td style="text-align: center;">
                 <!-- Direct Table Status Changer -->
@@ -646,7 +648,7 @@
         </div>
         <div class="form-group" style="margin:0;">
           <label class="form-label">Decimal Places Precision</label>
-          <input type="number" name="decimal_places" id="unit_decimals" class="form-control" value="2" min="0" max="4">
+          <input type="number" name="decimal_places" id="unit_decimals" class="form-control" value="0" min="0" max="4" placeholder="0">
         </div>
         <div class="form-group" style="margin:0;">
           <label class="form-label">Unit Status</label>
@@ -744,7 +746,7 @@
     document.getElementById('umodal-title').textContent = 'Add New Unit';
     document.getElementById('save-uom-btn').textContent = 'Save Unit';
     document.getElementById('save-uom-btn').disabled = false;
-    document.getElementById('unit_decimals').value = '2';
+    document.getElementById('unit_decimals').value = '0';
     document.getElementById('unit_status').value = 'Active';
     
     modal.style.display = 'flex';
@@ -767,7 +769,7 @@
     document.getElementById('unit_name').value = u.name || '';
     document.getElementById('unit_code').value = u.code || '';
     document.getElementById('unit_symbol').value = u.symbol || '';
-    document.getElementById('unit_decimals').value = u.decimal_places ?? 2;
+    document.getElementById('unit_decimals').value = (u.decimal_places !== undefined && u.decimal_places !== null && u.decimal_places !== '') ? u.decimal_places : 0;
     document.getElementById('unit_status').value = u.status || 'Active';
     document.getElementById('unit_parent').value = u.parent_id || '';
     document.getElementById('unit_factor').value = u.conversion_factor || '';
@@ -850,11 +852,15 @@
     const uId = document.getElementById('unit-id').value;
     const isEdit = Boolean(uId);
 
+    const decInput = document.getElementById('unit_decimals');
+    const decVal = decInput ? decInput.value.trim() : '';
+    const decimalPlaces = decVal === '' ? 0 : Math.max(0, parseInt(decVal) || 0);
+
     const payload = {
       name: document.getElementById('unit_name').value.trim(),
       code: document.getElementById('unit_code').value.trim(),
       symbol: document.getElementById('unit_symbol').value.trim(),
-      decimal_places: parseInt(document.getElementById('unit_decimals').value) || 2,
+      decimal_places: decimalPlaces,
       parent_id: document.getElementById('unit_parent').value || null,
       conversion_factor: parseFloat(document.getElementById('unit_factor').value) || null,
       status: document.getElementById('unit_status').value,
@@ -1024,9 +1030,11 @@
     const statusVal = (u.status || 'Active');
     const statusLower = statusVal.toLowerCase();
 
-    let conversionText = '1.0000 (Base)';
+    let conversionText = '1 (Base)';
     if (isDerived && u.conversion_factor && u.parent) {
-      conversionText = '1 ' + u.code + ' = ' + u.conversion_factor + ' ' + (u.parent.symbol || u.parent.code);
+      const factor = parseFloat(u.conversion_factor);
+      const factorFormatted = (factor % 1 === 0) ? factor.toString() : parseFloat(factor.toFixed(4)).toString();
+      conversionText = '1 ' + u.code + ' = ' + factorFormatted + ' ' + (u.parent.symbol || u.parent.code);
     }
 
     tr.innerHTML = `
@@ -1053,7 +1061,7 @@
         ${conversionText}
       </td>
       <td class="unit-decimals-val" style="text-align: center; font-weight:600; color:var(--slate-600);">
-        ${u.decimal_places ?? 2} Places
+        ${(u.decimal_places !== undefined && u.decimal_places !== null && u.decimal_places !== '') ? u.decimal_places : 0} Places
       </td>
       <td style="text-align: center;">
         <select class="uom-status-select ${statusLower}" onchange="changeUnitStatus(${u.id}, this.value, this)" title="Click to change status">
@@ -1114,16 +1122,18 @@
 
     const factorCell = row.querySelector('.unit-factor-val');
     if (factorCell) {
-      let conversionText = '1.0000 (Base)';
+      let conversionText = '1 (Base)';
       if (isDerived && u.conversion_factor && u.parent) {
-        conversionText = '1 ' + u.code + ' = ' + u.conversion_factor + ' ' + (u.parent.symbol || u.parent.code);
+        const factor = parseFloat(u.conversion_factor);
+        const factorFormatted = (factor % 1 === 0) ? factor.toString() : parseFloat(factor.toFixed(4)).toString();
+        conversionText = '1 ' + u.code + ' = ' + factorFormatted + ' ' + (u.parent.symbol || u.parent.code);
       }
       factorCell.textContent = conversionText;
     }
 
     const decimalsCell = row.querySelector('.unit-decimals-val');
     if (decimalsCell) {
-      decimalsCell.textContent = (u.decimal_places ?? 2) + ' Places';
+      decimalsCell.textContent = ((u.decimal_places !== undefined && u.decimal_places !== null && u.decimal_places !== '') ? u.decimal_places : 0) + ' Places';
     }
 
     const initials = (u.name || 'UN').substring(0, 2).toUpperCase();

@@ -586,7 +586,7 @@
               <td class="itm-rawmeter-val" style="text-align: right; font-weight: 600;">
                 @if($rawMeter > 0)
                   <span style="display:inline-flex; align-items:center; gap:3px; font-weight:700; color:#1d4ed8; background:#eff6ff; padding:2px 8px; border-radius:6px; font-size:0.8rem; border:1px solid #bfdbfe;" title="Raw meter required per piece">
-                    {{ number_format($rawMeter, 2) }} m
+                    {{ format_quantity($rawMeter) }} m
                   </span>
                 @else
                   <span style="color:var(--slate-400); font-size:0.8rem;">—</span>
@@ -596,10 +596,10 @@
                 ₹{{ number_format($itm->unit_cost, 2) }}
               </td>
               <td class="itm-stock-val" style="text-align: right; font-weight: 800; color: {{ $isLowStock ? '#dc2626' : '#059669' }};">
-                {{ number_format($itm->current_stock, 2) }}
+                {{ format_quantity($itm->current_stock) }}
               </td>
               <td class="itm-minstock-val" style="text-align: right; font-size:0.8rem; color:var(--slate-500); font-weight:600;">
-                {{ number_format($itm->min_stock, 2) }}
+                {{ format_quantity($itm->min_stock) }}
               </td>
               <td class="itm-stock-status-cell" style="text-align: center;">
                 @if($isLowStock)
@@ -1201,7 +1201,7 @@
     const rawMeter = parseFloat(itm.raw_meter_per_piece || 0);
 
     const rawMeterHtml = rawMeter > 0
-      ? '<span style="display:inline-flex; align-items:center; gap:3px; font-weight:700; color:#1d4ed8; background:#eff6ff; padding:2px 8px; border-radius:6px; font-size:0.8rem; border:1px solid #bfdbfe;" title="Raw meter required per piece">' + Number(rawMeter).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' m</span>'
+      ? '<span style="display:inline-flex; align-items:center; gap:3px; font-weight:700; color:#1d4ed8; background:#eff6ff; padding:2px 8px; border-radius:6px; font-size:0.8rem; border:1px solid #bfdbfe;" title="Raw meter required per piece">' + Number(rawMeter).toLocaleString('en-IN', {minimumFractionDigits: 0, maximumFractionDigits: 2}) + ' m</span>'
       : '<span style="color:var(--slate-400); font-size:0.8rem;">—</span>';
 
     tr.innerHTML = 
@@ -1232,10 +1232,10 @@
         '₹' + Number(itm.unit_cost || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}) +
       '</td>' +
       '<td class="itm-stock-val" style="text-align: right; font-weight: 800; color: ' + (isLow ? '#dc2626' : '#059669') + ';">' +
-        Number(itm.current_stock || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}) +
+        Number(itm.current_stock || 0).toLocaleString('en-IN', {minimumFractionDigits: 0, maximumFractionDigits: 2}) +
       '</td>' +
       '<td class="itm-minstock-val" style="text-align: right; font-size:0.8rem; color:var(--slate-500); font-weight:600;">' +
-        Number(itm.min_stock || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}) +
+        Number(itm.min_stock || 0).toLocaleString('en-IN', {minimumFractionDigits: 0, maximumFractionDigits: 2}) +
       '</td>' +
       '<td class="itm-stock-status-cell" style="text-align: center;">' +
         (isLow ? '<span class="badge badge-danger" style="font-size:0.7rem; font-weight:700;">Low Stock</span>' : '<span class="badge badge-success" style="font-size:0.7rem; font-weight:700;">In Stock</span>') +
@@ -1330,7 +1330,7 @@
     const rawMeterCell = row.querySelector('.itm-rawmeter-val');
     if (rawMeterCell) {
       rawMeterCell.innerHTML = rawMeter > 0
-        ? `<span style="display:inline-flex; align-items:center; gap:3px; font-weight:700; color:#1d4ed8; background:#eff6ff; padding:2px 8px; border-radius:6px; font-size:0.8rem; border:1px solid #bfdbfe;" title="Raw meter required per piece">${Number(rawMeter).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})} m</span>`
+        ? `<span style="display:inline-flex; align-items:center; gap:3px; font-weight:700; color:#1d4ed8; background:#eff6ff; padding:2px 8px; border-radius:6px; font-size:0.8rem; border:1px solid #bfdbfe;" title="Raw meter required per piece">${Number(rawMeter).toLocaleString('en-IN', {minimumFractionDigits: 0, maximumFractionDigits: 2})} m</span>`
         : `<span style="color:var(--slate-400); font-size:0.8rem;">—</span>`;
     }
 
@@ -1341,13 +1341,13 @@
 
     const stockCell = row.querySelector('.itm-stock-val');
     if (stockCell) {
-      stockCell.textContent = Number(itm.current_stock || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+      stockCell.textContent = Number(itm.current_stock || 0).toLocaleString('en-IN', {minimumFractionDigits: 0, maximumFractionDigits: 2});
       stockCell.style.color = isLow ? '#dc2626' : '#059669';
     }
 
     const minCell = row.querySelector('.itm-minstock-val');
     if (minCell) {
-      minCell.textContent = Number(itm.min_stock || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+      minCell.textContent = Number(itm.min_stock || 0).toLocaleString('en-IN', {minimumFractionDigits: 0, maximumFractionDigits: 2});
     }
 
     const statusBadgeCell = row.querySelector('.itm-stock-status-cell');

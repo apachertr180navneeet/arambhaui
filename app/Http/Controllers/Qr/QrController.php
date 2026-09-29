@@ -179,6 +179,7 @@ class QrController extends Controller
     {
         $vouchers = QrVoucher::latest()->get()->map(function ($v) {
             $v->claim_url = url('/claim/' . $v->voucher_code);
+            $v->is_paid = ($v->status === 'Paid' || strtolower((string)$v->payment_status) === 'paid');
             return $v;
         });
 
@@ -186,10 +187,26 @@ class QrController extends Controller
             return response()->json($vouchers);
         }
 
+        $paidCount = QrVoucher::where(function($q) {
+            $q->where('status', 'Paid')
+              ->orWhere('payment_status', 'Paid');
+        })->count();
+
+        $claimedCount = QrVoucher::where(function($q) {
+            $q->where('status', 'Redeemed')
+              ->orWhere('is_redeemed', true);
+        })->where(function($q) {
+            $q->whereNull('payment_status')
+              ->orWhere('payment_status', '!=', 'Paid');
+        })->where('status', '!=', 'Paid')
+          ->count();
+
         $stats = [
             'total' => QrVoucher::count(),
             'active' => QrVoucher::where('status', 'Active')->count(),
-            'redeemed' => QrVoucher::where('status', 'Redeemed')->count(),
+            'redeemed' => $claimedCount,
+            'claimed' => $claimedCount,
+            'paid' => $paidCount,
             'expired' => QrVoucher::where('status', 'Expired')->count()
         ];
 
@@ -203,6 +220,7 @@ class QrController extends Controller
         $voucher = QrVoucher::findOrFail($id);
         $voucherData = $voucher->toArray();
         $voucherData['claim_url'] = url('/claim/' . $voucher->voucher_code);
+        $voucherData['is_paid'] = ($voucher->status === 'Paid' || strtolower((string)$voucher->payment_status) === 'paid');
         return response()->json([
             'success' => true,
             'voucher' => $voucherData
@@ -220,7 +238,10 @@ class QrController extends Controller
             'customer_name' => 'nullable|string|max:255',
             'customer_phone' => 'nullable|string|max:25',
             'valid_until' => 'nullable|date',
-            'status' => 'nullable|in:Active,Expired,Redeemed'
+            'status' => 'nullable|string|max:50',
+            'payment_status' => 'nullable|string|max:50',
+            'payment_method' => 'nullable|string|max:50',
+            'upi_txn_ref' => 'nullable|string|max:100'
         ]);
 
         if (isset($validated['batch_name'])) {
@@ -241,10 +262,42 @@ class QrController extends Controller
         if (isset($validated['customer_name'])) $voucher->customer_name = $validated['customer_name'];
         if (isset($validated['customer_phone'])) $voucher->customer_phone = $validated['customer_phone'];
         if (isset($validated['valid_until'])) $voucher->valid_until = $validated['valid_until'];
+        if (isset($validated['payment_method'])) $voucher->payment_method = $validated['payment_method'];
+        if (isset($validated['upi_txn_ref'])) $voucher->upi_txn_ref = $validated['upi_txn_ref'];
+
         if (isset($validated['status'])) {
-            $voucher->status = $validated['status'];
-            if ($voucher->status === 'Active') {
+            $st = $validated['status'];
+            if ($st === 'Paid') {
+                $voucher->payment_status = 'Paid';
+                $voucher->is_redeemed = true;
+                try {
+                    $voucher->status = 'Paid';
+                } catch (\Throwable $e) {
+                    $voucher->status = 'Redeemed';
+                }
+            } elseif ($st === 'Redeemed') {
+                $voucher->is_redeemed = true;
+                $voucher->status = 'Redeemed';
+                if (!isset($validated['payment_status'])) {
+                    $voucher->payment_status = 'Pending';
+                }
+            } elseif ($st === 'Active') {
+                $voucher->status = 'Active';
                 $voucher->is_redeemed = false;
+                $voucher->payment_status = 'Pending';
+            } else {
+                $voucher->status = $st;
+            }
+        }
+
+        if (isset($validated['payment_status'])) {
+            $voucher->payment_status = $validated['payment_status'];
+            if ($voucher->payment_status === 'Paid') {
+                try {
+                    $voucher->status = 'Paid';
+                } catch (\Throwable $e) {
+                    $voucher->status = 'Redeemed';
+                }
             }
         }
 
@@ -700,7 +753,7 @@ class QrController extends Controller
         $voucher->original_bill = $bill;
         $voucher->discount_claimed = $discountValue;
         $voucher->final_payable = $finalPayable;
-        $voucher->payment_status = !empty($validated['payment_status']) ? $validated['payment_status'] : 'Completed';
+        $voucher->payment_status = !empty($validated['payment_status']) ? $validated['payment_status'] : 'Pending';
         $voucher->payment_method = !empty($validated['payment_method']) ? $validated['payment_method'] : 'UPI';
         $voucher->upi_txn_ref = !empty($validated['upi_txn_ref']) ? trim($validated['upi_txn_ref']) : null;
         if (!empty($validated['recipient_qr_image'])) {
@@ -725,7 +778,7 @@ class QrController extends Controller
             'payment_method' => $voucher->payment_method,
             'upi_txn_ref' => $voucher->upi_txn_ref,
             'redeemed_at' => $redeemedAtFormatted,
-            'message' => "Payment of ₹" . number_format($finalPayable, 2) . " confirmed and recorded! Voucher {$voucher->voucher_code} (Discount: ₹" . number_format($discountValue, 2) . ") successfully redeemed."
+            'message' => "We received your Claim, We will check and make payment soon if your claim is correct."
         ]);
     }
 
@@ -768,5 +821,41 @@ class QrController extends Controller
         }
 
         return redirect()->route('qr.history')->with('success', "Voucher {$code} deleted successfully.");
+    }
+
+    public function markPaid(Request $request, $id)
+    {
+        $voucher = QrVoucher::findOrFail($id);
+
+        $paymentMethod = $request->input('payment_method', $voucher->payment_method ?: 'UPI');
+        $upiTxnRef = $request->input('upi_txn_ref', $voucher->upi_txn_ref);
+
+        $voucher->payment_status = 'Paid';
+        $voucher->payment_method = $paymentMethod;
+        if (!empty($upiTxnRef)) {
+            $voucher->upi_txn_ref = trim($upiTxnRef);
+        }
+        $voucher->is_redeemed = true;
+        if (!$voucher->redeemed_at) {
+            $voucher->redeemed_at = now();
+        }
+
+        try {
+            $voucher->status = 'Paid';
+            $voucher->save();
+        } catch (\Throwable $e) {
+            $voucher->status = 'Redeemed';
+            $voucher->save();
+        }
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => "Voucher {$voucher->voucher_code} marked as Paid successfully!",
+                'voucher' => $voucher
+            ]);
+        }
+
+        return redirect()->route('qr.history')->with('success', "Voucher {$voucher->voucher_code} marked as Paid successfully!");
     }
 }

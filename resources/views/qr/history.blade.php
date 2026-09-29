@@ -550,10 +550,23 @@
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>
       </div>
       <div class="qr-stat-info">
-        <div class="qr-stat-label">Redeemed / Claimed</div>
+        <div class="qr-stat-label">Claimed (Pending)</div>
         <div class="qr-stat-value" style="color: #7c3aed;">
-          {{ number_format($stats['redeemed']) }}
+          {{ number_format($stats['claimed'] ?? $stats['redeemed']) }}
           <span style="font-size:0.75rem; font-weight:600; color:var(--slate-500);">Claims</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="qr-stat-card" style="--accent-color: #059669;">
+      <div class="qr-stat-icon" style="background: #ecfdf5; color: #059669;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/><path d="m9 12 2 2 4-4"/></svg>
+      </div>
+      <div class="qr-stat-info">
+        <div class="qr-stat-label">Paid Claims</div>
+        <div class="qr-stat-value" style="color: #059669;">
+          {{ number_format($stats['paid'] ?? 0) }}
+          <span style="font-size:0.75rem; background:#ecfdf5; color:#059669; border:1px solid #a7f3d0; padding:2px 8px; border-radius:9999px; font-weight:700;">Paid</span>
         </div>
       </div>
     </div>
@@ -627,8 +640,11 @@
         <button type="button" class="status-filter-btn" onclick="setStatusFilter('active', this)">
           Active ({{ $stats['active'] }})
         </button>
-        <button type="button" class="status-filter-btn" onclick="setStatusFilter('redeemed', this)">
-          Redeemed ({{ $stats['redeemed'] }})
+        <button type="button" class="status-filter-btn" onclick="setStatusFilter('claimed', this)">
+          Claimed ({{ $stats['claimed'] ?? $stats['redeemed'] }})
+        </button>
+        <button type="button" class="status-filter-btn" onclick="setStatusFilter('paid', this)">
+          Paid ({{ $stats['paid'] ?? 0 }})
         </button>
         <button type="button" class="status-filter-btn" onclick="setStatusFilter('expired', this)">
           Expired ({{ $stats['expired'] }})
@@ -680,8 +696,19 @@
             @php
               $amt = (float)($v->amount ?: $v->discount_amount ?: $v->discount_percent ?: 0);
               $batch = $v->batch_name ?: $v->title ?: 'AARAMBH';
-              $isExpired = $v->valid_until && strtotime($v->valid_until) < strtotime(date('Y-m-d'));
-              $statusKey = strtolower($v->status);
+              $isExpired = $v->status === 'Expired' || ($v->valid_until && strtotime($v->valid_until) < strtotime(date('Y-m-d')));
+              $isPaid = ($v->status === 'Paid' || strtolower((string)$v->payment_status) === 'paid');
+              $isClaimed = !$isPaid && ($v->status === 'Redeemed' || (bool)$v->is_redeemed);
+
+              if ($isPaid) {
+                $statusKey = 'paid';
+              } elseif ($isClaimed) {
+                $statusKey = 'claimed';
+              } elseif ($isExpired) {
+                $statusKey = 'expired';
+              } else {
+                $statusKey = 'active';
+              }
               $claimUrl = url('/claim/' . $v->voucher_code);
             @endphp
             <tr class="voucher-row" data-id="{{ $v->id }}" data-status="{{ $statusKey }}" data-code="{{ $v->voucher_code }}" data-batch="{{ $batch }}" data-amt="{{ $amt }}" data-url="{{ $claimUrl }}">
@@ -736,30 +763,32 @@
 
               <!-- 6. STATUS -->
               <td>
-                @if($v->status === 'Active')
-                  <span class="badge" style="background:#ecfdf5; color:#059669; border:1px solid #a7f3d0; font-weight:700; padding:4px 10px; border-radius:9999px;">
-                    ● Active
+                @if($isPaid)
+                  <span class="badge" style="background:#ecfdf5; color:#059669; border:1px solid #10b981; font-weight:800; padding:4px 11px; border-radius:9999px; display:inline-flex; align-items:center; gap:4px; box-shadow:0 1px 2px rgba(16,185,129,0.15);">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                    Paid
                   </span>
-                @elseif($v->status === 'Redeemed')
-                  <span class="badge" style="background:#f5f3ff; color:#7c3aed; border:1px solid #ddd6fe; font-weight:700; padding:4px 10px; border-radius:9999px;">
-                    ✓ Claimed
+                @elseif($isClaimed)
+                  <span class="badge" style="background:#f5f3ff; color:#7c3aed; border:1px solid #ddd6fe; font-weight:700; padding:4px 10px; border-radius:9999px; display:inline-flex; align-items:center; gap:4px;">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                    Claimed
                   </span>
-                @elseif($v->status === 'Expired' || $isExpired)
+                @elseif($isExpired)
                   <span class="badge" style="background:#fff1f2; color:#e11d48; border:1px solid #fecdd3; font-weight:700; padding:4px 10px; border-radius:9999px;">
                     ✕ Expired
                   </span>
                 @else
-                  <span class="badge" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; font-weight:700; padding:4px 10px; border-radius:9999px;">
-                    {{ $v->status }}
+                  <span class="badge" style="background:#ecfdf5; color:#059669; border:1px solid #a7f3d0; font-weight:700; padding:4px 10px; border-radius:9999px;">
+                    ● Active
                   </span>
                 @endif
               </td>
 
               <!-- 7. REDEMPTION AUDIT -->
               <td>
-                @if($v->is_redeemed || $v->redeemed_at)
-                  <div style="font-weight:700; color:#7c3aed; font-size:0.8rem;">
-                    {{ $v->redeemed_at ? (is_string($v->redeemed_at) ? $v->redeemed_at : $v->redeemed_at->format('d M Y, h:i A')) : 'Redeemed' }}
+                @if($v->is_redeemed || $v->redeemed_at || $isPaid)
+                  <div style="font-weight:700; color:#475569; font-size:0.8rem;">
+                    {{ $v->redeemed_at ? (is_string($v->redeemed_at) ? $v->redeemed_at : $v->redeemed_at->format('d M Y, h:i A')) : 'Claimed' }}
                   </div>
                   @if($v->customer_phone)
                     <div style="font-size:0.75rem; color:var(--slate-600);">Payer: {{ $v->customer_phone }}</div>
@@ -769,9 +798,20 @@
                       Payee: {{ $v->recipient_upi_id }}
                     </div>
                   @endif
-                  @if($v->final_payable !== null)
-                    <div style="font-size:0.72rem; color:#059669; font-weight:700;">
-                      Paid: ₹{{ number_format($v->final_payable, 2) }} <span style="color:#64748b; font-weight:600;">({{ $v->payment_method ?: 'UPI' }})</span>
+                  @if($isPaid)
+                    <div style="font-size:0.72rem; color:#059669; font-weight:800; margin-top:3px;">
+                      <span style="background:#dcfce7; color:#15803d; padding:2px 7px; border-radius:4px; border:1px solid #86efac; display:inline-flex; align-items:center; gap:3px;">
+                        ✓ Paid: ₹{{ number_format($amt, 2) }} <span style="font-weight:600; color:#166534;">({{ $v->payment_method ?: 'UPI' }})</span>
+                      </span>
+                    </div>
+                    @if($v->upi_txn_ref)
+                      <div style="font-size:0.68rem; color:#64748b; font-family:monospace; margin-top:1px;">Ref: {{ $v->upi_txn_ref }}</div>
+                    @endif
+                  @else
+                    <div style="font-size:0.72rem; color:#b45309; font-weight:700; margin-top:3px;">
+                      <span style="background:#fef3c7; color:#b45309; padding:2px 7px; border-radius:4px; border:1px solid #fde68a; display:inline-flex; align-items:center; gap:3px;">
+                        ⏳ Payment Pending
+                      </span>
                     </div>
                   @endif
                 @else
@@ -783,6 +823,14 @@
               <td style="text-align:right;">
                 <div style="display:inline-flex; gap:6px; align-items:center;">
                   
+                  <!-- Mark as Paid Button (For Claimed / Unpaid Vouchers) -->
+                  @if($isClaimed)
+                    <button type="button" class="btn btn-sm btn-mark-paid" onclick='openMarkPaidModal(@json($v))' style="font-size:0.75rem; font-weight:800; padding:4px 9px; display:inline-flex; align-items:center; gap:4px; background:#16a34a; border-color:#16a34a; color:#ffffff; border-radius:6px; cursor:pointer; box-shadow:0 1px 3px rgba(22,163,74,0.3);" title="Mark this claim as Paid">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                      Mark Paid
+                    </button>
+                  @endif
+
                   <!-- Direct Print Button -->
                   <button type="button" class="btn btn-secondary btn-sm" title="Print this QR Code" onclick='printSingleRowSticker(@json($v))' style="font-size:0.75rem; font-weight:800; padding:3px 8px; display:inline-flex; align-items:center; gap:4px; background:#f8fafc; border-color:#0f172a; color:#0f172a;">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
@@ -957,13 +1005,24 @@
           </div>
         </div>
 
-        <div class="form-group" style="margin-bottom:0;">
-          <label class="form-label" style="font-weight:700;">Status</label>
-          <select id="edit_status" name="status" class="form-control" style="font-weight:700;">
-            <option value="Active">Active</option>
-            <option value="Redeemed">Redeemed</option>
-            <option value="Expired">Expired</option>
-          </select>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label" style="font-weight:700;">Status</label>
+            <select id="edit_status" name="status" class="form-control" style="font-weight:700;">
+              <option value="Active">Active</option>
+              <option value="Redeemed">Claimed</option>
+              <option value="Paid">Paid</option>
+              <option value="Expired">Expired</option>
+            </select>
+          </div>
+
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label" style="font-weight:700;">Payment Status</label>
+            <select id="edit_payment_status" name="payment_status" class="form-control" style="font-weight:700;">
+              <option value="Pending">Pending</option>
+              <option value="Paid">Paid</option>
+            </select>
+          </div>
         </div>
 
       </div>
@@ -971,6 +1030,77 @@
       <div class="modal-footer" style="padding:16px 22px; border-top:1px solid #e2e8f0; display:flex; justify-content:space-between;">
         <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
         <button type="submit" id="btn-save-edit" class="btn btn-primary" style="font-weight:800;">Save Changes</button>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+<!-- ==========================================================================
+     MARK CLAIM AS PAID MODAL
+     ========================================================================== -->
+<div class="modal-backdrop" id="markPaidModal" style="display:none;" onclick="if(event.target===this) closeMarkPaidModal()">
+  <div class="modal-dialog" style="max-width:480px;">
+    <form id="markPaidForm" onsubmit="event.preventDefault(); submitMarkPaid();">
+      @csrf
+      <input type="hidden" id="pay_voucher_id" name="voucher_id">
+
+      <div class="modal-header" style="background:#f0fdf4; border-bottom:1px solid #bbf7d0; padding:16px 20px;">
+        <div class="modal-title" style="color:#15803d; font-size:1.1rem; font-weight:800; display:flex; align-items:center; gap:8px;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/><polyline points="20 6 9 17 4 12"/></svg>
+          Confirm Payment Settlement
+        </div>
+        <button type="button" class="modal-close-btn" onclick="closeMarkPaidModal()" style="border:none; background:transparent;">✕</button>
+      </div>
+
+      <div class="modal-body" style="padding:20px; display:flex; flex-direction:column; gap:16px;">
+        
+        <!-- Summary Box -->
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:14px; font-size:0.88rem;">
+          <div style="display:flex; justify-content:space-between; margin-bottom:8px; border-bottom:1px dashed #cbd5e1; padding-bottom:8px;">
+            <span style="color:#64748b;">Voucher Code:</span>
+            <strong id="pay_code" class="font-mono" style="color:#0f172a;">---</strong>
+          </div>
+          <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+            <span style="color:#64748b;">Payout Amount:</span>
+            <strong id="pay_amount" style="color:#15803d; font-size:1.15rem; font-weight:900;">₹0.00</strong>
+          </div>
+          <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+            <span style="color:#64748b;">Customer Mobile:</span>
+            <strong id="pay_phone" style="color:#0f172a;">---</strong>
+          </div>
+          <div style="display:flex; justify-content:space-between;">
+            <span style="color:#64748b;">Recipient UPI / QR:</span>
+            <strong id="pay_dest" class="font-mono" style="color:#2563eb; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">---</strong>
+          </div>
+        </div>
+
+        <!-- Payment Method -->
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label" style="font-weight:700; font-size:0.85rem; margin-bottom:6px;">Payment Method <span style="color:red;">*</span></label>
+          <select id="pay_method" name="payment_method" class="form-control" style="font-weight:700;">
+            <option value="UPI" selected>UPI Transfer (PhonePe / GPay / Paytm)</option>
+            <option value="Direct QR">Direct QR Scan Payment</option>
+            <option value="Bank Transfer">Bank Transfer (IMPS / NEFT)</option>
+            <option value="Cash">Cash Handover</option>
+          </select>
+        </div>
+
+        <!-- UPI / UTR Transaction Reference ID -->
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label" style="font-weight:700; font-size:0.85rem; margin-bottom:6px;">Bank / UPI Transaction Ref ID (UTR)</label>
+          <input type="text" id="pay_txn_ref" name="upi_txn_ref" class="form-control" placeholder="e.g. 425619284729 or UTR No. (Optional)" style="font-family:monospace;">
+          <span style="font-size:0.75rem; color:#64748b; margin-top:4px; display:block;">Saving reference number helps in bank reconciliation.</span>
+        </div>
+
+      </div>
+
+      <div class="modal-footer" style="padding:16px 20px; border-top:1px solid #e2e8f0; display:flex; justify-content:space-between;">
+        <button type="button" class="btn btn-secondary" onclick="closeMarkPaidModal()">Cancel</button>
+        <button type="submit" id="btn-confirm-paid" class="btn btn-primary" style="background:#16a34a; border-color:#16a34a; font-weight:800; display:inline-flex; align-items:center; gap:6px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+          Confirm Paid
+        </button>
       </div>
 
     </form>
@@ -1006,10 +1136,14 @@
     const rows = document.querySelectorAll('.voucher-row');
     rows.forEach(r => {
       const rowStatus = r.getAttribute('data-status');
-      if (status === 'all' || rowStatus === status) {
+      if (status === 'all') {
         r.style.display = '';
+      } else if (status === 'claimed' || status === 'redeemed') {
+        r.style.display = (rowStatus === 'claimed' || rowStatus === 'redeemed') ? '' : 'none';
+      } else if (status === 'paid') {
+        r.style.display = (rowStatus === 'paid') ? '' : 'none';
       } else {
-        r.style.display = 'none';
+        r.style.display = (rowStatus === status) ? '' : 'none';
       }
     });
   }
@@ -1279,13 +1413,90 @@
     document.getElementById('edit_batch_name').value = v.batch_name || v.title || '';
     document.getElementById('edit_qr_date').value = v.qr_date ? v.qr_date.substring(0, 10) : (v.valid_from ? v.valid_from.substring(0, 10) : '');
     document.getElementById('edit_amount').value = v.amount || v.discount_amount || v.discount_percent || 500;
-    document.getElementById('edit_status').value = v.status || 'Active';
+    
+    const isPaid = (v.status === 'Paid' || (v.payment_status && v.payment_status.toLowerCase() === 'paid'));
+    if (isPaid) {
+      document.getElementById('edit_status').value = 'Paid';
+      document.getElementById('edit_payment_status').value = 'Paid';
+    } else {
+      document.getElementById('edit_status').value = v.status || 'Active';
+      document.getElementById('edit_payment_status').value = v.payment_status || 'Pending';
+    }
 
     document.getElementById('editVoucherModal').style.display = 'flex';
   }
 
   function closeEditModal() {
     document.getElementById('editVoucherModal').style.display = 'none';
+  }
+
+  // ==========================================================================
+  // MARK AS PAID HANDLERS
+  // ==========================================================================
+  let activePaidVoucher = null;
+
+  function openMarkPaidModal(v) {
+    activePaidVoucher = v;
+    const amt = v.amount || v.discount_amount || v.discount_percent || 0;
+    document.getElementById('pay_voucher_id').value = v.id;
+    document.getElementById('pay_code').innerText = v.voucher_code;
+    document.getElementById('pay_amount').innerText = '₹' + parseFloat(amt).toFixed(2);
+    document.getElementById('pay_phone').innerText = v.customer_phone ? '+91 ' + v.customer_phone : '—';
+    document.getElementById('pay_dest').innerText = v.recipient_upi_id || 'Direct / Cash';
+    document.getElementById('pay_method').value = v.payment_method || 'UPI';
+    document.getElementById('pay_txn_ref').value = v.upi_txn_ref || '';
+
+    document.getElementById('markPaidModal').style.display = 'flex';
+  }
+
+  function closeMarkPaidModal() {
+    document.getElementById('markPaidModal').style.display = 'none';
+    activePaidVoucher = null;
+  }
+
+  async function submitMarkPaid() {
+    if (!activePaidVoucher) return;
+    const btn = document.getElementById('btn-confirm-paid');
+    btn.disabled = true;
+    btn.innerText = 'Updating...';
+
+    const voucherId = document.getElementById('pay_voucher_id').value;
+    const paymentMethod = document.getElementById('pay_method').value;
+    const upiTxnRef = document.getElementById('pay_txn_ref').value.trim();
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
+
+    try {
+      const res = await fetch(`{{ url('/qr/mark-paid') }}/${voucherId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': csrfToken,
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          payment_method: paymentMethod,
+          upi_txn_ref: upiTxnRef
+        })
+      });
+
+      const data = await res.json();
+      btn.disabled = false;
+      btn.innerText = 'Confirm Paid';
+
+      if (data.success) {
+        closeMarkPaidModal();
+        if (window.UI && UI.showToast) {
+          UI.showToast('Payment Marked Paid', data.message, 'success');
+        }
+        window.location.reload();
+      } else {
+        alert(data.message || 'Error updating payment status.');
+      }
+    } catch (err) {
+      btn.disabled = false;
+      btn.innerText = 'Confirm Paid';
+      alert('Error updating payment status: ' + err.message);
+    }
   }
 
   async function handleEditSubmit(e) {

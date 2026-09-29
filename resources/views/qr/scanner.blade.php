@@ -29,7 +29,7 @@
 
         <div style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.15); padding:6px 14px; border-radius:20px; font-size:0.75rem; font-weight:700; color:#e2e8f0; backdrop-filter:blur(4px); display:inline-flex; align-items:center; gap:6px;">
           <span style="width:8px; height:8px; border-radius:50%; background:#22c55e; display:inline-block; box-shadow:0 0 8px #22c55e;"></span>
-          Instant Payout Active
+          Claim Portal Active
         </div>
       </div>
     </div>
@@ -259,8 +259,32 @@
              ========================================================================= -->
         <div style="display:flex; flex-direction:column; gap:16px;">
           
-          <!-- Transfer Amount Hero Card -->
-          <div style="background:linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border:2px solid #86efac; border-radius:16px; padding:22px 24px; position:relative; overflow:hidden; box-shadow:0 4px 14px -2px rgba(16, 185, 129, 0.15);">
+          @php
+            $hasValidInitialVoucher = isset($voucher) && ($voucher->status === 'Active' || !$voucher->is_redeemed) && ((float)($voucher->amount ?: ($voucher->discount_amount ?: 0)) > 0);
+            $initialAmount = $hasValidInitialVoucher ? (float)($voucher->amount ?: ($voucher->discount_amount ?: 0)) : 0;
+            $initialCode = $hasValidInitialVoucher ? ($code ?: $voucher->voucher_code) : '';
+          @endphp
+
+          <!-- Transfer Amount Pending Placeholder (Shown until voucher code is entered/scanned) -->
+          <div id="voucher_waiting_placeholder" style="{{ $hasValidInitialVoucher ? 'display:none;' : 'display:flex;' }} align-items:center; gap:14px; background:#f8fafc; border:2px dashed #cbd5e1; border-radius:16px; padding:20px 22px; color:#64748b;">
+            <div style="width:48px; height:48px; border-radius:12px; background:#e2e8f0; display:flex; align-items:center; justify-content:center; flex-shrink:0; color:#475569;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="4" width="18" height="16" rx="2"/>
+                <path d="M7 8h10M7 12h10M7 16h6"/>
+              </svg>
+            </div>
+            <div>
+              <div style="font-weight:800; font-size:0.95rem; color:#1e293b; margin-bottom:2px;">
+                Enter Voucher Code to Calculate Transfer Amount
+              </div>
+              <div style="font-size:0.82rem; color:#64748b; line-height:1.4;">
+                Transfer amount will appear here once your unique voucher code is entered or scanned.
+              </div>
+            </div>
+          </div>
+
+          <!-- Transfer Amount Hero Card (Visible ONLY when valid voucher code & amount exist) -->
+          <div id="transfer_amount_card" style="{{ $hasValidInitialVoucher ? 'display:block;' : 'display:none;' }} background:linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border:2px solid #86efac; border-radius:16px; padding:22px 24px; position:relative; overflow:hidden; box-shadow:0 4px 14px -2px rgba(16, 185, 129, 0.15);">
             <div style="position:absolute; top:-10px; right:-10px; width:90px; height:90px; background:radial-gradient(circle, rgba(34,197,94,0.2) 0%, transparent 70%); border-radius:50%; pointer-events:none;"></div>
 
             <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px;">
@@ -270,7 +294,7 @@
                   <span>TRANSFER AMOUNT</span>
                 </div>
                 <div style="font-size:0.82rem; color:#166534; font-weight:600;">
-                  Instant cashback reward credited directly to you
+                  Cashback reward verified and processed after claim review
                 </div>
               </div>
 
@@ -284,7 +308,7 @@
             <div style="margin:16px 0 12px; display:flex; align-items:baseline; gap:6px;">
               <span style="font-size:1.6rem; font-weight:900; color:#14532d;">₹</span>
               <span id="transfer_amount_display" style="font-size:2.6rem; font-weight:900; color:#14532d; letter-spacing:-0.03em; line-height:1;">
-                {{ isset($voucher) ? number_format($voucher->amount ?: ($voucher->discount_amount ?: 500), 2) : '500.00' }}
+                {{ $hasValidInitialVoucher ? number_format($initialAmount, 2) : '0.00' }}
               </span>
               <span style="font-size:0.9rem; font-weight:700; color:#166534; margin-left:4px;">INR</span>
             </div>
@@ -293,7 +317,7 @@
             <div style="background:rgba(255,255,255,0.7); border:1px solid rgba(22, 101, 52, 0.15); border-radius:10px; padding:10px 14px; font-size:0.82rem; color:#166534; display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:8px;">
               <div>
                 <span style="color:#15803d; font-weight:600;">Voucher Code:</span>
-                <strong id="summary_voucher_code" class="font-mono" style="color:#14532d; margin-left:4px;">{{ $code ?: ($voucher->voucher_code ?? 'ARM-500-0799A') }}</strong>
+                <strong id="summary_voucher_code" class="font-mono" style="color:#14532d; margin-left:4px;">{{ $initialCode ?: '---' }}</strong>
               </div>
               <div>
                 <span style="color:#15803d; font-weight:600;">Payout Mode:</span>
@@ -306,21 +330,22 @@
           <!-- Status Alert Banner (Validation Feedback) -->
           <div id="validation_alert_box" style="display:none; border-radius:10px; padding:12px 16px; font-size:0.88rem; font-weight:600; align-items:center; gap:10px;"></div>
 
-          <!-- Claim & Transfer Submit Button -->
+          <!-- Claim Submit Button -->
           <button 
             type="submit" 
             id="claim_submit_btn" 
             class="btn btn-primary btn-lg" 
-            style="width:100%; padding:16px 20px; background:linear-gradient(135deg, #16a34a 0%, #15803d 100%); color:#ffffff; border:none; border-radius:12px; font-size:1.1rem; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; box-shadow:0 8px 20px -3px rgba(22, 163, 74, 0.4); transition:all 0.2s;"
-            onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 10px 24px -3px rgba(22, 163, 74, 0.5)';"
-            onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 8px 20px -3px rgba(22, 163, 74, 0.4)';"
+            {{ $hasValidInitialVoucher ? '' : 'disabled' }}
+            style="width:100%; padding:16px 20px; background:linear-gradient(135deg, #16a34a 0%, #15803d 100%); color:#ffffff; border:none; border-radius:12px; font-size:1.1rem; font-weight:800; cursor:{{ $hasValidInitialVoucher ? 'pointer' : 'not-allowed' }}; opacity:{{ $hasValidInitialVoucher ? '1' : '0.55' }}; display:flex; align-items:center; justify-content:center; gap:10px; box-shadow:0 8px 20px -3px rgba(22, 163, 74, 0.4); transition:all 0.2s;"
+            onmouseover="if(!this.disabled){this.style.transform='translateY(-1px)'; this.style.boxShadow='0 10px 24px -3px rgba(22, 163, 74, 0.5)';}"
+            onmouseout="if(!this.disabled){this.style.transform='translateY(0)'; this.style.boxShadow='0 8px 20px -3px rgba(22, 163, 74, 0.4)';}"
           >
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-            <span id="claim_btn_text">⚡ Claim & Transfer Amount Now</span>
+            <span id="claim_btn_text">{{ $hasValidInitialVoucher ? '⚡ Submit Voucher Claim Now' : 'Enter Voucher Code to Claim' }}</span>
           </button>
 
           <p style="text-align:center; font-size:0.75rem; color:#64748b; margin:4px 0 0;">
-            🔒 Safe & Secure single-use verification. Amount credited instantly upon confirmation.
+            🔒 Safe & Secure single-use verification. Payment will be checked and processed after claim verification.
           </p>
 
         </div>
@@ -343,17 +368,17 @@
       </div>
 
       <h2 style="margin:0; font-size:1.45rem; font-weight:800; color:#0f172a;">
-        Transfer Successful & Claimed!
+        Claim Received Successfully!
       </h2>
-      <p style="margin:6px 0 20px; font-size:0.88rem; color:#64748b;">
-        Your single-use voucher has been verified and amount transferred.
+      <p style="margin:8px 0 20px; font-size:0.92rem; color:#475569; font-weight:500; line-height:1.5;">
+        We received your Claim, We will check and make payment soon if your claim is correct.
       </p>
 
       <!-- Receipt Breakdown Box -->
       <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:14px; padding:18px; text-align:left; font-size:0.88rem; margin-bottom:22px;">
         
         <div style="display:flex; justify-content:space-between; margin-bottom:10px; border-bottom:1px dashed #cbd5e1; padding-bottom:10px;">
-          <span style="color:#64748b;">Transfer Amount:</span>
+          <span style="color:#64748b;">Claim Amount:</span>
           <strong id="receipt_amount" style="font-size:1.25rem; font-weight:900; color:#15803d;">₹0.00</strong>
         </div>
 
@@ -404,8 +429,8 @@
 
 @push('scripts')
 <script>
-  let activeVoucher = @json($voucher ?? null);
-  let activeTransferAmount = {{ isset($voucher) ? (float)($voucher->amount ?: ($voucher->discount_amount ?: 500)) : 500 }};
+  let activeVoucher = @json($hasValidInitialVoucher ? $voucher : null);
+  let activeTransferAmount = {{ $hasValidInitialVoucher ? (float)$initialAmount : 0 }};
   let cameraStream = null;
   let cameraAnimationId = null;
 
@@ -414,8 +439,46 @@
     const initialCode = codeInput ? codeInput.value.trim() : '';
     if (initialCode) {
       validateVoucherLive(initialCode);
+    } else {
+      updateTransferCardVisibility(false);
     }
   });
+
+  // UI state switcher helper: Shows Transfer Amount card only when voucher has valid amount
+  function updateTransferCardVisibility(isValid, amount = 0, voucherCode = '') {
+    const card = document.getElementById('transfer_amount_card');
+    const placeholder = document.getElementById('voucher_waiting_placeholder');
+    const submitBtn = document.getElementById('claim_submit_btn');
+    const submitBtnText = document.getElementById('claim_btn_text');
+    const amountDisplay = document.getElementById('transfer_amount_display');
+    const summaryCode = document.getElementById('summary_voucher_code');
+
+    if (isValid && amount > 0) {
+      if (card) card.style.display = 'block';
+      if (placeholder) placeholder.style.display = 'none';
+      if (amountDisplay) amountDisplay.innerText = parseFloat(amount).toFixed(2);
+      if (summaryCode && voucherCode) summaryCode.innerText = voucherCode;
+
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.style.cursor = 'pointer';
+        submitBtn.style.opacity = '1';
+      }
+      if (submitBtnText) submitBtnText.innerText = '⚡ Submit Voucher Claim Now';
+    } else {
+      if (card) card.style.display = 'none';
+      if (placeholder) placeholder.style.display = 'flex';
+      if (amountDisplay) amountDisplay.innerText = '0.00';
+      if (summaryCode) summaryCode.innerText = voucherCode || '---';
+
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.style.cursor = 'not-allowed';
+        submitBtn.style.opacity = '0.55';
+      }
+      if (submitBtnText) submitBtnText.innerText = 'Enter Voucher Code to Claim';
+    }
+  }
 
   // 1. Phone input formatter
   function onPhoneInputChange(input) {
@@ -538,16 +601,42 @@
     const targetCode = clean || val.toUpperCase().trim();
     if (targetCode.length >= 3) {
       validateVoucherLive(targetCode);
+    } else {
+      activeVoucher = null;
+      activeTransferAmount = 0;
+      updateTransferCardVisibility(false, 0, targetCode);
+      const pill = document.getElementById('code_validation_pill');
+      if (pill) {
+        pill.innerText = 'Required';
+        pill.style.background = '#e0e7ff';
+        pill.style.color = '#4338ca';
+      }
+      const alertBox = document.getElementById('validation_alert_box');
+      if (alertBox) alertBox.style.display = 'none';
     }
   }
 
   // 5. Live Voucher Validation with Backend
   async function validateVoucherLive(rawCode) {
     const code = cleanVoucherInput(rawCode);
-    if (!code) return;
+    if (!code) {
+      activeVoucher = null;
+      activeTransferAmount = 0;
+      updateTransferCardVisibility(false);
+      return;
+    }
 
     const summaryCode = document.getElementById('summary_voucher_code');
     if (summaryCode) summaryCode.innerText = code;
+
+    const pill = document.getElementById('code_validation_pill');
+    const alertBox = document.getElementById('validation_alert_box');
+
+    if (pill) {
+      pill.innerText = 'Checking...';
+      pill.style.background = '#fef3c7';
+      pill.style.color = '#92400e';
+    }
 
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
@@ -563,45 +652,64 @@
       });
 
       const data = await res.json();
-      const alertBox = document.getElementById('validation_alert_box');
-      const pill = document.getElementById('code_validation_pill');
-      const submitBtn = document.getElementById('claim_submit_btn');
 
       if (data.success) {
         activeVoucher = data.voucher;
-        activeTransferAmount = parseFloat(data.amount || data.voucher.amount || data.voucher.discount_amount || 500);
+        activeTransferAmount = parseFloat(data.amount || data.voucher.amount || data.voucher.discount_amount || 0);
 
-        // Update Transfer Amount Display
-        document.getElementById('transfer_amount_display').innerText = activeTransferAmount.toFixed(2);
-        document.getElementById('transfer_badge_text').innerText = 'Active & Claimable';
-        document.getElementById('transfer_badge').style.background = '#bbf7d0';
-        document.getElementById('transfer_badge').style.color = '#14532d';
+        if (activeTransferAmount > 0) {
+          updateTransferCardVisibility(true, activeTransferAmount, data.voucher.voucher_code || code);
 
-        if (pill) {
-          pill.innerText = 'Valid Code ✓';
-          pill.style.background = '#dcfce7';
-          pill.style.color = '#15803d';
+          const badgeText = document.getElementById('transfer_badge_text');
+          const badge = document.getElementById('transfer_badge');
+          if (badgeText) badgeText.innerText = 'Active & Claimable';
+          if (badge) {
+            badge.style.background = '#bbf7d0';
+            badge.style.color = '#14532d';
+          }
+
+          if (pill) {
+            pill.innerText = 'Valid Code ✓';
+            pill.style.background = '#dcfce7';
+            pill.style.color = '#15803d';
+          }
+
+          if (data.voucher.customer_phone) {
+            const phoneInput = document.getElementById('customer_phone');
+            if (phoneInput && !phoneInput.value) phoneInput.value = data.voucher.customer_phone;
+          }
+
+          if (alertBox) alertBox.style.display = 'none';
+        } else {
+          activeVoucher = null;
+          activeTransferAmount = 0;
+          updateTransferCardVisibility(false, 0, code);
+
+          if (pill) {
+            pill.innerText = 'No Amount';
+            pill.style.background = '#fee2e2';
+            pill.style.color = '#b91c1c';
+          }
+
+          if (alertBox) {
+            alertBox.style.display = 'flex';
+            alertBox.style.background = '#fef2f2';
+            alertBox.style.border = '1px solid #fecaca';
+            alertBox.style.color = '#991b1b';
+            alertBox.innerHTML = `<span>⚠️ This voucher has zero or unconfigured transfer amount.</span>`;
+          }
         }
-
-        if (data.voucher.customer_phone) {
-          const phoneInput = document.getElementById('customer_phone');
-          if (!phoneInput.value) phoneInput.value = data.voucher.customer_phone;
-        }
-
-        if (alertBox) alertBox.style.display = 'none';
-        if (submitBtn) submitBtn.disabled = false;
 
       } else {
         activeVoucher = null;
+        activeTransferAmount = 0;
+        updateTransferCardVisibility(false, 0, code);
+
         if (pill) {
-          pill.innerText = 'Invalid';
+          pill.innerText = data.already_redeemed ? 'Redeemed' : (data.expired ? 'Expired' : 'Invalid');
           pill.style.background = '#fee2e2';
           pill.style.color = '#b91c1c';
         }
-
-        document.getElementById('transfer_badge_text').innerText = data.already_redeemed ? 'Already Redeemed' : (data.expired ? 'Expired' : 'Invalid');
-        document.getElementById('transfer_badge').style.background = '#fee2e2';
-        document.getElementById('transfer_badge').style.color = '#b91c1c';
 
         if (alertBox) {
           alertBox.style.display = 'flex';
@@ -613,6 +721,9 @@
       }
     } catch(err) {
       console.error('Validation error:', err);
+      activeVoucher = null;
+      activeTransferAmount = 0;
+      updateTransferCardVisibility(false, 0, code);
     }
   }
 
@@ -743,6 +854,12 @@
       return;
     }
 
+    if (!activeVoucher || !activeTransferAmount || activeTransferAmount <= 0) {
+      alert('Valid voucher code and transfer amount are required before claim can be submitted.');
+      document.getElementById('voucher_code').focus();
+      return;
+    }
+
     if (!upi && !qrUrl) {
       const confirmProceed = confirm('No UPI ID or Payment QR was entered. Would you like to proceed with claim registration linked to mobile ' + phone + '?');
       if (!confirmProceed) return;
@@ -751,7 +868,7 @@
     const btn = document.getElementById('claim_submit_btn');
     const btnText = document.getElementById('claim_btn_text');
     btn.disabled = true;
-    btnText.innerText = 'Processing Transfer & Verifying...';
+    btnText.innerText = 'Submitting Claim...';
 
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
@@ -775,7 +892,7 @@
 
       const data = await res.json();
       btn.disabled = false;
-      btnText.innerText = '⚡ Claim & Transfer Amount Now';
+      btnText.innerText = '⚡ Submit Voucher Claim Now';
 
       if (data.success) {
         // Show Receipt Modal
@@ -802,7 +919,7 @@
       }
     } catch(err) {
       btn.disabled = false;
-      btnText.innerText = '⚡ Claim & Transfer Amount Now';
+      btnText.innerText = '⚡ Submit Voucher Claim Now';
       console.error(err);
       alert('Network or Server error: ' + err.message);
     }

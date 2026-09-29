@@ -5,8 +5,21 @@ namespace App\Providers;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
 use App\Models\CompanySetting;
+
+if (!function_exists('format_quantity')) {
+    function format_quantity($val, $maxDecimals = 2) {
+        if ($val === null || $val === '') return '0';
+        $floatVal = (float)$val;
+        if ($floatVal == (int)$floatVal) {
+            return (string)(int)$floatVal;
+        }
+        $formatted = number_format($floatVal, $maxDecimals, '.', '');
+        return rtrim(rtrim($formatted, '0'), '.');
+    }
+}
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -15,7 +28,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        require_once app_path('helpers.php');
     }
 
     /**
@@ -41,5 +54,9 @@ class AppServiceProvider extends ServiceProvider
 
         View::share('companySettings', $companySettings);
         View::share('companyName', $companyName);
+
+        Blade::directive('formatQty', function ($expression) {
+            return "<?php echo format_quantity($expression); ?>";
+        });
     }
 }

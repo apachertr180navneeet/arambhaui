@@ -76,9 +76,9 @@
               <td style="font-weight:700;">{{ $t->item_name }}</td>
               <td><span class="badge badge-info">{{ $t->type }}</span></td>
               <td style="font-family:var(--font-mono); font-weight:600;">{{ $t->reference_no }}</td>
-              <td style="font-weight:700; color:#059669;">{{ $t->qty_in ? '+' . number_format($t->qty_in, 2) : '—' }}</td>
-              <td style="font-weight:700; color:var(--danger-600);">{{ $t->qty_out ? '-' . number_format($t->qty_out, 2) : '—' }}</td>
-              <td style="font-weight:800; color:var(--slate-800);">{{ number_format($t->running_balance, 2) }}</td>
+              <td style="font-weight:700; color:#059669;">{{ $t->qty_in ? '+' . format_quantity($t->qty_in) : '—' }}</td>
+              <td style="font-weight:700; color:var(--danger-600);">{{ $t->qty_out ? '-' . format_quantity($t->qty_out) : '—' }}</td>
+              <td style="font-weight:800; color:var(--slate-800);">{{ format_quantity($t->running_balance) }}</td>
             </tr>
           @empty
             @forelse ($items as $itm)
@@ -87,9 +87,9 @@
                 <td style="font-weight:700;">{{ $itm->name }} ({{ $itm->code }})</td>
                 <td><span class="badge badge-primary">Opening / Stock</span></td>
                 <td style="font-family:var(--font-mono); font-weight:600;">SYS-OP-{{ $itm->code }}</td>
-                <td style="font-weight:700; color:#059669;">+{{ number_format($itm->current_stock, 2) }}</td>
+                <td style="font-weight:700; color:#059669;">+{{ format_quantity($itm->current_stock) }}</td>
                 <td>—</td>
-                <td style="font-weight:800; color:var(--slate-800);">{{ number_format($itm->current_stock, 2) }} {{ $itm->unit }}</td>
+                <td style="font-weight:800; color:var(--slate-800);">{{ format_quantity($itm->current_stock) }} {{ $itm->unit }}</td>
               </tr>
             @empty
               <tr>

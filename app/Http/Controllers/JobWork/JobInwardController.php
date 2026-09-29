@@ -685,8 +685,16 @@ class JobInwardController extends Controller
                 }
             }
 
+            $remarksInput = $request->input('remarks');
+            if (is_string($remarksInput) && str_starts_with(trim($remarksInput), '{')) {
+                $test = json_decode($remarksInput, true);
+                if (is_array($test) && array_key_exists('user_remarks', $test)) {
+                    $remarksInput = $test['user_remarks'];
+                }
+            }
+
             $notesPayload = [
-                'user_remarks' => $request->input('remarks'),
+                'user_remarks' => !empty($remarksInput) ? trim((string)$remarksInput) : null,
                 'total_items' => count($processedItems),
                 'total_thans' => $overallTotalThans,
                 'total_meters' => round($overallTotalMeters, 2),
@@ -1036,8 +1044,16 @@ class JobInwardController extends Controller
 
             $challanNo = !empty($validated['challan_no']) ? trim($validated['challan_no']) : $inward->challan_no;
 
+            $remarksInput = $request->input('remarks');
+            if (is_string($remarksInput) && str_starts_with(trim($remarksInput), '{')) {
+                $test = json_decode($remarksInput, true);
+                if (is_array($test) && array_key_exists('user_remarks', $test)) {
+                    $remarksInput = $test['user_remarks'];
+                }
+            }
+
             $notesPayload = [
-                'user_remarks' => $request->input('remarks'),
+                'user_remarks' => !empty($remarksInput) ? trim((string)$remarksInput) : null,
                 'total_items' => count($processedItems),
                 'total_thans' => $overallTotalThans,
                 'total_meters' => round($overallTotalMeters, 2),

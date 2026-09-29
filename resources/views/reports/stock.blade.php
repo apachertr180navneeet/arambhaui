@@ -107,11 +107,11 @@
               <td><span class="badge badge-info">{{ $itm->category }}</span></td>
               <td>{{ $itm->unit }}</td>
               <td style="font-weight:800; color:{{ $itm->current_stock <= $itm->min_stock ? 'var(--danger-600)' : 'var(--slate-800)' }};">
-                {{ number_format($itm->current_stock, 2) }}
+                {{ format_quantity($itm->current_stock) }}
               </td>
               <td>₹{{ number_format($itm->unit_cost, 2) }}</td>
               <td style="font-weight:800; color:#059669;">₹{{ number_format($val, 2) }}</td>
-              <td>{{ number_format($itm->min_stock, 2) }}</td>
+              <td>{{ format_quantity($itm->min_stock) }}</td>
               <td>{{ $itm->location ?: 'Warehouse A' }}</td>
             </tr>
           @empty

@@ -74,9 +74,14 @@ class UnitController extends Controller
         ]);
 
         $validated['status'] = !empty($validated['status']) ? ucfirst(strtolower($validated['status'])) : 'Active';
-        $validated['decimal_places'] = isset($validated['decimal_places']) ? intval($validated['decimal_places']) : 2;
         $name = trim($validated['name']);
         $validated['code'] = !empty($validated['code']) ? strtoupper(trim($validated['code'])) : strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $name), 0, 8));
+
+        if (in_array(strtoupper($name), ['PCS', 'PIECES', 'PC']) || in_array(strtoupper($validated['code']), ['PCS', 'PC'])) {
+            $validated['decimal_places'] = 0;
+        } else {
+            $validated['decimal_places'] = (isset($validated['decimal_places']) && $validated['decimal_places'] !== null && $validated['decimal_places'] !== '') ? intval($validated['decimal_places']) : 0;
+        }
 
         if (empty($validated['parent_id'])) {
             $validated['parent_id'] = null;
@@ -131,6 +136,16 @@ class UnitController extends Controller
 
         if (isset($validated['status'])) {
             $validated['status'] = ucfirst(strtolower($validated['status']));
+        }
+
+        if (array_key_exists('decimal_places', $validated)) {
+            $checkName = strtoupper(trim($validated['name'] ?? $unit->name));
+            $checkCode = strtoupper(trim($validated['code'] ?? $unit->code));
+            if (in_array($checkName, ['PCS', 'PIECES', 'PC']) || in_array($checkCode, ['PCS', 'PC'])) {
+                $validated['decimal_places'] = 0;
+            } else {
+                $validated['decimal_places'] = ($validated['decimal_places'] !== null && $validated['decimal_places'] !== '') ? intval($validated['decimal_places']) : 0;
+            }
         }
 
         if (array_key_exists('parent_id', $validated) && empty($validated['parent_id'])) {

@@ -258,7 +258,7 @@ class ERPStateManager {
           parentName: u.parent ? u.parent.name : null,
           conversionFactor: u.conversion_factor !== null && u.conversion_factor !== undefined ? Number(u.conversion_factor) : null,
           symbol: u.symbol || "",
-          decimalPlaces: Number(u.decimal_places ?? 2),
+          decimalPlaces: (u.decimal_places !== null && u.decimal_places !== undefined && u.decimal_places !== '') ? Number(u.decimal_places) : 0,
           description: u.description || "",
           status: u.status || "Active"
         }));
@@ -1223,7 +1223,7 @@ class ERPStateManager {
       parentName: parentName,
       conversionFactor: conversionFactor,
       symbol: unit.symbol || code.toLowerCase(),
-      decimalPlaces: Number(unit.decimalPlaces !== undefined ? unit.decimalPlaces : (unit.decimal_places !== undefined ? unit.decimal_places : 2)),
+      decimalPlaces: (unit.decimalPlaces !== undefined && unit.decimalPlaces !== null && unit.decimalPlaces !== '') ? Number(unit.decimalPlaces) : ((unit.decimal_places !== undefined && unit.decimal_places !== null && unit.decimal_places !== '') ? Number(unit.decimal_places) : 0),
       description: unit.description || "",
       status: unit.status || "Active"
     };
@@ -1308,7 +1308,7 @@ class ERPStateManager {
             parent_id: parentId,
             conversion_factor: conversionFactor,
             symbol: updatedData.symbol !== undefined ? updatedData.symbol : current.symbol,
-            decimal_places: updatedData.decimalPlaces !== undefined ? updatedData.decimalPlaces : current.decimalPlaces,
+            decimal_places: (updatedData.decimalPlaces !== undefined && updatedData.decimalPlaces !== null && updatedData.decimalPlaces !== '') ? Number(updatedData.decimalPlaces) : Number(current.decimalPlaces || 0),
             description: updatedData.description !== undefined ? updatedData.description : current.description,
             status: updatedData.status || current.status
           })

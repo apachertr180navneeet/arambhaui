@@ -102,6 +102,7 @@ Route::middleware('auth')->group(function () {
         Route::post('voucher/{id}/update', [QrController::class, 'update'])->name('update.post');
         Route::post('expire/{id}', [QrController::class, 'expireVoucher'])->name('expire');
         Route::post('reactivate/{id}', [QrController::class, 'reactivateVoucher'])->name('reactivate');
+        Route::post('mark-paid/{id}', [QrController::class, 'markPaid'])->name('markPaid');
         Route::delete('voucher/{id}', [QrController::class, 'destroy'])->name('destroy');
     });
 

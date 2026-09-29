@@ -36,4 +36,17 @@ class Unit extends Model
     {
         return $this->hasMany(Unit::class, 'parent_id');
     }
+
+    public function getDecimalPlacesAttribute($value)
+    {
+        if ($value === null || $value === '') {
+            return 0;
+        }
+        $code = strtoupper((string)($this->attributes['code'] ?? ''));
+        $name = strtoupper((string)($this->attributes['name'] ?? ''));
+        if ((int)$value === 2 && (in_array($code, ['PCS', 'PC']) || in_array($name, ['PCS', 'PIECES']))) {
+            return 0;
+        }
+        return (int)$value;
+    }
 }

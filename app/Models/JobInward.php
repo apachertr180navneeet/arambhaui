@@ -72,10 +72,18 @@ class JobInward extends Model
     {
         if (!empty($this->remarks) && is_string($this->remarks)) {
             $data = json_decode($this->remarks, true);
-            if (is_array($data) && isset($data['user_remarks'])) {
-                return (string)$data['user_remarks'];
+            if (is_array($data)) {
+                $userRemarks = $data['user_remarks'] ?? '';
+                if (is_string($userRemarks) && !empty($userRemarks)) {
+                    $nested = json_decode($userRemarks, true);
+                    if (is_array($nested) && array_key_exists('user_remarks', $nested)) {
+                        return (string)($nested['user_remarks'] ?? '');
+                    }
+                    return $userRemarks;
+                }
+                return '';
             }
-            return $this->remarks;
+            return (string)$this->remarks;
         }
         return '';
     }
