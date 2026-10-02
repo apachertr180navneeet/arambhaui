@@ -338,6 +338,12 @@
   .itm-row-transition {
     transition: all 0.3s ease;
   }
+
+  .form-label.required::after {
+    content: ' *';
+    color: #ef4444;
+    font-weight: 700;
+  }
 </style>
 @endpush
 
@@ -745,16 +751,16 @@
       <div class="itm-modal-section-title">Pricing & Stock Thresholds</div>
       <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:14px; margin-bottom:12px;">
         <div class="form-group" style="margin:0;">
-          <label class="form-label">Standard Unit Cost (₹)</label>
-          <input type="number" step="0.01" name="unit_cost" id="itm_cost" class="form-control" placeholder="0.00" value="280.00">
+          <label class="form-label required">Standard Unit Cost (₹)</label>
+          <input type="number" step="0.01" min="0" name="unit_cost" id="itm_cost" class="form-control" required placeholder="0.00" value="">
         </div>
         <div class="form-group" style="margin:0;">
-          <label class="form-label">Opening / Current Stock</label>
-          <input type="number" step="0.01" name="current_stock" id="itm_stock" class="form-control" placeholder="0.00" value="500.00">
+          <label class="form-label required">Opening / Current Stock</label>
+          <input type="number" step="0.01" min="0" name="current_stock" id="itm_stock" class="form-control" required placeholder="0.00" value="">
         </div>
         <div class="form-group" style="margin:0;">
-          <label class="form-label">Min Reorder Level</label>
-          <input type="number" step="0.01" name="min_stock" id="itm_min_stock" class="form-control" placeholder="0.00" value="100.00">
+          <label class="form-label required">Min Reorder Level</label>
+          <input type="number" step="0.01" min="0" name="min_stock" id="itm_min_stock" class="form-control" required placeholder="0.00" value="">
         </div>
       </div>
 
@@ -930,9 +936,9 @@
     document.getElementById('save-itm-btn').textContent = 'Save Item SKU';
     document.getElementById('save-itm-btn').disabled = false;
     document.getElementById('itm_raw_meter').value = '0.00';
-    document.getElementById('itm_cost').value = '280.00';
-    document.getElementById('itm_stock').value = '500.00';
-    document.getElementById('itm_min_stock').value = '100.00';
+    document.getElementById('itm_cost').value = '';
+    document.getElementById('itm_stock').value = '';
+    document.getElementById('itm_min_stock').value = '';
     document.getElementById('itm_status').value = 'Active';
 
     refreshUnitsDropdown('');
@@ -981,9 +987,9 @@
     refreshUnitsDropdown(unitVal);
 
     document.getElementById('itm_raw_meter').value = (itm.raw_meter_per_piece !== undefined && itm.raw_meter_per_piece !== null) ? itm.raw_meter_per_piece : '0.00';
-    document.getElementById('itm_cost').value = itm.unit_cost !== undefined ? itm.unit_cost : 280;
-    document.getElementById('itm_stock').value = itm.current_stock !== undefined ? itm.current_stock : 500;
-    document.getElementById('itm_min_stock').value = itm.min_stock !== undefined ? itm.min_stock : 100;
+    document.getElementById('itm_cost').value = (itm.unit_cost !== undefined && itm.unit_cost !== null) ? itm.unit_cost : '';
+    document.getElementById('itm_stock').value = (itm.current_stock !== undefined && itm.current_stock !== null) ? itm.current_stock : '';
+    document.getElementById('itm_min_stock').value = (itm.min_stock !== undefined && itm.min_stock !== null) ? itm.min_stock : '';
     document.getElementById('itm_status').value = itm.status || 'Active';
     document.getElementById('itm_hsn').value = itm.hsn_code || '';
     document.getElementById('itm_location').value = itm.location || '';
@@ -1053,29 +1059,72 @@
     const itmId = document.getElementById('item-id').value;
     const isEdit = Boolean(itmId);
 
+    const nameVal = document.getElementById('itm_name').value.trim();
+    const unitVal = document.getElementById('itm_unit').value;
+    const costRaw = document.getElementById('itm_cost').value.trim();
+    const stockRaw = document.getElementById('itm_stock').value.trim();
+    const minStockRaw = document.getElementById('itm_min_stock').value.trim();
+
+    if (!nameVal) {
+      showToastNotification('Validation Error', 'Item SKU Name is required', 'error');
+      document.getElementById('itm_name').focus();
+      return;
+    }
+
+    if (!unitVal) {
+      showToastNotification('Validation Error', 'Please select a Unit of Measure (UOM)', 'error');
+      document.getElementById('itm_unit').focus();
+      return;
+    }
+
+    if (costRaw === '') {
+      showToastNotification('Validation Error', 'Standard Unit Cost is required', 'error');
+      document.getElementById('itm_cost').focus();
+      return;
+    }
+    if (isNaN(costRaw) || Number(costRaw) < 0) {
+      showToastNotification('Validation Error', 'Please enter a valid Standard Unit Cost (minimum 0)', 'error');
+      document.getElementById('itm_cost').focus();
+      return;
+    }
+
+    if (stockRaw === '') {
+      showToastNotification('Validation Error', 'Opening / Current Stock is required', 'error');
+      document.getElementById('itm_stock').focus();
+      return;
+    }
+    if (isNaN(stockRaw) || Number(stockRaw) < 0) {
+      showToastNotification('Validation Error', 'Please enter a valid Opening / Current Stock (minimum 0)', 'error');
+      document.getElementById('itm_stock').focus();
+      return;
+    }
+
+    if (minStockRaw === '') {
+      showToastNotification('Validation Error', 'Min Reorder Level is required', 'error');
+      document.getElementById('itm_min_stock').focus();
+      return;
+    }
+    if (isNaN(minStockRaw) || Number(minStockRaw) < 0) {
+      showToastNotification('Validation Error', 'Please enter a valid Min Reorder Level (minimum 0)', 'error');
+      document.getElementById('itm_min_stock').focus();
+      return;
+    }
+
+    const rawMeterVal = document.getElementById('itm_raw_meter').value.trim();
+
     const payload = {
-      name: document.getElementById('itm_name').value.trim(),
+      name: nameVal,
       code: document.getElementById('itm_code').value.trim(),
       category: document.getElementById('itm_category').value,
-      unit: document.getElementById('itm_unit').value,
-      raw_meter_per_piece: parseFloat(document.getElementById('itm_raw_meter').value) || 0,
-      unit_cost: parseFloat(document.getElementById('itm_cost').value) || 0,
-      current_stock: parseFloat(document.getElementById('itm_stock').value) || 0,
-      min_stock: parseFloat(document.getElementById('itm_min_stock').value) || 0,
+      unit: unitVal,
+      raw_meter_per_piece: rawMeterVal !== '' ? (parseFloat(rawMeterVal) || 0) : 0,
+      unit_cost: parseFloat(costRaw),
+      current_stock: parseFloat(stockRaw),
+      min_stock: parseFloat(minStockRaw),
       status: document.getElementById('itm_status').value,
       hsn_code: document.getElementById('itm_hsn').value.trim(),
       location: document.getElementById('itm_location').value.trim()
     };
-
-    if (!payload.name) {
-      showToastNotification('Validation Error', 'Item SKU Name is required', 'error');
-      return;
-    }
-
-    if (!payload.unit) {
-      showToastNotification('Validation Error', 'Please select a Unit of Measure (UOM)', 'error');
-      return;
-    }
 
     saveBtn.disabled = true;
     saveBtn.textContent = isEdit ? 'Updating...' : 'Saving...';

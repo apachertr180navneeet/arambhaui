@@ -536,7 +536,9 @@
               if ($isDerived && $u->conversion_factor && $u->parent) {
                 $factor = (float)$u->conversion_factor;
                 $factorFormatted = ($factor == (int)$factor) ? (int)$factor : rtrim(rtrim(number_format($factor, 4, '.', ''), '0'), '.');
-                $conversionText = '1 ' . $u->code . ' = ' . $factorFormatted . ' ' . ($u->parent->symbol ?: $u->parent->code);
+                $parentCode = $u->parent->code ?: ($u->parent->symbol ?: $u->parent->name);
+                $unitCode = $u->code ?: ($u->symbol ?: $u->name);
+                $conversionText = $factorFormatted . ' ' . $unitCode . ' = 1 ' . $parentCode;
               }
             @endphp
             <tr class="uom-row uom-row-transition" id="unit-row-{{ $u->id }}" data-id="{{ $u->id }}" data-type="{{ $isDerived ? 'derived' : 'base' }}" data-status="{{ strtolower($u->status ?? 'active') }}">
@@ -633,18 +635,18 @@
       <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:14px; margin-bottom:12px;">
         <div class="form-group" style="margin:0;">
           <label class="form-label required">Unit Full Name</label>
-          <input type="text" name="name" id="unit_name" class="form-control" required placeholder="e.g. Meters, Kilograms, Rolls, Pieces">
+          <input type="text" name="name" id="unit_name" class="form-control" required placeholder="e.g. Meters, Kilograms, Rolls, Pieces" oninput="updateConversionPreview()">
         </div>
         <div class="form-group" style="margin:0;">
           <label class="form-label">Unit Code / Abbreviation</label>
-          <input type="text" name="code" id="unit_code" class="form-control" placeholder="e.g. MTR, KG, ROLL, PCS" style="text-transform:uppercase;">
+          <input type="text" name="code" id="unit_code" class="form-control" placeholder="e.g. MTR, KG, ROLL, PCS" style="text-transform:uppercase;" oninput="updateConversionPreview()">
         </div>
       </div>
 
       <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:14px; margin-bottom:12px;">
         <div class="form-group" style="margin:0;">
           <label class="form-label">Display Symbol</label>
-          <input type="text" name="symbol" id="unit_symbol" class="form-control" placeholder="e.g. m, kg, rl, pcs">
+          <input type="text" name="symbol" id="unit_symbol" class="form-control" placeholder="e.g. m, kg, rl, pcs" oninput="updateConversionPreview()">
         </div>
         <div class="form-group" style="margin:0;">
           <label class="form-label">Decimal Places Precision</label>
@@ -659,23 +661,35 @@
         </div>
       </div>
 
-      <!-- Hierarchy & Conversion Logic (Exact logic preserved) -->
+      <!-- Hierarchy & Conversion Logic -->
       <div class="uom-modal-section-title">Conversion & Base Unit Hierarchy</div>
       <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:14px; margin-bottom:12px;">
         <div class="form-group" style="margin:0;">
           <label class="form-label">Parent Base Unit</label>
-          <select name="parent_id" id="unit_parent" class="form-control" onchange="toggleConversionFactorInput(this.value)">
+          <select name="parent_id" id="unit_parent" class="form-control" onchange="toggleConversionFactorInput(this.value); updateConversionPreview();">
             <option value="">None (This is an Independent Base Unit)</option>
             @foreach($parentUnits as $pu)
-              <option value="{{ $pu->id }}">{{ $pu->name }} ({{ $pu->code }})</option>
+              <option value="{{ $pu->id }}" data-code="{{ $pu->code }}" data-name="{{ $pu->name }}" data-symbol="{{ $pu->symbol }}">{{ $pu->name }} ({{ $pu->code }})</option>
             @endforeach
           </select>
         </div>
         <div class="form-group" id="factor-group" style="margin:0;">
           <label class="form-label">Conversion Multiplier</label>
-          <input type="number" step="0.0001" name="conversion_factor" id="unit_factor" class="form-control" placeholder="e.g. 1 Roll = 100 Meters">
-          <small style="font-size:0.7rem; color:var(--slate-500); display:block; margin-top:3px;">How many parent units equal 1 of this unit</small>
+          <input type="number" step="0.0001" min="0.0001" name="conversion_factor" id="unit_factor" class="form-control" placeholder="e.g. 100" oninput="updateConversionPreview()">
+          <small style="font-size:0.7rem; color:var(--slate-500); display:block; margin-top:3px;">Sub-units in 1 parent unit (e.g. 100 CM = 1 MTR)</small>
         </div>
+      </div>
+
+      <!-- Live Conversion Formula Preview Banner -->
+      <div id="conversion-preview-box" style="display:none; margin-bottom:14px; padding:10px 14px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div style="width:28px; height:28px; border-radius:8px; background:#2563eb; color:#fff; display:flex; align-items:center; justify-content:center; font-size:0.85rem; font-weight:800; flex-shrink:0;">⇄</div>
+          <div>
+            <span style="font-size:0.68rem; font-weight:700; color:#1e40af; text-transform:uppercase; letter-spacing:0.05em; display:block;">Conversion Preview</span>
+            <span id="conversion-preview-formula" style="font-size:1.05rem; font-weight:800; color:#1e3a8a; font-family:var(--font-mono, monospace); letter-spacing:0.5px;">100 CM = 1 MTR</span>
+          </div>
+        </div>
+        <div style="font-size:0.75rem; color:#1d4ed8; font-weight:600; background:#dbeafe; padding:4px 10px; border-radius:6px;" id="conversion-preview-sub">1 MTR contains 100 CM</div>
       </div>
 
       <div class="form-group" style="margin-bottom:20px;">
@@ -720,11 +734,60 @@
 <script>
   const CSRF_TOKEN = '{{ csrf_token() }}';
 
+  function updateConversionPreview() {
+    const parentSelect = document.getElementById('unit_parent');
+    const factorInput = document.getElementById('unit_factor');
+    const previewBox = document.getElementById('conversion-preview-box');
+    const previewFormula = document.getElementById('conversion-preview-formula');
+    const previewSub = document.getElementById('conversion-preview-sub');
+
+    if (!previewBox || !parentSelect) return;
+
+    const parentId = parentSelect.value;
+    if (!parentId) {
+      previewBox.style.display = 'none';
+      return;
+    }
+
+    const selectedOpt = parentSelect.options[parentSelect.selectedIndex];
+    let parentText = '';
+    if (selectedOpt) {
+      parentText = selectedOpt.getAttribute('data-code') || '';
+      if (!parentText) {
+        const match = selectedOpt.textContent.match(/\(([^)]+)\)/);
+        parentText = match ? match[1] : selectedOpt.textContent.trim();
+      }
+    }
+    if (!parentText) parentText = 'MTR';
+
+    const unitCode = document.getElementById('unit_code').value.trim() || 
+                     document.getElementById('unit_symbol').value.trim() || 
+                     document.getElementById('unit_name').value.trim() || 'UNIT';
+    const factorRaw = factorInput ? factorInput.value.trim() : '';
+    const factor = factorRaw !== '' ? parseFloat(factorRaw) : null;
+
+    previewBox.style.display = 'flex';
+
+    if (factor && !isNaN(factor) && factor > 0) {
+      const factorFormatted = (factor % 1 === 0) ? factor.toString() : parseFloat(factor.toFixed(4)).toString();
+      previewFormula.textContent = `${factorFormatted} ${unitCode} = 1 ${parentText}`;
+      if (previewSub) {
+        previewSub.textContent = `1 ${parentText} contains ${factorFormatted} ${unitCode}`;
+      }
+    } else {
+      previewFormula.textContent = `100 ${unitCode} = 1 ${parentText}`;
+      if (previewSub) {
+        previewSub.textContent = `Enter multiplier (e.g. 100 for 100 ${unitCode} = 1 ${parentText})`;
+      }
+    }
+  }
+
   function toggleConversionFactorInput(parentId) {
     const factorInput = document.getElementById('unit_factor');
     if (!parentId) {
       if (factorInput) factorInput.value = '';
     }
+    updateConversionPreview();
   }
 
   function getUnitApiUrl(path) {
@@ -748,6 +811,7 @@
     document.getElementById('save-uom-btn').disabled = false;
     document.getElementById('unit_decimals').value = '0';
     document.getElementById('unit_status').value = 'Active';
+    updateConversionPreview();
     
     modal.style.display = 'flex';
   }
@@ -774,6 +838,8 @@
     document.getElementById('unit_parent').value = u.parent_id || '';
     document.getElementById('unit_factor').value = u.conversion_factor || '';
     document.getElementById('unit_desc').value = u.description || '';
+
+    updateConversionPreview();
 
     modal.style.display = 'flex';
   }
@@ -1004,9 +1070,13 @@
       const opt = document.createElement('option');
       opt.value = pu.id;
       opt.textContent = `${pu.name} (${pu.code})`;
+      opt.setAttribute('data-code', pu.code);
+      opt.setAttribute('data-name', pu.name);
+      opt.setAttribute('data-symbol', pu.symbol || '');
       if (String(pu.id) === String(currentVal)) opt.selected = true;
       select.appendChild(opt);
     });
+    updateConversionPreview();
   }
 
   // --- Dynamic Table DOM Manipulation ---
@@ -1034,7 +1104,9 @@
     if (isDerived && u.conversion_factor && u.parent) {
       const factor = parseFloat(u.conversion_factor);
       const factorFormatted = (factor % 1 === 0) ? factor.toString() : parseFloat(factor.toFixed(4)).toString();
-      conversionText = '1 ' + u.code + ' = ' + factorFormatted + ' ' + (u.parent.symbol || u.parent.code);
+      const parentCode = u.parent.code || u.parent.symbol || u.parent.name;
+      const unitCode = u.code || u.symbol || u.name;
+      conversionText = factorFormatted + ' ' + unitCode + ' = 1 ' + parentCode;
     }
 
     tr.innerHTML = `
@@ -1126,7 +1198,9 @@
       if (isDerived && u.conversion_factor && u.parent) {
         const factor = parseFloat(u.conversion_factor);
         const factorFormatted = (factor % 1 === 0) ? factor.toString() : parseFloat(factor.toFixed(4)).toString();
-        conversionText = '1 ' + u.code + ' = ' + factorFormatted + ' ' + (u.parent.symbol || u.parent.code);
+        const parentCode = u.parent.code || u.parent.symbol || u.parent.name;
+        const unitCode = u.code || u.symbol || u.name;
+        conversionText = factorFormatted + ' ' + unitCode + ' = 1 ' + parentCode;
       }
       factorCell.textContent = conversionText;
     }

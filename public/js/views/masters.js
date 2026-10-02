@@ -1770,18 +1770,18 @@ const MastersView = {
           </div>
 
           <div class="form-group">
-            <label class="form-label">Standard Unit Cost / Rate (₹)</label>
-            <input type="number" step="0.01" class="form-control" id="itm-rate" value="${item.rate !== undefined ? item.rate : (item.unitCost || 150)}" placeholder="0.00">
+            <label class="form-label required">Standard Unit Cost / Rate (₹) <span class="required-star">*</span></label>
+            <input type="number" step="0.01" class="form-control" id="itm-rate" value="${item.rate !== undefined ? item.rate : (item.unitCost !== undefined ? item.unitCost : '')}" placeholder="0.00" required>
           </div>
 
           <div class="form-group">
-            <label class="form-label">Opening / Current Stock</label>
-            <input type="number" step="0.01" class="form-control" id="itm-opening" value="${item.currentStock !== undefined ? item.currentStock : (item.openingStock || 0)}" placeholder="0.00">
+            <label class="form-label required">Opening / Current Stock <span class="required-star">*</span></label>
+            <input type="number" step="0.01" class="form-control" id="itm-opening" value="${item.currentStock !== undefined ? item.currentStock : (item.openingStock !== undefined ? item.openingStock : '')}" placeholder="0.00" required>
           </div>
 
           <div class="form-group">
-            <label class="form-label">Reorder Level Alert (Min Stock)</label>
-            <input type="number" step="1" class="form-control" id="itm-reorder" value="${item.minStock !== undefined ? item.minStock : (item.reorderLevel || 100)}" placeholder="100">
+            <label class="form-label required">Reorder Level Alert (Min Stock) <span class="required-star">*</span></label>
+            <input type="number" step="0.01" class="form-control" id="itm-reorder" value="${item.minStock !== undefined ? item.minStock : (item.reorderLevel !== undefined ? item.reorderLevel : '')}" placeholder="0.00" required>
             <span style="font-size:0.7rem; color:var(--slate-500); margin-top:3px; display:block;">Triggers low stock warnings when inventory dips below this level</span>
           </div>
 
@@ -1825,8 +1825,21 @@ const MastersView = {
     saveBtn.onclick = async () => {
       const name = document.getElementById("itm-name").value.trim();
       const code = document.getElementById("itm-code").value.trim();
+      const rateRaw = document.getElementById("itm-rate").value.trim();
+      const openingRaw = document.getElementById("itm-opening").value.trim();
+      const reorderRaw = document.getElementById("itm-reorder").value.trim();
+
       if (!name || !code) {
         return UI.showToast("Required Field", "Item Code and Name are required", "error");
+      }
+      if (rateRaw === '' || isNaN(rateRaw) || Number(rateRaw) < 0) {
+        return UI.showToast("Required Field", "Valid Standard Unit Cost is required", "error");
+      }
+      if (openingRaw === '' || isNaN(openingRaw) || Number(openingRaw) < 0) {
+        return UI.showToast("Required Field", "Valid Opening / Current Stock is required", "error");
+      }
+      if (reorderRaw === '' || isNaN(reorderRaw) || Number(reorderRaw) < 0) {
+        return UI.showToast("Required Field", "Valid Min Reorder Level is required", "error");
       }
 
       saveBtn.disabled = true;
@@ -1838,12 +1851,12 @@ const MastersView = {
         type: document.getElementById("itm-type").value,
         category: document.getElementById("itm-cat").value.trim() || 'Fabric',
         unit: document.getElementById("itm-unit").value,
-        rate: Number(document.getElementById("itm-rate").value) || 0,
-        unitCost: Number(document.getElementById("itm-rate").value) || 0,
-        currentStock: Number(document.getElementById("itm-opening").value) || 0,
-        openingStock: Number(document.getElementById("itm-opening").value) || 0,
-        reorderLevel: Number(document.getElementById("itm-reorder").value) || 100,
-        minStock: Number(document.getElementById("itm-reorder").value) || 100,
+        rate: Number(rateRaw),
+        unitCost: Number(rateRaw),
+        currentStock: Number(openingRaw),
+        openingStock: Number(openingRaw),
+        reorderLevel: Number(reorderRaw),
+        minStock: Number(reorderRaw),
         hsn: document.getElementById("itm-hsn").value.trim(),
         fabric: document.getElementById("itm-fabric").value.trim(),
         location: document.getElementById("itm-loc").value.trim() || 'Zone A',
@@ -1989,7 +2002,7 @@ const MastersView = {
           rowIndex: null,
           isChild: true,
           parentObj: base,
-          conversionDisplay: child.conversionFactor ? `1 ${base.name} = ${Number(child.conversionFactor).toFixed(2)} ${child.name}` : (child.conversionText || "—")
+          conversionDisplay: child.conversionFactor ? `${(Number(child.conversionFactor) % 1 === 0 ? Number(child.conversionFactor) : Number(child.conversionFactor).toFixed(2))} ${child.code || child.name} = 1 ${base.code || base.name}` : (child.conversionText || "—")
         });
       });
     });
@@ -2003,7 +2016,7 @@ const MastersView = {
           rowIndex: null,
           isChild: true,
           parentObj: { name: sub.parentName || "Parent" },
-          conversionDisplay: sub.conversionFactor ? `1 ${sub.parentName || 'Unit'} = ${Number(sub.conversionFactor).toFixed(2)} ${sub.name}` : (sub.conversionText || "—")
+          conversionDisplay: sub.conversionFactor ? `${(Number(sub.conversionFactor) % 1 === 0 ? Number(sub.conversionFactor) : Number(sub.conversionFactor).toFixed(2))} ${sub.code || sub.name} = 1 ${sub.parentName || 'Unit'}` : (sub.conversionText || "—")
         });
       }
     });
@@ -2250,7 +2263,7 @@ const MastersView = {
             </div>
           </div>
           <div id="conversion-live-preview" style="font-size:0.9rem; font-weight:800; color:#4f46e5; background:#ede9fe; padding:10px 14px; border-radius:8px; border:1px solid #c7d2fe;">
-            Conversion: 1 Parent = ? Unit
+            Conversion: 100 CM = 1 MTR
           </div>
         </div>
 
@@ -2339,8 +2352,8 @@ const MastersView = {
     const name = nameInput.value.trim() || "Unit";
     const parentName = parentSelect.value && parentSelect.selectedIndex >= 0 ? parentSelect.options[parentSelect.selectedIndex].text.trim() : "Parent";
     const factor = Number(factorInput.value) || 1;
-
-    preview.innerText = `1 ${parentName} = ${factor.toFixed(2)} ${name}`;
+    const factorFormatted = (factor % 1 === 0) ? factor.toString() : parseFloat(factor.toFixed(4)).toString();
+    preview.innerText = `Conversion: ${factorFormatted} ${name} = 1 ${parentName}`;
   },
 
   deleteUnit(unitId) {

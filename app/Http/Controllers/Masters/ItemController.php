@@ -106,21 +106,32 @@ class ItemController extends Controller
             'size' => 'nullable|string|max:50',
             'unit' => 'nullable|string|max:50',
             'raw_meter_per_piece' => 'nullable|numeric|min:0',
-            'unit_cost' => 'nullable|numeric|min:0',
-            'current_stock' => 'nullable|numeric|min:0',
-            'min_stock' => 'nullable|numeric|min:0',
+            'unit_cost' => 'required|numeric|min:0',
+            'current_stock' => 'required|numeric|min:0',
+            'min_stock' => 'required|numeric|min:0',
             'hsn_code' => 'nullable|string|max:50',
             'location' => 'nullable|string|max:150',
             'status' => 'nullable|string|max:50'
+        ], [
+            'name.required' => 'Item SKU Name is required.',
+            'unit_cost.required' => 'Standard Unit Cost is required.',
+            'unit_cost.numeric' => 'Standard Unit Cost must be a valid number.',
+            'unit_cost.min' => 'Standard Unit Cost cannot be negative.',
+            'current_stock.required' => 'Opening / Current Stock is required.',
+            'current_stock.numeric' => 'Opening / Current Stock must be a valid number.',
+            'current_stock.min' => 'Opening / Current Stock cannot be negative.',
+            'min_stock.required' => 'Min Reorder Level is required.',
+            'min_stock.numeric' => 'Min Reorder Level must be a valid number.',
+            'min_stock.min' => 'Min Reorder Level cannot be negative.',
         ])->validate();
 
         $category = !empty($validated['category']) ? $validated['category'] : 'Fabric';
         $validated['category'] = $category;
         $validated['unit'] = !empty($validated['unit']) ? $validated['unit'] : 'Meters';
         $validated['raw_meter_per_piece'] = isset($validated['raw_meter_per_piece']) ? floatval($validated['raw_meter_per_piece']) : 0.00;
-        $validated['unit_cost'] = isset($validated['unit_cost']) ? floatval($validated['unit_cost']) : 0.00;
-        $validated['current_stock'] = isset($validated['current_stock']) ? floatval($validated['current_stock']) : 0.00;
-        $validated['min_stock'] = isset($validated['min_stock']) ? floatval($validated['min_stock']) : 100.00;
+        $validated['unit_cost'] = floatval($validated['unit_cost']);
+        $validated['current_stock'] = floatval($validated['current_stock']);
+        $validated['min_stock'] = floatval($validated['min_stock']);
         $validated['status'] = !empty($validated['status']) ? ucfirst(strtolower($validated['status'])) : 'Active';
 
         if (empty($validated['code'])) {
@@ -190,12 +201,23 @@ class ItemController extends Controller
             'size' => 'nullable|string|max:50',
             'unit' => 'sometimes|nullable|string|max:50',
             'raw_meter_per_piece' => 'sometimes|nullable|numeric|min:0',
-            'unit_cost' => 'sometimes|nullable|numeric|min:0',
-            'current_stock' => 'sometimes|nullable|numeric|min:0',
-            'min_stock' => 'sometimes|nullable|numeric|min:0',
+            'unit_cost' => 'sometimes|required|numeric|min:0',
+            'current_stock' => 'sometimes|required|numeric|min:0',
+            'min_stock' => 'sometimes|required|numeric|min:0',
             'hsn_code' => 'nullable|string|max:50',
             'location' => 'nullable|string|max:150',
             'status' => 'nullable|string|max:50'
+        ], [
+            'name.required' => 'Item SKU Name is required.',
+            'unit_cost.required' => 'Standard Unit Cost is required.',
+            'unit_cost.numeric' => 'Standard Unit Cost must be a valid number.',
+            'unit_cost.min' => 'Standard Unit Cost cannot be negative.',
+            'current_stock.required' => 'Opening / Current Stock is required.',
+            'current_stock.numeric' => 'Opening / Current Stock must be a valid number.',
+            'current_stock.min' => 'Opening / Current Stock cannot be negative.',
+            'min_stock.required' => 'Min Reorder Level is required.',
+            'min_stock.numeric' => 'Min Reorder Level must be a valid number.',
+            'min_stock.min' => 'Min Reorder Level cannot be negative.',
         ])->validate();
 
         if (isset($validated['status'])) {
@@ -203,6 +225,15 @@ class ItemController extends Controller
         }
         if (isset($validated['raw_meter_per_piece'])) {
             $validated['raw_meter_per_piece'] = floatval($validated['raw_meter_per_piece']);
+        }
+        if (isset($validated['unit_cost'])) {
+            $validated['unit_cost'] = floatval($validated['unit_cost']);
+        }
+        if (isset($validated['current_stock'])) {
+            $validated['current_stock'] = floatval($validated['current_stock']);
+        }
+        if (isset($validated['min_stock'])) {
+            $validated['min_stock'] = floatval($validated['min_stock']);
         }
 
         $item->update($validated);
