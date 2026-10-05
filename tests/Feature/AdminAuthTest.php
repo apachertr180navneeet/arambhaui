@@ -49,7 +49,7 @@ class AdminAuthTest extends TestCase
     {
         $response = $this->get('/login');
         $response->assertStatus(200);
-        $response->assertSee('Nathmal Amarchand');
+        $response->assertSee('aarambh');
         $response->assertSee('admin@garmenterp.com');
     }
 
@@ -68,7 +68,7 @@ class AdminAuthTest extends TestCase
 
         $dashboardResponse = $this->get('/dashboard');
         $dashboardResponse->assertStatus(200);
-        $dashboardResponse->assertSee('Nathmal Amarchand');
+        $dashboardResponse->assertSee('aarambh');
     }
 
     /**

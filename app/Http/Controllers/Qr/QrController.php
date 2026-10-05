@@ -683,10 +683,18 @@ class QrController extends Controller
             'order_bill' => 'nullable|numeric|min:0',
             'recipient_upi_id' => 'nullable|string|max:100',
             'recipient_name' => 'nullable|string|max:100',
+            'recipient_address' => 'required|string|max:1000',
+            'recipient_pincode' => 'required|string|regex:/^[0-9]{6}$/',
+            'recipient_city' => 'nullable|string|max:100',
+            'recipient_state' => 'nullable|string|max:100',
             'payment_status' => 'nullable|string|max:50',
             'payment_method' => 'nullable|string|max:50',
             'upi_txn_ref' => 'nullable|string|max:100',
             'recipient_qr_image' => 'nullable|string'
+        ], [
+            'recipient_address.required' => 'Full Delivery Address is required for sending gifts.',
+            'recipient_pincode.required' => 'PIN code is mandatory for gift delivery.',
+            'recipient_pincode.regex' => 'PIN code must be a valid 6-digit number.'
         ]);
 
         $raw = $validated['voucher_code'];
@@ -748,6 +756,15 @@ class QrController extends Controller
         $voucher->customer_phone = $phone;
         $voucher->redeemed_invoice_no = $claimId;
 
+        $voucher->recipient_address = !empty($validated['recipient_address']) ? trim($validated['recipient_address']) : null;
+        $voucher->recipient_pincode = !empty($validated['recipient_pincode']) ? trim($validated['recipient_pincode']) : null;
+        if (!empty($validated['recipient_city'])) {
+            $voucher->recipient_city = trim($validated['recipient_city']);
+        }
+        if (!empty($validated['recipient_state'])) {
+            $voucher->recipient_state = trim($validated['recipient_state']);
+        }
+
         $voucher->recipient_upi_id = !empty($validated['recipient_upi_id']) ? trim($validated['recipient_upi_id']) : null;
         $voucher->recipient_name = !empty($validated['recipient_name']) ? trim($validated['recipient_name']) : null;
         $voucher->original_bill = $bill;
@@ -769,6 +786,10 @@ class QrController extends Controller
             'claim_id' => $claimId,
             'voucher' => $voucher,
             'phone' => $phone,
+            'recipient_address' => $voucher->recipient_address,
+            'recipient_pincode' => $voucher->recipient_pincode,
+            'recipient_city' => $voucher->recipient_city,
+            'recipient_state' => $voucher->recipient_state,
             'discount_value' => $discountValue,
             'original_bill' => $bill,
             'final_payable' => $finalPayable,

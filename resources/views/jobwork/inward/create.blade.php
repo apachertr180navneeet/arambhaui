@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Record Job Work Inward Receipt - Nathmal Amarchand')
+@section('title', 'Record Job Work Inward Receipt - aarambh')
 
 @section('breadcrumb')
   <div class="breadcrumb-item"><a href="{{ route('jobwork.assign.index') }}" style="color:inherit; text-decoration:none;">Job Work & Assign</a></div>
@@ -97,87 +97,143 @@
         <a href="{{ route('jobwork.inward.index') }}" class="btn btn-secondary" style="font-weight:700;">Cancel</a>
         <button type="submit" id="save-inward-btn-top" class="btn btn-primary" style="display:inline-flex; align-items:center; gap:8px; font-weight:700; box-shadow:0 2px 8px rgba(5, 150, 105, 0.3); background:#059669; border-color:#059669; padding:10px 22px;">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-          Confirm Inward & Update Stock
+          Confirm Inward Receipt
         </button>
       </div>
     </div>
 
     <!-- 1. Selection Card: Job Worker & Job Assignment -->
     <div class="card" style="background:#fff; border-radius:var(--radius-xl, 16px); border:1px solid var(--slate-200, #e2e8f0); box-shadow:var(--shadow-sm); padding:24px;">
-      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--slate-100, #f1f5f9); padding-bottom:12px; margin-bottom:18px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--slate-100, #f1f5f9); padding-bottom:12px; margin-bottom:18px; flex-wrap:wrap; gap:10px;">
         <h3 style="font-size:0.95rem; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; margin:0; color:var(--slate-800); display:flex; align-items:center; gap:8px;">
           <span style="width:24px; height:24px; border-radius:6px; background:#eff6ff; color:#2563eb; display:inline-flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:800;">1</span>
-          Select Contractor & Job Assignment
+          Contractor & Inward Mode
         </h3>
-        <span style="font-size:0.75rem; background:#eff6ff; color:#1d4ed8; font-weight:700; padding:3px 10px; border-radius:9999px; border:1px solid #bfdbfe;">
-          Step 1: Contractor &rarr; Step 2: Job Order
-        </span>
-      </div>
-
-      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:18px; margin-bottom:18px;">
         
-        <!-- Step 1: Select Job Worker -->
-        <div class="form-group" style="margin-bottom:0;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-            <label class="form-label" style="font-weight:700; color:var(--slate-800); margin:0;">
-              1. Select Job Worker / Contractor <span style="color:#ef4444;">*</span>
-            </label>
-            <span style="font-size:0.75rem; color:var(--slate-500);">Filters active assignments</span>
-          </div>
-          <select id="worker_select" name="job_worker_id" class="form-control" required onchange="onWorkerSelectChange(this)" style="font-size:0.95rem; font-weight:700;">
-            <option value="">-- Select Job Worker / Contractor --</option>
-            @foreach($jobworkers as $jw)
-              @php
-                $wKey = (string)$jw->id;
-                $activeCount = isset($assignmentsByWorker[$wKey]) ? count($assignmentsByWorker[$wKey]) : 0;
-                $isWorkerSel = ($preselectedWorkerId && $preselectedWorkerId == $jw->id);
-              @endphp
-              <option value="{{ $jw->id }}" data-name="{{ $jw->name }}" data-process="{{ $jw->process_type }}" {{ $isWorkerSel ? 'selected' : '' }}>
-                {{ $jw->name }} [{{ $jw->process_type ?? 'Contractor' }}] — {{ $activeCount }} Active Job(s)
-              </option>
-            @endforeach
-          </select>
+        <!-- Mode Switcher: Linked vs Standalone Direct -->
+        <div style="display:flex; gap:8px; background:#f1f5f9; padding:3px; border-radius:8px;">
+          <button type="button" id="tab-linked-btn" class="btn btn-sm" onclick="switchInwardMode('linked')" style="background:#ffffff; color:#1d4ed8; font-weight:800; box-shadow:0 1px 2px rgba(0,0,0,0.06); padding:4px 12px; border-radius:6px; border:none;">
+            Linked to Job Order
+          </button>
+          <button type="button" id="tab-direct-btn" class="btn btn-sm" onclick="switchInwardMode('direct')" style="background:transparent; color:#64748b; font-weight:700; padding:4px 12px; border-radius:6px; border:none;">
+            ⭐ Direct Standalone Inward
+          </button>
         </div>
-
-        <!-- Step 2: Select Job Assignment -->
-        <div class="form-group" style="margin-bottom:0;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-            <label class="form-label" style="font-weight:700; color:var(--slate-800); margin:0;">
-              2. Select Job Assignment (Order / Lot) <span style="color:#ef4444;">*</span>
-            </label>
-            <span style="font-size:0.75rem; color:var(--slate-500);">Auto-loads assigned items</span>
-          </div>
-          <select name="job_assignment_id" id="ja_select" class="form-control" required onchange="onJobOrderChange(this)" style="font-size:0.95rem; font-weight:700;">
-            <option value="">-- First select a Job Worker above --</option>
-          </select>
-        </div>
-
       </div>
 
-      <!-- Live Job Order Details Preview Banner -->
-      <div id="job-order-preview-box" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px; display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:14px;">
-        <div>
-          <span style="font-size:0.75rem; color:#64748b; font-weight:700; text-transform:uppercase;">Contractor:</span>
-          <div id="pv-worker" style="font-weight:800; color:var(--slate-800); font-size:0.95rem;">—</div>
+      <!-- Mode 1: Linked to Job Order (Default) -->
+      <div id="linked-mode-controls">
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:18px; margin-bottom:18px;">
+          
+          <!-- Step 1: Select Job Worker -->
+          <div class="form-group" style="margin-bottom:0;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <label class="form-label" style="font-weight:700; color:var(--slate-800); margin:0;">
+                1. Select Job Worker / Contractor <span style="color:#ef4444;">*</span>
+              </label>
+              <span style="font-size:0.75rem; color:var(--slate-500);">Filters active assignments</span>
+            </div>
+            <select id="worker_select" name="job_worker_id" class="form-control" onchange="onWorkerSelectChange(this)" style="font-size:0.95rem; font-weight:700;">
+              <option value="">-- Select Job Worker / Contractor --</option>
+              @foreach($jobworkers as $jw)
+                @php
+                  $wKey = (string)$jw->id;
+                  $activeCount = isset($assignmentsByWorker[$wKey]) ? count($assignmentsByWorker[$wKey]) : 0;
+                  $isWorkerSel = ($preselectedWorkerId && $preselectedWorkerId == $jw->id);
+                @endphp
+                <option value="{{ $jw->id }}" data-name="{{ $jw->name }}" data-process="{{ $jw->process_type }}" {{ $isWorkerSel ? 'selected' : '' }}>
+                  {{ $jw->name }} [{{ $jw->process_type ?? 'Contractor' }}] — {{ $activeCount }} Active Job(s)
+                </option>
+              @endforeach
+            </select>
+          </div>
+
+          <!-- Step 2: Select Job Assignment -->
+          <div class="form-group" style="margin-bottom:0;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <label class="form-label" style="font-weight:700; color:var(--slate-800); margin:0;">
+                2. Select Job Assignment (Order / Lot) <span style="color:#ef4444;">*</span>
+              </label>
+              <span style="font-size:0.75rem; color:var(--slate-500);">Auto-loads assigned items</span>
+            </div>
+            <select name="job_assignment_id" id="ja_select" class="form-control" onchange="onJobOrderChange(this)" style="font-size:0.95rem; font-weight:700;">
+              <option value="">-- First select a Job Worker above --</option>
+            </select>
+          </div>
+
         </div>
-        <div>
-          <span style="font-size:0.75rem; color:#64748b; font-weight:700; text-transform:uppercase;">Process:</span>
-          <div id="pv-process" style="font-weight:700; color:var(--slate-700);">—</div>
+
+        <!-- Live Job Order Details Preview Banner -->
+        <div id="job-order-preview-box" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px; display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:14px;">
+          <div>
+            <span style="font-size:0.75rem; color:#64748b; font-weight:700; text-transform:uppercase;">Contractor:</span>
+            <div id="pv-worker" style="font-weight:800; color:var(--slate-800); font-size:0.95rem;">—</div>
+          </div>
+          <div>
+            <span style="font-size:0.75rem; color:#64748b; font-weight:700; text-transform:uppercase;">Process:</span>
+            <div id="pv-process" style="font-weight:700; color:var(--slate-700);">—</div>
+          </div>
+          <div>
+            <span style="font-size:0.75rem; color:#64748b; font-weight:700; text-transform:uppercase;">Lot / Batch #:</span>
+            <div id="pv-lot" style="font-family:var(--font-mono, monospace); font-weight:800; color:#4338ca;">—</div>
+          </div>
+          <div>
+            <span style="font-size:0.75rem; color:#64748b; font-weight:700; text-transform:uppercase;">Style / Primary Item:</span>
+            <div id="pv-style" style="font-weight:700; color:var(--slate-700);">—</div>
+          </div>
+          <div>
+            <span style="font-size:0.75rem; color:#64748b; font-weight:700; text-transform:uppercase;">Total Assigned:</span>
+            <div id="pv-issued" style="font-family:var(--font-mono, monospace); font-weight:800; color:var(--slate-900);">0 Pcs</div>
+          </div>
+          <div>
+            <span style="font-size:0.75rem; color:#64748b; font-weight:700; text-transform:uppercase;">Previously Received:</span>
+            <div id="pv-received" style="font-family:var(--font-mono, monospace); font-weight:800; color:#059669;">0 Pcs</div>
+          </div>
+          <div>
+            <span style="font-size:0.75rem; color:#64748b; font-weight:700; text-transform:uppercase;">Remaining Balance:</span>
+            <div id="pv-pending" style="font-family:var(--font-mono, monospace); font-weight:800; color:#dc2626; font-size:1.05rem;">0 Pcs</div>
+          </div>
         </div>
-        <div>
-          <span style="font-size:0.75rem; color:#64748b; font-weight:700; text-transform:uppercase;">Lot / Batch #:</span>
-          <div id="pv-lot" style="font-family:var(--font-mono, monospace); font-weight:800; color:#4338ca;">—</div>
+      </div>
+
+      <!-- Mode 2: Direct Standalone Inward (No Job Order Required) -->
+      <div id="direct-mode-controls" style="display:none;">
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:18px;">
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label" style="font-weight:700; color:var(--slate-800); margin-bottom:6px;">
+              Contractor / Job Worker Name <span style="color:#ef4444;">*</span>
+            </label>
+            <input type="text" name="job_worker_name" id="direct_worker_name" class="form-control" placeholder="Enter Job Worker / Contractor Name">
+          </div>
+
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label" style="font-weight:700; color:var(--slate-800); margin-bottom:6px;">
+              Process / Operation
+            </label>
+            <select name="process_name" id="direct_process_name" class="form-control">
+              <option value="Stitching & Assembly">Stitching & Assembly</option>
+              <option value="Fabric Cutting">Fabric Cutting</option>
+              <option value="Embroidery & Design">Embroidery & Design</option>
+              <option value="Washing & Finishing">Washing & Finishing</option>
+              <option value="Ironing & Packing">Ironing & Packing</option>
+            </select>
+          </div>
+
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label" style="font-weight:700; color:var(--slate-800); margin-bottom:6px;">
+              Lot / Batch Number
+            </label>
+            <input type="text" name="lot_number" id="direct_lot_number" class="form-control" placeholder="e.g. LOT-2026-001" style="font-family:var(--font-mono, monospace); font-weight:700;">
+          </div>
+
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label" style="font-weight:700; color:var(--slate-800); margin-bottom:6px;">
+              Style / Garment Name
+            </label>
+            <input type="text" name="style_name" id="direct_style_name" class="form-control" placeholder="e.g. Cotton Kurta / Shirt">
+          </div>
         </div>
-        <div>
-          <span style="font-size:0.75rem; color:#64748b; font-weight:700; text-transform:uppercase;">Style / Primary Item:</span>
-          <div id="pv-style" style="font-weight:700; color:var(--slate-700);">—</div>
-        </div>
-        <div>
-          <span style="font-size:0.75rem; color:#64748b; font-weight:700; text-transform:uppercase;">Total Assigned:</span>
-          <div id="pv-issued" style="font-family:var(--font-mono, monospace); font-weight:800; color:var(--slate-900);">0 Pcs</div>
-        </div>
-        <div>
-          <span style="font-size:0.75rem; color:#64748b; font-weight:700; text-transform:uppercase;">Previously Received:</span>
+      </div>
           <div id="pv-received" style="font-family:var(--font-mono, monospace); font-weight:800; color:#059669;">0 Pcs</div>
         </div>
         <div>
@@ -337,7 +393,7 @@
       <a href="{{ route('jobwork.inward.index') }}" class="btn btn-secondary" style="font-weight:700; padding:10px 20px;">Cancel</a>
       <button type="submit" id="save-inward-btn-bottom" class="btn btn-primary" style="display:inline-flex; align-items:center; gap:8px; font-weight:700; box-shadow:0 2px 8px rgba(5, 150, 105, 0.3); background:#059669; border-color:#059669; padding:10px 24px;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-        Confirm Inward & Update Stock
+        Confirm Inward Receipt
       </button>
     </div>
 
@@ -396,6 +452,86 @@
       input.style.backgroundColor = '';
       input.style.boxShadow = '';
     }, 500);
+  }
+
+  let currentInwardMode = 'linked';
+
+  function switchInwardMode(mode) {
+    currentInwardMode = mode;
+    const linkedBox = document.getElementById('linked-mode-controls');
+    const directBox = document.getElementById('direct-mode-controls');
+    const tabLinked = document.getElementById('tab-linked-btn');
+    const tabDirect = document.getElementById('tab-direct-btn');
+    const addDirectBtn = document.getElementById('btn-add-direct-item');
+
+    if (mode === 'direct') {
+      if (linkedBox) linkedBox.style.display = 'none';
+      if (directBox) directBox.style.display = 'block';
+      if (tabDirect) {
+        tabDirect.style.background = '#ffffff';
+        tabDirect.style.color = '#1d4ed8';
+        tabDirect.style.boxShadow = '0 1px 2px rgba(0,0,0,0.06)';
+      }
+      if (tabLinked) {
+        tabLinked.style.background = 'transparent';
+        tabLinked.style.color = '#64748b';
+        tabLinked.style.boxShadow = 'none';
+      }
+      if (addDirectBtn) addDirectBtn.style.display = 'inline-flex';
+
+      // Setup default item if empty
+      if (itemsData.length === 0) {
+        itemsData = [{
+          job_assignment_item_id: null,
+          item_id: null,
+          item_name: 'Finished Garment',
+          item_code: '',
+          assigned_qty: 0,
+          previously_received_qty: 0,
+          current_inward_qty: 100,
+          defect_qty: 0,
+          remaining_qty: 999999,
+          rate: 25.00,
+          assigned_thans: [],
+          thans: []
+        }];
+        renderAllItems();
+        calculateOverallTotals();
+      }
+    } else {
+      if (linkedBox) linkedBox.style.display = 'block';
+      if (directBox) directBox.style.display = 'none';
+      if (tabLinked) {
+        tabLinked.style.background = '#ffffff';
+        tabLinked.style.color = '#1d4ed8';
+        tabLinked.style.boxShadow = '0 1px 2px rgba(0,0,0,0.06)';
+      }
+      if (tabDirect) {
+        tabDirect.style.background = 'transparent';
+        tabDirect.style.color = '#64748b';
+        tabDirect.style.boxShadow = 'none';
+      }
+      if (addDirectBtn) addDirectBtn.style.display = 'none';
+    }
+  }
+
+  function addNewDirectItem() {
+    itemsData.push({
+      job_assignment_item_id: null,
+      item_id: null,
+      item_name: 'Finished Item #' + (itemsData.length + 1),
+      item_code: '',
+      assigned_qty: 0,
+      previously_received_qty: 0,
+      current_inward_qty: 50,
+      defect_qty: 0,
+      remaining_qty: 999999,
+      rate: 25.00,
+      assigned_thans: [],
+      thans: []
+    });
+    renderAllItems();
+    calculateOverallTotals();
   }
 
   // 1. When Job Worker is selected
@@ -539,11 +675,11 @@
     const container = document.getElementById('items-container');
     if (!container) return;
 
-    if (!currentAssignmentData || itemsData.length === 0) {
+    if ((currentInwardMode === 'linked' && !currentAssignmentData) || itemsData.length === 0) {
       container.innerHTML = `
         <div style="text-align:center; padding:32px 18px; color:#64748b; border:2px dashed #cbd5e1; border-radius:16px; background:#ffffff;">
-          <div style="font-weight:700; font-size:0.95rem; color:#475569; margin-bottom:4px;">No Job Assignment Selected</div>
-          <p style="font-size:0.8rem; color:#94a3b8; margin:0;">Please select a <strong>Job Worker</strong> and <strong>Job Assignment</strong> above to load assigned items and quantities.</p>
+          <div style="font-weight:700; font-size:0.95rem; color:#475569; margin-bottom:4px;">No Items to Inward</div>
+          <p style="font-size:0.8rem; color:#94a3b8; margin:0;">Select a Job Order above or click <strong>⭐ Direct Standalone Inward</strong> to record without a Job Order.</p>
         </div>
       `;
       return;
@@ -1076,16 +1212,24 @@
 
   // 5. Submit validation
   document.getElementById('inward-form')?.addEventListener('submit', function(e) {
-    if (!document.getElementById('worker_select').value) {
-      e.preventDefault();
-      alert('Please select a Job Worker / Contractor.');
-      return false;
-    }
-
-    if (!document.getElementById('ja_select').value) {
-      e.preventDefault();
-      alert('Please select an Active Job Assignment.');
-      return false;
+    if (currentInwardMode === 'linked') {
+      if (!document.getElementById('worker_select').value) {
+        e.preventDefault();
+        alert('Please select a Job Worker / Contractor.');
+        return false;
+      }
+      if (!document.getElementById('ja_select').value) {
+        e.preventDefault();
+        alert('Please select an Active Job Assignment or switch to Direct Standalone Inward.');
+        return false;
+      }
+    } else {
+      const directWorker = document.getElementById('direct_worker_name')?.value?.trim();
+      if (!directWorker) {
+        e.preventDefault();
+        alert('Please enter Contractor / Job Worker Name.');
+        return false;
+      }
     }
 
     if (itemsData.length === 0) {
@@ -1095,21 +1239,10 @@
     }
 
     let totalInwarding = 0;
-    let hasExceededLimit = false;
-
     itemsData.forEach((item, idx) => {
       const q = parseFloat(item.current_inward_qty) || 0;
       totalInwarding += q;
-      if (q > item.remaining_qty) {
-        hasExceededLimit = true;
-      }
     });
-
-    if (hasExceededLimit) {
-      e.preventDefault();
-      alert('One or more items have an inward quantity greater than the remaining pending balance.');
-      return false;
-    }
 
     if (totalInwarding <= 0) {
       e.preventDefault();

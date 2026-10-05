@@ -1,6 +1,6 @@
 @extends('layouts.public')
 
-@section('title', 'Claim Voucher & Transfer Amount - ' . ($companyName ?? 'Nathmal Amarchand'))
+@section('title', 'Claim Voucher & Transfer Amount - ' . ($companyName ?? 'aarambh'))
 
 @section('content')
 <div style="max-width:760px; margin:0 auto; padding:15px 12px 50px;">
@@ -13,7 +13,7 @@
       <div style="position:absolute; top:-20px; right:-20px; width:130px; height:130px; background:radial-gradient(circle, rgba(99,102,241,0.25) 0%, rgba(99,102,241,0) 70%); border-radius:50%; pointer-events:none;"></div>
       
       @php
-        $cName = $companyName ?? 'Nathmal Amarchand';
+        $cName = $companyName ?? 'aarambh';
         $words = preg_split('/\s+/', trim($cName));
         $brandInitials = '';
         foreach ($words as $w) {
@@ -152,6 +152,90 @@
             </div>
             
             <input type="hidden" id="uploaded_customer_qr_url" name="recipient_qr_image" value="{{ $voucher->recipient_qr_image ?? '' }}">
+          </div>
+
+          <!-- Stylized Section: Full Address & PIN Code for Sending Gifts -->
+          <div style="background:#f0fdf4; border:1.5px solid #86efac; border-radius:14px; padding:16px 18px; margin-top:4px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-size:1.15rem;">🎁</span>
+                <div>
+                  <h4 style="margin:0; font-size:0.95rem; font-weight:800; color:#14532d;">
+                    Gift Delivery Address Details
+                  </h4>
+                  <p style="margin:2px 0 0; font-size:0.75rem; color:#15803d;">
+                    Full shipping address & PIN code are required to deliver your gifts
+                  </p>
+                </div>
+              </div>
+              <span style="font-size:0.7rem; background:#bbf7d0; color:#14532d; font-weight:800; padding:2px 8px; border-radius:12px; border:1px solid #86efac;">
+                Mandatory
+              </span>
+            </div>
+
+            <!-- Full Address -->
+            <div class="form-group" style="margin-bottom:12px;">
+              <label class="form-label" for="recipient_address" style="font-weight:700; font-size:0.88rem; color:#14532d; margin-bottom:6px; display:flex; align-items:center; justify-content:space-between;">
+                <span style="display:inline-flex; align-items:center; gap:6px;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                  Full Address for Sending Gifts <span style="color:#ef4444;">*</span>
+                </span>
+                <span style="font-size:0.72rem; color:#166534; font-weight:600;">Doorstep Delivery</span>
+              </label>
+              <textarea 
+                id="recipient_address" 
+                name="recipient_address" 
+                class="form-control" 
+                rows="3" 
+                required 
+                placeholder="House / Flat No., Building Name, Street / Road, Area, Landmark, City..." 
+                style="width:100%; padding:10px 14px; border:1.5px solid #86efac; border-radius:10px; font-size:0.9rem; font-weight:600; color:#0f172a; background:#ffffff; resize:vertical;"
+              >{{ $voucher->recipient_address ?? '' }}</textarea>
+            </div>
+
+            <!-- PIN Code and City/State Grid -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+              <!-- PIN Code (Required) -->
+              <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label" for="recipient_pincode" style="font-weight:700; font-size:0.88rem; color:#14532d; margin-bottom:6px; display:flex; align-items:center; justify-content:space-between;">
+                  <span style="display:inline-flex; align-items:center; gap:5px;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/><path d="M15 3v18"/></svg>
+                    PIN Code <span style="color:#ef4444;">*</span>
+                  </span>
+                  <span style="font-size:0.72rem; color:#dc2626; font-weight:700;">6 Digits</span>
+                </label>
+                <input 
+                  type="text" 
+                  id="recipient_pincode" 
+                  name="recipient_pincode" 
+                  class="form-control font-mono" 
+                  required 
+                  maxlength="6" 
+                  pattern="[0-9]{6}" 
+                  placeholder="e.g. 302001" 
+                  value="{{ $voucher->recipient_pincode ?? '' }}" 
+                  oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+                  style="width:100%; padding:10px 14px; border:1.5px solid #86efac; border-radius:10px; font-size:1rem; font-weight:800; color:#14532d; background:#ffffff; letter-spacing:2px;"
+                >
+              </div>
+
+              <!-- City / State (Optional Helper) -->
+              <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label" for="recipient_city" style="font-weight:700; font-size:0.88rem; color:#14532d; margin-bottom:6px;">
+                  City / State
+                </label>
+                <input 
+                  type="text" 
+                  id="recipient_city" 
+                  name="recipient_city" 
+                  class="form-control" 
+                  placeholder="e.g. Jaipur, Rajasthan" 
+                  value="{{ $voucher->recipient_city ?? '' }}" 
+                  style="width:100%; padding:10px 14px; border:1.5px solid #86efac; border-radius:10px; font-size:0.9rem; font-weight:600; color:#0f172a; background:#ffffff;"
+                >
+              </div>
+            </div>
+
           </div>
 
         </div>
@@ -410,6 +494,18 @@
         <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
           <span style="color:#64748b;">Payout UPI / QR:</span>
           <strong id="receipt_payout_dest" class="font-mono" style="color:#0f172a; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">---</strong>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; margin-bottom:8px; border-top:1px dashed #cbd5e1; padding-top:8px;">
+          <span style="color:#64748b; display:inline-flex; align-items:center; gap:4px;">
+            <span>🎁</span> Gift Address:
+          </span>
+          <strong id="receipt_address" style="color:#0f172a; max-width:220px; text-align:right; font-size:0.82rem; line-height:1.3; word-break:break-word;">---</strong>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+          <span style="color:#64748b;">Delivery PIN Code:</span>
+          <strong id="receipt_pincode" class="font-mono" style="color:#15803d; font-weight:800; font-size:0.95rem;">---</strong>
         </div>
 
         <div style="display:flex; justify-content:space-between;">
@@ -851,10 +947,25 @@
     const qrUrl = document.getElementById('uploaded_customer_qr_url').value.trim();
     const rawCode = document.getElementById('voucher_code').value.trim();
     const code = cleanVoucherInput(rawCode);
+    const address = (document.getElementById('recipient_address')?.value || '').trim();
+    const pincode = (document.getElementById('recipient_pincode')?.value || '').trim();
+    const city = (document.getElementById('recipient_city')?.value || '').trim();
 
     if (!phone || phone.length < 10) {
       alert('Please enter a valid 10-digit Customer Phone Number.');
       document.getElementById('customer_phone').focus();
+      return;
+    }
+
+    if (!address || address.length < 5) {
+      alert('Please enter your complete Full Delivery Address [for sending gifts].');
+      document.getElementById('recipient_address')?.focus();
+      return;
+    }
+
+    if (!pincode || !/^\d{6}$/.test(pincode)) {
+      alert('A valid 6-digit PIN code is necessary for gift delivery.');
+      document.getElementById('recipient_pincode')?.focus();
       return;
     }
 
@@ -893,6 +1004,9 @@
         body: JSON.stringify({
           voucher_code: code,
           customer_phone: phone,
+          recipient_address: address,
+          recipient_pincode: pincode,
+          recipient_city: city,
           recipient_upi_id: upi || 'PAYOUT-' + phone,
           recipient_qr_image: qrUrl,
           order_bill: activeTransferAmount,
@@ -911,6 +1025,12 @@
         document.getElementById('receipt_code').innerText = code;
         document.getElementById('receipt_phone').innerText = '+91 ' + phone;
         document.getElementById('receipt_payout_dest').innerText = upi || (qrUrl ? 'Uploaded QR' : 'Mobile Linked');
+        if (document.getElementById('receipt_address')) {
+          document.getElementById('receipt_address').innerText = data.recipient_address || address;
+        }
+        if (document.getElementById('receipt_pincode')) {
+          document.getElementById('receipt_pincode').innerText = data.recipient_pincode || pincode;
+        }
         document.getElementById('receipt_timestamp').innerText = data.redeemed_at || new Date().toLocaleString();
 
         const modal = document.getElementById('success_receipt_modal');

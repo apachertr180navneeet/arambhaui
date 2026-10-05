@@ -50,7 +50,7 @@ class AppServiceProvider extends ServiceProvider
             $companySettings = [];
         }
 
-        $companyName = !empty($companySettings['company_name']) ? $companySettings['company_name'] : config('app.name', 'Nathmal Amarchand');
+        $companyName = !empty($companySettings['company_name']) ? $companySettings['company_name'] : config('app.name', 'aarambh');
 
         View::share('companySettings', $companySettings);
         View::share('companyName', $companyName);

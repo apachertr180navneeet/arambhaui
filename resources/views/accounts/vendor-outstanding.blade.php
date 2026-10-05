@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Vendor Outstanding & Payables - Nathmal Amarchand')
+@section('title', 'Vendor Outstanding & Payables - aarambh')
 
 @section('breadcrumb')
   <div class="breadcrumb-item"><span>Accounts & Settlements</span></div>

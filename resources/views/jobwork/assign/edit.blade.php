@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Edit Job Work Order - Nathmal Amarchand')
+@section('title', 'Edit Job Work Order - aarambh')
 
 @section('breadcrumb')
   <div class="breadcrumb-item"><a href="{{ route('jobwork.assign.index') }}" style="color:inherit; text-decoration:none;">Job Work & Assign</a></div>
@@ -92,7 +92,7 @@
 @endpush
 
 @section('content')
-<form action="{{ route('jobwork.assign.update', $assign->id) }}" method="POST" id="jw-form">
+<form action="{{ route('jobwork.assign.update', $assign->id) }}" method="POST" id="jw-form" enctype="multipart/form-data">
   @csrf
   @method('PUT')
 
@@ -250,10 +250,61 @@
 
     </div>
 
-    <!-- 3. Instructions & Overall Order Summary -->
+    <!-- 3. Sample / Item Photos Provided to Job Worker (Camera & Gallery) -->
+    <div class="card" style="background:#fff; border-radius:var(--radius-xl, 16px); border:1px solid var(--slate-200, #e2e8f0); box-shadow:var(--shadow-sm); padding:24px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--slate-100, #f1f5f9); padding-bottom:14px; margin-bottom:18px; flex-wrap:wrap; gap:12px;">
+        <div>
+          <h3 style="font-size:0.95rem; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; margin:0; color:var(--slate-800); display:flex; align-items:center; gap:8px;">
+            <span style="width:24px; height:24px; border-radius:6px; background:#fef3c7; color:#d97706; display:inline-flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:800;">3</span>
+            Sample / Item Photos Provided to Job Worker
+          </h3>
+          <p style="margin:4px 0 0; font-size:0.825rem; color:var(--slate-500);">
+            Photos of sample garments, patterns, cuts, or materials handed over to contractor.
+          </p>
+        </div>
+
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+          <button type="button" class="btn btn-primary btn-sm" onclick="triggerDeviceCamera()" style="display:inline-flex; align-items:center; gap:6px; font-weight:700; background:#0284c7; border-color:#0284c7; box-shadow:0 2px 6px rgba(2, 132, 199, 0.25);">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            📷 Take Photo (Camera)
+          </button>
+
+          <button type="button" class="btn btn-secondary btn-sm" onclick="openWebcamModal()" style="display:inline-flex; align-items:center; gap:6px; font-weight:700; color:#0369a1; background:#f0f9ff; border-color:#bae6fd;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2"/></svg>
+            Live Webcam
+          </button>
+
+          <button type="button" class="btn btn-secondary btn-sm" onclick="triggerGalleryUpload()" style="display:inline-flex; align-items:center; gap:6px; font-weight:700; background:#ffffff; border-color:#cbd5e1; color:#334155;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            🖼️ Pick from Gallery
+          </button>
+        </div>
+      </div>
+
+      <!-- Hidden actual file inputs -->
+      <input type="file" id="cameraFileInput" name="camera_photos[]" accept="image/*" capture="environment" style="display:none;" multiple onchange="handleFileInputChange(this, 'Camera')">
+      <input type="file" id="galleryFileInput" name="gallery_photos[]" accept="image/*" style="display:none;" multiple onchange="handleFileInputChange(this, 'Gallery')">
+
+      <!-- Hidden base64 snapshots and retained photos container -->
+      <div id="hidden-snapshots-container"></div>
+      <div id="retained-photos-container"></div>
+
+      <!-- Photo Preview Grid -->
+      <div id="photo-preview-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(130px, 1fr)); gap:14px; min-height:110px; border:2px dashed #cbd5e1; border-radius:14px; padding:18px; background:#f8fafc; align-items:center; justify-content:center;">
+        <div id="no-photo-empty" style="grid-column:1 / -1; text-align:center; padding:16px; color:#64748b;">
+          <div style="width:44px; height:44px; margin:0 auto 10px; border-radius:50%; background:#e2e8f0; display:flex; align-items:center; justify-content:center; color:#64748b;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          </div>
+          <div style="font-weight:700; font-size:0.9rem; color:#334155;">No sample photos attached yet</div>
+          <p style="margin:4px 0 0; font-size:0.775rem; color:#94a3b8;">Use <strong>📷 Take Photo</strong> on mobile or <strong>🖼️ Pick from Gallery</strong> to upload handover samples.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Instructions & Overall Order Summary -->
     <div class="card" style="background:#fff; border-radius:var(--radius-xl, 16px); border:1px solid var(--slate-200, #e2e8f0); box-shadow:var(--shadow-sm); padding:24px;">
       <h3 style="font-size:0.95rem; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; margin-top:0; margin-bottom:18px; color:var(--slate-800); border-bottom:1px solid var(--slate-100, #f1f5f9); padding-bottom:10px; display:flex; align-items:center; gap:8px;">
-        <span style="width:24px; height:24px; border-radius:6px; background:#f5f3ff; color:#7c3aed; display:inline-flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:800;">3</span>
+        <span style="width:24px; height:24px; border-radius:6px; background:#f5f3ff; color:#7c3aed; display:inline-flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:800;">4</span>
         Production Yield & Contract Terms Summary
       </h3>
 
@@ -318,6 +369,37 @@
 
   </div>
 </form>
+
+<!-- Live Camera / Webcam Snapshot Modal -->
+<div class="modal-backdrop" id="webcamModal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.75); backdrop-filter:blur(4px); z-index:9999; align-items:center; justify-content:center;" onclick="if(event.target===this) closeWebcamModal()">
+  <div style="background:#ffffff; border-radius:18px; width:92%; max-width:540px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.25); overflow:hidden; border:1px solid #cbd5e1;">
+    <div style="padding:16px 20px; background:#0f172a; color:#fff; display:flex; justify-content:space-between; align-items:center;">
+      <div style="display:flex; align-items:center; gap:8px; font-weight:800; font-size:0.95rem;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        <span>Live Camera - Capture Handover Sample</span>
+      </div>
+      <button type="button" onclick="closeWebcamModal()" style="background:transparent; border:none; color:#94a3b8; font-size:1.4rem; cursor:pointer; line-height:1;">&times;</button>
+    </div>
+    <div style="padding:16px; background:#020617; display:flex; flex-direction:column; align-items:center; gap:12px;">
+      <video id="webcamVideo" autoplay playsinline style="width:100%; max-height:360px; object-fit:contain; border-radius:12px; background:#000;"></video>
+      <canvas id="webcamCanvas" style="display:none;"></canvas>
+      <div id="cameraStatusMsg" style="font-size:0.8rem; color:#94a3b8;">Point camera at sample garment or fabric cut...</div>
+    </div>
+    <div style="padding:14px 20px; background:#f8fafc; border-top:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center;">
+      <button type="button" class="btn btn-secondary btn-sm" onclick="switchCameraFacing()" style="display:inline-flex; align-items:center; gap:5px; font-weight:700;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/></svg>
+        Switch Camera
+      </button>
+      <div style="display:flex; gap:10px;">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="closeWebcamModal()" style="font-weight:700;">Cancel</button>
+        <button type="button" class="btn btn-primary btn-sm" onclick="captureWebcamSnapshot()" style="background:#0284c7; border-color:#0284c7; display:inline-flex; align-items:center; gap:6px; font-weight:800; padding:8px 18px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+          Capture Photo
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 
 @endsection
 
@@ -1300,9 +1382,205 @@
     }
   });
 
+  // Photo management state for edit
+  const existingPhotosRaw = @json($assign->photos_list ?: []);
+  let photoItems = [];
+
+  if (Array.isArray(existingPhotosRaw)) {
+    existingPhotosRaw.forEach((path, i) => {
+      if (path) {
+        photoItems.push({
+          id: 'exist_' + i,
+          source: 'Attached',
+          dataUrl: path.startsWith('http') || path.startsWith('/') ? path : ('/' + path),
+          path: path,
+          name: 'Photo #' + (i + 1),
+          isExisting: true
+        });
+      }
+    });
+  }
+
+  function triggerDeviceCamera() {
+    const camInput = document.getElementById('cameraFileInput');
+    if (camInput) camInput.click();
+  }
+
+  function triggerGalleryUpload() {
+    const galInput = document.getElementById('galleryFileInput');
+    if (galInput) galInput.click();
+  }
+
+  let webcamStream = null;
+  let currentFacingMode = 'environment';
+
+  async function openWebcamModal() {
+    const modal = document.getElementById('webcamModal');
+    if (modal) modal.style.display = 'flex';
+    await startWebcamStream();
+  }
+
+  async function startWebcamStream() {
+    const video = document.getElementById('webcamVideo');
+    const msg = document.getElementById('cameraStatusMsg');
+    if (!video) return;
+
+    if (webcamStream) {
+      webcamStream.getTracks().forEach(t => t.stop());
+    }
+
+    try {
+      webcamStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: currentFacingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: false
+      });
+      video.srcObject = webcamStream;
+      if (msg) msg.textContent = 'Camera active. Frame sample and click "Capture Photo".';
+    } catch (err) {
+      console.warn('Webcam stream error:', err);
+      if (msg) msg.textContent = 'Webcam not available directly. Switching to device camera file capture...';
+      setTimeout(() => {
+        closeWebcamModal();
+        triggerDeviceCamera();
+      }, 1000);
+    }
+  }
+
+  async function switchCameraFacing() {
+    currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
+    await startWebcamStream();
+  }
+
+  function closeWebcamModal() {
+    const modal = document.getElementById('webcamModal');
+    if (modal) modal.style.display = 'none';
+    if (webcamStream) {
+      webcamStream.getTracks().forEach(t => t.stop());
+      webcamStream = null;
+    }
+  }
+
+  function captureWebcamSnapshot() {
+    const video = document.getElementById('webcamVideo');
+    const canvas = document.getElementById('webcamCanvas');
+    if (!video || !canvas) return;
+
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+
+    const photoId = 'snap_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+    photoItems.push({
+      id: photoId,
+      source: 'Camera',
+      dataUrl: dataUrl,
+      isSnapshot: true,
+      name: 'Camera Snapshot'
+    });
+
+    renderPhotoPreviews();
+    closeWebcamModal();
+    if (window.UI && UI.showToast) {
+      UI.showToast('Captured', 'Sample photo captured successfully', 'success');
+    }
+  }
+
+  function handleFileInputChange(input, source) {
+    if (!input.files || input.files.length === 0) return;
+
+    Array.from(input.files).forEach(file => {
+      if (!file.type.startsWith('image/')) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const photoId = 'file_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+        photoItems.push({
+          id: photoId,
+          source: source,
+          dataUrl: e.target.result,
+          file: file,
+          name: file.name,
+          isSnapshot: false
+        });
+        renderPhotoPreviews();
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function removePhotoItem(id) {
+    photoItems = photoItems.filter(p => p.id !== id);
+    renderPhotoPreviews();
+  }
+
+  function renderPhotoPreviews() {
+    const grid = document.getElementById('photo-preview-grid');
+    const snapshotsContainer = document.getElementById('hidden-snapshots-container');
+    const retainedContainer = document.getElementById('retained-photos-container');
+    if (!grid) return;
+
+    if (photoItems.length === 0) {
+      grid.innerHTML = `
+        <div id="no-photo-empty" style="grid-column:1 / -1; text-align:center; padding:16px; color:#64748b;">
+          <div style="width:44px; height:44px; margin:0 auto 10px; border-radius:50%; background:#e2e8f0; display:flex; align-items:center; justify-content:center; color:#64748b;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          </div>
+          <div style="font-weight:700; font-size:0.9rem; color:#334155;">No sample photos attached yet</div>
+          <p style="margin:4px 0 0; font-size:0.775rem; color:#94a3b8;">Use <strong>📷 Take Photo</strong> on mobile or <strong>🖼️ Pick from Gallery</strong> to upload handover samples.</p>
+        </div>
+      `;
+      if (snapshotsContainer) snapshotsContainer.innerHTML = '';
+      if (retainedContainer) retainedContainer.innerHTML = '';
+      return;
+    }
+
+    let html = '';
+    let snapshotInputs = '';
+    let retainedInputs = '';
+
+    photoItems.forEach((p, idx) => {
+      const isCam = p.source === 'Camera';
+      const badgeBg = isCam ? '#e0f2fe' : (p.isExisting ? '#fef3c7' : '#f1f5f9');
+      const badgeColor = isCam ? '#0369a1' : (p.isExisting ? '#d97706' : '#475569');
+      const badgeIcon = isCam ? '📷' : (p.isExisting ? '📁' : '🖼️');
+
+      html += `
+        <div style="position:relative; background:#ffffff; border:1px solid #cbd5e1; border-radius:12px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+          <div style="height:110px; background:#0f172a; overflow:hidden; position:relative; cursor:pointer;" onclick="window.open('${p.dataUrl}', '_blank')">
+            <img src="${p.dataUrl}" alt="Sample ${idx + 1}" style="width:100%; height:100%; object-fit:cover;">
+            <span style="position:absolute; top:6px; left:6px; background:${badgeBg}; color:${badgeColor}; font-size:0.68rem; font-weight:800; padding:2px 6px; border-radius:4px; border:1px solid rgba(0,0,0,0.06);">
+              ${badgeIcon} ${p.source}
+            </span>
+          </div>
+          <div style="padding:6px 8px; display:flex; justify-content:space-between; align-items:center; background:#ffffff;">
+            <span style="font-size:0.72rem; color:#64748b; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:85px;">
+              ${p.name || 'Sample #' + (idx + 1)}
+            </span>
+            <button type="button" onclick="removePhotoItem('${p.id}')" style="background:#fee2e2; border:1px solid #fca5a5; color:#dc2626; border-radius:6px; width:22px; height:22px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-weight:800; font-size:0.75rem;" title="Remove this photo">
+              &times;
+            </button>
+          </div>
+        </div>
+      `;
+
+      if (p.isSnapshot) {
+        snapshotInputs += `<input type="hidden" name="camera_snapshots[]" value="${p.dataUrl}">`;
+      }
+      if (p.isExisting && p.path) {
+        retainedInputs += `<input type="hidden" name="retained_photos[]" value="${p.path}">`;
+      }
+    });
+
+    grid.innerHTML = html;
+    if (snapshotsContainer) snapshotsContainer.innerHTML = snapshotInputs;
+    if (retainedContainer) retainedContainer.innerHTML = retainedInputs;
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     renderAllRawItemCards();
     calculateOverallTotals();
+    renderPhotoPreviews();
   });
 </script>
 @endpush

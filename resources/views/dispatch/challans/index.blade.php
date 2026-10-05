@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Dispatch Challans - Nathmal Amarchand')
+@section('title', 'Dispatch Challans - aarambh')
 
 @section('breadcrumb')
   <div class="breadcrumb-item"><span>Shipping</span></div>
@@ -573,7 +573,7 @@
 
   function openChallanPrintModal(dc) {
     if (!dc) return;
-    const companyName = {!! json_encode($companyName ?? 'Nathmal Amarchand') !!};
+    const companyName = {!! json_encode($companyName ?? 'aarambh') !!};
     const companySettings = {!! json_encode($companySettings ?? []) !!};
 
     let itemsHtml = '';

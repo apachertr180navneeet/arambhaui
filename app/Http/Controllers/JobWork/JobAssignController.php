@@ -240,6 +240,70 @@ class JobAssignController extends Controller
         return $purchasedTons;
     }
 
+    /**
+     * Handle photo uploads from camera and gallery
+     */
+    protected function handlePhotoUploads(Request $request, $existingPhotos = [])
+    {
+        $savedPhotos = is_array($existingPhotos) ? $existingPhotos : [];
+        $uploadPath = public_path('uploads/job_assignments');
+        if (!file_exists($uploadPath)) {
+            mkdir($uploadPath, 0777, true);
+        }
+
+        // 1. Process uploaded files from gallery or camera file inputs
+        $fileInputs = ['photos', 'gallery_photos', 'camera_photos', 'sample_photo_file'];
+        foreach ($fileInputs as $inputKey) {
+            if ($request->hasFile($inputKey)) {
+                $files = $request->file($inputKey);
+                if (!is_array($files)) {
+                    $files = [$files];
+                }
+                foreach ($files as $file) {
+                    if ($file && $file->isValid()) {
+                        $filename = 'job_' . time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+                        $file->move($uploadPath, $filename);
+                        $savedPhotos[] = 'uploads/job_assignments/' . $filename;
+                    }
+                }
+            }
+        }
+
+        // 2. Process base64 camera snapshots
+        $snapshots = $request->input('camera_snapshots', []);
+        if (is_string($snapshots)) {
+            $snapshots = json_decode($snapshots, true) ?: [$snapshots];
+        }
+        if (is_array($snapshots)) {
+            foreach ($snapshots as $snap) {
+                if (!empty($snap) && is_string($snap) && preg_match('/^data:image\/(\w+);base64,/', $snap, $match)) {
+                    $ext = strtolower($match[1]);
+                    if (!in_array($ext, ['jpg', 'jpeg', 'png', 'webp', 'gif'])) {
+                        $ext = 'jpg';
+                    }
+                    $base64Data = substr($snap, strpos($snap, ',') + 1);
+                    $imageData = base64_decode($base64Data);
+                    if ($imageData !== false) {
+                        $filename = 'cam_' . time() . '_' . uniqid() . '.' . $ext;
+                        file_put_contents($uploadPath . '/' . $filename, $imageData);
+                        $savedPhotos[] = 'uploads/job_assignments/' . $filename;
+                    }
+                }
+            }
+        }
+
+        // 3. Keep any existing retained photos from edit form
+        $retainedPhotos = $request->input('retained_photos', []);
+        if (is_string($retainedPhotos)) {
+            $retainedPhotos = json_decode($retainedPhotos, true) ?: [];
+        }
+        if (is_array($retainedPhotos) && !empty($retainedPhotos)) {
+            $savedPhotos = array_values(array_unique(array_merge($retainedPhotos, $savedPhotos)));
+        }
+
+        return array_values(array_unique(array_filter($savedPhotos)));
+    }
+
     public function create()
     {
         $jobworkers = JobWorker::where('status', 'Active')->get();
@@ -474,6 +538,15 @@ class JobAssignController extends Controller
                 $assignmentData['than_details'] = !empty($allThanDetails) ? json_encode($allThanDetails) : null;
             }
 
+            // Handle Camera & Gallery photos
+            $photos = $this->handlePhotoUploads($request);
+            if (Schema::hasColumn('job_assignments', 'photos')) {
+                $assignmentData['photos'] = $photos;
+            }
+            if (Schema::hasColumn('job_assignments', 'sample_photo') && !empty($photos)) {
+                $assignmentData['sample_photo'] = $photos[0];
+            }
+
             $jobAssignment = JobAssignment::create($assignmentData);
 
             // Save line items
@@ -509,21 +582,7 @@ class JobAssignController extends Controller
                 if ($hasItemThanDetails) $itemPayload['than_details'] = $pItem['than_details'];
 
                 JobAssignmentItem::create($itemPayload);
-
-                // Reduce Raw Item current stock in items table
-                $rItemId = $pItem['raw_item_id'] ?: $pItem['item_id'];
-                $rawItem = null;
-                if ($rItemId) {
-                    $rawItem = Item::find($rItemId);
-                }
-                if (!$rawItem && !empty($pItem['raw_item_name'])) {
-                    $rawItem = Item::where('name', $pItem['raw_item_name'])->first();
-                }
-                if ($rawItem) {
-                    $deductMtr = (float)($pItem['than_meters'] > 0 ? $pItem['than_meters'] : $pItem['qty']);
-                    $rawItem->current_stock = max(0, (float)$rawItem->current_stock - $deductMtr);
-                    $rawItem->save();
-                }
+                // Note: Stock maintenance disabled as per business requirements.
             }
 
             if ($request->wantsJson() || $request->ajax()) {
@@ -769,26 +828,19 @@ class JobAssignController extends Controller
                 $assignmentData['than_details'] = !empty($allThanDetails) ? json_encode($allThanDetails) : null;
             }
 
-            $assign->update($assignmentData);
-
-            // Restore previous raw item stock
-            foreach ($assign->items as $prevItem) {
-                $prevRId = $prevItem->raw_item_id ?: $prevItem->item_id;
-                $prevRawItem = null;
-                if ($prevRId) {
-                    $prevRawItem = Item::find($prevRId);
-                }
-                if (!$prevRawItem && !empty($prevItem->raw_item_name)) {
-                    $prevRawItem = Item::where('name', $prevItem->raw_item_name)->first();
-                }
-                if ($prevRawItem) {
-                    $restoreMtr = (float)($prevItem->than_meters > 0 ? $prevItem->than_meters : $prevItem->qty);
-                    $prevRawItem->current_stock = (float)$prevRawItem->current_stock + $restoreMtr;
-                    $prevRawItem->save();
-                }
+            // Handle Camera & Gallery photos
+            $existingPhotos = $assign->photos_list;
+            $photos = $this->handlePhotoUploads($request, $existingPhotos);
+            if (Schema::hasColumn('job_assignments', 'photos')) {
+                $assignmentData['photos'] = $photos;
+            }
+            if (Schema::hasColumn('job_assignments', 'sample_photo')) {
+                $assignmentData['sample_photo'] = !empty($photos) ? $photos[0] : null;
             }
 
-            // Sync line items
+            $assign->update($assignmentData);
+
+            // Sync line items (Note: Stock maintenance disabled)
             $assign->items()->delete();
 
             $hasRawId = Schema::hasColumn('job_assignment_items', 'raw_item_id');
@@ -823,21 +875,7 @@ class JobAssignController extends Controller
                 if ($hasItemThanDetails) $itemPayload['than_details'] = $pItem['than_details'];
 
                 JobAssignmentItem::create($itemPayload);
-
-                // Reduce Raw Item current stock
-                $rItemId = $pItem['raw_item_id'] ?: $pItem['item_id'];
-                $rawItem = null;
-                if ($rItemId) {
-                    $rawItem = Item::find($rItemId);
-                }
-                if (!$rawItem && !empty($pItem['raw_item_name'])) {
-                    $rawItem = Item::where('name', $pItem['raw_item_name'])->first();
-                }
-                if ($rawItem) {
-                    $deductMtr = (float)($pItem['than_meters'] > 0 ? $pItem['than_meters'] : $pItem['qty']);
-                    $rawItem->current_stock = max(0, (float)$rawItem->current_stock - $deductMtr);
-                    $rawItem->save();
-                }
+                // Note: Stock maintenance disabled as per business requirements.
             }
 
             if ($request->wantsJson() || $request->ajax()) {
@@ -861,23 +899,7 @@ class JobAssignController extends Controller
     {
         $no = $assign->job_order_no;
 
-        // Restore raw item stock
-        foreach ($assign->items as $prevItem) {
-            $prevRId = $prevItem->raw_item_id ?: $prevItem->item_id;
-            $prevRawItem = null;
-            if ($prevRId) {
-                $prevRawItem = Item::find($prevRId);
-            }
-            if (!$prevRawItem && !empty($prevItem->raw_item_name)) {
-                $prevRawItem = Item::where('name', $prevItem->raw_item_name)->first();
-            }
-            if ($prevRawItem) {
-                $restoreMtr = (float)($prevItem->than_meters > 0 ? $prevItem->than_meters : $prevItem->qty);
-                $prevRawItem->current_stock = (float)$prevRawItem->current_stock + $restoreMtr;
-                $prevRawItem->save();
-            }
-        }
-
+        // Note: Stock maintenance disabled as per business requirements.
         $assign->items()->delete();
         $assign->delete();
 

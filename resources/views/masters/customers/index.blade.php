@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Customer Master - Nathmal Amarchand')
+@section('title', 'Customer Master - aarambh')
 
 @section('breadcrumb')
   <div class="breadcrumb-item"><span>Masters Management</span></div>

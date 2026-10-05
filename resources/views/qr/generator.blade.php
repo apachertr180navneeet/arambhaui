@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Generate QR Vouchers (Color Master A4 Setup) - Nathmal Amarchand')
+@section('title', 'Generate QR Vouchers (Color Master A4 Setup) - aarambh')
 
 @section('breadcrumb')
   <div class="breadcrumb-item"><span>Barcodes & QR</span></div>

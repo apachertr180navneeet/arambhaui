@@ -746,7 +746,7 @@ const MastersView = {
         <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:2px solid var(--slate-900); padding-bottom:16px; margin-bottom:16px;">
           <div>
             <h2 style="font-size:1.25rem; font-weight:800; color:var(--slate-900); margin:0;">STATEMENT OF ACCOUNT</h2>
-            <div style="font-size:0.8rem; color:var(--slate-500); margin-top:2px;">${window.COMPANY_NAME || 'Nathmal Amarchand'}</div>
+            <div style="font-size:0.8rem; color:var(--slate-500); margin-top:2px;">${window.COMPANY_NAME || 'aarambh'}</div>
           </div>
           <div style="text-align:right;">
             <div style="font-size:0.75rem; color:var(--slate-500);">Statement Date</div>
@@ -869,7 +869,7 @@ const MastersView = {
     printWin.document.write(`
       <html>
         <head>
-          <title>Customer Master Directory - ${window.COMPANY_NAME || 'Nathmal Amarchand'}</title>
+          <title>Customer Master Directory - ${window.COMPANY_NAME || 'aarambh'}</title>
           <style>
             body { font-family: Arial, sans-serif; padding: 25px; font-size: 12px; }
             h2 { margin-bottom: 4px; }
@@ -1923,7 +1923,7 @@ const MastersView = {
     printWin.document.write(`
       <html>
         <head>
-          <title>Item Master Catalog - ${window.COMPANY_NAME || 'Nathmal Amarchand'}</title>
+          <title>Item Master Catalog - ${window.COMPANY_NAME || 'aarambh'}</title>
           <style>
             body { font-family: Arial, sans-serif; padding: 25px; font-size: 12px; color: #1e293b; }
             h2 { margin-bottom: 4px; color: #0f172a; }

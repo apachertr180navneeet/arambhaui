@@ -12,6 +12,21 @@ class JobAssignment extends Model
 
     protected $guarded = [];
 
+    protected $casts = [
+        'photos' => 'array',
+        'issue_date' => 'date',
+        'due_date' => 'date',
+    ];
+
+    public function getPhotosListAttribute(): array
+    {
+        if (empty($this->photos)) {
+            return $this->sample_photo ? [$this->sample_photo] : [];
+        }
+        $p = is_string($this->photos) ? json_decode($this->photos, true) : $this->photos;
+        return is_array($p) ? array_values(array_filter($p)) : ($this->sample_photo ? [$this->sample_photo] : []);
+    }
+
     public function jobWorker()
     {
         return $this->belongsTo(JobWorker::class);

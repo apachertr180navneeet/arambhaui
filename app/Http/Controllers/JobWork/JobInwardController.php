@@ -453,7 +453,13 @@ class JobInwardController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'job_assignment_id' => 'required|exists:job_assignments,id',
+            'job_assignment_id' => 'nullable|integer',
+            'job_order_no' => 'nullable|string|max:100',
+            'lot_number' => 'nullable|string|max:100',
+            'job_worker_name' => 'nullable|string|max:255',
+            'job_worker_id' => 'nullable|integer',
+            'style_name' => 'nullable|string|max:255',
+            'process_name' => 'nullable|string|max:100',
             'inward_date' => 'required|date',
             'challan_no' => 'nullable|string|max:100',
             'received_qty' => 'nullable|integer|min:0',
@@ -467,8 +473,8 @@ class JobInwardController extends Controller
         ]);
 
         return DB::transaction(function () use ($validated, $request) {
-            $assignment = JobAssignment::lockForUpdate()->findOrFail($validated['job_assignment_id']);
-            $currentTracking = $this->formatAssignmentTracking($assignment);
+            $assignment = !empty($validated['job_assignment_id']) ? JobAssignment::find($validated['job_assignment_id']) : null;
+            $currentTracking = $assignment ? $this->formatAssignmentTracking($assignment) : ['items' => []];
 
             $year = date('Y');
             $count = JobInward::withTrashed()->count() + 1;
@@ -488,17 +494,19 @@ class JobInwardController extends Controller
             $allThansCombined = [];
             $totalAmount = 0;
 
-            // Map tracking items for remaining validation
+            // Map tracking items if assignment exists
             $trackingItemsMap = [];
-            foreach ($currentTracking['items'] as $ti) {
-                if (!empty($ti['job_assignment_item_id'])) {
-                    $trackingItemsMap['jai_' . $ti['job_assignment_item_id']] = $ti;
-                }
-                if (!empty($ti['item_id'])) {
-                    $trackingItemsMap['itm_' . $ti['item_id']] = $ti;
-                }
-                if (!empty($ti['item_name'])) {
-                    $trackingItemsMap['name_' . strtolower(trim($ti['item_name']))] = $ti;
+            if (!empty($currentTracking['items'])) {
+                foreach ($currentTracking['items'] as $ti) {
+                    if (!empty($ti['job_assignment_item_id'])) {
+                        $trackingItemsMap['jai_' . $ti['job_assignment_item_id']] = $ti;
+                    }
+                    if (!empty($ti['item_id'])) {
+                        $trackingItemsMap['itm_' . $ti['item_id']] = $ti;
+                    }
+                    if (!empty($ti['item_name'])) {
+                        $trackingItemsMap['name_' . strtolower(trim($ti['item_name']))] = $ti;
+                    }
                 }
             }
 
@@ -512,7 +520,7 @@ class JobInwardController extends Controller
                     $jaiId = !empty($itm['job_assignment_item_id']) ? (int)$itm['job_assignment_item_id'] : null;
                     $itemId = !empty($itm['item_id']) ? (int)$itm['item_id'] : null;
                     
-                    // Match tracking data
+                    // Match tracking data if available
                     $matchedTracking = null;
                     if ($jaiId && isset($trackingItemsMap['jai_' . $jaiId])) {
                         $matchedTracking = $trackingItemsMap['jai_' . $jaiId];
@@ -524,12 +532,11 @@ class JobInwardController extends Controller
 
                     $assignedQty = $matchedTracking ? (int)$matchedTracking['assigned_qty'] : (int)($itm['assigned_qty'] ?? 0);
                     $prevReceivedQty = $matchedTracking ? (int)$matchedTracking['previously_received_qty'] : (int)($itm['previously_received_qty'] ?? 0);
-                    $maxAllowed = $matchedTracking ? (int)$matchedTracking['remaining_qty'] : $assignedQty;
 
                     $receivedQty = (int)($itm['received_qty'] ?? 0);
                     $defectQty = (int)($itm['defect_qty'] ?? 0);
                     $wastageMeters = (float)($itm['wastage_returned_meters'] ?? 0);
-                    $rate = isset($itm['rate']) && $itm['rate'] !== '' ? (float)$itm['rate'] : (float)$assignment->rate_per_piece;
+                    $rate = isset($itm['rate']) && $itm['rate'] !== '' ? (float)$itm['rate'] : (float)($assignment?->rate_per_piece ?? ($validated['rate_per_piece'] ?? 0));
 
                     // Process Than-wise inward entries if present
                     $rawAssignedThans = $itm['assigned_thans'] ?? [];
@@ -542,16 +549,11 @@ class JobInwardController extends Controller
                         foreach ($rawAssignedThans as $at) {
                             $thAssignedPcs = (int)($at['assigned_pcs'] ?? 0);
                             $thPrevRecPcs = (int)($at['previously_received_pcs'] ?? 0);
-                            $thMaxAllowed = max(0, $thAssignedPcs - $thPrevRecPcs);
                             $thRecPcs = (int)($at['received_pcs'] ?? 0);
                             $thDefPcs = (int)($at['defect_pcs'] ?? 0);
                             $thWastage = (float)($at['wastage'] ?? 0);
                             $thPrevWastage = (float)($at['previously_returned_wastage'] ?? 0);
                             $thRetWastage = isset($at['wastage_returned']) ? (float)$at['wastage_returned'] : (float)($at['wastage_returned_meters'] ?? 0);
-
-                            if ($thMaxAllowed > 0 && $thRecPcs > $thMaxAllowed) {
-                                $thRecPcs = $thMaxAllowed;
-                            }
 
                             $thRemPcs = max(0, $thAssignedPcs - ($thPrevRecPcs + $thRecPcs));
                             $thRemWastage = max(0, $thWastage - ($thPrevWastage + $thRetWastage));
@@ -591,11 +593,6 @@ class JobInwardController extends Controller
                     }
                     if (!empty($processedAssignedThans) && $sumThanWastage > 0) {
                         $wastageMeters = $sumThanWastage;
-                    }
-
-                    // Enforce remaining limit on item overall
-                    if ($maxAllowed > 0 && $receivedQty > $maxAllowed) {
-                        $receivedQty = $maxAllowed;
                     }
 
                     $thansRaw = $itm['thans'] ?? [];
@@ -649,15 +646,7 @@ class JobInwardController extends Controller
                         $allThansCombined = array_merge($allThansCombined, $cleanThans);
                     }
 
-                    // Increment finished item stock in items table
-                    $stockItemId = $itemId ?: ($matchedTracking['finished_item_id'] ?? ($matchedTracking['item_id'] ?? null));
-                    if ($stockItemId && $receivedQty > 0) {
-                        $stockItem = Item::find($stockItemId);
-                        if ($stockItem) {
-                            $stockItem->current_stock = (float)$stockItem->current_stock + (float)$receivedQty;
-                            $stockItem->save();
-                        }
-                    }
+                    // Stock maintenance is disabled per user requirements - all modules work independently
                 }
             }
 
@@ -665,11 +654,11 @@ class JobInwardController extends Controller
                 $overallReceivedQty = (int)($validated['received_qty'] ?? 0);
                 $overallDefectQty = (int)($validated['defect_qty'] ?? 0);
                 $overallWastageMeters = (float)($validated['wastage_returned_meters'] ?? 0);
-                $rate = (float)($request->input('rate_per_piece', $assignment->rate_per_piece) ?: 0);
+                $rate = (float)($request->input('rate_per_piece', $assignment?->rate_per_piece ?? 0) ?: 0);
                 $totalAmount = $overallReceivedQty * $rate;
             }
 
-            $rate = (float)($request->input('rate_per_piece', $assignment->rate_per_piece) ?: 0);
+            $rate = (float)($request->input('rate_per_piece', $assignment?->rate_per_piece ?? 0) ?: 0);
             if ($totalAmount <= 0) {
                 $totalAmount = $overallReceivedQty * $rate;
             }
@@ -702,15 +691,27 @@ class JobInwardController extends Controller
                 'items' => $processedItems
             ];
 
+            // Resolve Worker Name and ID
+            $resolvedWorkerId = $assignment ? $assignment->job_worker_id : ($validated['job_worker_id'] ?? null);
+            $resolvedWorkerName = $assignment ? $assignment->job_worker_name : ($validated['job_worker_name'] ?? 'Direct Contractor');
+            if (!$resolvedWorkerName && $resolvedWorkerId) {
+                $resolvedWorkerName = JobWorker::find($resolvedWorkerId)?->name ?? 'Job Worker';
+            }
+
+            $resolvedJobOrderNo = $assignment ? $assignment->job_order_no : ($validated['job_order_no'] ?? 'INW-' . date('Ymd'));
+            $resolvedLotNumber = $assignment ? $assignment->lot_number : ($validated['lot_number'] ?? ('LOT-' . date('Y') . '-' . str_pad($count, 3, '0', STR_PAD_LEFT)));
+            $resolvedStyleName = $assignment ? $assignment->style_name : ($validated['style_name'] ?? (!empty($processedItems[0]['item_name']) ? $processedItems[0]['item_name'] : 'Finished Garment'));
+            $resolvedProcessName = $assignment ? $assignment->process_name : ($validated['process_name'] ?? 'Stitching');
+
             $inwardData = [
                 'inward_number' => $inwardNo,
-                'job_assignment_id' => $assignment->id,
-                'job_order_no' => $assignment->job_order_no,
-                'lot_number' => $assignment->lot_number,
-                'job_worker_id' => $assignment->job_worker_id,
-                'job_worker_name' => $assignment->job_worker_name,
-                'process_name' => $assignment->process_name,
-                'style_name' => $assignment->style_name,
+                'job_assignment_id' => $assignment?->id,
+                'job_order_no' => $resolvedJobOrderNo,
+                'lot_number' => $resolvedLotNumber,
+                'job_worker_id' => $resolvedWorkerId,
+                'job_worker_name' => $resolvedWorkerName,
+                'process_name' => $resolvedProcessName,
+                'style_name' => $resolvedStyleName,
                 'inward_date' => $validated['inward_date'],
                 'challan_no' => $challanNo,
                 'received_qty' => $overallReceivedQty,
@@ -738,36 +739,38 @@ class JobInwardController extends Controller
 
             $inward = JobInward::create($inwardData);
 
-            // Recompute total received on parent Job Assignment across all inwards
-            $allAssignmentInwards = JobInward::where('job_assignment_id', $assignment->id)->get();
-            $totReceived = $allAssignmentInwards->sum('received_qty');
-            $totDefect = $allAssignmentInwards->sum('defect_qty');
+            // Recompute total received on parent Job Assignment across all inwards (if linked)
+            if ($assignment) {
+                $allAssignmentInwards = JobInward::where('job_assignment_id', $assignment->id)->get();
+                $totReceived = $allAssignmentInwards->sum('received_qty');
+                $totDefect = $allAssignmentInwards->sum('defect_qty');
 
-            $assignment->received_qty = (int)$totReceived;
-            $assignment->rejected_qty = (int)$totDefect;
+                $assignment->received_qty = (int)$totReceived;
+                $assignment->rejected_qty = (int)$totDefect;
 
-            $totalIssued = (int)$assignment->issued_qty;
-            $pending = max(0, $totalIssued - $totReceived);
+                $totalIssued = (int)$assignment->issued_qty;
+                $pending = max(0, $totalIssued - $totReceived);
 
-            if ($pending <= 0) {
-                $assignment->status = 'Completed';
-            } elseif ($totReceived > 0) {
-                $assignment->status = 'Partial Ready';
-            } else {
-                $assignment->status = 'Issued';
+                if ($pending <= 0) {
+                    $assignment->status = 'Completed';
+                } elseif ($totReceived > 0) {
+                    $assignment->status = 'Partial Ready';
+                } else {
+                    $assignment->status = 'Issued';
+                }
+                $assignment->save();
             }
-            $assignment->save();
 
             if ($request->wantsJson() || $request->ajax()) {
                 return response()->json([
                     'success' => true,
-                    'message' => "Job Inward {$inwardNo} recorded successfully for Lot #{$assignment->lot_number}!",
+                    'message' => "Job Inward {$inwardNo} recorded successfully!",
                     'inward' => $inward
                 ]);
             }
 
             return redirect()->route('jobwork.inward.index')
-                ->with('success', "Job Inward Receipt {$inwardNo} recorded successfully! Received {$overallReceivedQty} pieces / {$overallTotalThans} thans from {$assignment->job_worker_name}.");
+                ->with('success', "Job Inward Receipt {$inwardNo} recorded successfully! Received {$overallReceivedQty} pieces from {$resolvedWorkerName}.");
         });
     }
 
@@ -819,7 +822,12 @@ class JobInwardController extends Controller
         $inward = JobInward::findOrFail($id);
 
         $validated = $request->validate([
-            'job_assignment_id' => 'required|exists:job_assignments,id',
+            'job_assignment_id' => 'nullable|exists:job_assignments,id',
+            'job_worker_name' => 'nullable|string|max:200',
+            'job_worker_id' => 'nullable|integer',
+            'lot_number' => 'nullable|string|max:100',
+            'process_name' => 'nullable|string|max:100',
+            'style_name' => 'nullable|string|max:100',
             'inward_date' => 'required|date',
             'challan_no' => 'nullable|string|max:100',
             'received_qty' => 'nullable|integer|min:0',
@@ -832,24 +840,12 @@ class JobInwardController extends Controller
         ]);
 
         return DB::transaction(function () use ($validated, $request, $inward) {
-            // 1. Revert previous stock changes for this inward
-            $oldInwItems = $inward->items_list;
-            if (!empty($oldInwItems)) {
-                foreach ($oldInwItems as $it) {
-                    $oldItemId = $it['item_id'] ?? null;
-                    $oldQty = (int)($it['received_qty'] ?? 0);
-                    if ($oldItemId && $oldQty > 0) {
-                        $stockItem = Item::find($oldItemId);
-                        if ($stockItem) {
-                            $stockItem->current_stock = max(0, (float)$stockItem->current_stock - $oldQty);
-                            $stockItem->save();
-                        }
-                    }
-                }
-            }
+            // Note: Stock maintenance is completely disabled as per business requirements.
+            // Purchase, Sales, Job assign, and Job inward work independently.
 
-            $assignment = JobAssignment::lockForUpdate()->findOrFail($validated['job_assignment_id']);
-            $currentTracking = $this->formatAssignmentTracking($assignment, $inward->id);
+            $assignmentId = !empty($validated['job_assignment_id']) ? $validated['job_assignment_id'] : $inward->job_assignment_id;
+            $assignment = $assignmentId ? JobAssignment::lockForUpdate()->find($assignmentId) : null;
+            $currentTracking = $assignment ? $this->formatAssignmentTracking($assignment, $inward->id) : ['items' => []];
 
             $rawItems = $request->input('items', []);
             $processedItems = [];
@@ -860,17 +856,19 @@ class JobInwardController extends Controller
             $allThansCombined = [];
             $totalAmount = 0;
 
-            // Map tracking items for remaining validation
+            // Map tracking items for remaining info
             $trackingItemsMap = [];
-            foreach ($currentTracking['items'] as $ti) {
-                if (!empty($ti['job_assignment_item_id'])) {
-                    $trackingItemsMap['jai_' . $ti['job_assignment_item_id']] = $ti;
-                }
-                if (!empty($ti['item_id'])) {
-                    $trackingItemsMap['itm_' . $ti['item_id']] = $ti;
-                }
-                if (!empty($ti['item_name'])) {
-                    $trackingItemsMap['name_' . strtolower(trim($ti['item_name']))] = $ti;
+            if (!empty($currentTracking['items'])) {
+                foreach ($currentTracking['items'] as $ti) {
+                    if (!empty($ti['job_assignment_item_id'])) {
+                        $trackingItemsMap['jai_' . $ti['job_assignment_item_id']] = $ti;
+                    }
+                    if (!empty($ti['item_id'])) {
+                        $trackingItemsMap['itm_' . $ti['item_id']] = $ti;
+                    }
+                    if (!empty($ti['item_name'])) {
+                        $trackingItemsMap['name_' . strtolower(trim($ti['item_name']))] = $ti;
+                    }
                 }
             }
 
@@ -884,7 +882,7 @@ class JobInwardController extends Controller
                     $jaiId = !empty($itm['job_assignment_item_id']) ? (int)$itm['job_assignment_item_id'] : null;
                     $itemId = !empty($itm['item_id']) ? (int)$itm['item_id'] : null;
 
-                    // Match tracking data
+                    // Match tracking data if available
                     $matchedTracking = null;
                     if ($jaiId && isset($trackingItemsMap['jai_' . $jaiId])) {
                         $matchedTracking = $trackingItemsMap['jai_' . $jaiId];
@@ -896,11 +894,11 @@ class JobInwardController extends Controller
 
                     $assignedQty = $matchedTracking ? (int)$matchedTracking['assigned_qty'] : (int)($itm['assigned_qty'] ?? 0);
                     $prevReceivedQty = $matchedTracking ? (int)$matchedTracking['previously_received_qty'] : (int)($itm['previously_received_qty'] ?? 0);
-                    $maxAllowed = $matchedTracking ? (int)$matchedTracking['remaining_qty'] : $assignedQty;
 
                     $receivedQty = (int)($itm['received_qty'] ?? 0);
                     $defectQty = (int)($itm['defect_qty'] ?? 0);
-                    $rate = isset($itm['rate']) && $itm['rate'] !== '' ? (float)$itm['rate'] : (float)$assignment->rate_per_piece;
+                    $fallbackRate = $assignment ? (float)$assignment->rate_per_piece : (float)($validated['rate_per_piece'] ?? 0);
+                    $rate = isset($itm['rate']) && $itm['rate'] !== '' ? (float)$itm['rate'] : $fallbackRate;
 
                     // Process Than-wise inward entries if present
                     $rawAssignedThans = $itm['assigned_thans'] ?? [];
@@ -912,14 +910,8 @@ class JobInwardController extends Controller
                         foreach ($rawAssignedThans as $at) {
                             $thAssignedPcs = (int)($at['assigned_pcs'] ?? 0);
                             $thPrevRecPcs = (int)($at['previously_received_pcs'] ?? 0);
-                            $thMaxAllowed = max(0, $thAssignedPcs - $thPrevRecPcs);
                             $thRecPcs = (int)($at['received_pcs'] ?? 0);
                             $thDefPcs = (int)($at['defect_pcs'] ?? 0);
-
-                            if ($thMaxAllowed > 0 && $thRecPcs > $thMaxAllowed) {
-                                $thRecPcs = $thMaxAllowed;
-                            }
-
                             $thRemPcs = max(0, $thAssignedPcs - ($thPrevRecPcs + $thRecPcs));
 
                             $sumThanReceivedPcs += $thRecPcs;
@@ -949,11 +941,6 @@ class JobInwardController extends Controller
                     }
                     if (!empty($processedAssignedThans) && $sumThanDefectPcs > 0 && $defectQty <= 0) {
                         $defectQty = $sumThanDefectPcs;
-                    }
-
-                    // Enforce remaining limit on item overall
-                    if ($maxAllowed > 0 && $receivedQty > $maxAllowed) {
-                        $receivedQty = $maxAllowed;
                     }
 
                     $thansRaw = $itm['thans'] ?? [];
@@ -1018,15 +1005,6 @@ class JobInwardController extends Controller
                         'thans' => $cleanThans,
                         'assigned_thans' => $processedAssignedThans
                     ];
-
-                    // Increment finished item stock in inventory
-                    if ($itemId && $receivedQty > 0) {
-                        $stockItem = Item::find($itemId);
-                        if ($stockItem) {
-                            $stockItem->current_stock = (float)$stockItem->current_stock + $receivedQty;
-                            $stockItem->save();
-                        }
-                    }
                 }
             }
 
@@ -1037,7 +1015,7 @@ class JobInwardController extends Controller
                 $overallDefectQty = (int)($validated['defect_qty'] ?? 0);
             }
 
-            $rate = isset($validated['rate_per_piece']) && $validated['rate_per_piece'] !== '' ? (float)$validated['rate_per_piece'] : (float)$assignment->rate_per_piece;
+            $rate = isset($validated['rate_per_piece']) && $validated['rate_per_piece'] !== '' ? (float)$validated['rate_per_piece'] : ($assignment ? (float)$assignment->rate_per_piece : 0);
             if ($totalAmount <= 0) {
                 $totalAmount = $overallReceivedQty * $rate;
             }
@@ -1061,14 +1039,21 @@ class JobInwardController extends Controller
                 'items' => $processedItems
             ];
 
+            $workerName = $assignment ? $assignment->job_worker_name : ($validated['job_worker_name'] ?? $inward->job_worker_name ?? 'Direct Inward Worker');
+            $workerId = $assignment ? $assignment->job_worker_id : ($validated['job_worker_id'] ?? $inward->job_worker_id ?? null);
+            $lotNumber = $assignment ? $assignment->lot_number : ($validated['lot_number'] ?? $inward->lot_number ?? null);
+            $processName = $assignment ? $assignment->process_name : ($validated['process_name'] ?? $inward->process_name ?? 'General Job Work');
+            $styleName = $assignment ? $assignment->style_name : ($validated['style_name'] ?? $inward->style_name ?? null);
+            $jobOrderNo = $assignment ? $assignment->job_order_no : ($inward->job_order_no ?? null);
+
             $updateData = [
-                'job_assignment_id' => $assignment->id,
-                'job_order_no' => $assignment->job_order_no,
-                'lot_number' => $assignment->lot_number,
-                'job_worker_id' => $assignment->job_worker_id,
-                'job_worker_name' => $assignment->job_worker_name,
-                'process_name' => $assignment->process_name,
-                'style_name' => $assignment->style_name,
+                'job_assignment_id' => $assignment ? $assignment->id : null,
+                'job_order_no' => $jobOrderNo,
+                'lot_number' => $lotNumber,
+                'job_worker_id' => $workerId,
+                'job_worker_name' => $workerName,
+                'process_name' => $processName,
+                'style_name' => $styleName,
                 'inward_date' => $validated['inward_date'],
                 'challan_no' => $challanNo,
                 'received_qty' => $overallReceivedQty,
@@ -1095,25 +1080,27 @@ class JobInwardController extends Controller
 
             $inward->update($updateData);
 
-            // Recompute total received on parent Job Assignment across all inwards
-            $allAssignmentInwards = JobInward::where('job_assignment_id', $assignment->id)->get();
-            $totReceived = $allAssignmentInwards->sum('received_qty');
-            $totDefect = $allAssignmentInwards->sum('defect_qty');
+            // Update assignment status if linked
+            if ($assignment) {
+                $allAssignmentInwards = JobInward::where('job_assignment_id', $assignment->id)->get();
+                $totReceived = $allAssignmentInwards->sum('received_qty');
+                $totDefect = $allAssignmentInwards->sum('defect_qty');
 
-            $assignment->received_qty = (int)$totReceived;
-            $assignment->rejected_qty = (int)$totDefect;
+                $assignment->received_qty = (int)$totReceived;
+                $assignment->rejected_qty = (int)$totDefect;
 
-            $totalIssued = (int)$assignment->issued_qty;
-            $pending = max(0, $totalIssued - $totReceived);
+                $totalIssued = (int)$assignment->issued_qty;
+                $pending = max(0, $totalIssued - $totReceived);
 
-            if ($pending <= 0) {
-                $assignment->status = 'Completed';
-            } elseif ($totReceived > 0) {
-                $assignment->status = 'Partial Ready';
-            } else {
-                $assignment->status = 'Issued';
+                if ($pending <= 0) {
+                    $assignment->status = 'Completed';
+                } elseif ($totReceived > 0) {
+                    $assignment->status = 'Partial Ready';
+                } else {
+                    $assignment->status = 'Issued';
+                }
+                $assignment->save();
             }
-            $assignment->save();
 
             if ($request->wantsJson() || $request->ajax()) {
                 return response()->json([
@@ -1124,7 +1111,7 @@ class JobInwardController extends Controller
             }
 
             return redirect()->route('jobwork.inward.index')
-                ->with('success', "Job Inward Receipt {$inward->inward_number} updated successfully! Received {$overallReceivedQty} pieces / {$overallTotalThans} thans from {$assignment->job_worker_name}.");
+                ->with('success', "Job Inward Receipt {$inward->inward_number} updated successfully! Received {$overallReceivedQty} pieces / {$overallTotalThans} thans.");
         });
     }
 
@@ -1133,45 +1120,32 @@ class JobInwardController extends Controller
         $inward = JobInward::findOrFail($id);
 
         DB::transaction(function () use ($inward) {
-            // Revert finished item stocks
-            $inwItems = $inward->items_list;
-            if (!empty($inwItems)) {
-                foreach ($inwItems as $it) {
-                    $itemId = $it['item_id'] ?? null;
-                    $qty = (int)($it['received_qty'] ?? 0);
-                    if ($itemId && $qty > 0) {
-                        $stockItem = Item::find($itemId);
-                        if ($stockItem) {
-                            $stockItem->current_stock = max(0, (float)$stockItem->current_stock - $qty);
-                            $stockItem->save();
-                        }
-                    }
-                }
-            }
-
+            // Note: Stock is not altered on deletion.
             $assignId = $inward->job_assignment_id;
             $inward->delete();
 
-            $assignment = JobAssignment::find($assignId);
-            if ($assignment) {
-                $remainingInwards = JobInward::where('job_assignment_id', $assignment->id)->get();
-                $totReceived = $remainingInwards->sum('received_qty');
-                $totDefect = $remainingInwards->sum('defect_qty');
+            if ($assignId) {
+                $assignment = JobAssignment::find($assignId);
+                if ($assignment) {
+                    $remainingInwards = JobInward::where('job_assignment_id', $assignment->id)->get();
+                    $totReceived = $remainingInwards->sum('received_qty');
+                    $totDefect = $remainingInwards->sum('defect_qty');
 
-                $assignment->received_qty = (int)$totReceived;
-                $assignment->rejected_qty = (int)$totDefect;
+                    $assignment->received_qty = (int)$totReceived;
+                    $assignment->rejected_qty = (int)$totDefect;
 
-                $totalIssued = (int)$assignment->issued_qty;
-                $pending = max(0, $totalIssued - $totReceived);
+                    $totalIssued = (int)$assignment->issued_qty;
+                    $pending = max(0, $totalIssued - $totReceived);
 
-                if ($pending <= 0 && $totalIssued > 0) {
-                    $assignment->status = 'Completed';
-                } elseif ($totReceived > 0) {
-                    $assignment->status = 'Partial Ready';
-                } else {
-                    $assignment->status = 'Issued';
+                    if ($pending <= 0 && $totalIssued > 0) {
+                        $assignment->status = 'Completed';
+                    } elseif ($totReceived > 0) {
+                        $assignment->status = 'Partial Ready';
+                    } else {
+                        $assignment->status = 'Issued';
+                    }
+                    $assignment->save();
                 }
-                $assignment->save();
             }
         });
 

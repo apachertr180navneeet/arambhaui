@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Edit Job Work Inward Receipt - ' . $inward->inward_number . ' - Nathmal Amarchand')
+@section('title', 'Edit Job Work Inward Receipt - ' . $inward->inward_number . ' - aarambh')
 
 @section('breadcrumb')
   <div class="breadcrumb-item"><a href="{{ route('jobwork.assign.index') }}" style="color:inherit; text-decoration:none;">Job Work & Assign</a></div>
@@ -1111,21 +1111,10 @@
     }
 
     let totalInwarding = 0;
-    let hasExceededLimit = false;
-
     itemsData.forEach((item, idx) => {
       const q = parseFloat(item.current_inward_qty) || 0;
       totalInwarding += q;
-      if (q > item.remaining_qty) {
-        hasExceededLimit = true;
-      }
     });
-
-    if (hasExceededLimit) {
-      e.preventDefault();
-      alert('One or more items have an inward quantity greater than the remaining pending balance.');
-      return false;
-    }
 
     if (totalInwarding <= 0) {
       e.preventDefault();

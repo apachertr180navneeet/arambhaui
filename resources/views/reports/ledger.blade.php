@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Item Stock Movement Ledger - Nathmal Amarchand')
+@section('title', 'Item Stock Movement Ledger - aarambh')
 
 @section('breadcrumb')
   <div class="breadcrumb-item"><span>Reports Hub</span></div>
@@ -18,7 +18,7 @@
         🏢
       </div>
       <div>
-        <div style="font-weight:800; font-size:1.15rem; color:var(--slate-900);">{{ $companyName ?? 'Nathmal Amarchand' }}</div>
+        <div style="font-weight:800; font-size:1.15rem; color:var(--slate-900);">{{ $companyName ?? 'aarambh' }}</div>
         <div style="font-size:0.775rem; color:var(--slate-500);">
           @if(!empty($companySettings['gstin'])) GSTIN: <strong style="color:var(--slate-700);">{{ $companySettings['gstin'] }}</strong> &bull; @endif
           Financial Year: <strong style="color:var(--slate-700);">{{ $companySettings['financial_year'] ?? date('Y') . '-' . (date('Y')+1) }}</strong>
@@ -27,7 +27,7 @@
       </div>
     </div>
     <div style="display:flex; gap:8px;">
-      <button class="btn btn-secondary btn-sm" onclick="UI.printElement('ledger-table', 'Item Stock Movement Ledger - ' + {!! json_encode($companyName ?? 'Nathmal Amarchand') !!})" style="display:inline-flex; align-items:center; gap:6px;">
+      <button class="btn btn-secondary btn-sm" onclick="UI.printElement('ledger-table', 'Item Stock Movement Ledger - ' + {!! json_encode($companyName ?? 'aarambh') !!})" style="display:inline-flex; align-items:center; gap:6px;">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
         Print Ledger
       </button>

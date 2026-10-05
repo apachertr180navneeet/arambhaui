@@ -5,14 +5,17 @@
 @section('content')
 <div class="auth-card">
   @php
-    $cName = $companyName ?? 'Nathmal Amarchand';
+    $cName = $companyName ?? 'aarambh';
     $words = preg_split('/\s+/', trim($cName));
     $brandInitials = '';
     foreach ($words as $w) {
       if (!empty($w)) $brandInitials .= mb_strtoupper(mb_substr($w, 0, 1));
       if (strlen($brandInitials) >= 2) break;
     }
-    if (empty($brandInitials)) $brandInitials = 'NA';
+    if (strlen($brandInitials) < 2 && !empty($cName)) {
+      $brandInitials = mb_strtoupper(mb_substr($cName, 0, 2));
+    }
+    if (empty($brandInitials)) $brandInitials = 'AA';
   @endphp
   <div class="auth-brand">
     <div class="logo-icon" style="font-size:1.25rem; font-weight:800; letter-spacing:0.5px;">{{ $brandInitials }}</div>
@@ -56,7 +59,7 @@
         id="email" 
         name="email" 
         class="form-control" 
-        placeholder="admin@Nathmal Amarchand.com" 
+        placeholder="admin@aarambh.com" 
         value="{{ old('email') }}" 
         required 
         autofocus

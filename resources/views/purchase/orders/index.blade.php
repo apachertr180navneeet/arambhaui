@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Purchase Entry - Nathmal Amarchand')
+@section('title', 'Purchase Entry - aarambh')
 
 @section('breadcrumb')
   <div class="breadcrumb-item"><span>Purchase Management</span></div>

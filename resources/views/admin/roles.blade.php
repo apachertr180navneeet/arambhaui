@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Roles & Permissions - Nathmal Amarchand')
+@section('title', 'Roles & Permissions - aarambh')
 
 @section('breadcrumb')
   <div class="breadcrumb-item"><span>Administration</span></div>

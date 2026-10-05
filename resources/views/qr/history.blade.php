@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'QR Vouchers Listing & A4 Sheet Printing - Nathmal Amarchand')
+@section('title', 'QR Vouchers Listing & A4 Sheet Printing - aarambh')
 
 @section('breadcrumb')
   <div class="breadcrumb-item"><span>Barcodes & QR</span></div>
@@ -798,6 +798,17 @@
                       Payee: {{ $v->recipient_upi_id }}
                     </div>
                   @endif
+                  @if($v->recipient_address || $v->recipient_pincode)
+                    <div style="font-size:0.73rem; color:#15803d; background:#f0fdf4; border:1px solid #86efac; border-radius:6px; padding:3px 7px; margin-top:3px; line-height:1.3;" title="Gift Delivery Address: {{ $v->recipient_address }}">
+                      🎁 <strong>Gift Address:</strong> {{ Str::limit($v->recipient_address, 35) }}
+                      @if($v->recipient_pincode)
+                        <br><span style="color:#166534; font-weight:700;">PIN: {{ $v->recipient_pincode }}</span>
+                      @endif
+                      @if($v->recipient_city)
+                        <span style="color:#64748b;">({{ $v->recipient_city }})</span>
+                      @endif
+                    </div>
+                  @endif
                   @if($isPaid)
                     <div style="font-size:0.72rem; color:#059669; font-weight:800; margin-top:3px;">
                       <span style="background:#dcfce7; color:#15803d; padding:2px 7px; border-radius:4px; border:1px solid #86efac; display:inline-flex; align-items:center; gap:3px;">
@@ -938,6 +949,20 @@
         </div>
         <div style="font-size:0.75rem; color:var(--slate-500); margin-top:6px;">
           When customer scans the 1"x1" sticker with any phone camera, it opens this claim portal to redeem discount.
+        </div>
+      </div>
+
+      <!-- Gift Delivery Address Info in Modal -->
+      <div id="m-gift-delivery-box" style="display:none; background:#f0fdf4; border:1.5px solid #86efac; border-radius:10px; padding:14px; margin-top:14px; text-align:left;">
+        <div style="font-size:0.78rem; font-weight:800; color:#15803d; text-transform:uppercase; margin-bottom:6px; display:flex; align-items:center; gap:6px;">
+          <span>🎁</span> Gift Delivery Address & PIN
+        </div>
+        <div style="font-size:0.85rem; color:#0f172a; font-weight:600; line-height:1.4;" id="m-gift-address">
+          ---
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; border-top:1px dashed #bbf7d0; padding-top:6px; font-size:0.8rem;">
+          <span style="color:#166534; font-weight:700;">PIN Code: <span id="m-gift-pincode" class="font-mono" style="font-size:0.95rem; color:#14532d;">---</span></span>
+          <span style="color:#64748b;" id="m-gift-city"></span>
         </div>
       </div>
 
@@ -1185,6 +1210,18 @@
       colorLight: "#ffffff",
       correctLevel: QRCode.CorrectLevel.M
     });
+
+    const giftBox = document.getElementById('m-gift-delivery-box');
+    if (giftBox) {
+      if (v.recipient_address || v.recipient_pincode) {
+        giftBox.style.display = 'block';
+        document.getElementById('m-gift-address').innerText = v.recipient_address || 'Address not specified';
+        document.getElementById('m-gift-pincode').innerText = v.recipient_pincode || '---';
+        document.getElementById('m-gift-city').innerText = v.recipient_city ? `${v.recipient_city}${v.recipient_state ? ', ' + v.recipient_state : ''}` : '';
+      } else {
+        giftBox.style.display = 'none';
+      }
+    }
 
     document.getElementById('stickerModal').style.display = 'flex';
   }

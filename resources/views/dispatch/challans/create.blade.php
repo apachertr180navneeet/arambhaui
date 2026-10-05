@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Generate Dispatch Challan - ' . ($companyName ?? 'Nathmal Amarchand'))
+@section('title', 'Generate Dispatch Challan - ' . ($companyName ?? 'aarambh'))
 
 @section('breadcrumb')
   <div class="breadcrumb-item"><a href="{{ route('dispatch.challans.index') }}" style="color:inherit; text-decoration:none;">Logistics & Dispatch</a></div>

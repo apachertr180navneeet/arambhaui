@@ -188,12 +188,8 @@ class DispatchController extends Controller
                     $styleName = !empty($row['style_name']) ? $row['style_name'] : 'Finished Garment';
                     $itemId = !empty($row['item_id']) ? (int)$row['item_id'] : null;
 
-                    // Deduct stock from item if linked
+                    // Style and batch assignments
                     $item = $itemId ? Item::find($itemId) : null;
-                    if ($item) {
-                        $item->current_stock = max(0, (float)$item->current_stock - $itemQty);
-                        $item->save();
-                    }
 
                     // Create Dispatch Item record
                     DispatchItem::create([
@@ -280,20 +276,9 @@ class DispatchController extends Controller
         ]);
 
         return DB::transaction(function () use ($validated, $challan, $request) {
-            // Restore previous stock if modifying line items
             if (isset($validated['items']) && is_array($validated['items'])) {
-                foreach ($challan->items as $prevItem) {
-                    if ($prevItem->item_id) {
-                        $itm = Item::find($prevItem->item_id);
-                        if ($itm) {
-                            $itm->current_stock += (float)$prevItem->qty;
-                            $itm->save();
-                        }
-                    }
-                }
                 $challan->items()->delete();
 
-                // Recreate with updated batches and deduct stock
                 $computedQty = 0;
                 $computedCartons = 0;
 
@@ -312,12 +297,6 @@ class DispatchController extends Controller
                     $batchNo = !empty($row['batch_no']) ? strtoupper(trim($row['batch_no'])) : 'DEFAULT-LOT';
                     $styleName = !empty($row['style_name']) ? $row['style_name'] : 'Finished Garment';
                     $itemId = !empty($row['item_id']) ? (int)$row['item_id'] : null;
-
-                    $item = $itemId ? Item::find($itemId) : null;
-                    if ($item) {
-                        $item->current_stock = max(0, (float)$item->current_stock - $itemQty);
-                        $item->save();
-                    }
 
                     DispatchItem::create([
                         'dispatch_challan_id' => $challan->id,
@@ -368,17 +347,6 @@ class DispatchController extends Controller
     {
         $no = $challan->challan_no;
 
-        // Restore deducted inventory stock before deletion
-        foreach ($challan->items as $itm) {
-            if ($itm->item_id) {
-                $itemModel = Item::find($itm->item_id);
-                if ($itemModel) {
-                    $itemModel->current_stock += (float)$itm->qty;
-                    $itemModel->save();
-                }
-            }
-        }
-
         try {
             Transaction::where('reference_no', $no)->delete();
         } catch (\Throwable $e) {}
@@ -387,9 +355,9 @@ class DispatchController extends Controller
         $challan->delete();
 
         if (request()->wantsJson() || request()->ajax()) {
-            return response()->json(['success' => true, 'message' => "Dispatch challan {$no} deleted and stock restored."]);
+            return response()->json(['success' => true, 'message' => "Dispatch challan {$no} deleted successfully."]);
         }
 
-        return redirect()->route('dispatch.challans.index')->with('success', "Dispatch challan {$no} deleted and stock restored.");
+        return redirect()->route('dispatch.challans.index')->with('success', "Dispatch challan {$no} deleted successfully.");
     }
 }

@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Job Work & Assignment - Nathmal Amarchand')
+@section('title', 'Job Work & Assignment - aarambh')
 
 @section('breadcrumb')
   <div class="breadcrumb-item"><span>Job Work & Assign</span></div>
@@ -455,6 +455,19 @@
                 @if($ja->items && count($ja->items) > 1)
                   <span style="font-size:0.72rem; color:var(--primary-700); font-weight:700;">+{{ count($ja->items) }} items</span>
                 @endif
+                @php
+                  $pList = $ja->photos_list ?: [];
+                @endphp
+                @if(!empty($pList))
+                  <div style="display:flex; align-items:center; gap:5px; margin-top:3px;">
+                    <a href="{{ asset($pList[0]) }}" target="_blank" onclick="event.stopPropagation();" title="View sample photo">
+                      <img src="{{ asset($pList[0]) }}" style="width:20px; height:20px; object-fit:cover; border-radius:4px; border:1px solid #cbd5e1;">
+                    </a>
+                    <span style="font-size:0.68rem; font-weight:700; color:#0369a1; background:#f0f9ff; border:1px solid #bae6fd; padding:1px 5px; border-radius:4px;">
+                      📷 {{ count($pList) }} {{ count($pList) == 1 ? 'photo' : 'photos' }}
+                    </span>
+                  </div>
+                @endif
               </td>
 
               <!-- Than Fabric Meters & Rolls -->
@@ -641,6 +654,14 @@
         </div>
       </div>
 
+      <!-- Sample Handover Photos Section -->
+      <div id="m-photos-section" style="display:none;">
+        <h4 style="font-size:0.85rem; font-weight:800; text-transform:uppercase; color:var(--slate-700); margin:0 0 8px; display:flex; align-items:center; gap:6px;">
+          <span>📷 Handover Sample Photos Provided to Worker</span>
+        </h4>
+        <div id="m-photos-grid" style="display:flex; gap:10px; flex-wrap:wrap; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px;"></div>
+      </div>
+
     </div>
 
     <div class="modal-footer" style="padding:14px 22px; border-top:1px solid #e2e8f0; display:flex; justify-content:flex-end;">
@@ -771,6 +792,23 @@
       `;
       tbody.appendChild(tr);
     });
+
+    // Populate Handover Sample Photos
+    const photosSection = document.getElementById('m-photos-section');
+    const photosGrid = document.getElementById('m-photos-grid');
+    const photos = ja.photos_list || (ja.photos ? (typeof ja.photos === 'string' ? JSON.parse(ja.photos) : ja.photos) : []);
+
+    if (photos && photos.length > 0) {
+      photosGrid.innerHTML = photos.map((p, i) => `
+        <a href="${p.startsWith('http') || p.startsWith('/') ? p : '/' + p}" target="_blank" style="display:inline-block; border-radius:8px; overflow:hidden; border:1px solid #cbd5e1; box-shadow:0 1px 3px rgba(0,0,0,0.08); transition:transform 0.15s ease;" title="Click to view full photo">
+          <img src="${p.startsWith('http') || p.startsWith('/') ? p : '/' + p}" alt="Sample ${i + 1}" style="width:72px; height:72px; object-fit:cover; display:block;">
+        </a>
+      `).join('');
+      photosSection.style.display = 'block';
+    } else {
+      photosSection.style.display = 'none';
+      photosGrid.innerHTML = '';
+    }
 
     document.getElementById('jobOrderModal').style.display = 'flex';
   }

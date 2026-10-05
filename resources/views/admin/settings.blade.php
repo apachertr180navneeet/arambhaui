@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Company Settings - Nathmal Amarchand')
+@section('title', 'Company Settings - aarambh')
 
 @section('breadcrumb')
   <div class="breadcrumb-item"><span>Administration</span></div>
@@ -24,7 +24,7 @@
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
         <div class="form-group" style="grid-column:1/-1;">
           <label class="form-label">Company / Legal Entity Name <span style="color:red;">*</span></label>
-          <input type="text" name="company_name" class="form-control" required value="{{ $settings['company_name'] ?? config('app.name', 'Nathmal Amarchand') }}">
+          <input type="text" name="company_name" class="form-control" required value="{{ $settings['company_name'] ?? config('app.name', 'aarambh') }}">
         </div>
 
         <div class="form-group">
@@ -44,7 +44,7 @@
 
         <div class="form-group">
           <label class="form-label">Official Billing Email</label>
-          <input type="email" name="company_email" class="form-control" value="{{ $settings['company_email'] ?? 'accounts@Nathmal Amarchand.com' }}">
+          <input type="email" name="company_email" class="form-control" value="{{ $settings['company_email'] ?? 'accounts@aarambh.com' }}">
         </div>
 
         <div class="form-group">

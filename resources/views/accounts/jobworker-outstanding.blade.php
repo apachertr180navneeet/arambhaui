@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Job Worker Outstanding - Nathmal Amarchand')
+@section('title', 'Job Worker Outstanding - aarambh')
 
 @section('breadcrumb')
   <div class="breadcrumb-item"><span>Accounts & Settlements</span></div>

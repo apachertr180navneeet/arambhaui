@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>@yield('title', 'Customer Voucher Portal') - {{ $companyName ?? 'Nathmal Amarchand' }}</title>
+  <title>@yield('title', 'Customer Voucher Portal') - {{ $companyName ?? 'aarambh' }}</title>
   <meta name="description" content="Customer QR voucher verification and instant discount redemption portal.">
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <meta name="base-url" content="{{ url('/') }}">
@@ -13,7 +13,7 @@
     window.APP_URL = "{{ rtrim(url('/'), '/') }}";
     window.API_BASE_URL = window.APP_URL;
     window.COMPANY_SETTINGS = {!! json_encode($companySettings ?? []) !!};
-    window.COMPANY_NAME = {!! json_encode($companyName ?? 'Nathmal Amarchand') !!};
+    window.COMPANY_NAME = {!! json_encode($companyName ?? 'aarambh') !!};
 
     // Helper to resolve relative routes to the full application base URL
     window.apiUrl = function(path) {
@@ -190,7 +190,7 @@
 
   <!-- Clean Public Footer -->
   <footer class="public-footer">
-    <div>&copy; {{ date('Y') }} {{ $companyName ?? 'Nathmal Amarchand' }} &bull; Single-Use Secure QR Voucher System</div>
+    <div>&copy; {{ date('Y') }} {{ $companyName ?? 'aarambh' }} &bull; Single-Use Secure QR Voucher System</div>
   </footer>
 
   <!-- Core UI Components (Toasts, Modals) -->
