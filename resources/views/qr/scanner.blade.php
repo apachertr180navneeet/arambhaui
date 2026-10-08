@@ -294,8 +294,10 @@
               <span style="font-size:0.75rem; color:#64748b; font-weight:600;">Scan / Upload Sticker</span>
             </label>
 
-            <!-- Hidden File Input for Voucher QR -->
+            <!-- Hidden File Input for Voucher QR (Upload from gallery/files) -->
             <input type="file" id="voucher_qr_file" accept="image/*" style="display:none;" onchange="handleVoucherQrImageUpload(event)">
+            <!-- Hidden File Input for Direct Camera Snapshot (Instant camera shutter on mobile) -->
+            <input type="file" id="voucher_qr_camera_direct" accept="image/*" capture="environment" style="display:none;" onchange="handleVoucherQrImageUpload(event)">
 
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
               <!-- Upload Button -->
@@ -328,15 +330,15 @@
             <!-- Inline Camera Viewport (if active) -->
             <div id="camera_scanner_container" style="display:none; margin-top:14px; position:relative; border-radius:14px; overflow:hidden; border:2px solid #4f46e5; background:#0f172a; box-shadow:0 12px 28px -6px rgba(79, 70, 229, 0.35);">
               <!-- Html5Qrcode dedicated mount -->
-              <div id="html5qr_video_box" style="width:100%; min-height:260px; background:#000;"></div>
+              <div id="html5qr_video_box" style="width:100%; min-height:280px; background:#000;"></div>
               
               <!-- Direct WebRTC fallback video -->
-              <video id="camera_video" playsinline webkit-playsinline muted autoplay style="display:none; width:100%; height:260px; object-fit:cover; background:#000;"></video>
+              <video id="camera_video" playsinline webkit-playsinline muted autoplay style="display:none; width:100%; height:280px; object-fit:cover; background:#000;"></video>
               <canvas id="camera_canvas" style="display:none;"></canvas>
 
               <!-- Animated Viewfinder Overlay Box & Scanning Laser -->
               <div id="camera_overlay_frame" style="position:absolute; inset:0; pointer-events:none; display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:5;">
-                <div style="width:200px; height:200px; border:2px solid rgba(99, 102, 241, 0.85); border-radius:16px; position:relative; box-shadow:0 0 0 2000px rgba(15, 23, 42, 0.45); overflow:hidden;">
+                <div style="width:220px; height:220px; border:2px solid rgba(99, 102, 241, 0.85); border-radius:16px; position:relative; box-shadow:0 0 0 2000px rgba(15, 23, 42, 0.45); overflow:hidden;">
                   <!-- Corner Guides -->
                   <div style="position:absolute; top:0; left:0; width:18px; height:18px; border-top:4px solid #38bdf8; border-left:4px solid #38bdf8; border-top-left-radius:6px;"></div>
                   <div style="position:absolute; top:0; right:0; width:18px; height:18px; border-top:4px solid #38bdf8; border-right:4px solid #38bdf8; border-top-right-radius:6px;"></div>
@@ -348,6 +350,10 @@
                 <div id="scanner_status_hint" style="margin-top:12px; color:#ffffff; font-size:0.8rem; font-weight:700; text-shadow:0 2px 4px rgba(0,0,0,0.8); background:rgba(15, 23, 42, 0.75); padding:4px 14px; border-radius:20px; backdrop-filter:blur(4px);">
                   Align voucher QR inside frame
                 </div>
+                <!-- One-Tap Photo Snap Fallback for Mobile Camera -->
+                <button type="button" id="btn_snap_photo_fallback" onclick="triggerCameraSnapshotCapture()" style="margin-top:8px; pointer-events:auto; background:linear-gradient(135deg, #2563eb, #4f46e5); color:#ffffff; font-weight:700; font-size:0.8rem; border:none; padding:7px 16px; border-radius:20px; cursor:pointer; box-shadow:0 4px 14px rgba(37,99,235,0.4); display:none; align-items:center; gap:6px;">
+                  📸 Tap here to Snap Photo of QR
+                </button>
               </div>
 
               <!-- Top Quick Action Controls -->
@@ -626,12 +632,114 @@
 
   // =========================================================================
   // UNIVERSAL MULTI-TIER QR DECODER (Image / File / Screenshot)
-  // Supports Html5Qrcode, Native BarcodeDetector, and Multi-Scale jsQR
+  // Highly optimized for mobile camera photos (12MP-50MP), auto EXIF orientation
   // =========================================================================
   async function decodeQrFromImage(file) {
     if (!file) return null;
 
-    // 1. Try Html5Qrcode.scanFile if loaded
+    let imgSource = null;
+    let isBitmap = false;
+
+    // 1. Hardware EXIF orientation handling with createImageBitmap
+    if (typeof createImageBitmap === 'function') {
+      try {
+        imgSource = await createImageBitmap(file, { imageOrientation: 'from-image' });
+        isBitmap = true;
+      } catch(bmErr) {}
+    }
+
+    // Fallback image loader if createImageBitmap unavailable
+    if (!imgSource) {
+      imgSource = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const image = new Image();
+          image.onload = () => resolve(image);
+          image.onerror = () => reject(new Error('Image failed to load'));
+          image.src = reader.result;
+        };
+        reader.onerror = () => reject(new Error('File read failed'));
+        reader.readAsDataURL(file);
+      });
+    }
+
+    const naturalWidth = imgSource.width || imgSource.naturalWidth || 800;
+    const naturalHeight = imgSource.height || imgSource.naturalHeight || 600;
+
+    // TIER 1: Native BarcodeDetector (instant GPU acceleration in ~10ms)
+    if ('BarcodeDetector' in window) {
+      try {
+        const detector = new BarcodeDetector({ formats: ['qr_code'] });
+        const barcodes = await detector.detect(imgSource);
+        if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
+          if (isBitmap && imgSource.close) imgSource.close();
+          return barcodes[0].rawValue.trim();
+        }
+      } catch(bErr) {}
+    }
+
+    // TIER 2: Multi-Scale jsQR with center-crop and contrast optimization
+    if (typeof jsQR !== 'undefined') {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+      // Pass A: Center-crop (most smartphone users center the QR sticker in the camera view)
+      const cropSize = Math.floor(Math.min(naturalWidth, naturalHeight) * 0.72);
+      const sx = Math.floor((naturalWidth - cropSize) / 2);
+      const sy = Math.floor((naturalHeight - cropSize) / 2);
+      canvas.width = 600;
+      canvas.height = 600;
+      ctx.drawImage(imgSource, sx, sy, cropSize, cropSize, 0, 0, 600, 600);
+      let imgData = ctx.getImageData(0, 0, 600, 600);
+      let qr = jsQR(imgData.data, 600, 600, { inversionAttempts: 'attemptBoth' });
+      if (qr && qr.data) {
+        if (isBitmap && imgSource.close) imgSource.close();
+        return qr.data.trim();
+      }
+
+      // Pass B: Multi-scale downsampled full passes (prevents main thread freezing on 12MP-48MP photos)
+      const targetSizes = [1000, 650, 1400];
+      for (const maxDim of targetSizes) {
+        let w = naturalWidth;
+        let h = naturalHeight;
+        if (w > maxDim || h > maxDim) {
+          const scale = maxDim / Math.max(w, h);
+          w = Math.round(w * scale);
+          h = Math.round(h * scale);
+        }
+        if (w <= 0 || h <= 0) continue;
+
+        canvas.width = w;
+        canvas.height = h;
+        ctx.drawImage(imgSource, 0, 0, w, h);
+        imgData = ctx.getImageData(0, 0, w, h);
+
+        qr = jsQR(imgData.data, w, h, { inversionAttempts: 'attemptBoth' });
+        if (qr && qr.data) {
+          if (isBitmap && imgSource.close) imgSource.close();
+          return qr.data.trim();
+        }
+
+        // Pass C: High-contrast binarized pass for dim/lighting/reflection issues
+        if (w <= 800) {
+          const d = imgData.data;
+          for (let i = 0; i < d.length; i += 4) {
+            const gray = (d[i] * 0.299 + d[i+1] * 0.587 + d[i+2] * 0.114);
+            const val = gray > 125 ? 255 : 0;
+            d[i] = val;
+            d[i+1] = val;
+            d[i+2] = val;
+          }
+          qr = jsQR(d, w, h, { inversionAttempts: 'attemptBoth' });
+          if (qr && qr.data) {
+            if (isBitmap && imgSource.close) imgSource.close();
+            return qr.data.trim();
+          }
+        }
+      }
+    }
+
+    // TIER 3: Fallback to Html5Qrcode.scanFile if previous tiers missed
     if (typeof Html5Qrcode !== 'undefined') {
       try {
         let tempDiv = document.getElementById('temp_html5qr_file_scan');
@@ -643,79 +751,15 @@
         }
         const fileScanner = new Html5Qrcode('temp_html5qr_file_scan');
         const text = await fileScanner.scanFile(file, false);
+        try { await fileScanner.clear(); } catch(e) {}
         if (text && text.trim()) {
-          try { await fileScanner.clear(); } catch(e) {}
+          if (isBitmap && imgSource.close) imgSource.close();
           return text.trim();
         }
-      } catch(e) {
-        // Continue to next tier if ZXing couldn't decode
-      }
+      } catch(e) {}
     }
 
-    // Load file into HTMLImageElement
-    const img = await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const image = new Image();
-        image.onload = () => resolve(image);
-        image.onerror = () => reject(new Error('Image failed to load'));
-        image.src = reader.result;
-      };
-      reader.onerror = () => reject(new Error('File read failed'));
-      reader.readAsDataURL(file);
-    });
-
-    // 2. Try Native BarcodeDetector (GPU/Hardware Accelerated on Android/Chrome)
-    if ('BarcodeDetector' in window) {
-      try {
-        const detector = new BarcodeDetector({ formats: ['qr_code'] });
-        const barcodes = await detector.detect(img);
-        if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
-          return barcodes[0].rawValue.trim();
-        }
-      } catch(bErr) {}
-    }
-
-    // 3. Multi-Scale jsQR (Solves smartphone 12MP-48MP photo decoding failure)
-    if (typeof jsQR !== 'undefined') {
-      const targetScales = [800, 1200, 500, Math.max(img.width, img.height)];
-      for (const maxDim of targetScales) {
-        let w = img.width;
-        let h = img.height;
-        if (w > maxDim || h > maxDim) {
-          const scale = maxDim / Math.max(w, h);
-          w = Math.round(w * scale);
-          h = Math.round(h * scale);
-        }
-        if (w <= 0 || h <= 0) continue;
-
-        const canvas = document.createElement('canvas');
-        canvas.width = w;
-        canvas.height = h;
-        const ctx = canvas.getContext('2d', { willReadFrequently: true });
-        ctx.drawImage(img, 0, 0, w, h);
-        const imgData = ctx.getImageData(0, 0, w, h);
-
-        // Attempt A: Normal with attemptBoth inversion
-        let qr = jsQR(imgData.data, w, h, { inversionAttempts: 'attemptBoth' });
-        if (qr && qr.data) return qr.data.trim();
-
-        // Attempt B: High-contrast binarized pass for dim/lighting issues
-        if (w <= 800) {
-          const d = imgData.data;
-          for (let i = 0; i < d.length; i += 4) {
-            const gray = (d[i] * 0.299 + d[i+1] * 0.587 + d[i+2] * 0.114);
-            const val = gray > 125 ? 255 : 0;
-            d[i] = val;
-            d[i+1] = val;
-            d[i+2] = val;
-          }
-          qr = jsQR(d, w, h, { inversionAttempts: 'attemptBoth' });
-          if (qr && qr.data) return qr.data.trim();
-        }
-      }
-    }
-
+    if (isBitmap && imgSource.close) imgSource.close();
     return null;
   }
 
@@ -1035,6 +1079,15 @@
   var currentFacingMode = 'environment';
   var isTorchActive = false;
   var cameraVideoTrack = null;
+  var cameraFallbackTimer = null;
+
+  // Direct Mobile Camera Shutter Trigger (works on all devices, HTTP & HTTPS)
+  function triggerCameraSnapshotCapture() {
+    const directCameraInput = document.getElementById('voucher_qr_camera_direct');
+    if (directCameraInput) {
+      directCameraInput.click();
+    }
+  }
 
   async function toggleCameraScannerModal() {
     const container = document.getElementById('camera_scanner_container');
@@ -1049,9 +1102,28 @@
 
   async function startCameraScanner() {
     const statusHint = document.getElementById('scanner_status_hint');
+    const snapBtn = document.getElementById('btn_snap_photo_fallback');
     if (statusHint) statusHint.innerText = 'Starting camera...';
+    if (snapBtn) snapBtn.style.display = 'none';
 
-    // Tier 1: Try Html5Qrcode if available
+    // Clear previous fallback timer
+    if (cameraFallbackTimer) clearTimeout(cameraFallbackTimer);
+
+    // Schedule fallback button to appear after 4s if QR is taking long to scan
+    cameraFallbackTimer = setTimeout(() => {
+      const btn = document.getElementById('btn_snap_photo_fallback');
+      if (btn) btn.style.display = 'inline-flex';
+    }, 4000);
+
+    // Mobile Check: If mediaDevices not available (e.g. non-HTTPS on mobile IP), seamlessly trigger native camera
+    const hasMedia = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+    if (!hasMedia && typeof Html5Qrcode === 'undefined') {
+      if (statusHint) statusHint.innerText = 'Opening camera shutter...';
+      triggerCameraSnapshotCapture();
+      return;
+    }
+
+    // Tier 1: Try Html5Qrcode with hardware BarcodeDetector and responsive qrbox
     if (typeof Html5Qrcode !== 'undefined') {
       try {
         const box = document.getElementById('html5qr_video_box');
@@ -1062,17 +1134,41 @@
         if (html5QrScannerInstance) {
           try { await html5QrScannerInstance.stop(); } catch(e) {}
         }
-        html5QrScannerInstance = new Html5Qrcode("html5qr_video_box");
+
+        html5QrScannerInstance = new Html5Qrcode("html5qr_video_box", {
+          experimentalFeatures: {
+            useBarCodeDetectorIfSupported: true
+          }
+        });
         activeScannerEngine = 'html5qrcode';
+
+        // Enumerate cameras on mobile to select the best physical rear/main camera
+        let cameraIdOrConfig = { facingMode: currentFacingMode };
+        try {
+          const cameras = await Html5Qrcode.getCameras();
+          if (cameras && cameras.length > 0) {
+            const backCam = cameras.find(c => /back|rear|environment|primary|0/i.test(c.label));
+            if (backCam) {
+              cameraIdOrConfig = backCam.id;
+            } else if (cameras.length === 1) {
+              cameraIdOrConfig = cameras[0].id;
+            }
+          }
+        } catch(cErr) {}
 
         const config = {
           fps: 15,
-          qrbox: { width: 220, height: 220 },
-          aspectRatio: 1.0
+          qrbox: (viewfinderWidth, viewfinderHeight) => {
+            const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+            return {
+              width: Math.max(180, Math.floor(minEdge * 0.85)),
+              height: Math.max(180, Math.floor(minEdge * 0.85))
+            };
+          }
         };
 
         await html5QrScannerInstance.start(
-          { facingMode: currentFacingMode },
+          cameraIdOrConfig,
           config,
           (decodedText) => {
             onSuccessfulQrScan(decodedText);
@@ -1091,7 +1187,7 @@
       }
     }
 
-    // Tier 2: Direct WebRTC Camera Stream + BarcodeDetector & jsQR Fallback
+    // Tier 2: Direct WebRTC Camera Stream + BarcodeDetector & High-Res Center Crop Fallback
     await startNativeCameraStream();
   }
 
@@ -1105,14 +1201,21 @@
     if (video) video.style.display = 'block';
 
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      alert('Camera access is not supported by your browser. Please use the Upload QR button instead.');
-      stopCameraScanner(true);
+      if (statusHint) statusHint.innerText = 'WebRTC camera unavailable. Opening camera shutter...';
+      triggerCameraSnapshotCapture();
       return;
     }
 
     let stream = null;
     const constraintsList = [
-      { video: { facingMode: { ideal: currentFacingMode }, width: { ideal: 1280 }, height: { ideal: 720 } } },
+      {
+        video: {
+          facingMode: { ideal: currentFacingMode },
+          width: { ideal: 1280, max: 1920 },
+          height: { ideal: 720, max: 1080 },
+          advanced: [{ focusMode: 'continuous' }]
+        }
+      },
       { video: { facingMode: currentFacingMode } },
       { video: true }
     ];
@@ -1127,8 +1230,8 @@
     }
 
     if (!stream) {
-      alert('Could not access camera. Please allow camera permissions in browser settings or use the Upload QR button.');
-      stopCameraScanner(true);
+      if (statusHint) statusHint.innerText = 'Could not start live stream. Opening camera shutter...';
+      triggerCameraSnapshotCapture();
       return;
     }
 
@@ -1170,7 +1273,7 @@
           if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && video.videoWidth > 0) {
             let codeFound = null;
 
-            // 1. Native BarcodeDetector (instant hardware scan)
+            // 1. Native BarcodeDetector (instant hardware scan directly on video)
             if ('BarcodeDetector' in window) {
               try {
                 if (!window._barcodeDetectorInstance) {
@@ -1183,24 +1286,43 @@
               } catch(bErr) {}
             }
 
-            // 2. jsQR on downsampled 640px canvas
+            // 2. jsQR Multi-Pass: Center-Crop (High Resolution) + Full Frame
             if (!codeFound && typeof jsQR !== 'undefined') {
-              const maxDim = 640;
-              let w = video.videoWidth;
-              let h = video.videoHeight;
-              if (w > maxDim || h > maxDim) {
-                const s = maxDim / Math.max(w, h);
-                w = Math.round(w * s);
-                h = Math.round(h * s);
-              }
-              canvas.width = w;
-              canvas.height = h;
+              const vw = video.videoWidth;
+              const vh = video.videoHeight;
               const ctx = canvas.getContext('2d', { willReadFrequently: true });
-              ctx.drawImage(video, 0, 0, w, h);
-              const imgData = ctx.getImageData(0, 0, w, h);
-              const qr = jsQR(imgData.data, w, h, { inversionAttempts: 'attemptBoth' });
+
+              // Pass A: Center-crop (takes the center 70% of high-res video frame for crisp small QR modules)
+              const cropSize = Math.floor(Math.min(vw, vh) * 0.72);
+              const sx = Math.floor((vw - cropSize) / 2);
+              const sy = Math.floor((vh - cropSize) / 2);
+              canvas.width = 480;
+              canvas.height = 480;
+              ctx.drawImage(video, sx, sy, cropSize, cropSize, 0, 0, 480, 480);
+              let imgData = ctx.getImageData(0, 0, 480, 480);
+              let qr = jsQR(imgData.data, 480, 480, { inversionAttempts: 'attemptBoth' });
               if (qr && qr.data) {
                 codeFound = qr.data;
+              }
+
+              // Pass B: Downsampled full frame if center crop didn't find it
+              if (!codeFound) {
+                const maxDim = 640;
+                let dw = vw;
+                let dh = vh;
+                if (dw > maxDim || dh > maxDim) {
+                  const s = maxDim / Math.max(dw, dh);
+                  dw = Math.round(dw * s);
+                  dh = Math.round(dh * s);
+                }
+                canvas.width = dw;
+                canvas.height = dh;
+                ctx.drawImage(video, 0, 0, dw, dh);
+                imgData = ctx.getImageData(0, 0, dw, dh);
+                qr = jsQR(imgData.data, dw, dh, { inversionAttempts: 'attemptBoth' });
+                if (qr && qr.data) {
+                  codeFound = qr.data;
+                }
               }
             }
 
@@ -1247,6 +1369,14 @@
   }
 
   function stopCameraScanner(hideContainer = true) {
+    if (cameraFallbackTimer) {
+      clearTimeout(cameraFallbackTimer);
+      cameraFallbackTimer = null;
+    }
+
+    const snapBtn = document.getElementById('btn_snap_photo_fallback');
+    if (snapBtn) snapBtn.style.display = 'none';
+
     if (cameraAnimationId) {
       cancelAnimationFrame(cameraAnimationId);
       cameraAnimationId = null;
