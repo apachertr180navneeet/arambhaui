@@ -85,6 +85,7 @@
             width: 100%;
             text-align: center;
             margin: 0 auto;
+            background: #ffffff;
         }
 
         .qr-brand {
@@ -108,6 +109,9 @@
             display: block;
             text-align: center;
             overflow: hidden;
+            background: #ffffff;
+            padding: 1.2mm;
+            box-sizing: border-box;
         }
 
         .qr-code-box svg,

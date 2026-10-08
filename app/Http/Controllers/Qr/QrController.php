@@ -579,21 +579,21 @@ class QrController extends Controller
 
         $svg = '';
 
-        // 1. Try SimpleSoftwareIO Facade
+        // 1. Try SimpleSoftwareIO Facade with proper Quiet Zone margin (margin: 2) & Medium error correction
         try {
             if (class_exists(\SimpleSoftwareIO\QrCode\Facades\QrCode::class)) {
-                $svg = (string)\SimpleSoftwareIO\QrCode\Facades\QrCode::size(150)->margin(0)->generate($claimUrl);
+                $svg = (string)\SimpleSoftwareIO\QrCode\Facades\QrCode::size(200)->margin(2)->errorCorrection('M')->generate($claimUrl);
             }
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::warning("SimpleSoftwareIO QrCode failed for {$code}: " . $e->getMessage());
         }
 
-        // 2. Try BaconQrCode directly
+        // 2. Try BaconQrCode directly with Quiet Zone margin 2
         if (empty($svg)) {
             try {
                 if (class_exists(\BaconQrCode\Renderer\Image\SvgImageBackEnd::class)) {
                     $renderer = new \BaconQrCode\Renderer\ImageRenderer(
-                        new \BaconQrCode\Renderer\RendererStyle\RendererStyle(150, 0),
+                        new \BaconQrCode\Renderer\RendererStyle\RendererStyle(200, 2),
                         new \BaconQrCode\Renderer\Image\SvgImageBackEnd()
                     );
                     $writer = new \BaconQrCode\Writer($renderer);
@@ -604,12 +604,12 @@ class QrController extends Controller
             }
         }
 
-        // 3. Try high-reliability QR SVG APIs (live cloud fallback)
+        // 3. Try high-reliability QR SVG APIs (live cloud fallback) with Quiet Zone margin 2
         if (empty($svg)) {
             $encodedUrl = urlencode($claimUrl);
             $apis = [
-                "https://api.qrserver.com/v1/create-qr-code/?size=150x150&margin=0&format=svg&data={$encodedUrl}",
-                "https://quickchart.io/qr?size=150&margin=0&format=svg&text={$encodedUrl}"
+                "https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=2&format=svg&data={$encodedUrl}",
+                "https://quickchart.io/qr?size=200&margin=2&format=svg&text={$encodedUrl}"
             ];
             $ctx = stream_context_create(['http' => ['timeout' => 3, 'ignore_errors' => true]]);
             foreach ($apis as $apiUrl) {

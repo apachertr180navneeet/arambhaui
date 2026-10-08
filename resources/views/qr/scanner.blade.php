@@ -574,6 +574,9 @@
     const codeInput = document.getElementById('voucher_code');
     const initialCode = codeInput ? codeInput.value.trim() : '';
     if (initialCode) {
+      if (activeTransferAmount > 0) {
+        updateTransferCardVisibility(true, activeTransferAmount, initialCode);
+      }
       validateVoucherLive(initialCode);
     } else {
       updateTransferCardVisibility(false);
@@ -632,25 +635,15 @@
 
   // =========================================================================
   // UNIVERSAL MULTI-TIER QR DECODER (Image / File / Screenshot)
-  // Highly optimized for mobile camera photos (12MP-50MP), auto EXIF orientation
+  // Powered by ZXing BrowserMultiFormatReader, BarcodeDetector & jsQR
   // =========================================================================
   async function decodeQrFromImage(file) {
     if (!file) return null;
 
-    let imgSource = null;
-    let isBitmap = false;
-
-    // 1. Hardware EXIF orientation handling with createImageBitmap
-    if (typeof createImageBitmap === 'function') {
-      try {
-        imgSource = await createImageBitmap(file, { imageOrientation: 'from-image' });
-        isBitmap = true;
-      } catch(bmErr) {}
-    }
-
-    // Fallback image loader if createImageBitmap unavailable
-    if (!imgSource) {
-      imgSource = await new Promise((resolve, reject) => {
+    // Load file into HTMLImageElement
+    let img = null;
+    try {
+      img = await new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => {
           const image = new Image();
@@ -661,105 +654,148 @@
         reader.onerror = () => reject(new Error('File read failed'));
         reader.readAsDataURL(file);
       });
+    } catch(loadErr) {
+      console.warn('Image load failed:', loadErr);
+      return null;
     }
 
-    const naturalWidth = imgSource.width || imgSource.naturalWidth || 800;
-    const naturalHeight = imgSource.height || imgSource.naturalHeight || 600;
+    const naturalWidth = img.naturalWidth || img.width || 800;
+    const naturalHeight = img.naturalHeight || img.height || 600;
 
-    // TIER 1: Native BarcodeDetector (instant GPU acceleration in ~10ms)
+    // Helper: offscreen canvas scaled
+    function createScaledCanvas(maxDim) {
+      let w = naturalWidth;
+      let h = naturalHeight;
+      if (w > maxDim || h > maxDim) {
+        const scale = maxDim / Math.max(w, h);
+        w = Math.round(w * scale);
+        h = Math.round(h * scale);
+      }
+      const c = document.createElement('canvas');
+      c.width = w;
+      c.height = h;
+      const ctx = c.getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(img, 0, 0, w, h);
+      return c;
+    }
+
+    // Helper: center crop canvas
+    function createCenterCropCanvas(cropRatio = 0.75, targetSize = 600) {
+      const cropSize = Math.floor(Math.min(naturalWidth, naturalHeight) * cropRatio);
+      const sx = Math.floor((naturalWidth - cropSize) / 2);
+      const sy = Math.floor((naturalHeight - cropSize) / 2);
+      const c = document.createElement('canvas');
+      c.width = targetSize;
+      c.height = targetSize;
+      const ctx = c.getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(img, sx, sy, cropSize, cropSize, 0, 0, targetSize, targetSize);
+      return c;
+    }
+
+    // =======================================================================
+    // TIER 1: ZXing BrowserMultiFormatReader (Industry Gold Standard)
+    // Works on all phone photos (rotated, tilted, curved, shadowed)
+    // =======================================================================
+    if (typeof ZXing !== 'undefined' && ZXing.BrowserMultiFormatReader) {
+      try {
+        const zxingReader = new ZXing.BrowserMultiFormatReader();
+
+        // 1A. Direct image decode
+        try {
+          const res = await zxingReader.decodeFromImageElement(img);
+          if (res && res.getText()) return res.getText().trim();
+        } catch(e) {}
+
+        // 1B. Center crop at 800px (most phone users center the sticker)
+        try {
+          const cropC = createCenterCropCanvas(0.8, 800);
+          const res = await zxingReader.decodeFromCanvas(cropC);
+          if (res && res.getText()) return res.getText().trim();
+        } catch(e) {}
+
+        // 1C. Scaled to 1200px
+        try {
+          const scaledC = createScaledCanvas(1200);
+          const res = await zxingReader.decodeFromCanvas(scaledC);
+          if (res && res.getText()) return res.getText().trim();
+        } catch(e) {}
+
+        // 1D. Scaled to 700px
+        try {
+          const scaledC2 = createScaledCanvas(700);
+          const res = await zxingReader.decodeFromCanvas(scaledC2);
+          if (res && res.getText()) return res.getText().trim();
+        } catch(e) {}
+      } catch(zxingErr) {
+        console.warn('ZXing pass notice:', zxingErr);
+      }
+    }
+
+    // =======================================================================
+    // TIER 2: Native BarcodeDetector (GPU/Hardware Accelerated on Android/Chrome)
+    // =======================================================================
     if ('BarcodeDetector' in window) {
       try {
         const detector = new BarcodeDetector({ formats: ['qr_code'] });
-        const barcodes = await detector.detect(imgSource);
+
+        // Direct img element
+        let barcodes = await detector.detect(img);
         if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
-          if (isBitmap && imgSource.close) imgSource.close();
+          return barcodes[0].rawValue.trim();
+        }
+
+        // Scaled canvas
+        const scaledCanvas = createScaledCanvas(1000);
+        barcodes = await detector.detect(scaledCanvas);
+        if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
           return barcodes[0].rawValue.trim();
         }
       } catch(bErr) {}
     }
 
-    // TIER 2: Multi-Scale jsQR with center-crop and contrast optimization
+    // =======================================================================
+    // TIER 3: Multi-Scale jsQR with Contrast / Inversion Passes
+    // =======================================================================
     if (typeof jsQR !== 'undefined') {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      try {
+        // 3A. Center Crop
+        const cropC = createCenterCropCanvas(0.8, 600);
+        const cropCtx = cropC.getContext('2d', { willReadFrequently: true });
+        let imgData = cropCtx.getImageData(0, 0, 600, 600);
+        let qr = jsQR(imgData.data, 600, 600, { inversionAttempts: 'attemptBoth' });
+        if (qr && qr.data) return qr.data.trim();
 
-      // Pass A: Center-crop (most smartphone users center the QR sticker in the camera view)
-      const cropSize = Math.floor(Math.min(naturalWidth, naturalHeight) * 0.72);
-      const sx = Math.floor((naturalWidth - cropSize) / 2);
-      const sy = Math.floor((naturalHeight - cropSize) / 2);
-      canvas.width = 600;
-      canvas.height = 600;
-      ctx.drawImage(imgSource, sx, sy, cropSize, cropSize, 0, 0, 600, 600);
-      let imgData = ctx.getImageData(0, 0, 600, 600);
-      let qr = jsQR(imgData.data, 600, 600, { inversionAttempts: 'attemptBoth' });
-      if (qr && qr.data) {
-        if (isBitmap && imgSource.close) imgSource.close();
-        return qr.data.trim();
-      }
-
-      // Pass B: Multi-scale downsampled full passes (prevents main thread freezing on 12MP-48MP photos)
-      const targetSizes = [1000, 650, 1400];
-      for (const maxDim of targetSizes) {
-        let w = naturalWidth;
-        let h = naturalHeight;
-        if (w > maxDim || h > maxDim) {
-          const scale = maxDim / Math.max(w, h);
-          w = Math.round(w * scale);
-          h = Math.round(h * scale);
+        // 3B. Multi-scale passes
+        const sizes = [1000, 600, 1400];
+        for (const s of sizes) {
+          const c = createScaledCanvas(s);
+          const ctx = c.getContext('2d', { willReadFrequently: true });
+          imgData = ctx.getImageData(0, 0, c.width, c.height);
+          qr = jsQR(imgData.data, c.width, c.height, { inversionAttempts: 'attemptBoth' });
+          if (qr && qr.data) return qr.data.trim();
         }
-        if (w <= 0 || h <= 0) continue;
-
-        canvas.width = w;
-        canvas.height = h;
-        ctx.drawImage(imgSource, 0, 0, w, h);
-        imgData = ctx.getImageData(0, 0, w, h);
-
-        qr = jsQR(imgData.data, w, h, { inversionAttempts: 'attemptBoth' });
-        if (qr && qr.data) {
-          if (isBitmap && imgSource.close) imgSource.close();
-          return qr.data.trim();
-        }
-
-        // Pass C: High-contrast binarized pass for dim/lighting/reflection issues
-        if (w <= 800) {
-          const d = imgData.data;
-          for (let i = 0; i < d.length; i += 4) {
-            const gray = (d[i] * 0.299 + d[i+1] * 0.587 + d[i+2] * 0.114);
-            const val = gray > 125 ? 255 : 0;
-            d[i] = val;
-            d[i+1] = val;
-            d[i+2] = val;
-          }
-          qr = jsQR(d, w, h, { inversionAttempts: 'attemptBoth' });
-          if (qr && qr.data) {
-            if (isBitmap && imgSource.close) imgSource.close();
-            return qr.data.trim();
-          }
-        }
-      }
+      } catch(jsqrErr) {}
     }
 
-    // TIER 3: Fallback to Html5Qrcode.scanFile if previous tiers missed
+    // =======================================================================
+    // TIER 4: Html5Qrcode.scanFile with real-dimension offscreen DOM element
+    // =======================================================================
     if (typeof Html5Qrcode !== 'undefined') {
       try {
         let tempDiv = document.getElementById('temp_html5qr_file_scan');
         if (!tempDiv) {
           tempDiv = document.createElement('div');
           tempDiv.id = 'temp_html5qr_file_scan';
-          tempDiv.style.display = 'none';
+          tempDiv.style.cssText = 'position:fixed; top:-9999px; left:-9999px; width:500px; height:500px; opacity:0; pointer-events:none; z-index:-1;';
           document.body.appendChild(tempDiv);
         }
         const fileScanner = new Html5Qrcode('temp_html5qr_file_scan');
         const text = await fileScanner.scanFile(file, false);
         try { await fileScanner.clear(); } catch(e) {}
-        if (text && text.trim()) {
-          if (isBitmap && imgSource.close) imgSource.close();
-          return text.trim();
-        }
+        if (text && text.trim()) return text.trim();
       } catch(e) {}
     }
 
-    if (isBitmap && imgSource.close) imgSource.close();
     return null;
   }
 
@@ -1135,26 +1171,11 @@
           try { await html5QrScannerInstance.stop(); } catch(e) {}
         }
 
-        html5QrScannerInstance = new Html5Qrcode("html5qr_video_box", {
-          experimentalFeatures: {
-            useBarCodeDetectorIfSupported: true
-          }
-        });
+        html5QrScannerInstance = new Html5Qrcode("html5qr_video_box");
         activeScannerEngine = 'html5qrcode';
 
-        // Enumerate cameras on mobile to select the best physical rear/main camera
-        let cameraIdOrConfig = { facingMode: currentFacingMode };
-        try {
-          const cameras = await Html5Qrcode.getCameras();
-          if (cameras && cameras.length > 0) {
-            const backCam = cameras.find(c => /back|rear|environment|primary|0/i.test(c.label));
-            if (backCam) {
-              cameraIdOrConfig = backCam.id;
-            } else if (cameras.length === 1) {
-              cameraIdOrConfig = cameras[0].id;
-            }
-          }
-        } catch(cErr) {}
+        // Standard rear facing camera constraint (prevents selecting black/depth sensors on Android)
+        const cameraConfig = { facingMode: currentFacingMode };
 
         const config = {
           fps: 15,
@@ -1168,7 +1189,7 @@
         };
 
         await html5QrScannerInstance.start(
-          cameraIdOrConfig,
+          cameraConfig,
           config,
           (decodedText) => {
             onSuccessfulQrScan(decodedText);
