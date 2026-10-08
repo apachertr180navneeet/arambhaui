@@ -561,10 +561,8 @@
 
 @push('scripts')
 <script>
-  let activeVoucher = @json($hasValidInitialVoucher ? $voucher : null);
-  let activeTransferAmount = {{ $hasValidInitialVoucher ? (float)$initialAmount : 0 }};
-  let cameraStream = null;
-  let cameraAnimationId = null;
+  var activeVoucher = @json($hasValidInitialVoucher ? $voucher : null);
+  var activeTransferAmount = {{ $hasValidInitialVoucher ? (float)$initialAmount : 0 }};
 
   document.addEventListener('DOMContentLoaded', function() {
     const codeInput = document.getElementById('voucher_code');
@@ -1030,13 +1028,13 @@
   }
 
   // 7. Live Camera Scanner Engine (Html5Qrcode + WebRTC Fallback with BarcodeDetector & jsQR)
-  let activeScannerEngine = null;
-  let html5QrScannerInstance = null;
-  let cameraStream = null;
-  let cameraAnimationId = null;
-  let currentFacingMode = 'environment';
-  let isTorchActive = false;
-  let cameraVideoTrack = null;
+  var activeScannerEngine = null;
+  var html5QrScannerInstance = null;
+  var cameraStream = null;
+  var cameraAnimationId = null;
+  var currentFacingMode = 'environment';
+  var isTorchActive = false;
+  var cameraVideoTrack = null;
 
   async function toggleCameraScannerModal() {
     const container = document.getElementById('camera_scanner_container');
