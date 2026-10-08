@@ -326,16 +326,42 @@
             </div>
 
             <!-- Inline Camera Viewport (if active) -->
-            <div id="camera_scanner_container" style="display:none; margin-top:14px; position:relative; border-radius:12px; overflow:hidden; border:2px solid #4f46e5; background:#000000;">
-              <video id="camera_video" playsinline style="width:100%; height:220px; object-fit:cover;"></video>
+            <div id="camera_scanner_container" style="display:none; margin-top:14px; position:relative; border-radius:14px; overflow:hidden; border:2px solid #4f46e5; background:#0f172a; box-shadow:0 12px 28px -6px rgba(79, 70, 229, 0.35);">
+              <!-- Html5Qrcode dedicated mount -->
+              <div id="html5qr_video_box" style="width:100%; min-height:260px; background:#000;"></div>
+              
+              <!-- Direct WebRTC fallback video -->
+              <video id="camera_video" playsinline webkit-playsinline muted autoplay style="display:none; width:100%; height:260px; object-fit:cover; background:#000;"></video>
               <canvas id="camera_canvas" style="display:none;"></canvas>
-              <div style="position:absolute; inset:0; border:2px solid rgba(255,255,255,0.4); margin:20px; border-radius:12px; pointer-events:none; box-shadow:0 0 0 2000px rgba(0,0,0,0.4);"></div>
-              <div style="position:absolute; bottom:10px; left:0; right:0; text-align:center; color:#fff; font-size:0.8rem; font-weight:600; text-shadow:0 1px 3px rgba(0,0,0,0.8);">
-                Align QR sticker inside frame
+
+              <!-- Animated Viewfinder Overlay Box & Scanning Laser -->
+              <div id="camera_overlay_frame" style="position:absolute; inset:0; pointer-events:none; display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:5;">
+                <div style="width:200px; height:200px; border:2px solid rgba(99, 102, 241, 0.85); border-radius:16px; position:relative; box-shadow:0 0 0 2000px rgba(15, 23, 42, 0.45); overflow:hidden;">
+                  <!-- Corner Guides -->
+                  <div style="position:absolute; top:0; left:0; width:18px; height:18px; border-top:4px solid #38bdf8; border-left:4px solid #38bdf8; border-top-left-radius:6px;"></div>
+                  <div style="position:absolute; top:0; right:0; width:18px; height:18px; border-top:4px solid #38bdf8; border-right:4px solid #38bdf8; border-top-right-radius:6px;"></div>
+                  <div style="position:absolute; bottom:0; left:0; width:18px; height:18px; border-bottom:4px solid #38bdf8; border-left:4px solid #38bdf8; border-bottom-left-radius:6px;"></div>
+                  <div style="position:absolute; bottom:0; right:0; width:18px; height:18px; border-bottom:4px solid #38bdf8; border-right:4px solid #38bdf8; border-bottom-right-radius:6px;"></div>
+                  <!-- Laser Line -->
+                  <div class="qr-laser-line" style="position:absolute; left:0; right:0; height:2.5px; background:linear-gradient(90deg, transparent, #38bdf8, #818cf8, transparent); box-shadow:0 0 10px #38bdf8; animation:qrScanLaser 2s infinite ease-in-out;"></div>
+                </div>
+                <div id="scanner_status_hint" style="margin-top:12px; color:#ffffff; font-size:0.8rem; font-weight:700; text-shadow:0 2px 4px rgba(0,0,0,0.8); background:rgba(15, 23, 42, 0.75); padding:4px 14px; border-radius:20px; backdrop-filter:blur(4px);">
+                  Align voucher QR inside frame
+                </div>
               </div>
-              <button type="button" onclick="stopCameraScanner()" class="btn btn-sm btn-danger" style="position:absolute; top:8px; right:8px; font-weight:700; font-size:0.75rem;">
-                ✕ Close Camera
-              </button>
+
+              <!-- Top Quick Action Controls -->
+              <div style="position:absolute; top:10px; right:10px; display:flex; align-items:center; gap:8px; z-index:10;">
+                <button type="button" id="btn_toggle_torch" onclick="toggleScannerTorch()" style="display:none; background:rgba(15, 23, 42, 0.8); border:1px solid rgba(255,255,255,0.25); color:#fff; border-radius:8px; padding:6px 10px; font-size:0.8rem; cursor:pointer;" title="Toggle Torch Light">
+                  💡
+                </button>
+                <button type="button" id="btn_flip_camera" onclick="switchCameraFacing()" style="background:rgba(15, 23, 42, 0.8); border:1px solid rgba(255,255,255,0.25); color:#fff; border-radius:8px; padding:6px 10px; font-size:0.8rem; cursor:pointer;" title="Flip Camera">
+                  🔄 Flip
+                </button>
+                <button type="button" onclick="stopCameraScanner(true)" class="btn btn-sm btn-danger" style="font-weight:700; font-size:0.75rem; padding:6px 12px; border-radius:8px;">
+                  ✕ Close
+                </button>
+              </div>
             </div>
 
           </div>
@@ -600,102 +626,216 @@
     }
   }
 
+  // =========================================================================
+  // UNIVERSAL MULTI-TIER QR DECODER (Image / File / Screenshot)
+  // Supports Html5Qrcode, Native BarcodeDetector, and Multi-Scale jsQR
+  // =========================================================================
+  async function decodeQrFromImage(file) {
+    if (!file) return null;
+
+    // 1. Try Html5Qrcode.scanFile if loaded
+    if (typeof Html5Qrcode !== 'undefined') {
+      try {
+        let tempDiv = document.getElementById('temp_html5qr_file_scan');
+        if (!tempDiv) {
+          tempDiv = document.createElement('div');
+          tempDiv.id = 'temp_html5qr_file_scan';
+          tempDiv.style.display = 'none';
+          document.body.appendChild(tempDiv);
+        }
+        const fileScanner = new Html5Qrcode('temp_html5qr_file_scan');
+        const text = await fileScanner.scanFile(file, false);
+        if (text && text.trim()) {
+          try { await fileScanner.clear(); } catch(e) {}
+          return text.trim();
+        }
+      } catch(e) {
+        // Continue to next tier if ZXing couldn't decode
+      }
+    }
+
+    // Load file into HTMLImageElement
+    const img = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = () => reject(new Error('Image failed to load'));
+        image.src = reader.result;
+      };
+      reader.onerror = () => reject(new Error('File read failed'));
+      reader.readAsDataURL(file);
+    });
+
+    // 2. Try Native BarcodeDetector (GPU/Hardware Accelerated on Android/Chrome)
+    if ('BarcodeDetector' in window) {
+      try {
+        const detector = new BarcodeDetector({ formats: ['qr_code'] });
+        const barcodes = await detector.detect(img);
+        if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
+          return barcodes[0].rawValue.trim();
+        }
+      } catch(bErr) {}
+    }
+
+    // 3. Multi-Scale jsQR (Solves smartphone 12MP-48MP photo decoding failure)
+    if (typeof jsQR !== 'undefined') {
+      const targetScales = [800, 1200, 500, Math.max(img.width, img.height)];
+      for (const maxDim of targetScales) {
+        let w = img.width;
+        let h = img.height;
+        if (w > maxDim || h > maxDim) {
+          const scale = maxDim / Math.max(w, h);
+          w = Math.round(w * scale);
+          h = Math.round(h * scale);
+        }
+        if (w <= 0 || h <= 0) continue;
+
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        ctx.drawImage(img, 0, 0, w, h);
+        const imgData = ctx.getImageData(0, 0, w, h);
+
+        // Attempt A: Normal with attemptBoth inversion
+        let qr = jsQR(imgData.data, w, h, { inversionAttempts: 'attemptBoth' });
+        if (qr && qr.data) return qr.data.trim();
+
+        // Attempt B: High-contrast binarized pass for dim/lighting issues
+        if (w <= 800) {
+          const d = imgData.data;
+          for (let i = 0; i < d.length; i += 4) {
+            const gray = (d[i] * 0.299 + d[i+1] * 0.587 + d[i+2] * 0.114);
+            const val = gray > 125 ? 255 : 0;
+            d[i] = val;
+            d[i+1] = val;
+            d[i+2] = val;
+          }
+          qr = jsQR(d, w, h, { inversionAttempts: 'attemptBoth' });
+          if (qr && qr.data) return qr.data.trim();
+        }
+      }
+    }
+
+    return null;
+  }
+
   // 3. Customer Payment QR Upload handler
-  function handleCustomerPaymentQrUpload(e) {
+  async function handleCustomerPaymentQrUpload(e) {
     const file = e.target.files[0];
     if (!file) return;
 
+    // Show instant preview
     const reader = new FileReader();
     reader.onload = function() {
-      const img = new Image();
-      img.onload = function() {
-        // Decode UPI details via jsQR
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0);
-        const imgData = ctx.getImageData(0, 0, img.width, img.height);
-
-        let parsedUpi = '';
-        if (typeof jsQR !== 'undefined') {
-          const qr = jsQR(imgData.data, imgData.width, imgData.height);
-          if (qr && qr.data) {
-            const dataStr = qr.data.trim();
-            if (dataStr.startsWith('upi://') || dataStr.includes('pa=')) {
-              try {
-                const url = new URL(dataStr.startsWith('upi://') ? dataStr.replace('upi://pay', 'http://upi') : dataStr);
-                parsedUpi = url.searchParams.get('pa') || '';
-              } catch(err) {
-                const paMatch = dataStr.match(/[?&]pa=([^&#\s]+)/i);
-                if (paMatch) parsedUpi = decodeURIComponent(paMatch[1]);
-              }
-            } else if (dataStr.includes('@')) {
-              parsedUpi = dataStr;
-            }
-          }
-        }
-
-        if (parsedUpi) {
-          document.getElementById('customer_upi').value = parsedUpi;
-          onUpiInputChange(document.getElementById('customer_upi'));
-        }
-
-        // Update preview UI
-        const previewBox = document.getElementById('payment_qr_preview_box');
-        if (previewBox) {
-          previewBox.innerHTML = `<img src="${reader.result}" alt="Payment QR" style="width:100%; height:100%; object-fit:cover;">`;
-        }
-        document.getElementById('payment_qr_label').innerText = file.name;
-        document.getElementById('payment_qr_sub').innerHTML = `<span style="color:#16a34a; font-weight:700;">✓ Payment QR Attached ${parsedUpi ? '(' + parsedUpi + ')' : ''}</span>`;
-
-        // Upload to server
-        const formData = new FormData();
-        formData.append('qr_image', file);
-        if (parsedUpi) formData.append('recipient_upi_id', parsedUpi);
-
-        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-        fetch('{{ route('qr.uploadRecipient') }}', {
-          method: 'POST',
-          headers: {
-            'X-CSRF-TOKEN': csrfToken,
-            'Accept': 'application/json'
-          },
-          body: formData
-        })
-        .then(res => res.json())
-        .then(data => {
-          if (data.success && data.image_url) {
-            document.getElementById('uploaded_customer_qr_url').value = data.image_url;
-          }
-        })
-        .catch(err => console.error('QR upload notice:', err));
-      };
-      img.src = reader.result;
+      const previewBox = document.getElementById('payment_qr_preview_box');
+      if (previewBox) {
+        previewBox.innerHTML = `<img src="${reader.result}" alt="Payment QR" style="width:100%; height:100%; object-fit:cover;">`;
+      }
+      document.getElementById('payment_qr_label').innerText = file.name;
     };
     reader.readAsDataURL(file);
+
+    try {
+      const decoded = await decodeQrFromImage(file);
+      let parsedUpi = '';
+      if (decoded) {
+        const dataStr = decoded.trim();
+        if (dataStr.startsWith('upi://') || dataStr.includes('pa=')) {
+          try {
+            const url = new URL(dataStr.startsWith('upi://') ? dataStr.replace('upi://pay', 'http://upi') : dataStr);
+            parsedUpi = url.searchParams.get('pa') || '';
+          } catch(err) {
+            const paMatch = dataStr.match(/[?&]pa=([^&#\s]+)/i);
+            if (paMatch) parsedUpi = decodeURIComponent(paMatch[1]);
+          }
+        } else if (dataStr.includes('@')) {
+          parsedUpi = dataStr;
+        }
+      }
+
+      if (parsedUpi) {
+        document.getElementById('customer_upi').value = parsedUpi;
+        onUpiInputChange(document.getElementById('customer_upi'));
+        document.getElementById('payment_qr_sub').innerHTML = `<span style="color:#16a34a; font-weight:700;">✓ Payment QR Attached (${parsedUpi})</span>`;
+      } else {
+        document.getElementById('payment_qr_sub').innerHTML = `<span style="color:#16a34a; font-weight:700;">✓ Payment QR Attached</span>`;
+      }
+
+      // Upload file to server
+      const formData = new FormData();
+      formData.append('qr_image', file);
+      if (parsedUpi) formData.append('recipient_upi_id', parsedUpi);
+
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+      fetch('{{ route('qr.uploadRecipient') }}', {
+        method: 'POST',
+        headers: {
+          'X-CSRF-TOKEN': csrfToken,
+          'Accept': 'application/json'
+        },
+        body: formData
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.success && data.image_url) {
+          document.getElementById('uploaded_customer_qr_url').value = data.image_url;
+        }
+      })
+      .catch(err => console.error('QR upload notice:', err));
+
+    } catch(err) {
+      console.error('Customer payment QR scan notice:', err);
+    }
   }
 
-  // 4. Clean Voucher Code Helper
+  // 4. Clean Voucher Code Helper (Accepts URLs, query strings, JSON, paths, plain codes)
   function cleanVoucherInput(raw) {
     if (!raw) return '';
     raw = raw.toString().trim();
 
-    try {
-      const parsed = JSON.parse(raw);
-      if (parsed && parsed.code) return parsed.code.toString().toUpperCase().trim();
-    } catch(e) {}
-
-    const queryMatch = raw.match(/[?&](?:code|voucher|c|v)=([^&#\s]+)/i);
-    if (queryMatch && queryMatch[1]) return decodeURIComponent(queryMatch[1]).toUpperCase().trim();
-
-    const pathMatch = raw.match(/(?:\/claim\/|\/voucher\/|\/qr\/scanner\/)([^\/?&#\s]+)/i);
-    if (pathMatch && pathMatch[1]) {
-      const seg = decodeURIComponent(pathMatch[1]).toUpperCase().trim();
-      if (!['SCANNER', 'CLAIM', 'QR', 'PUBLIC', 'GENERATOR'].includes(seg)) return seg;
+    // 1. JSON payload parse
+    if ((raw.startsWith('{') && raw.endsWith('}')) || (raw.startsWith('[') && raw.endsWith(']'))) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (parsed) {
+          if (parsed.code) return String(parsed.code).toUpperCase().trim();
+          if (parsed.voucher_code) return String(parsed.voucher_code).toUpperCase().trim();
+          if (parsed.voucher) return String(parsed.voucher).toUpperCase().trim();
+        }
+      } catch(e) {}
     }
 
-    return raw.replace(/^["'\s]+|["'\s/]+$/g, '').toUpperCase().trim();
+    // 2. Query parameter match: ?voucher_code=, ?code=, ?voucher=, ?c=, ?v=
+    const queryMatch = raw.match(/[?&](?:voucher_code|code|voucher|c|v)=([^&#\s]+)/i);
+    if (queryMatch && queryMatch[1]) {
+      return decodeURIComponent(queryMatch[1]).toUpperCase().trim();
+    }
+
+    // 3. Path route match: /claim/CODE or /voucher/CODE or /qr/scanner/CODE
+    const pathMatch = raw.match(/(?:^|\/)(?:claim|voucher|qr\/scanner)\/([^\/?&#\s]+)/i);
+    if (pathMatch && pathMatch[1]) {
+      const seg = decodeURIComponent(pathMatch[1]).toUpperCase().trim();
+      if (!['SCANNER', 'CLAIM', 'QR', 'PUBLIC', 'GENERATOR', 'HISTORY', 'INDEX'].includes(seg)) {
+        return seg;
+      }
+    }
+
+    // 4. URL path segment parse
+    if (/^https?:\/\//i.test(raw)) {
+      try {
+        const urlObj = new URL(raw);
+        const parts = urlObj.pathname.split('/').filter(Boolean);
+        const last = parts[parts.length - 1];
+        if (last && !['SCANNER', 'CLAIM', 'QR', 'PUBLIC', 'GENERATOR', 'GARMENT'].includes(last.toUpperCase())) {
+          return decodeURIComponent(last).toUpperCase().trim();
+        }
+      } catch(e) {}
+    }
+
+    // 5. Clean text voucher code
+    return raw.replace(/^["'\s/]+|["'\s/]+$/g, '').toUpperCase().trim();
   }
 
   function onVoucherCodeInput(val) {
@@ -757,9 +897,14 @@
         body: JSON.stringify({ voucher_code: code })
       });
 
-      const data = await res.json();
+      let data = null;
+      try {
+        data = await res.json();
+      } catch(parseErr) {
+        data = { success: false, message: 'Server response error: invalid JSON.' };
+      }
 
-      if (data.success) {
+      if (data && data.success) {
         activeVoucher = data.voucher;
         activeTransferAmount = parseFloat(data.amount || data.voucher.amount || data.voucher.discount_amount || 0);
 
@@ -812,7 +957,7 @@
         updateTransferCardVisibility(false, 0, code);
 
         if (pill) {
-          pill.innerText = data.already_redeemed ? 'Redeemed' : (data.expired ? 'Expired' : 'Invalid');
+          pill.innerText = (data && data.already_redeemed) ? 'Redeemed' : ((data && data.expired) ? 'Expired' : 'Invalid');
           pill.style.background = '#fee2e2';
           pill.style.color = '#b91c1c';
         }
@@ -822,7 +967,7 @@
           alertBox.style.background = '#fef2f2';
           alertBox.style.border = '1px solid #fecaca';
           alertBox.style.color = '#991b1b';
-          alertBox.innerHTML = `<span>⚠️ ${data.message || 'Voucher cannot be claimed.'}</span>`;
+          alertBox.innerHTML = `<span>⚠️ ${(data && data.message) ? data.message : 'Voucher cannot be claimed.'}</span>`;
         }
       }
     } catch(err) {
@@ -830,114 +975,335 @@
       activeVoucher = null;
       activeTransferAmount = 0;
       updateTransferCardVisibility(false, 0, code);
+      if (pill) {
+        pill.innerText = 'Network Error';
+        pill.style.background = '#fee2e2';
+        pill.style.color = '#b91c1c';
+      }
     }
   }
 
-  // 6. Voucher QR Image Upload & jsQR Decode
-  function handleVoucherQrImageUpload(e) {
+  // 6. Voucher QR Image Upload Handler
+  async function handleVoucherQrImageUpload(e) {
     const file = e.target.files[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = function() {
-      const img = new Image();
-      img.onload = function() {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0);
-        const imgData = ctx.getImageData(0, 0, img.width, img.height);
-
-        if (typeof jsQR !== 'undefined') {
-          const qr = jsQR(imgData.data, imgData.width, imgData.height);
-          if (qr && qr.data) {
-            const extractedCode = cleanVoucherInput(qr.data);
-            document.getElementById('voucher_code').value = extractedCode;
-            validateVoucherLive(extractedCode);
-            if (typeof Swal !== 'undefined') {
-              Swal.fire({
-                icon: 'success',
-                title: 'QR Code Scanned!',
-                text: `Unique Code: ${extractedCode}`,
-                timer: 2000,
-                showConfirmButton: false
-              });
-            }
-            return;
-          }
-        }
-        alert('Could not decode QR code from the uploaded image. Please ensure image is clear.');
-      };
-      img.src = reader.result;
-    };
-    reader.readAsDataURL(file);
-  }
-
-  // 7. Live Camera Scanner
-  function toggleCameraScannerModal() {
-    const container = document.getElementById('camera_scanner_container');
-    if (container.style.display === 'none') {
-      startCameraScanner();
-    } else {
-      stopCameraScanner();
+    const pill = document.getElementById('code_validation_pill');
+    if (pill) {
+      pill.innerText = 'Decoding QR...';
+      pill.style.background = '#fef3c7';
+      pill.style.color = '#92400e';
     }
-  }
 
-  function startCameraScanner() {
-    const container = document.getElementById('camera_scanner_container');
-    const video = document.getElementById('camera_video');
-    const canvas = document.getElementById('camera_canvas');
-    container.style.display = 'block';
-
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-      .then(stream => {
-        cameraStream = stream;
-        video.srcObject = stream;
-        video.setAttribute('playsinline', true);
-        video.play();
-        cameraAnimationId = requestAnimationFrame(scanCameraFrame);
-      })
-      .catch(err => {
-        alert('Camera access denied or unavailable: ' + err.message);
-        container.style.display = 'none';
-      });
-  }
-
-  function scanCameraFrame() {
-    const video = document.getElementById('camera_video');
-    const canvas = document.getElementById('camera_canvas');
-    if (video.readyState === video.HAVE_ENOUGH_DATA) {
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
-      if (typeof jsQR !== 'undefined') {
-        const qr = jsQR(imgData.data, imgData.width, imgData.height, {
-          inversionAttempts: 'dontInvert'
-        });
-        if (qr && qr.data) {
-          const code = cleanVoucherInput(qr.data);
-          document.getElementById('voucher_code').value = code;
-          stopCameraScanner();
-          validateVoucherLive(code);
+    try {
+      const decodedText = await decodeQrFromImage(file);
+      if (decodedText) {
+        const extractedCode = cleanVoucherInput(decodedText);
+        if (extractedCode) {
+          document.getElementById('voucher_code').value = extractedCode;
+          validateVoucherLive(extractedCode);
+          if (typeof Swal !== 'undefined') {
+            Swal.fire({
+              icon: 'success',
+              title: 'QR Code Scanned!',
+              text: `Voucher Code: ${extractedCode}`,
+              timer: 2000,
+              showConfirmButton: false
+            });
+          }
           return;
         }
       }
+
+      alert('Could not decode QR code from the uploaded image. Please ensure the image is clear and well-lit, or manually enter the code.');
+      if (pill) {
+        pill.innerText = 'Not Found';
+        pill.style.background = '#fee2e2';
+        pill.style.color = '#b91c1c';
+      }
+    } catch(err) {
+      console.error('File scan error:', err);
+      alert('Error reading image file: ' + err.message);
+    } finally {
+      e.target.value = '';
     }
-    cameraAnimationId = requestAnimationFrame(scanCameraFrame);
   }
 
-  function stopCameraScanner() {
-    if (cameraAnimationId) cancelAnimationFrame(cameraAnimationId);
-    if (cameraStream) {
-      cameraStream.getTracks().forEach(track => track.stop());
-      cameraStream = null;
-    }
+  // 7. Live Camera Scanner Engine (Html5Qrcode + WebRTC Fallback with BarcodeDetector & jsQR)
+  let activeScannerEngine = null;
+  let html5QrScannerInstance = null;
+  let cameraStream = null;
+  let cameraAnimationId = null;
+  let currentFacingMode = 'environment';
+  let isTorchActive = false;
+  let cameraVideoTrack = null;
+
+  async function toggleCameraScannerModal() {
     const container = document.getElementById('camera_scanner_container');
-    if (container) container.style.display = 'none';
+    if (!container) return;
+    if (container.style.display === 'none' || !container.style.display) {
+      container.style.display = 'block';
+      await startCameraScanner();
+    } else {
+      stopCameraScanner(true);
+    }
+  }
+
+  async function startCameraScanner() {
+    const statusHint = document.getElementById('scanner_status_hint');
+    if (statusHint) statusHint.innerText = 'Starting camera...';
+
+    // Tier 1: Try Html5Qrcode if available
+    if (typeof Html5Qrcode !== 'undefined') {
+      try {
+        const box = document.getElementById('html5qr_video_box');
+        if (box) box.style.display = 'block';
+        const vid = document.getElementById('camera_video');
+        if (vid) vid.style.display = 'none';
+
+        if (html5QrScannerInstance) {
+          try { await html5QrScannerInstance.stop(); } catch(e) {}
+        }
+        html5QrScannerInstance = new Html5Qrcode("html5qr_video_box");
+        activeScannerEngine = 'html5qrcode';
+
+        const config = {
+          fps: 15,
+          qrbox: { width: 220, height: 220 },
+          aspectRatio: 1.0
+        };
+
+        await html5QrScannerInstance.start(
+          { facingMode: currentFacingMode },
+          config,
+          (decodedText) => {
+            onSuccessfulQrScan(decodedText);
+          },
+          () => {} // Frame-by-frame parse misses are normal
+        );
+
+        if (statusHint) statusHint.innerText = 'Align voucher QR inside frame';
+        return;
+      } catch(hErr) {
+        console.warn('Html5Qrcode camera notice, switching to native stream:', hErr);
+        if (html5QrScannerInstance) {
+          try { await html5QrScannerInstance.clear(); } catch(e) {}
+          html5QrScannerInstance = null;
+        }
+      }
+    }
+
+    // Tier 2: Direct WebRTC Camera Stream + BarcodeDetector & jsQR Fallback
+    await startNativeCameraStream();
+  }
+
+  async function startNativeCameraStream() {
+    activeScannerEngine = 'native';
+    const box = document.getElementById('html5qr_video_box');
+    if (box) box.style.display = 'none';
+    const video = document.getElementById('camera_video');
+    const canvas = document.getElementById('camera_canvas');
+    const statusHint = document.getElementById('scanner_status_hint');
+    if (video) video.style.display = 'block';
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      alert('Camera access is not supported by your browser. Please use the Upload QR button instead.');
+      stopCameraScanner(true);
+      return;
+    }
+
+    let stream = null;
+    const constraintsList = [
+      { video: { facingMode: { ideal: currentFacingMode }, width: { ideal: 1280 }, height: { ideal: 720 } } },
+      { video: { facingMode: currentFacingMode } },
+      { video: true }
+    ];
+
+    for (const constraints of constraintsList) {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+        if (stream) break;
+      } catch(e) {
+        console.warn('getUserMedia attempt failed:', constraints, e);
+      }
+    }
+
+    if (!stream) {
+      alert('Could not access camera. Please allow camera permissions in browser settings or use the Upload QR button.');
+      stopCameraScanner(true);
+      return;
+    }
+
+    cameraStream = stream;
+    cameraVideoTrack = stream.getVideoTracks()[0] || null;
+
+    // Check torch / flashlight support
+    const torchBtn = document.getElementById('btn_toggle_torch');
+    if (torchBtn && cameraVideoTrack) {
+      const caps = cameraVideoTrack.getCapabilities ? cameraVideoTrack.getCapabilities() : {};
+      torchBtn.style.display = (caps.torch) ? 'inline-block' : 'none';
+    }
+
+    video.srcObject = stream;
+    video.muted = true;
+    video.setAttribute('playsinline', 'true');
+    video.setAttribute('webkit-playsinline', 'true');
+    video.autoplay = true;
+
+    try {
+      await video.play();
+    } catch(pErr) {
+      console.warn('Video play notice:', pErr);
+    }
+
+    if (statusHint) statusHint.innerText = 'Align voucher QR inside frame';
+
+    let lastScanTime = 0;
+    let isProcessing = false;
+
+    async function scanNativeFrame(now) {
+      if (!cameraStream) return;
+
+      if (now - lastScanTime > 120 && !isProcessing) {
+        lastScanTime = now;
+        isProcessing = true;
+
+        try {
+          if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && video.videoWidth > 0) {
+            let codeFound = null;
+
+            // 1. Native BarcodeDetector (instant hardware scan)
+            if ('BarcodeDetector' in window) {
+              try {
+                if (!window._barcodeDetectorInstance) {
+                  window._barcodeDetectorInstance = new BarcodeDetector({ formats: ['qr_code'] });
+                }
+                const barcodes = await window._barcodeDetectorInstance.detect(video);
+                if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
+                  codeFound = barcodes[0].rawValue;
+                }
+              } catch(bErr) {}
+            }
+
+            // 2. jsQR on downsampled 640px canvas
+            if (!codeFound && typeof jsQR !== 'undefined') {
+              const maxDim = 640;
+              let w = video.videoWidth;
+              let h = video.videoHeight;
+              if (w > maxDim || h > maxDim) {
+                const s = maxDim / Math.max(w, h);
+                w = Math.round(w * s);
+                h = Math.round(h * s);
+              }
+              canvas.width = w;
+              canvas.height = h;
+              const ctx = canvas.getContext('2d', { willReadFrequently: true });
+              ctx.drawImage(video, 0, 0, w, h);
+              const imgData = ctx.getImageData(0, 0, w, h);
+              const qr = jsQR(imgData.data, w, h, { inversionAttempts: 'attemptBoth' });
+              if (qr && qr.data) {
+                codeFound = qr.data;
+              }
+            }
+
+            if (codeFound) {
+              onSuccessfulQrScan(codeFound);
+              return;
+            }
+          }
+        } catch(frameErr) {
+          console.warn('Frame scan err:', frameErr);
+        } finally {
+          isProcessing = false;
+        }
+      }
+
+      if (cameraStream) {
+        cameraAnimationId = requestAnimationFrame(scanNativeFrame);
+      }
+    }
+
+    cameraAnimationId = requestAnimationFrame(scanNativeFrame);
+  }
+
+  async function switchCameraFacing() {
+    currentFacingMode = (currentFacingMode === 'environment') ? 'user' : 'environment';
+    stopCameraScanner(false);
+    const container = document.getElementById('camera_scanner_container');
+    if (container) container.style.display = 'block';
+    await startCameraScanner();
+  }
+
+  async function toggleScannerTorch() {
+    if (!cameraVideoTrack) return;
+    try {
+      isTorchActive = !isTorchActive;
+      await cameraVideoTrack.applyConstraints({
+        advanced: [{ torch: isTorchActive }]
+      });
+      const btn = document.getElementById('btn_toggle_torch');
+      if (btn) btn.style.background = isTorchActive ? '#facc15' : 'rgba(15, 23, 42, 0.8)';
+    } catch(e) {
+      console.warn('Torch notice:', e);
+    }
+  }
+
+  function stopCameraScanner(hideContainer = true) {
+    if (cameraAnimationId) {
+      cancelAnimationFrame(cameraAnimationId);
+      cameraAnimationId = null;
+    }
+
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(t => t.stop());
+      cameraStream = null;
+      cameraVideoTrack = null;
+    }
+
+    if (html5QrScannerInstance) {
+      try {
+        html5QrScannerInstance.stop().catch(() => {}).then(() => {
+          try { html5QrScannerInstance.clear(); } catch(e) {}
+          html5QrScannerInstance = null;
+        });
+      } catch(e) {
+        html5QrScannerInstance = null;
+      }
+    }
+
+    const video = document.getElementById('camera_video');
+    if (video) video.srcObject = null;
+
+    if (hideContainer) {
+      const container = document.getElementById('camera_scanner_container');
+      if (container) container.style.display = 'none';
+    }
+  }
+
+  function onSuccessfulQrScan(rawText) {
+    if (navigator.vibrate) {
+      try { navigator.vibrate([80]); } catch(e) {}
+    }
+
+    stopCameraScanner(true);
+
+    const code = cleanVoucherInput(rawText);
+    if (code) {
+      const input = document.getElementById('voucher_code');
+      if (input) input.value = code;
+      validateVoucherLive(code);
+      if (typeof Swal !== 'undefined') {
+        Swal.fire({
+          icon: 'success',
+          title: 'QR Code Detected!',
+          text: `Voucher Code: ${code}`,
+          timer: 1800,
+          showConfirmButton: false
+        });
+      }
+    } else {
+      alert('Scanned code could not be resolved: ' + rawText);
+    }
   }
 
   // 8. Submit Claim & Instant Transfer
@@ -1060,6 +1426,12 @@
 @keyframes popIn {
   0% { transform: scale(0.92); opacity: 0; }
   100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes qrScanLaser {
+  0% { top: 8px; opacity: 0.85; }
+  50% { top: 185px; opacity: 1; }
+  100% { top: 8px; opacity: 0.85; }
 }
 
 @media (max-width: 640px) {

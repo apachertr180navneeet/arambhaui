@@ -34,23 +34,25 @@ class QrController extends Controller
 
         $input = trim((string)$input);
 
-        // If JSON payload was passed (e.g. {"code":"MAJ-500-X7K"})
-        if (str_starts_with($input, '{') && str_ends_with($input, '}')) {
+        // If JSON payload was passed (e.g. {"code":"ARM-500-X7K"})
+        if ((str_starts_with($input, '{') && str_ends_with($input, '}')) || (str_starts_with($input, '[') && str_ends_with($input, ']'))) {
             $json = json_decode($input, true);
-            if (is_array($json) && !empty($json['code'])) {
-                return strtoupper(trim($json['code']));
+            if (is_array($json)) {
+                if (!empty($json['voucher_code'])) return strtoupper(trim($json['voucher_code']));
+                if (!empty($json['code'])) return strtoupper(trim($json['code']));
+                if (!empty($json['voucher'])) return strtoupper(trim($json['voucher']));
             }
         }
 
-        // Check query parameters (case-insensitive) like ?code=, &code=, ?voucher=, &c=, &v=
-        if (preg_match('/[?&](?:code|voucher|c|v)=([^&#\s]+)/i', $input, $matches)) {
+        // Check query parameters (case-insensitive) like ?voucher_code=, ?code=, ?voucher=, &c=, &v=
+        if (preg_match('/[?&](?:voucher_code|code|voucher|c|v)=([^&#\s]+)/i', $input, $matches)) {
             return strtoupper(trim(urldecode($matches[1])));
         }
 
-        // Check path routes like /claim/CODE or /voucher/CODE
-        if (preg_match('/(?:\/claim\/|\/voucher\/|\/qr\/scanner\/)([^\/?&#\s]+)/i', $input, $matches)) {
+        // Check path routes like /claim/CODE or /voucher/CODE or /qr/scanner/CODE
+        if (preg_match('/(?:^|\/)(?:claim|voucher|qr\/scanner)\/([^\/?&#\s]+)/i', $input, $matches)) {
             $seg = strtoupper(trim(urldecode($matches[1])));
-            if (!in_array($seg, ['SCANNER', 'CLAIM', 'QR', 'PUBLIC', 'GENERATOR'])) {
+            if (!in_array($seg, ['SCANNER', 'CLAIM', 'QR', 'PUBLIC', 'GENERATOR', 'HISTORY', 'INDEX'])) {
                 return $seg;
             }
         }
@@ -61,7 +63,7 @@ class QrController extends Controller
             if (!empty($parsed['query'])) {
                 parse_str($parsed['query'], $queryParams);
                 foreach ($queryParams as $key => $val) {
-                    if (in_array(strtolower($key), ['code', 'voucher', 'c', 'v']) && !empty($val)) {
+                    if (in_array(strtolower($key), ['voucher_code', 'code', 'voucher', 'c', 'v']) && !empty($val)) {
                         return strtoupper(trim($val));
                     }
                 }
@@ -69,7 +71,7 @@ class QrController extends Controller
             if (!empty($parsed['path'])) {
                 $segments = array_filter(explode('/', trim($parsed['path'], '/')));
                 $lastSegment = end($segments);
-                if ($lastSegment && !in_array(strtolower($lastSegment), ['scanner', 'claim', 'qr', 'public', 'generator'])) {
+                if ($lastSegment && !in_array(strtolower($lastSegment), ['scanner', 'claim', 'qr', 'public', 'generator', 'garment'])) {
                     return strtoupper(trim(urldecode($lastSegment)));
                 }
             }
@@ -628,12 +630,14 @@ class QrController extends Controller
 
     public function validateVoucher(Request $request)
     {
-        $raw = $request->input('voucher_code', '');
+        $raw = $request->input('voucher_code', '') ?: $request->query('voucher_code', '') ?: $request->input('code', '') ?: $request->query('code', '');
         $code = self::cleanVoucherCode($raw);
 
-        $voucher = !empty($code) ? QrVoucher::where('voucher_code', $code)->first() : null;
-        if (!$voucher && !empty($code)) {
-            $voucher = QrVoucher::whereRaw('UPPER(voucher_code) = ?', [$code])->first();
+        $voucher = null;
+        if (!empty($code)) {
+            $voucher = QrVoucher::where('voucher_code', $code)
+                ->orWhereRaw('UPPER(TRIM(voucher_code)) = ?', [$code])
+                ->first();
         }
 
         if (!$voucher) {

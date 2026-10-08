@@ -73,11 +73,30 @@
   <link rel="stylesheet" href="{{ asset('css/qr.css') }}">
   <link rel="stylesheet" href="{{ asset('css/print.css') }}">
 
-  <!-- jsQR library for browser camera/file QR decoding -->
+  <!-- QR Scanning Engines: html5-qrcode + jsQR (multi-CDN resilient fallbacks) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+  <script>
+    if (typeof Html5Qrcode === 'undefined') {
+      document.write('<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"><\/script>');
+    }
+  </script>
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+  <script>
+    if (typeof jsQR === 'undefined') {
+      document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"><\/script>');
+    }
+    if (typeof jsQR === 'undefined') {
+      document.write('<script src="https://unpkg.com/jsqr@1.4.0/dist/jsQR.js"><\/script>');
+    }
+  </script>
 
-  <!-- SweetAlert2 library -->
+  <!-- SweetAlert2 library with fallback -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script>
+    if (typeof Swal === 'undefined') {
+      document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/sweetalert2/11.10.7/sweetalert2.all.min.js"><\/script>');
+    }
+  </script>
 
   @stack('styles')
 </head>

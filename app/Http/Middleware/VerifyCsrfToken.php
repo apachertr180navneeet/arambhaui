@@ -12,6 +12,10 @@ class VerifyCsrfToken extends Middleware
      * @var array<int, string>
      */
     protected $except = [
-        //
+        'qr/validate',
+        'qr/redeem',
+        'qr/upload-recipient',
+        'claim/validate',
+        'claim/redeem',
     ];
 }

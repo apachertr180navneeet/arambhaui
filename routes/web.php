@@ -34,8 +34,10 @@ Route::middleware('guest')->group(function () {
 // Public Customer QR Claim & Scanning Routes
 Route::get('/claim/{code?}', [QrController::class, 'scanner'])->name('qr.claim');
 Route::get('/qr/scanner', [QrController::class, 'scanner'])->name('qr.scanner');
-Route::post('/qr/validate', [QrController::class, 'validateVoucher'])->name('qr.validate');
+Route::match(['get', 'post'], '/qr/validate', [QrController::class, 'validateVoucher'])->name('qr.validate');
+Route::match(['get', 'post'], '/claim/validate', [QrController::class, 'validateVoucher'])->name('claim.validate');
 Route::post('/qr/redeem', [QrController::class, 'redeemVoucher'])->name('qr.redeem');
+Route::post('/claim/redeem', [QrController::class, 'redeemVoucher'])->name('claim.redeem');
 Route::post('/qr/upload-recipient', [QrController::class, 'uploadRecipientQr'])->name('qr.uploadRecipient');
 Route::post('/qr/save-recipient-settings', [QrController::class, 'saveRecipientSettings'])->name('qr.saveRecipientSettings');
 
