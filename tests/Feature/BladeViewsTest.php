@@ -29,6 +29,8 @@ class BladeViewsTest extends TestCase
             '/masters/units',
             '/purchase/orders',
             '/purchase/orders/create',
+            '/purchase/ledger',
+            '/purchase/payment-mapping',
             '/jobwork/assign',
             '/jobwork/inward-report',
             '/qr/generator',

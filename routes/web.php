@@ -13,6 +13,8 @@ use App\Http\Controllers\JobWork\JobAssignController;
 use App\Http\Controllers\JobWork\JobInwardController;
 use App\Http\Controllers\JobWork\JobInwardReportController;
 use App\Http\Controllers\Purchase\PurchaseOrderController;
+use App\Http\Controllers\Purchase\PurchaseLedgerController;
+use App\Http\Controllers\Purchase\PaymentMappingController;
 use App\Http\Controllers\Qr\QrController;
 use App\Http\Controllers\Dispatch\DispatchController;
 use App\Http\Controllers\Accounts\AccountsController;
@@ -83,9 +85,14 @@ Route::middleware('auth')->group(function () {
     });
 
     // ==========================================
-    // 3. PURCHASE ORDERS
+    // 3. PURCHASE MANAGEMENT & ACCOUNTING
     // ==========================================
     Route::prefix('purchase')->name('purchase.')->group(function () {
+        Route::get('ledger', [PurchaseLedgerController::class, 'index'])->name('ledger');
+        Route::get('payment-mapping', [PaymentMappingController::class, 'index'])->name('payment-mapping');
+        Route::post('payment-mapping/payment', [PaymentMappingController::class, 'storePayment'])->name('payment-mapping.store-payment');
+        Route::post('payment-mapping/allocate', [PaymentMappingController::class, 'allocate'])->name('payment-mapping.allocate');
+        Route::delete('payment-mapping/allocation/{id}', [PaymentMappingController::class, 'removeAllocation'])->name('payment-mapping.remove-allocation');
         Route::resource('orders', PurchaseOrderController::class);
     });
 
@@ -137,6 +144,7 @@ Route::middleware('auth')->group(function () {
     // ==========================================
     Route::prefix('reports')->name('reports.')->group(function () {
         Route::get('ledger', [ReportsController::class, 'itemLedger'])->name('ledger');
+        Route::get('purchase-ledger', [PurchaseLedgerController::class, 'index'])->name('purchase-ledger');
         Route::get('stock', [ReportsController::class, 'stockReport'])->name('stock');
         Route::get('lot-purchase', [ReportsController::class, 'lotPurchase'])->name('lot-purchase');
         Route::get('lot-sales', [ReportsController::class, 'lotSales'])->name('lot-sales');

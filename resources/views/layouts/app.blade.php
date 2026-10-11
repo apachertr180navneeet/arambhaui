@@ -204,6 +204,8 @@
             <div class="nav-submenu">
               <a href="{{ route('purchase.orders.index') }}" class="submenu-link {{ request()->routeIs('purchase.orders.index') ? 'active' : '' }}">Purchase Entry</a>
               <a href="{{ route('purchase.orders.create') }}" class="submenu-link {{ request()->routeIs('purchase.orders.create') ? 'active' : '' }}">+ New Purchase Entry</a>
+              <a href="{{ route('purchase.ledger') }}" class="submenu-link {{ request()->routeIs('purchase.ledger') ? 'active' : '' }}">Purchase Ledger (Tally)</a>
+              <a href="{{ route('purchase.payment-mapping') }}" class="submenu-link {{ request()->routeIs('purchase.payment-mapping') ? 'active' : '' }}">Payment Mapping</a>
             </div>
           </div>
         </div>
@@ -261,6 +263,7 @@
               <a href="{{ route('accounts.customer-accounts') }}" class="submenu-link {{ request()->routeIs('accounts.customer-accounts') ? 'active' : '' }}">Customer Settlements</a>
               <a href="{{ route('accounts.customer-outstanding') }}" class="submenu-link {{ request()->routeIs('accounts.customer-outstanding') ? 'active' : '' }}">Customer Outstanding</a>
               <a href="{{ route('accounts.vendor-outstanding') }}" class="submenu-link {{ request()->routeIs('accounts.vendor-outstanding') ? 'active' : '' }}">Vendor Outstanding</a>
+              <a href="{{ route('purchase.payment-mapping') }}" class="submenu-link {{ request()->routeIs('purchase.payment-mapping') ? 'active' : '' }}">Vendor Payment Mapping</a>
               <a href="{{ route('accounts.jobworker-outstanding') }}" class="submenu-link {{ request()->routeIs('accounts.jobworker-outstanding') ? 'active' : '' }}">Job Worker Outstanding</a>
             </div>
           </div>
@@ -278,6 +281,7 @@
               <svg class="nav-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
             </a>
             <div class="nav-submenu">
+              <a href="{{ route('purchase.ledger') }}" class="submenu-link {{ request()->routeIs('purchase.ledger') || request()->routeIs('reports.purchase-ledger') ? 'active' : '' }}">Purchase Ledger (Tally)</a>
               <a href="{{ route('reports.ledger') }}" class="submenu-link {{ request()->routeIs('reports.ledger') ? 'active' : '' }}">Item Stock Ledger</a>
               <a href="{{ route('reports.stock') }}" class="submenu-link {{ request()->routeIs('reports.stock') ? 'active' : '' }}">Stock Report</a>
               <a href="{{ route('reports.lot-purchase') }}" class="submenu-link {{ request()->routeIs('reports.lot-purchase') ? 'active' : '' }}">Lot-Wise Purchase</a>

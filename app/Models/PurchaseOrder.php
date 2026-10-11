@@ -28,6 +28,24 @@ class PurchaseOrder extends Model
         return $this->hasMany(PurchaseOrderItem::class);
     }
 
+    public function allocations()
+    {
+        return $this->hasMany(PurchasePaymentAllocation::class, 'purchase_order_id');
+    }
+
+    public function getTotalPaidAmountAttribute(): float
+    {
+        if ($this->relationLoaded('allocations')) {
+            return (float) $this->allocations->sum('allocated_amount');
+        }
+        return (float) $this->allocations()->sum('allocated_amount');
+    }
+
+    public function getOutstandingAmountAttribute(): float
+    {
+        return (float) max(0, round($this->grand_total - $this->total_paid_amount, 2));
+    }
+
     public function getThanListAttribute()
     {
         if (!empty($this->than_details)) {
