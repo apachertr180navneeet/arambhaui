@@ -179,6 +179,128 @@
   .than-compact-table tr:hover td {
     background: #f8fafc;
   }
+
+  /* Searchable Combobox Styles */
+  .searchable-select-wrap {
+    position: relative;
+    width: 100%;
+  }
+  .searchable-dropdown-list {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    max-height: 260px;
+    overflow-y: auto;
+    background: #ffffff;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 10px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
+    z-index: 1050;
+    padding: 6px;
+  }
+  .searchable-dropdown-item {
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.825rem;
+    transition: all 0.12s ease;
+  }
+  .searchable-dropdown-item:hover {
+    background: #eef2ff;
+    color: #4338ca;
+  }
+  .searchable-dropdown-item.selected {
+    background: #e0e7ff;
+    color: #3730a3;
+    font-weight: 700;
+  }
+  .quick-pill-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.725rem;
+    font-weight: 700;
+    color: #4338ca;
+    background: #eef2ff;
+    border: 1px solid #c7d2fe;
+    padding: 2px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.12s ease;
+    user-select: none;
+  }
+  .quick-pill-tag:hover {
+    background: #4338ca;
+    color: #ffffff;
+    border-color: #4338ca;
+  }
+
+  /* Modal Lot Cards & Range Selector */
+  .modal-tab-btn {
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    border: 1.5px solid #cbd5e1;
+    background: #ffffff;
+    color: #475569;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .modal-tab-btn:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+  }
+  .modal-tab-btn.active {
+    background: #4338ca;
+    color: #ffffff;
+    border-color: #4338ca;
+    box-shadow: 0 1px 4px rgba(67, 56, 202, 0.25);
+  }
+  .modal-lot-card {
+    background: #ffffff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    transition: all 0.15s ease;
+  }
+  .modal-lot-card:hover {
+    border-color: #cbd5e1;
+  }
+  .modal-lot-header {
+    background: #f8fafc;
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  .modal-lot-body {
+    padding: 12px 14px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 8px;
+    background: #fafafa;
+  }
+  .modal-range-bar {
+    background: #ffffff;
+    border: 1.5px solid #c7d2fe;
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+    box-shadow: 0 2px 8px rgba(79, 70, 229, 0.06);
+  }
 </style>
 @endpush
 
@@ -492,28 +614,77 @@
   </div>
 </div>
 
-<!-- Modal: Compact Searchable Than Selection -->
+<!-- Modal: Compact Searchable Than Selection with Lot Grouping & Quick Range -->
 <div class="modal-backdrop" id="thanSelectModal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.75); backdrop-filter:blur(4px); z-index:9999; align-items:center; justify-content:center;" onclick="if(event.target===this) closeThanSelectModal()">
-  <div style="background:#ffffff; border-radius:18px; width:94%; max-width:760px; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25); overflow:hidden; border:1px solid #cbd5e1;">
+  <div style="background:#ffffff; border-radius:18px; width:94%; max-width:840px; max-height:92vh; display:flex; flex-direction:column; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25); overflow:hidden; border:1px solid #cbd5e1;">
     <!-- Modal Header -->
     <div style="padding:16px 22px; background:#0f172a; color:#fff; display:flex; justify-content:space-between; align-items:center;">
       <div style="display:flex; align-items:center; gap:10px;">
-        <span style="width:32px; height:32px; border-radius:8px; background:rgba(255,255,255,0.1); display:inline-flex; align-items:center; justify-content:center; font-size:1rem;">📦</span>
+        <span style="width:34px; height:34px; border-radius:8px; background:rgba(255,255,255,0.12); display:inline-flex; align-items:center; justify-content:center; font-size:1.1rem;">📦</span>
         <div>
-          <div style="font-weight:800; font-size:1.05rem;" id="thanModalTitle">Select Purchase Thans</div>
-          <div style="font-size:0.75rem; color:#94a3b8;" id="thanModalSubtitle">Choose from available stock rolls & challans</div>
+          <div style="font-weight:800; font-size:1.1rem;" id="thanModalTitle">Select Purchase Thans</div>
+          <div style="font-size:0.75rem; color:#94a3b8;" id="thanModalSubtitle">Choose by Lot/Challan, Range, or individual rolls</div>
         </div>
       </div>
       <button type="button" onclick="closeThanSelectModal()" style="background:transparent; border:none; color:#94a3b8; font-size:1.5rem; cursor:pointer; line-height:1; padding:0 4px;">&times;</button>
     </div>
 
-    <!-- Modal Search & Controls Bar -->
+    <!-- Modal Controls Bar -->
     <div style="padding:14px 20px; background:#f8fafc; border-bottom:1px solid #e2e8f0; display:flex; flex-direction:column; gap:10px;">
-      <!-- Search Input -->
-      <div style="position:relative; display:flex; align-items:center;">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2.5" style="position:absolute; left:12px; pointer-events:none;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input type="text" id="thanModalSearchInput" class="form-control" placeholder="Search by Challan #, Than #, PO #, or meters..." oninput="renderThanModalList()" style="padding-left:36px; padding-right:32px; font-weight:600; font-size:0.9rem; height:42px; border-radius:10px;">
-        <button type="button" onclick="document.getElementById('thanModalSearchInput').value=''; renderThanModalList();" id="thanModalClearSearchBtn" style="position:absolute; right:10px; background:transparent; border:none; color:#94a3b8; cursor:pointer; display:none; font-size:1.1rem; line-height:1;">&times;</button>
+      
+      <!-- Top Row: Search & View Mode Tabs -->
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+        <!-- Search Input -->
+        <div style="position:relative; flex:1; min-width:240px; display:flex; align-items:center;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2.5" style="position:absolute; left:12px; pointer-events:none;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="thanModalSearchInput" class="form-control" placeholder="Search Challan #, PO #, Than #, or meters..." oninput="renderThanModalList()" style="padding-left:36px; padding-right:32px; font-weight:600; font-size:0.875rem; height:38px; border-radius:8px;">
+          <button type="button" onclick="document.getElementById('thanModalSearchInput').value=''; renderThanModalList();" id="thanModalClearSearchBtn" style="position:absolute; right:10px; background:transparent; border:none; color:#94a3b8; cursor:pointer; display:none; font-size:1.1rem; line-height:1;">&times;</button>
+        </div>
+
+        <!-- Mode Tabs -->
+        <div style="display:flex; gap:6px; align-items:center;">
+          <button type="button" class="modal-tab-btn active" id="tabBtnLot" onclick="setModalTab('lot')">
+            📦 Lot / Challan View
+          </button>
+          <button type="button" class="modal-tab-btn" id="tabBtnRange" onclick="setModalTab('range')">
+            ⚡ Quick Range
+          </button>
+          <button type="button" class="modal-tab-btn" id="tabBtnGrid" onclick="setModalTab('grid')">
+            🔢 All Thans Grid
+          </button>
+        </div>
+      </div>
+
+      <!-- Quick Range Selector Bar (Expandable or when Range tab active) -->
+      <div id="thanModalRangePanel" class="modal-range-bar" style="display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
+          <span style="font-weight:800; font-size:0.8rem; color:#3730a3; text-transform:uppercase; letter-spacing:0.03em;">
+            ⚡ Quick Sequence Range Selection (e.g. Than 1 to 50)
+          </span>
+          <span style="font-size:0.725rem; color:#64748b;">Validates against available stock records</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+          <div style="min-width:180px;">
+            <select id="thanRangeLotSelect" class="form-control" style="font-size:0.8rem; font-weight:700; height:36px; border-radius:6px;">
+              <option value="">-- All Lots / Challans --</option>
+            </select>
+          </div>
+          <div style="display:flex; align-items:center; gap:4px;">
+            <span style="font-size:0.78rem; font-weight:700; color:#475569;">From #:</span>
+            <input type="number" id="thanRangeStart" min="1" step="1" placeholder="Start" class="form-control" style="width:90px; height:36px; font-weight:800; text-align:center;">
+          </div>
+          <div style="display:flex; align-items:center; gap:4px;">
+            <span style="font-size:0.78rem; font-weight:700; color:#475569;">To #:</span>
+            <input type="number" id="thanRangeEnd" min="1" step="1" placeholder="End" class="form-control" style="width:90px; height:36px; font-weight:800; text-align:center;">
+          </div>
+          <button type="button" class="btn btn-primary btn-xs" onclick="applyRangeSelection(true)" style="height:36px; padding:0 14px; font-weight:800; display:inline-flex; align-items:center; gap:4px;">
+            ✓ Select Range
+          </button>
+          <button type="button" class="btn btn-secondary btn-xs" onclick="applyRangeSelection(false)" style="height:36px; padding:0 12px; font-weight:700; color:#ef4444; border-color:#fecaca;">
+            ✕ Deselect Range
+          </button>
+        </div>
+        <div id="thanRangeFeedback" style="display:none; margin-top:8px; font-size:0.78rem; font-weight:700; border-radius:6px; padding:6px 10px;"></div>
       </div>
 
       <!-- Quick Action Toolbar -->
@@ -535,20 +706,21 @@
       </div>
     </div>
 
-    <!-- Modal Scrollable Than Grid/List -->
-    <div id="thanModalListContainer" style="padding:16px 20px; overflow-y:auto; flex:1; max-height:420px; display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:10px; background:#ffffff;">
-      <!-- Dynamically filled with interactive Than selection cards -->
+    <!-- Modal Scrollable Content Container -->
+    <div id="thanModalListContainer" style="padding:16px 20px; overflow-y:auto; flex:1; max-height:440px; background:#f8fafc;">
+      <!-- Dynamically filled with Lot cards or flat Than cards -->
     </div>
 
     <!-- Modal Footer -->
-    <div style="padding:14px 22px; background:#f8fafc; border-top:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-      <div style="font-size:0.85rem; color:#64748b;">
-        <span id="thanModalTotalSelectedBadge" style="font-weight:800; color:#4338ca; background:#eef2ff; border:1px solid #c7d2fe; padding:4px 10px; border-radius:6px; font-size:0.85rem;">0 Thans Selected</span>
+    <div style="padding:14px 22px; background:#ffffff; border-top:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+      <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+        <span id="thanModalTotalSelectedBadge" style="font-weight:800; color:#4338ca; background:#eef2ff; border:1px solid #c7d2fe; padding:5px 12px; border-radius:7px; font-size:0.85rem;">0 Thans Selected | 0.00 Mtr</span>
+        <span id="thanModalYieldBadge" style="font-weight:700; color:#059669; background:#ecfdf5; border:1px solid #a7f3d0; padding:5px 12px; border-radius:7px; font-size:0.825rem; display:none;">Yield: 0 Pcs</span>
       </div>
       <div style="display:flex; gap:10px;">
         <button type="button" class="btn btn-secondary btn-sm" onclick="closeThanSelectModal()" style="font-weight:700; padding:8px 16px;">Cancel</button>
         <button type="button" class="btn btn-primary btn-sm" onclick="applyThanModalSelection()" id="thanModalApplyBtn" style="font-weight:800; padding:8px 22px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 8px rgba(79, 70, 229, 0.3);">
-          Apply Selection
+          Apply Selection (0)
         </button>
       </div>
     </div>
@@ -810,46 +982,197 @@
     calculateOverallTotals();
   }
 
-  // 1. Raw Item Selection Change
-  function onRawItemChange(idx, select) {
-    const opt = select.options[select.selectedIndex];
-    if (!opt || !opt.value) {
-      itemsData[idx].raw_item_id = '';
-      itemsData[idx].raw_item_name = '';
-    } else {
-      itemsData[idx].raw_item_id = opt.getAttribute('data-id') || '';
-      itemsData[idx].raw_item_name = opt.value;
-    }
-
-    renderAllRawItemCards();
-    calculateOverallTotals();
+  // Helper to get raw material list
+  function getRawItemList() {
+    const list = masterItems.filter(itm => {
+      const cat = (itm.category || '').toLowerCase();
+      const type = (itm.type || '').toLowerCase();
+      return cat.includes('raw') || cat.includes('fabric') || type.includes('raw') || type.includes('fabric');
+    });
+    return list.length > 0 ? list : masterItems;
   }
 
-  // 2. Finished Item Selection Change
-  function onFinishedItemChange(idx, select) {
-    const opt = select.options[select.selectedIndex];
-    if (!opt || !opt.value) {
-      itemsData[idx].finished_item_id = '';
-      itemsData[idx].finished_item_name = '';
-    } else {
-      itemsData[idx].finished_item_id = opt.getAttribute('data-id') || '';
-      itemsData[idx].finished_item_name = opt.value;
-      const rawMtr = parseFloat(opt.getAttribute('data-raw-meter'));
-      if (rawMtr && rawMtr > 0) {
-        itemsData[idx].consumption_per_pc = rawMtr;
-      }
-    }
+  // Helper to get finished items list (excludes raw fabrics, prioritizes styles)
+  function getFinishedItemList() {
+    const list = masterItems.filter(itm => {
+      const cat = (itm.category || '').toLowerCase();
+      const name = (itm.name || '').toLowerCase();
+      const hasRatio = (itm.raw_meter_per_piece && itm.raw_meter_per_piece > 0);
+      return !cat.includes('fabric') || hasRatio || name.includes('dupatta') || name.includes('kurti') || name.includes('suit') || name.includes('pant') || name.includes('plazo') || name.includes('palazzo');
+    });
+    return list.length > 0 ? list : masterItems;
+  }
 
-    // Recalculate all Thans with new consumption ratio while preserving metadata
-    const cons = itemsData[idx].consumption_per_pc;
-    itemsData[idx].thans.forEach(t => {
-      const calcs = calculateThanValues(t.meter, null, cons);
-      Object.assign(t, calcs);
+  function openItemDropdown(itemIdx, type) {
+    document.querySelectorAll('.searchable-dropdown-list').forEach(el => el.style.display = 'none');
+    const dd = document.getElementById(`${type}-item-dropdown-${itemIdx}`);
+    if (!dd) return;
+    filterItemDropdown(itemIdx, type, '');
+    dd.style.display = 'block';
+  }
+
+  function closeItemDropdown(itemIdx, type) {
+    const dd = document.getElementById(`${type}-item-dropdown-${itemIdx}`);
+    if (dd) dd.style.display = 'none';
+  }
+
+  function toggleItemDropdown(itemIdx, type) {
+    const dd = document.getElementById(`${type}-item-dropdown-${itemIdx}`);
+    if (dd && dd.style.display === 'block') {
+      closeItemDropdown(itemIdx, type);
+    } else {
+      openItemDropdown(itemIdx, type);
+    }
+  }
+
+  function filterItemDropdown(itemIdx, type, query) {
+    const dd = document.getElementById(`${type}-item-dropdown-${itemIdx}`);
+    if (!dd) return;
+    const q = (query || '').toLowerCase().trim();
+    const sourceList = (type === 'raw') ? getRawItemList() : getFinishedItemList();
+    const currentVal = (type === 'raw') ? itemsData[itemIdx]?.raw_item_name : itemsData[itemIdx]?.finished_item_name;
+
+    const filtered = sourceList.filter(itm => {
+      if (!q) return true;
+      return (itm.name || '').toLowerCase().includes(q) ||
+             (itm.code || '').toLowerCase().includes(q) ||
+             (itm.category || '').toLowerCase().includes(q);
     });
 
-    renderAllRawItemCards();
-    calculateOverallTotals();
+    if (filtered.length === 0) {
+      dd.innerHTML = `<div style="padding:10px 12px; font-size:0.8rem; color:#94a3b8; text-align:center;">No matching items found</div>`;
+      return;
+    }
+
+    dd.innerHTML = filtered.map(itm => {
+      const isSel = (itm.name === currentVal);
+      const rawMtr = itm.raw_meter_per_piece || 0;
+      const metaBadge = type === 'finished' && rawMtr > 0 
+        ? `<span style="background:#eef2ff; color:#4338ca; font-weight:800; font-size:0.7rem; padding:2px 6px; border-radius:4px;">${rawMtr} Mtr/Pc</span>`
+        : `<span style="background:#f1f5f9; color:#64748b; font-size:0.7rem; padding:2px 6px; border-radius:4px;">${itm.category || (type === 'raw' ? 'Fabric' : 'Style')}</span>`;
+
+      return `
+        <div class="searchable-dropdown-item ${isSel ? 'selected' : ''}" 
+             onclick="selectItem(${itemIdx}, '${type}', '${itm.id}', '${itm.name.replace(/'/g, "\\'")}', ${rawMtr})">
+          <div>
+            <strong>${itm.name}</strong> 
+            <span style="font-size:0.725rem; color:#64748b; margin-left:4px;">[${itm.code || 'CODE'}]</span>
+          </div>
+          <div>${metaBadge}</div>
+        </div>
+      `;
+    }).join('');
   }
+
+  function selectItem(itemIdx, type, id, name, rawMeter) {
+    const item = itemsData[itemIdx];
+    if (!item) return;
+
+    if (type === 'finished') {
+      item.finished_item_id = id || '';
+      item.finished_item_name = name || '';
+      if (rawMeter && parseFloat(rawMeter) > 0) {
+        item.consumption_per_pc = parseFloat(rawMeter);
+      }
+      
+      const searchInp = document.getElementById(`finished-item-search-${itemIdx}`);
+      const nameInp = document.getElementById(`finished-item-name-input-${itemIdx}`);
+      const idInp = document.getElementById(`finished-item-id-input-${itemIdx}`);
+      const consInp = document.getElementById(`cons-input-${itemIdx}`);
+      const ratioHint = document.getElementById(`finished-item-ratio-hint-${itemIdx}`);
+      
+      if (searchInp) searchInp.value = `${name}${item.consumption_per_pc ? ` (${parseFloat(item.consumption_per_pc).toFixed(2)} Mtr/Pc)` : ''}`;
+      if (nameInp) nameInp.value = name;
+      if (idInp) idInp.value = id || '';
+      if (consInp) consInp.value = item.consumption_per_pc;
+      if (ratioHint) ratioHint.innerHTML = `Ratio: <strong>${parseFloat(item.consumption_per_pc).toFixed(2)} Mtr/Pc</strong>`;
+
+      // Recalculate thans yield pieces in-place
+      const cons = item.consumption_per_pc;
+      item.thans.forEach(t => {
+        Object.assign(t, calculateThanValues(t.meter, t.wastage, cons));
+      });
+
+      renderTonsForCard(itemIdx);
+      recalcRawItemRow(itemIdx);
+      calculateOverallTotals();
+      closeItemDropdown(itemIdx, 'finished');
+    } else if (type === 'raw') {
+      item.raw_item_id = id || '';
+      item.raw_item_name = name || '';
+
+      const searchInp = document.getElementById(`raw-item-search-${itemIdx}`);
+      const nameInp = document.getElementById(`raw-item-name-input-${itemIdx}`);
+      const idInp = document.getElementById(`raw-item-id-input-${itemIdx}`);
+      
+      if (searchInp) searchInp.value = name;
+      if (nameInp) nameInp.value = name;
+      if (idInp) idInp.value = id || '';
+
+      closeItemDropdown(itemIdx, 'raw');
+
+      renderAllRawItemCards();
+      calculateOverallTotals();
+
+      // If target finished item is not selected yet, automatically focus & open it
+      setTimeout(() => {
+        const finInp = document.getElementById(`finished-item-search-${itemIdx}`);
+        if (finInp && !item.finished_item_name) {
+          finInp.focus();
+          openItemDropdown(itemIdx, 'finished');
+        }
+      }, 100);
+    }
+  }
+
+  function populateQuickPills(itemIdx) {
+    const rawPillsContainer = document.getElementById(`raw-quick-pills-${itemIdx}`);
+    const finishedPillsContainer = document.getElementById(`finished-quick-pills-${itemIdx}`);
+
+    if (rawPillsContainer) {
+      const rawList = getRawItemList();
+      const topRaw = rawList.slice(0, 5);
+      rawPillsContainer.innerHTML = `
+        <span style="font-size:0.7rem; color:#64748b; font-weight:700;">Quick Pick:</span>
+        ${topRaw.map(r => `
+          <span class="quick-pill-tag" onclick="selectItem(${itemIdx}, 'raw', '${r.id}', '${r.name.replace(/'/g, "\\'")}', 0)">
+            + ${r.name}
+          </span>
+        `).join('')}
+      `;
+    }
+
+    if (finishedPillsContainer) {
+      const finList = getFinishedItemList();
+      const priorityNames = ['dupatta', 'kurti', 'palazzo', 'pant', 'suit'];
+      const prioritized = [...finList].sort((a, b) => {
+        const aName = (a.name || '').toLowerCase();
+        const bName = (b.name || '').toLowerCase();
+        const aPri = priorityNames.findIndex(p => aName.includes(p));
+        const bPri = priorityNames.findIndex(p => bName.includes(p));
+        if (aPri !== -1 && bPri !== -1) return aPri - bPri;
+        if (aPri !== -1) return -1;
+        if (bPri !== -1) return 1;
+        return 0;
+      });
+      const topFin = prioritized.slice(0, 5);
+      finishedPillsContainer.innerHTML = `
+        <span style="font-size:0.7rem; color:#64748b; font-weight:700;">Quick Pick:</span>
+        ${topFin.map(f => `
+          <span class="quick-pill-tag" onclick="selectItem(${itemIdx}, 'finished', '${f.id}', '${f.name.replace(/'/g, "\\'")}', ${f.raw_meter_per_piece || 0})">
+            + ${f.name}
+          </span>
+        `).join('')}
+      `;
+    }
+  }
+
+  // Document click listener to close open combobox dropdowns
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('.searchable-select-wrap')) {
+      document.querySelectorAll('.searchable-dropdown-list').forEach(el => el.style.display = 'none');
+    }
+  });
 
   // Add a purchased ton from the available list
   function addPurchasedTon(itemIdx, tonData) {
@@ -1165,30 +1488,73 @@
         <input type="hidden" name="items[${itemIdx}][finished_item_id]" value="${item.finished_item_id}">
         <input type="hidden" id="hidden-raw-qty-${itemIdx}" name="items[${itemIdx}][than_meters]" value="${totalRaw.toFixed(2)}">
 
+        <!-- Row 1: Searchable Raw Item Select & Target Finished Item Select -->
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-bottom:14px;">
           
+          <!-- Step 1: Select Raw Item -->
           <div class="form-group" style="margin-bottom:0;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
               <label class="form-label" style="font-weight:700; color:var(--slate-800); margin:0;">
-                1. Select Raw Item <span style="color:#ef4444;">*</span>
+                1. Select Raw Item / Fabric <span style="color:#ef4444;">*</span>
               </label>
               <a href="{{ route('masters.items.index') }}" target="_blank" style="font-size:0.75rem; color:#4338ca; text-decoration:none; font-weight:600;">+ Items Master</a>
             </div>
-            <select name="items[${itemIdx}][raw_item_name]" class="form-control" required onchange="onRawItemChange(${itemIdx}, this)">
-              ${rawOptions}
-            </select>
+
+            <div class="searchable-select-wrap" id="raw-item-wrap-${itemIdx}">
+              <div style="position:relative;">
+                <input type="text" 
+                       id="raw-item-search-${itemIdx}" 
+                       class="form-control" 
+                       placeholder="🔍 Search Raw Item / Fabric..." 
+                       value="${item.raw_item_name || ''}" 
+                       autocomplete="off"
+                       onclick="openItemDropdown(${itemIdx}, 'raw')"
+                       onfocus="openItemDropdown(${itemIdx}, 'raw')"
+                       oninput="filterItemDropdown(${itemIdx}, 'raw', this.value)"
+                       style="font-weight:700; height:40px; border-radius:8px; padding-right:32px; background:#ffffff;">
+                <button type="button" onclick="toggleItemDropdown(${itemIdx}, 'raw')" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:transparent; border:none; color:#64748b; font-size:0.85rem; cursor:pointer; padding:4px;">▾</button>
+              </div>
+              <input type="hidden" id="raw-item-name-input-${itemIdx}" name="items[${itemIdx}][raw_item_name]" value="${item.raw_item_name || ''}" required>
+              <input type="hidden" id="raw-item-id-input-${itemIdx}" name="items[${itemIdx}][raw_item_id]" value="${item.raw_item_id || ''}">
+              <div id="raw-item-dropdown-${itemIdx}" class="searchable-dropdown-list" style="display:none;"></div>
+            </div>
+
+            <!-- Quick Pick Pills for Raw Fabrics -->
+            <div style="display:flex; align-items:center; gap:5px; margin-top:6px; flex-wrap:wrap;" id="raw-quick-pills-${itemIdx}"></div>
           </div>
 
+          <!-- Step 2: Select Finished Item -->
           <div class="form-group" style="margin-bottom:0;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
               <label class="form-label" style="font-weight:700; color:var(--slate-800); margin:0;">
                 2. Select Target Finished Item <span style="color:#ef4444;">*</span>
               </label>
-              <span style="font-size:0.725rem; color:var(--slate-500);">Auto loads consumption ratio</span>
+              <span style="font-size:0.725rem; color:var(--slate-500);" id="finished-item-ratio-hint-${itemIdx}">
+                ${item.consumption_per_pc ? `Ratio: <strong>${parseFloat(item.consumption_per_pc).toFixed(2)} Mtr/Pc</strong>` : 'Auto-loads consumption ratio'}
+              </span>
             </div>
-            <select name="items[${itemIdx}][finished_item_name]" class="form-control" required onchange="onFinishedItemChange(${itemIdx}, this)">
-              ${finishedOptions}
-            </select>
+
+            <div class="searchable-select-wrap" id="finished-item-wrap-${itemIdx}">
+              <div style="position:relative;">
+                <input type="text" 
+                       id="finished-item-search-${itemIdx}" 
+                       class="form-control" 
+                       placeholder="🔍 Search Finished Product (e.g. Dupatta, Kurti)..." 
+                       value="${item.finished_item_name ? `${item.finished_item_name}${item.consumption_per_pc ? ` (${parseFloat(item.consumption_per_pc).toFixed(2)} Mtr/Pc)` : ''}` : ''}" 
+                       autocomplete="off"
+                       onclick="openItemDropdown(${itemIdx}, 'finished')"
+                       onfocus="openItemDropdown(${itemIdx}, 'finished')"
+                       oninput="filterItemDropdown(${itemIdx}, 'finished', this.value)"
+                       style="font-weight:700; height:40px; border-radius:8px; padding-right:32px; background:#ffffff;">
+                <button type="button" onclick="toggleItemDropdown(${itemIdx}, 'finished')" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:transparent; border:none; color:#64748b; font-size:0.85rem; cursor:pointer; padding:4px;">▾</button>
+              </div>
+              <input type="hidden" id="finished-item-name-input-${itemIdx}" name="items[${itemIdx}][finished_item_name]" value="${item.finished_item_name || ''}" required>
+              <input type="hidden" id="finished-item-id-input-${itemIdx}" name="items[${itemIdx}][finished_item_id]" value="${item.finished_item_id || ''}">
+              <div id="finished-item-dropdown-${itemIdx}" class="searchable-dropdown-list" style="display:none;"></div>
+            </div>
+
+            <!-- Quick Pick Pills for Finished Styles -->
+            <div style="display:flex; align-items:center; gap:5px; margin-top:6px; flex-wrap:wrap;" id="finished-quick-pills-${itemIdx}"></div>
           </div>
 
         </div>
@@ -1338,6 +1704,7 @@
       `;
 
       container.appendChild(card);
+      populateQuickPills(itemIdx);
       renderTonsForCard(itemIdx);
       recalcRawItemRow(itemIdx);
     });
@@ -1552,6 +1919,189 @@
     activeModalItemIdx = null;
   }
 
+  let modalActiveTab = 'lot'; // 'lot', 'range', 'grid'
+  const lotCollapseState = {};
+
+  function setModalTab(tab) {
+    modalActiveTab = tab;
+    const btnLot = document.getElementById('tabBtnLot');
+    const btnRange = document.getElementById('tabBtnRange');
+    const btnGrid = document.getElementById('tabBtnGrid');
+    if (btnLot) btnLot.className = `modal-tab-btn ${tab === 'lot' ? 'active' : ''}`;
+    if (btnRange) btnRange.className = `modal-tab-btn ${tab === 'range' ? 'active' : ''}`;
+    if (btnGrid) btnGrid.className = `modal-tab-btn ${tab === 'grid' ? 'active' : ''}`;
+
+    const rangePanel = document.getElementById('thanModalRangePanel');
+    if (rangePanel) {
+      rangePanel.style.display = (tab === 'range') ? 'block' : 'none';
+    }
+
+    renderThanModalList();
+  }
+
+  function getOtherCardsUniqueIds() {
+    const set = new Set();
+    itemsData.forEach((otherItm, oIdx) => {
+      if (oIdx !== activeModalItemIdx) {
+        (otherItm.thans || []).forEach(t => {
+          if (t.unique_id) set.add(t.unique_id);
+        });
+      }
+    });
+    return set;
+  }
+
+  function groupPurchasesByLot(purchases) {
+    const map = new Map();
+    purchases.forEach(p => {
+      const challan = p.challan_no || p.po_number || 'General Lot';
+      const key = `lot_${challan}`;
+      if (!map.has(key)) {
+        map.set(key, {
+          key: key,
+          challan_no: challan,
+          po_number: p.po_number || '',
+          date: p.date || '',
+          unit: p.unit || 'Mtr',
+          thans: [],
+          totalMeters: 0
+        });
+      }
+      const entry = map.get(key);
+      entry.thans.push(p);
+      entry.totalMeters += (parseFloat(p.meter) || 0);
+    });
+    return Array.from(map.values());
+  }
+
+  function populateRangeLotSelect(lots) {
+    const sel = document.getElementById('thanRangeLotSelect');
+    if (!sel) return;
+    const curVal = sel.value;
+    let opts = `<option value="">-- All Lots / Challans (${lots.length}) --</option>`;
+    lots.forEach(l => {
+      opts += `<option value="${l.challan_no}" ${curVal === l.challan_no ? 'selected' : ''}>Challan #${l.challan_no} (${l.thans.length} Thans, ${l.totalMeters.toFixed(1)}m)</option>`;
+    });
+    sel.innerHTML = opts;
+  }
+
+  function toggleLotExpand(lotKey) {
+    lotCollapseState[lotKey] = !lotCollapseState[lotKey];
+    const body = document.getElementById(`lot-body-${lotKey}`);
+    const btn = document.getElementById(`lot-toggle-btn-${lotKey}`);
+    if (body) {
+      body.style.display = lotCollapseState[lotKey] ? 'none' : 'grid';
+    }
+    if (btn) {
+      btn.textContent = lotCollapseState[lotKey] ? '▶ Expand' : '▼ Collapse';
+    }
+  }
+
+  function selectWholeLot(lotChallan) {
+    if (activeModalItemIdx === null) return;
+    const item = itemsData[activeModalItemIdx];
+    const rawId = item.raw_item_id;
+    const rawName = (item.raw_item_name || '').toLowerCase().trim();
+    const availablePurchases = (rawId && purchasedTonsMap[rawId]) ? purchasedTonsMap[rawId] : (rawName && purchasedTonsMap[rawName] ? purchasedTonsMap[rawName] : []);
+
+    const otherCardsUniqueIds = getOtherCardsUniqueIds();
+
+    availablePurchases.forEach(p => {
+      const matchLot = (p.challan_no === lotChallan || p.po_number === lotChallan);
+      if (matchLot && !otherCardsUniqueIds.has(p.unique_id)) {
+        modalSelectedUniqueIds.add(p.unique_id);
+      }
+    });
+
+    renderThanModalList();
+  }
+
+  function deselectWholeLot(lotChallan) {
+    if (activeModalItemIdx === null) return;
+    const item = itemsData[activeModalItemIdx];
+    const rawId = item.raw_item_id;
+    const rawName = (item.raw_item_name || '').toLowerCase().trim();
+    const availablePurchases = (rawId && purchasedTonsMap[rawId]) ? purchasedTonsMap[rawId] : (rawName && purchasedTonsMap[rawName] ? purchasedTonsMap[rawName] : []);
+
+    availablePurchases.forEach(p => {
+      const matchLot = (p.challan_no === lotChallan || p.po_number === lotChallan);
+      if (matchLot) {
+        modalSelectedUniqueIds.delete(p.unique_id);
+      }
+    });
+
+    renderThanModalList();
+  }
+
+  function applyRangeSelection(isSelect) {
+    if (activeModalItemIdx === null) return;
+    const item = itemsData[activeModalItemIdx];
+    const rawId = item.raw_item_id;
+    const rawName = (item.raw_item_name || '').toLowerCase().trim();
+    const availablePurchases = (rawId && purchasedTonsMap[rawId]) ? purchasedTonsMap[rawId] : (rawName && purchasedTonsMap[rawName] ? purchasedTonsMap[rawName] : []);
+
+    const lotFilter = document.getElementById('thanRangeLotSelect')?.value || '';
+    const startNum = parseInt(document.getElementById('thanRangeStart')?.value) || 0;
+    const endNum = parseInt(document.getElementById('thanRangeEnd')?.value) || 0;
+    const feedback = document.getElementById('thanRangeFeedback');
+
+    if (startNum <= 0 || endNum <= 0) {
+      if (feedback) {
+        feedback.style.display = 'block';
+        feedback.style.background = '#fef2f2';
+        feedback.style.color = '#dc2626';
+        feedback.textContent = 'Please enter valid Start and End Than numbers (greater than 0).';
+      }
+      return;
+    }
+
+    if (startNum > endNum) {
+      if (feedback) {
+        feedback.style.display = 'block';
+        feedback.style.background = '#fef2f2';
+        feedback.style.color = '#dc2626';
+        feedback.textContent = 'Start Than # must be less than or equal to End Than #.';
+      }
+      return;
+    }
+
+    const otherCardsUniqueIds = getOtherCardsUniqueIds();
+    let count = 0;
+    let meters = 0;
+
+    availablePurchases.forEach(p => {
+      if (lotFilter && p.challan_no !== lotFilter && p.po_number !== lotFilter) return;
+      const tNum = parseInt(p.than_no) || 0;
+      if (tNum >= startNum && tNum <= endNum) {
+        if (otherCardsUniqueIds.has(p.unique_id)) return;
+        if (isSelect) {
+          modalSelectedUniqueIds.add(p.unique_id);
+        } else {
+          modalSelectedUniqueIds.delete(p.unique_id);
+        }
+        count++;
+        meters += (parseFloat(p.meter) || 0);
+      }
+    });
+
+    if (feedback) {
+      feedback.style.display = 'block';
+      if (count > 0) {
+        feedback.style.background = isSelect ? '#ecfdf5' : '#f8fafc';
+        feedback.style.color = isSelect ? '#047857' : '#475569';
+        feedback.textContent = isSelect 
+          ? `✓ Successfully selected ${count} Thans (${meters.toFixed(2)} Mtr) for range #${startNum} to #${endNum}${lotFilter ? ` in Challan #${lotFilter}` : ''}.`
+          : `✓ Deselected ${count} Thans for range #${startNum} to #${endNum}.`;
+      } else {
+        feedback.style.background = '#fffbeb';
+        feedback.style.color = '#b45309';
+        feedback.textContent = `No available thans found matching Than #${startNum} to #${endNum}${lotFilter ? ` in Challan #${lotFilter}` : ''}.`;
+      }
+    }
+
+    renderThanModalList();
+  }
+
   function renderThanModalList() {
     if (activeModalItemIdx === null) return;
     const item = itemsData[activeModalItemIdx];
@@ -1566,14 +2116,7 @@
     const clearBtn = document.getElementById('thanModalClearSearchBtn');
     if (clearBtn) clearBtn.style.display = query ? 'inline-flex' : 'none';
 
-    const otherCardsUniqueIds = new Set();
-    itemsData.forEach((otherItm, oIdx) => {
-      if (oIdx !== activeModalItemIdx) {
-        (otherItm.thans || []).forEach(t => {
-          if (t.unique_id) otherCardsUniqueIds.add(t.unique_id);
-        });
-      }
-    });
+    const otherCardsUniqueIds = getOtherCardsUniqueIds();
 
     const filtered = availablePurchases.filter(p => {
       if (otherCardsUniqueIds.has(p.unique_id)) return false;
@@ -1586,9 +2129,12 @@
       return matchChallan || matchThan || matchPO || matchMeter || matchLabel;
     });
 
+    const lots = groupPurchasesByLot(availablePurchases.filter(p => !otherCardsUniqueIds.has(p.unique_id)));
+    populateRangeLotSelect(lots);
+
     if (filtered.length === 0) {
       container.innerHTML = `
-        <div style="grid-column: 1 / -1; text-align:center; padding:36px 16px; color:#64748b;">
+        <div style="text-align:center; padding:36px 16px; color:#64748b;">
           <div style="font-size:1.8rem; margin-bottom:8px;">🔍</div>
           <div style="font-weight:700; font-size:0.95rem; color:#334155;">No matching Thans found</div>
           <div style="font-size:0.8rem; color:#94a3b8; margin-top:4px;">Try refining your search keyword.</div>
@@ -1598,36 +2144,93 @@
       return;
     }
 
-    container.innerHTML = filtered.map(p => {
-      const isSelected = modalSelectedUniqueIds.has(p.unique_id);
-      const isPartial = p.original_meter && p.used_meter > 0;
-      return `
-        <div class="modal-than-item ${isSelected ? 'selected' : ''}" 
-             id="modal-than-${p.unique_id}"
-             onclick="toggleModalThanItem('${p.unique_id}')">
-          <div style="display:flex; align-items:flex-start; gap:10px;">
-            <input type="checkbox" id="modal-chk-${p.unique_id}" ${isSelected ? 'checked' : ''} style="margin-top:3px; pointer-events:none; accent-color:#4338ca; width:16px; height:16px;">
-            <div style="flex:1; min-width:0;">
-              <div style="display:flex; justify-content:space-between; align-items:center; gap:6px;">
-                <span style="font-weight:800; font-size:0.85rem; color:#1e293b;">Than #${p.than_no}</span>
-                <span style="font-weight:800; font-size:0.85rem; color:#059669; font-family:monospace;">${parseFloat(p.meter).toFixed(2)} ${p.unit || 'Mtr'}</span>
+    if (modalActiveTab === 'lot') {
+      const filteredLots = groupPurchasesByLot(filtered);
+
+      container.innerHTML = filteredLots.map(lot => {
+        let lotSelectedCount = 0;
+        let lotSelectedMeters = 0;
+        lot.thans.forEach(t => {
+          if (modalSelectedUniqueIds.has(t.unique_id)) {
+            lotSelectedCount++;
+            lotSelectedMeters += (parseFloat(t.meter) || 0);
+          }
+        });
+
+        const isCollapsed = (lotCollapseState[lot.key] === true);
+
+        return `
+          <div class="modal-lot-card" id="lot-card-${lot.key}">
+            <div class="modal-lot-header">
+              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                <span style="font-weight:800; font-size:0.925rem; color:#1e293b;">
+                  📦 Challan #${lot.challan_no}
+                </span>
+                <span style="background:#eef2ff; color:#4338ca; border:1px solid #c7d2fe; font-size:0.75rem; font-weight:800; padding:2px 8px; border-radius:5px;">
+                  ${lot.thans.length} Thans &bull; ${lot.totalMeters.toFixed(2)} ${lot.unit}
+                </span>
+                ${lot.date ? `<span style="color:#64748b; font-size:0.75rem;">${lot.date}</span>` : ''}
+                <span style="font-size:0.75rem; font-weight:800; color:${lotSelectedCount > 0 ? '#059669' : '#94a3b8'}; background:${lotSelectedCount > 0 ? '#ecfdf5' : '#f1f5f9'}; border:1px solid ${lotSelectedCount > 0 ? '#a7f3d0' : '#e2e8f0'}; padding:2px 8px; border-radius:5px;">
+                  ${lotSelectedCount}/${lot.thans.length} Selected (${lotSelectedMeters.toFixed(2)} Mtr)
+                </span>
               </div>
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-top:3px; font-size:0.75rem; color:#64748b;">
-                <span>Challan #${p.challan_no}</span>
-                ${p.date ? `<span style="font-size:0.7rem; color:#94a3b8;">${p.date}</span>` : ''}
+              <div style="display:flex; gap:6px; align-items:center;">
+                <button type="button" class="btn btn-secondary btn-xs" onclick="selectWholeLot('${lot.challan_no}')" style="font-weight:700; color:#4338ca; border-color:#c7d2fe; background:#ffffff;">
+                  ✓ Select Entire Lot
+                </button>
+                <button type="button" class="btn btn-secondary btn-xs" onclick="deselectWholeLot('${lot.challan_no}')" style="font-weight:700; color:#ef4444; border-color:#fecaca; background:#ffffff;">
+                  ✕ Deselect Lot
+                </button>
+                <button type="button" class="btn btn-secondary btn-xs" id="lot-toggle-btn-${lot.key}" onclick="toggleLotExpand('${lot.key}')" style="font-weight:700;">
+                  ${isCollapsed ? '▶ Expand' : '▼ Collapse'}
+                </button>
               </div>
-              ${isPartial ? `
-                <div style="font-size:0.68rem; color:#d97706; font-weight:700; margin-top:3px; background:#fffbeb; padding:1px 6px; border-radius:4px; display:inline-block;">
-                  ⚡ ${parseFloat(p.meter).toFixed(2)} rem of ${parseFloat(p.original_meter).toFixed(2)} ${p.unit}
-                </div>
-              ` : ''}
+            </div>
+            <div class="modal-lot-body" id="lot-body-${lot.key}" style="display:${isCollapsed ? 'none' : 'grid'};">
+              ${lot.thans.map(p => renderSingleThanCardHtml(p)).join('')}
             </div>
           </div>
+        `;
+      }).join('');
+    } else {
+      // Grid or Range mode (renders responsive grid of than cards)
+      container.innerHTML = `
+        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(210px, 1fr)); gap:10px;">
+          ${filtered.map(p => renderSingleThanCardHtml(p)).join('')}
         </div>
       `;
-    }).join('');
+    }
 
     updateThanModalStats(availablePurchases.length, filtered.length);
+  }
+
+  function renderSingleThanCardHtml(p) {
+    const isSelected = modalSelectedUniqueIds.has(p.unique_id);
+    const isPartial = p.original_meter && p.used_meter > 0;
+    return `
+      <div class="modal-than-item ${isSelected ? 'selected' : ''}" 
+           id="modal-than-${p.unique_id}"
+           onclick="toggleModalThanItem('${p.unique_id}')">
+        <div style="display:flex; align-items:flex-start; gap:10px;">
+          <input type="checkbox" id="modal-chk-${p.unique_id}" ${isSelected ? 'checked' : ''} style="margin-top:3px; pointer-events:none; accent-color:#4338ca; width:16px; height:16px;">
+          <div style="flex:1; min-width:0;">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:6px;">
+              <span style="font-weight:800; font-size:0.85rem; color:#1e293b;">Than #${p.than_no}</span>
+              <span style="font-weight:800; font-size:0.85rem; color:#059669; font-family:monospace;">${parseFloat(p.meter).toFixed(2)} ${p.unit || 'Mtr'}</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:3px; font-size:0.75rem; color:#64748b;">
+              <span>Challan #${p.challan_no}</span>
+              ${p.date ? `<span style="font-size:0.7rem; color:#94a3b8;">${p.date}</span>` : ''}
+            </div>
+            ${isPartial ? `
+              <div style="font-size:0.68rem; color:#d97706; font-weight:700; margin-top:3px; background:#fffbeb; padding:1px 6px; border-radius:4px; display:inline-block;">
+                ⚡ ${parseFloat(p.meter).toFixed(2)} rem of ${parseFloat(p.original_meter).toFixed(2)} ${p.unit}
+              </div>
+            ` : ''}
+          </div>
+        </div>
+      </div>
+    `;
   }
 
   function toggleModalThanItem(uniqueId) {
@@ -1666,14 +2269,7 @@
     
     const query = (document.getElementById('thanModalSearchInput')?.value || '').toLowerCase().trim();
 
-    const otherCardsUniqueIds = new Set();
-    itemsData.forEach((otherItm, oIdx) => {
-      if (oIdx !== activeModalItemIdx) {
-        (otherItm.thans || []).forEach(t => {
-          if (t.unique_id) otherCardsUniqueIds.add(t.unique_id);
-        });
-      }
-    });
+    const otherCardsUniqueIds = getOtherCardsUniqueIds();
 
     availablePurchases.forEach(p => {
       if (otherCardsUniqueIds.has(p.unique_id)) return;
@@ -1742,7 +2338,19 @@
 
     const badge = document.getElementById('thanModalTotalSelectedBadge');
     if (badge) {
-      badge.textContent = `${selectedCount} Than${selectedCount === 1 ? '' : 's'} Selected (${selectedMeters.toFixed(2)} Mtr)`;
+      badge.textContent = `${selectedCount} Thans Selected | ${selectedMeters.toFixed(2)} Mtr`;
+    }
+
+    const cons = parseFloat(item.consumption_per_pc) || 1.5;
+    const yieldBadge = document.getElementById('thanModalYieldBadge');
+    if (yieldBadge) {
+      if (selectedCount > 0) {
+        const estYield = Math.floor(selectedMeters / cons);
+        yieldBadge.style.display = 'inline-block';
+        yieldBadge.textContent = `Yield: ~${estYield.toLocaleString()} Pcs (${item.finished_item_name || 'Finished Product'})`;
+      } else {
+        yieldBadge.style.display = 'none';
+      }
     }
 
     const stats = document.getElementById('modalSummaryStats');
