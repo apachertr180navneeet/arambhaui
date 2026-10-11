@@ -675,14 +675,10 @@
 
       <!-- Basic Identification -->
       <div class="itm-modal-section-title">General Identification</div>
-      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:14px; margin-bottom:12px;">
+      <div style="margin-bottom:12px;">
         <div class="form-group" style="margin:0;">
-          <label class="form-label required">Item / Fabric SKU Name</label>
+          <label class="form-label required">Item Description / Quality</label>
           <input type="text" name="name" id="itm_name" class="form-control" required placeholder="e.g. 100% Cotton Single Jersey 180 GSM">
-        </div>
-        <div class="form-group" style="margin:0;">
-          <label class="form-label">Item SKU Code</label>
-          <input type="text" name="code" id="itm_code" class="form-control" placeholder="Auto-generated if empty (e.g. FAB-001)">
         </div>
       </div>
 
@@ -762,7 +758,7 @@
 
       <div style="display:flex; justify-content:flex-end; gap:10px; border-top:1px solid var(--slate-100); padding-top:16px;">
         <button type="button" class="btn btn-secondary" onclick="closeItemModal()">Cancel</button>
-        <button type="submit" id="save-itm-btn" class="btn btn-primary" style="background:linear-gradient(135deg, #2563eb, #1d4ed8); font-weight:700;">Save Item SKU</button>
+        <button type="submit" id="save-itm-btn" class="btn btn-primary" style="background:linear-gradient(135deg, #2563eb, #1d4ed8); font-weight:700;">Save Item</button>
       </div>
     </form>
   </div>
@@ -907,8 +903,8 @@
     
     document.getElementById('item-form').reset();
     document.getElementById('item-id').value = '';
-    document.getElementById('imodual-title').textContent = 'Add Item SKU';
-    document.getElementById('save-itm-btn').textContent = 'Save Item SKU';
+    document.getElementById('imodual-title').textContent = 'Add New Item';
+    document.getElementById('save-itm-btn').textContent = 'Save Item';
     document.getElementById('save-itm-btn').disabled = false;
     document.getElementById('itm_raw_meter').value = '0.00';
     document.getElementById('itm_status').value = 'Active';
@@ -927,13 +923,12 @@
     const modal = document.getElementById('item-modal');
     if (!modal) return;
 
-    document.getElementById('imodual-title').textContent = 'Edit Item: ' + (itm.code || itm.name);
-    document.getElementById('save-itm-btn').textContent = 'Update Item SKU';
+    document.getElementById('imodual-title').textContent = 'Edit Item: ' + (itm.name || 'Item');
+    document.getElementById('save-itm-btn').textContent = 'Update Item';
     document.getElementById('save-itm-btn').disabled = false;
     document.getElementById('item-id').value = itm.id;
 
     document.getElementById('itm_name').value = itm.name || '';
-    document.getElementById('itm_code').value = itm.code || '';
     document.getElementById('itm_category').value = itm.category || 'Fabric';
 
     // Set unit and refresh from master list
@@ -1031,7 +1026,7 @@
     const unitVal = document.getElementById('itm_unit').value;
 
     if (!nameVal) {
-      showToastNotification('Validation Error', 'Item SKU Name is required', 'error');
+      showToastNotification('Validation Error', 'Item Description / Quality is required', 'error');
       document.getElementById('itm_name').focus();
       return;
     }
@@ -1047,7 +1042,6 @@
 
     const payload = {
       name: nameVal,
-      code: document.getElementById('itm_code') ? document.getElementById('itm_code').value.trim() : '',
       category: document.getElementById('itm_category') ? document.getElementById('itm_category').value : 'Fabric',
       unit: unitVal,
       raw_meter_per_piece: rawMeterVal !== '' ? (parseFloat(rawMeterVal) || 0) : 0,

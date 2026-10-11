@@ -220,6 +220,10 @@ class ItemController extends Controller
             $validated['min_stock'] = floatval($validated['min_stock']);
         }
 
+        if (array_key_exists('code', $validated) && empty($validated['code'])) {
+            unset($validated['code']);
+        }
+
         $item->update($validated);
 
         if ($request->expectsJson() || $request->wantsJson() || $request->ajax() || $request->isJson() || str_contains((string)$request->header('Accept'), 'application/json')) {
