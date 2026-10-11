@@ -747,33 +747,12 @@
         </div>
       </div>
 
-      <!-- Pricing & Inventory Stock -->
-      <div class="itm-modal-section-title">Pricing & Stock Thresholds</div>
-      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:14px; margin-bottom:12px;">
-        <div class="form-group" style="margin:0;">
-          <label class="form-label required">Standard Unit Cost (₹)</label>
-          <input type="number" step="0.01" min="0" name="unit_cost" id="itm_cost" class="form-control" required placeholder="0.00" value="">
-        </div>
-        <div class="form-group" style="margin:0;">
-          <label class="form-label required">Opening / Current Stock</label>
-          <input type="number" step="0.01" min="0" name="current_stock" id="itm_stock" class="form-control" required placeholder="0.00" value="">
-        </div>
-        <div class="form-group" style="margin:0;">
-          <label class="form-label required">Min Reorder Level</label>
-          <input type="number" step="0.01" min="0" name="min_stock" id="itm_min_stock" class="form-control" required placeholder="0.00" value="">
-        </div>
-      </div>
-
-      <!-- Tax & Storage -->
-      <div class="itm-modal-section-title">Compliance, Storage & Status</div>
+      <!-- Compliance & Status -->
+      <div class="itm-modal-section-title">Compliance & Status</div>
       <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:14px; margin-bottom:20px;">
         <div class="form-group" style="margin:0;">
           <label class="form-label">HSN Code</label>
           <input type="text" name="hsn_code" id="itm_hsn" class="form-control" placeholder="e.g. 5208">
-        </div>
-        <div class="form-group" style="margin:0;">
-          <label class="form-label">Storage Location / Rack</label>
-          <input type="text" name="location" id="itm_location" class="form-control" placeholder="e.g. Warehouse A - Rack 04">
         </div>
         <div class="form-group" style="margin:0;">
           <label class="form-label">Status</label>
@@ -936,9 +915,6 @@
     document.getElementById('save-itm-btn').textContent = 'Save Item SKU';
     document.getElementById('save-itm-btn').disabled = false;
     document.getElementById('itm_raw_meter').value = '0.00';
-    document.getElementById('itm_cost').value = '';
-    document.getElementById('itm_stock').value = '';
-    document.getElementById('itm_min_stock').value = '';
     document.getElementById('itm_status').value = 'Active';
 
     refreshUnitsDropdown('');
@@ -987,12 +963,8 @@
     refreshUnitsDropdown(unitVal);
 
     document.getElementById('itm_raw_meter').value = (itm.raw_meter_per_piece !== undefined && itm.raw_meter_per_piece !== null) ? itm.raw_meter_per_piece : '0.00';
-    document.getElementById('itm_cost').value = (itm.unit_cost !== undefined && itm.unit_cost !== null) ? itm.unit_cost : '';
-    document.getElementById('itm_stock').value = (itm.current_stock !== undefined && itm.current_stock !== null) ? itm.current_stock : '';
-    document.getElementById('itm_min_stock').value = (itm.min_stock !== undefined && itm.min_stock !== null) ? itm.min_stock : '';
     document.getElementById('itm_status').value = itm.status || 'Active';
     document.getElementById('itm_hsn').value = itm.hsn_code || '';
-    document.getElementById('itm_location').value = itm.location || '';
 
     modal.style.display = 'flex';
   }
@@ -1061,9 +1033,6 @@
 
     const nameVal = document.getElementById('itm_name').value.trim();
     const unitVal = document.getElementById('itm_unit').value;
-    const costRaw = document.getElementById('itm_cost').value.trim();
-    const stockRaw = document.getElementById('itm_stock').value.trim();
-    const minStockRaw = document.getElementById('itm_min_stock').value.trim();
 
     if (!nameVal) {
       showToastNotification('Validation Error', 'Item SKU Name is required', 'error');
@@ -1077,53 +1046,17 @@
       return;
     }
 
-    if (costRaw === '') {
-      showToastNotification('Validation Error', 'Standard Unit Cost is required', 'error');
-      document.getElementById('itm_cost').focus();
-      return;
-    }
-    if (isNaN(costRaw) || Number(costRaw) < 0) {
-      showToastNotification('Validation Error', 'Please enter a valid Standard Unit Cost (minimum 0)', 'error');
-      document.getElementById('itm_cost').focus();
-      return;
-    }
-
-    if (stockRaw === '') {
-      showToastNotification('Validation Error', 'Opening / Current Stock is required', 'error');
-      document.getElementById('itm_stock').focus();
-      return;
-    }
-    if (isNaN(stockRaw) || Number(stockRaw) < 0) {
-      showToastNotification('Validation Error', 'Please enter a valid Opening / Current Stock (minimum 0)', 'error');
-      document.getElementById('itm_stock').focus();
-      return;
-    }
-
-    if (minStockRaw === '') {
-      showToastNotification('Validation Error', 'Min Reorder Level is required', 'error');
-      document.getElementById('itm_min_stock').focus();
-      return;
-    }
-    if (isNaN(minStockRaw) || Number(minStockRaw) < 0) {
-      showToastNotification('Validation Error', 'Please enter a valid Min Reorder Level (minimum 0)', 'error');
-      document.getElementById('itm_min_stock').focus();
-      return;
-    }
-
-    const rawMeterVal = document.getElementById('itm_raw_meter').value.trim();
+    const rawMeterEl = document.getElementById('itm_raw_meter');
+    const rawMeterVal = rawMeterEl ? rawMeterEl.value.trim() : '';
 
     const payload = {
       name: nameVal,
-      code: document.getElementById('itm_code').value.trim(),
-      category: document.getElementById('itm_category').value,
+      code: document.getElementById('itm_code') ? document.getElementById('itm_code').value.trim() : '',
+      category: document.getElementById('itm_category') ? document.getElementById('itm_category').value : 'Fabric',
       unit: unitVal,
       raw_meter_per_piece: rawMeterVal !== '' ? (parseFloat(rawMeterVal) || 0) : 0,
-      unit_cost: parseFloat(costRaw),
-      current_stock: parseFloat(stockRaw),
-      min_stock: parseFloat(minStockRaw),
-      status: document.getElementById('itm_status').value,
-      hsn_code: document.getElementById('itm_hsn').value.trim(),
-      location: document.getElementById('itm_location').value.trim()
+      status: document.getElementById('itm_status') ? document.getElementById('itm_status').value : 'Active',
+      hsn_code: document.getElementById('itm_hsn') ? document.getElementById('itm_hsn').value.trim() : ''
     };
 
     saveBtn.disabled = true;
