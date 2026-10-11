@@ -93,6 +93,97 @@
     border-color: #4338ca;
     box-shadow: 0 2px 8px rgba(67, 56, 202, 0.1);
   }
+
+  /* Compact Than Selector & Modal Styles */
+  .modal-than-item {
+    background: #ffffff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: none;
+  }
+  .modal-than-item:hover {
+    border-color: #818cf8;
+    background: #f8fafc;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(99, 102, 241, 0.08);
+  }
+  .modal-than-item.selected {
+    border-color: #4338ca;
+    background: #eef2ff;
+    box-shadow: 0 0 0 1.5px #4338ca;
+  }
+  .than-chip-compact {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    color: #1e293b;
+    padding: 3px 8px 3px 10px;
+    border-radius: 8px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    transition: all 0.15s ease;
+  }
+  .than-chip-compact:hover {
+    border-color: #94a3b8;
+    background: #f8fafc;
+  }
+  .than-chip-remove {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 2px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: color 0.15s ease;
+  }
+  .than-chip-remove:hover {
+    color: #ef4444;
+  }
+  .than-table-wrap {
+    max-height: 320px;
+    overflow-y: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #ffffff;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.03);
+  }
+  .than-compact-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.825rem;
+  }
+  .than-compact-table th {
+    position: sticky;
+    top: 0;
+    background: #f8fafc;
+    color: #475569;
+    font-weight: 800;
+    text-transform: uppercase;
+    font-size: 0.725rem;
+    letter-spacing: 0.03em;
+    padding: 8px 10px;
+    border-bottom: 1.5px solid #e2e8f0;
+    z-index: 2;
+  }
+  .than-compact-table td {
+    padding: 6px 10px;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+  }
+  .than-compact-table tr:hover td {
+    background: #f8fafc;
+  }
 </style>
 @endpush
 
@@ -393,6 +484,69 @@
         <button type="button" class="btn btn-primary btn-sm" onclick="captureWebcamSnapshot()" style="background:#0284c7; border-color:#0284c7; display:inline-flex; align-items:center; gap:6px; font-weight:800; padding:8px 18px;">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
           Capture Photo
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Compact Searchable Than Selection -->
+<div class="modal-backdrop" id="thanSelectModal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.75); backdrop-filter:blur(4px); z-index:9999; align-items:center; justify-content:center;" onclick="if(event.target===this) closeThanSelectModal()">
+  <div style="background:#ffffff; border-radius:18px; width:94%; max-width:760px; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25); overflow:hidden; border:1px solid #cbd5e1;">
+    <!-- Modal Header -->
+    <div style="padding:16px 22px; background:#0f172a; color:#fff; display:flex; justify-content:space-between; align-items:center;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span style="width:32px; height:32px; border-radius:8px; background:rgba(255,255,255,0.1); display:inline-flex; align-items:center; justify-content:center; font-size:1rem;">📦</span>
+        <div>
+          <div style="font-weight:800; font-size:1.05rem;" id="thanModalTitle">Select Purchase Thans</div>
+          <div style="font-size:0.75rem; color:#94a3b8;" id="thanModalSubtitle">Choose from available stock rolls & challans</div>
+        </div>
+      </div>
+      <button type="button" onclick="closeThanSelectModal()" style="background:transparent; border:none; color:#94a3b8; font-size:1.5rem; cursor:pointer; line-height:1; padding:0 4px;">&times;</button>
+    </div>
+
+    <!-- Modal Search & Controls Bar -->
+    <div style="padding:14px 20px; background:#f8fafc; border-bottom:1px solid #e2e8f0; display:flex; flex-direction:column; gap:10px;">
+      <!-- Search Input -->
+      <div style="position:relative; display:flex; align-items:center;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2.5" style="position:absolute; left:12px; pointer-events:none;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="thanModalSearchInput" class="form-control" placeholder="Search by Challan #, Than #, PO #, or meters..." oninput="renderThanModalList()" style="padding-left:36px; padding-right:32px; font-weight:600; font-size:0.9rem; height:42px; border-radius:10px;">
+        <button type="button" onclick="document.getElementById('thanModalSearchInput').value=''; renderThanModalList();" id="thanModalClearSearchBtn" style="position:absolute; right:10px; background:transparent; border:none; color:#94a3b8; cursor:pointer; display:none; font-size:1.1rem; line-height:1;">&times;</button>
+      </div>
+
+      <!-- Quick Action Toolbar -->
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+        <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+          <button type="button" class="btn btn-secondary btn-xs" onclick="modalSelectAllFiltered()" style="font-weight:700; font-size:0.75rem; padding:4px 10px;">
+            ✓ Select All Filtered
+          </button>
+          <button type="button" class="btn btn-secondary btn-xs" onclick="modalDeselectAllFiltered()" style="font-weight:700; font-size:0.75rem; padding:4px 10px;">
+            ✕ Deselect All Filtered
+          </button>
+          <button type="button" class="btn btn-secondary btn-xs" onclick="modalClearAllSelection()" style="font-weight:700; font-size:0.75rem; padding:4px 10px; color:#dc2626;">
+            Clear Selection
+          </button>
+        </div>
+        <div id="modalSummaryStats" style="font-size:0.8rem; font-weight:700; color:#334155;">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Scrollable Than Grid/List -->
+    <div id="thanModalListContainer" style="padding:16px 20px; overflow-y:auto; flex:1; max-height:420px; display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:10px; background:#ffffff;">
+      <!-- Dynamically filled with interactive Than selection cards -->
+    </div>
+
+    <!-- Modal Footer -->
+    <div style="padding:14px 22px; background:#f8fafc; border-top:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+      <div style="font-size:0.85rem; color:#64748b;">
+        <span id="thanModalTotalSelectedBadge" style="font-weight:800; color:#4338ca; background:#eef2ff; border:1px solid #c7d2fe; padding:4px 10px; border-radius:6px; font-size:0.85rem;">0 Thans Selected</span>
+      </div>
+      <div style="display:flex; gap:10px;">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="closeThanSelectModal()" style="font-weight:700; padding:8px 16px;">Cancel</button>
+        <button type="button" class="btn btn-primary btn-sm" onclick="applyThanModalSelection()" id="thanModalApplyBtn" style="font-weight:800; padding:8px 22px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 8px rgba(79, 70, 229, 0.3);">
+          Apply Selection
         </button>
       </div>
     </div>
@@ -842,56 +996,6 @@
 
       const remainingAvailable = availablePurchases.filter(p => !p.unique_id || !allSelectedUniqueIds.has(p.unique_id));
 
-      let purchasedTonsChipsHtml = '';
-      if (!item.raw_item_name) {
-        purchasedTonsChipsHtml = `
-          <div style="margin-top:10px; background:#f8fafc; border:1px dashed #cbd5e1; border-radius:10px; padding:12px; text-align:center; color:#64748b; font-size:0.8rem;">
-            Please select a <strong>Raw Item</strong> above to load available Purchase Thans from stock.
-          </div>
-        `;
-      } else if (availablePurchases.length > 0) {
-        purchasedTonsChipsHtml = `
-          <div style="margin-top:10px; background:#ffffff; border:1px solid #cbd5e1; border-radius:10px; padding:12px 14px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
-              <span style="font-size:0.75rem; font-weight:800; color:#1e293b; text-transform:uppercase; display:inline-flex; align-items:center; gap:5px;">
-                📦 Available Purchase Thans in Stock (${remainingAvailable.length} of ${availablePurchases.length} available):
-              </span>
-              ${remainingAvailable.length > 0 ? `
-                <button type="button" class="btn btn-secondary btn-xs" onclick="addAllPurchasedTons(${itemIdx})" style="font-size:0.725rem; font-weight:700;">+ Select Remaining (${remainingAvailable.length})</button>
-              ` : `
-                <span style="font-size:0.725rem; font-weight:700; color:#059669; background:#ecfdf5; border:1px solid #a7f3d0; padding:2px 8px; border-radius:6px;">✓ All Stock Thans Selected</span>
-              `}
-            </div>
-            <div style="display:flex; flex-wrap:wrap; gap:8px;">
-              ${availablePurchases.map(p => {
-                const isAdded = p.unique_id && allSelectedUniqueIds.has(p.unique_id);
-                const pJson = JSON.stringify(p).replace(/"/g, '&quot;');
-                if (isAdded) {
-                  return `
-                    <button type="button" class="purchased-ton-chip added" style="background:#ecfdf5; border-color:#6ee7b7; color:#065f46; cursor:default; font-weight:700;" title="Already added to this order" disabled>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="color:#059669;"><polyline points="20 6 9 17 4 12"/></svg>
-                      <span>${p.label} (Added)</span>
-                    </button>
-                  `;
-                } else {
-                  return `
-                    <button type="button" class="purchased-ton-chip" onclick="addPurchasedTon(${itemIdx}, ${pJson})" title="Click to select ${p.meter} ${p.unit} from Challan #${p.challan_no}">
-                      <span>+ ${p.label}</span>
-                    </button>
-                  `;
-                }
-              }).join('')}
-            </div>
-          </div>
-        `;
-      } else {
-        purchasedTonsChipsHtml = `
-          <div style="margin-top:10px; background:#fffbeb; border:1px solid #fde68a; border-radius:10px; padding:10px 14px; color:#92400e; font-size:0.8rem;">
-            No purchase thans in stock found for <strong>${item.raw_item_name}</strong>. You can click <strong>+ Add Custom Than</strong> to enter thans manually.
-          </div>
-        `;
-      }
-
       let totalRaw = 0;
       let totalWastage = 0;
       let totalPcs = 0;
@@ -978,41 +1082,92 @@
 
         </div>
 
-        <!-- Section A: Multiple Purchase Thans Container -->
-        <div class="tons-container" style="margin-top:14px;">
+        <!-- Section A: Compact Purchase Thans Selection & Breakdown -->
+        <div class="tons-container" style="margin-top:14px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:14px; padding:16px;">
           
-          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
-            <div style="font-weight:800; font-size:0.85rem; color:#334155; text-transform:uppercase; letter-spacing:0.04em; display:flex; align-items:center; gap:6px;">
-              <span>3. Select Purchase Thans for ${item.raw_item_name || 'Raw Material'}</span>
-              <span class="calc-badge" style="font-size:0.75rem;" id="card-step3-count-badge-${itemIdx}">${item.thans.length} Selected</span>
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+            <div style="font-weight:800; font-size:0.875rem; color:#1e293b; text-transform:uppercase; letter-spacing:0.04em; display:flex; align-items:center; gap:8px;">
+              <span>3. Purchase Thans for ${item.raw_item_name || 'Raw Material'}</span>
+              <span class="calc-badge" style="font-size:0.775rem;" id="card-step3-count-badge-${itemIdx}">${item.thans.length} Selected</span>
             </div>
             
-            <div style="display:flex; gap:8px; align-items:center;">
-              <button type="button" class="btn btn-secondary btn-xs" onclick="addManualThan(${itemIdx})" style="font-weight:700; font-size:0.75rem; color:#4338ca; border-color:#c7d2fe; background:#eef2ff;">
-                + Add Custom Than
-              </button>
+            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+              ${item.raw_item_name ? `
+                <button type="button" class="btn btn-primary btn-xs" onclick="openThanSelectModal(${itemIdx})" style="font-weight:700; font-size:0.75rem; padding:5px 12px; display:inline-flex; align-items:center; gap:5px; box-shadow:0 1px 4px rgba(79, 70, 229, 0.25);">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  🔍 Select / Manage Thans (${availablePurchases.length} in Stock)
+                </button>
+              ` : ''}
               ${item.thans.length > 0 ? `
-                <button type="button" class="btn btn-secondary btn-xs" onclick="clearAllTons(${itemIdx})" style="font-weight:700; font-size:0.75rem; color:#dc2626;">
-                  Clear All Thans
+                <button type="button" class="btn btn-secondary btn-xs" onclick="clearAllTons(${itemIdx})" style="font-weight:700; font-size:0.75rem; padding:5px 12px; color:#dc2626; border-color:#fecaca; background:#ffffff;">
+                  Clear Selection
                 </button>
               ` : ''}
             </div>
           </div>
 
-          <!-- Available Purchases Thans Chip List -->
-          ${purchasedTonsChipsHtml}
-
-          <!-- Empty State Box -->
-          <div id="tons-empty-box-${itemIdx}" style="text-align:center; padding:18px 14px; color:#64748b; border:2px dashed #cbd5e1; border-radius:10px; background:#ffffff; margin-top:10px; ${item.thans.length > 0 ? 'display:none;' : 'display:block;'}">
-            <div style="font-weight:700; font-size:0.85rem; color:#475569; margin-bottom:2px;">No Purchase Thans selected yet</div>
-            <p style="font-size:0.75rem; color:#94a3b8; margin:0;">Click on the available purchase thans in stock above or click <strong>+ Add Custom Than</strong> to enter thans.</p>
+          <!-- Empty State Box (When 0 selected) -->
+          <div id="tons-empty-box-${itemIdx}" style="text-align:center; padding:16px 14px; color:#64748b; border:1.5px dashed #cbd5e1; border-radius:10px; background:#ffffff; margin-top:8px; ${item.thans.length > 0 ? 'display:none;' : 'display:block;'}">
+            ${!item.raw_item_name ? `
+              <div style="font-size:0.8rem; color:#64748b;">Please select a <strong>Raw Item</strong> above to load available Purchase Thans from stock.</div>
+            ` : `
+              <div style="font-weight:700; font-size:0.85rem; color:#475569; margin-bottom:3px;">No Purchase Thans selected yet</div>
+              <p style="font-size:0.75rem; color:#94a3b8; margin:0 0 8px;">Choose from ${availablePurchases.length} available rolls in stock.</p>
+              ${availablePurchases.length > 0 ? `
+                <button type="button" class="btn btn-primary btn-xs" onclick="openThanSelectModal(${itemIdx})" style="font-weight:700;">Open Thans Selector (${availablePurchases.length} Available)</button>
+              ` : ''}
+            `}
           </div>
 
-          <!-- Selected Thans Grid List -->
-          <div id="tons-list-box-${itemIdx}" style="${item.thans.length > 0 ? 'display:grid;' : 'display:none;'} grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:14px; margin-top:14px; margin-bottom:14px;"></div>
+          <!-- Selected Thans Summary & Compact Chips -->
+          <div id="tons-chips-wrapper-${itemIdx}" style="${item.thans.length > 0 ? 'display:block;' : 'display:none;'} margin-top:8px; background:#ffffff; border:1px solid #e2e8f0; border-radius:10px; padding:10px 12px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
+              <span style="font-size:0.75rem; font-weight:800; color:#475569; text-transform:uppercase;">
+                Selected Locations / Thans:
+              </span>
+              <button type="button" class="btn btn-secondary btn-xs" onclick="openThanSelectModal(${itemIdx})" style="font-size:0.725rem; font-weight:700; color:#4338ca;">
+                Edit Selection in Modal
+              </button>
+            </div>
+            <div id="tons-chips-container-${itemIdx}" style="display:flex; flex-wrap:wrap; gap:6px; align-items:center;">
+              <!-- Chips populated by renderTonsForCard -->
+            </div>
+          </div>
+
+          <!-- Collapsible Breakdown Drawer Toggle -->
+          <div id="tons-collapse-bar-${itemIdx}" style="${item.thans.length > 0 ? 'display:block;' : 'display:none;'} margin-top:8px;">
+            <button type="button" id="tons-toggle-btn-${itemIdx}" class="btn btn-secondary" onclick="toggleThanDetails(${itemIdx})" style="width:100%; display:flex; justify-content:space-between; align-items:center; padding:7px 12px; border-radius:8px; border:1px solid #e2e8f0; background:#ffffff; transition:all 0.15s ease;">
+              <span id="tons-toggle-btn-text-${itemIdx}" style="font-weight:700; font-size:0.78rem; color:#334155;">
+                ▼ View & Edit Than Breakdown Table (${item.thans.length} Thans)
+              </span>
+              <span style="font-size:0.725rem; color:#64748b; font-weight:600;">
+                Click to expand/collapse individual entries
+              </span>
+            </button>
+
+            <!-- Collapsible Table -->
+            <div id="tons-table-wrapper-${itemIdx}" class="than-table-wrap" style="margin-top:6px; display:none;">
+              <table class="than-compact-table">
+                <thead>
+                  <tr>
+                    <th style="width:75px;">Than #</th>
+                    <th>Challan / PO Ref</th>
+                    <th style="width:130px; text-align:right;">Than Qty (Mtr)</th>
+                    <th style="width:130px; text-align:right;">Wastage (Mtr)</th>
+                    <th style="width:110px; text-align:right;">Usable Qty</th>
+                    <th style="width:100px; text-align:center;">Yield Output</th>
+                    <th style="width:45px; text-align:center;">Del</th>
+                  </tr>
+                </thead>
+                <tbody id="tons-table-body-${itemIdx}">
+                  <!-- Rows populated by renderTonsForCard -->
+                </tbody>
+              </table>
+            </div>
+          </div>
 
           <!-- Total Raw Quantity Footer under this Raw Item -->
-          <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px dashed #cbd5e1; padding-top:12px; margin-top:8px; font-size:0.875rem; flex-wrap:wrap; gap:8px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px dashed #cbd5e1; padding-top:12px; margin-top:12px; font-size:0.875rem; flex-wrap:wrap; gap:8px;">
             <span style="font-weight:700; color:#475569;">Raw Material Summary (${item.raw_item_name || 'Raw Item'}):</span>
             <div id="tons-total-display-${itemIdx}" style="display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
               <!-- Handled by recalcRawItemRow -->
@@ -1082,96 +1237,471 @@
     });
   }
 
+  const thanCardCollapseState = {};
+
+  function toggleThanDetails(itemIdx) {
+    thanCardCollapseState[itemIdx] = !thanCardCollapseState[itemIdx];
+    const tableWrap = document.getElementById(`tons-table-wrapper-${itemIdx}`);
+    const toggleBtnText = document.getElementById(`tons-toggle-btn-text-${itemIdx}`);
+    const toggleBtn = document.getElementById(`tons-toggle-btn-${itemIdx}`);
+
+    if (tableWrap) {
+      tableWrap.style.display = thanCardCollapseState[itemIdx] ? 'block' : 'none';
+    }
+    if (toggleBtnText) {
+      const item = itemsData[itemIdx];
+      const count = (item && item.thans) ? item.thans.length : 0;
+      toggleBtnText.textContent = thanCardCollapseState[itemIdx] 
+        ? `▲ Hide Than Breakdown Table (${count} Thans)` 
+        : `▼ View & Edit Than Breakdown Table (${count} Thans)`;
+    }
+    if (toggleBtn) {
+      toggleBtn.style.background = thanCardCollapseState[itemIdx] ? '#eef2ff' : '#ffffff';
+      toggleBtn.style.borderColor = thanCardCollapseState[itemIdx] ? '#c7d2fe' : '#e2e8f0';
+    }
+  }
+
   function renderTonsForCard(itemIdx) {
     const item = itemsData[itemIdx];
     if (!item) return;
 
     const emptyBox = document.getElementById(`tons-empty-box-${itemIdx}`);
-    const listBox = document.getElementById(`tons-list-box-${itemIdx}`);
+    const chipsWrapper = document.getElementById(`tons-chips-wrapper-${itemIdx}`);
+    const chipsContainer = document.getElementById(`tons-chips-container-${itemIdx}`);
+    const collapseBar = document.getElementById(`tons-collapse-bar-${itemIdx}`);
+    const tableBody = document.getElementById(`tons-table-body-${itemIdx}`);
+    const tableWrap = document.getElementById(`tons-table-wrapper-${itemIdx}`);
+    const toggleBtnText = document.getElementById(`tons-toggle-btn-text-${itemIdx}`);
+    const toggleBtn = document.getElementById(`tons-toggle-btn-${itemIdx}`);
 
-    if (!emptyBox || !listBox) return;
-
-    listBox.innerHTML = '';
+    if (!emptyBox) return;
 
     if (item.thans.length === 0) {
       emptyBox.style.display = 'block';
-      listBox.style.display = 'none';
+      if (chipsWrapper) chipsWrapper.style.display = 'none';
+      if (collapseBar) collapseBar.style.display = 'none';
+      if (tableBody) tableBody.innerHTML = '';
       return;
     }
 
     emptyBox.style.display = 'none';
-    listBox.style.display = 'grid';
+    if (chipsWrapper) chipsWrapper.style.display = 'block';
+    if (collapseBar) collapseBar.style.display = 'block';
 
-    item.thans.forEach((than, tIdx) => {
-      const row = document.createElement('div');
-      row.className = 'than-item-card';
-      const challanBadge = than.challan_no ? `
-        <span style="background:#f1f5f9; color:#475569; font-size:0.75rem; font-weight:700; padding:2px 7px; border-radius:4px; border:1px solid #cbd5e1;" title="Purchase Challan Reference">
-          Challan #${than.challan_no}${than.purchase_than_no ? ` (Than #${than.purchase_than_no})` : ''}
-        </span>
-      ` : (than.po_number ? `
-        <span style="background:#f1f5f9; color:#475569; font-size:0.75rem; font-weight:700; padding:2px 7px; border-radius:4px; border:1px solid #cbd5e1;">
-          PO #${than.po_number}
-        </span>
-      ` : '');
+    // 1. Render Compact Chips
+    if (chipsContainer) {
+      chipsContainer.innerHTML = '';
+      const maxVisibleChips = 8;
+      const displayThans = item.thans.slice(0, maxVisibleChips);
 
-      row.innerHTML = `
-        <input type="hidden" id="than-no-hidden-${itemIdx}-${tIdx}" name="items[${itemIdx}][thans][${tIdx}][than_no]" value="${tIdx + 1}">
-        <input type="hidden" id="than-usable-hidden-${itemIdx}-${tIdx}" name="items[${itemIdx}][thans][${tIdx}][usable]" value="${than.usable}">
-        <input type="hidden" id="than-pieces-hidden-${itemIdx}-${tIdx}" name="items[${itemIdx}][thans][${tIdx}][pieces]" value="${than.pieces}">
-        <input type="hidden" name="items[${itemIdx}][thans][${tIdx}][unique_id]" value="${than.unique_id || ''}">
-        <input type="hidden" name="items[${itemIdx}][thans][${tIdx}][po_id]" value="${than.po_id || ''}">
-        <input type="hidden" name="items[${itemIdx}][thans][${tIdx}][po_item_id]" value="${than.po_item_id || ''}">
-        <input type="hidden" name="items[${itemIdx}][thans][${tIdx}][po_number]" value="${than.po_number || ''}">
-        <input type="hidden" name="items[${itemIdx}][thans][${tIdx}][challan_no]" value="${than.challan_no || ''}">
-        <input type="hidden" name="items[${itemIdx}][thans][${tIdx}][purchase_than_no]" value="${than.purchase_than_no || (than.than_no || '')}">
-        
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:6px;">
-          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-            <span style="background:#eef2ff; color:#4338ca; font-weight:800; font-size:0.85rem; padding:3px 9px; border-radius:6px; border:1px solid #c7d2fe;">
-              Than #${tIdx + 1}
+      displayThans.forEach((than, tIdx) => {
+        const chip = document.createElement('span');
+        chip.className = 'than-chip-compact';
+        chip.innerHTML = `
+          <span>Than #${tIdx + 1}: ${parseFloat(than.meter).toFixed(1)}m${than.challan_no ? ` <span style="color:#64748b; font-size:0.7rem;">[CH #${than.challan_no}]</span>` : ''}</span>
+          <button type="button" class="than-chip-remove" onclick="removeTon(${itemIdx}, ${tIdx})" title="Remove Than #${tIdx + 1}">&times;</button>
+        `;
+        chipsContainer.appendChild(chip);
+      });
+
+      if (item.thans.length > maxVisibleChips) {
+        const overflowBtn = document.createElement('button');
+        overflowBtn.type = 'button';
+        overflowBtn.className = 'than-chip-compact';
+        overflowBtn.style.background = '#eef2ff';
+        overflowBtn.style.color = '#4338ca';
+        overflowBtn.style.borderColor = '#c7d2fe';
+        overflowBtn.style.cursor = 'pointer';
+        overflowBtn.title = 'Click to view & manage all thans';
+        overflowBtn.textContent = `+ ${item.thans.length - maxVisibleChips} more thans (View All / Edit)`;
+        overflowBtn.onclick = () => openThanSelectModal(itemIdx);
+        chipsContainer.appendChild(overflowBtn);
+      }
+    }
+
+    // 2. Render Table Rows
+    if (tableBody) {
+      tableBody.innerHTML = '';
+      item.thans.forEach((than, tIdx) => {
+        const tr = document.createElement('tr');
+
+        const challanBadge = than.challan_no ? `
+          <span style="background:#f1f5f9; color:#475569; font-size:0.75rem; font-weight:700; padding:2px 7px; border-radius:4px; border:1px solid #cbd5e1;" title="Purchase Challan Reference">
+            Challan #${than.challan_no}${than.purchase_than_no ? ` (Than #${than.purchase_than_no})` : ''}
+          </span>
+        ` : (than.po_number ? `
+          <span style="background:#f1f5f9; color:#475569; font-size:0.75rem; font-weight:700; padding:2px 7px; border-radius:4px; border:1px solid #cbd5e1;">
+            PO #${than.po_number}
+          </span>
+        ` : '<span style="color:#94a3b8; font-size:0.75rem;">Custom</span>');
+
+        tr.innerHTML = `
+          <td>
+            <span style="background:#eef2ff; color:#4338ca; font-weight:800; font-size:0.8rem; padding:2px 7px; border-radius:5px; border:1px solid #c7d2fe;">
+              #${tIdx + 1}
             </span>
+            <input type="hidden" id="than-no-hidden-${itemIdx}-${tIdx}" name="items[${itemIdx}][thans][${tIdx}][than_no]" value="${tIdx + 1}">
+            <input type="hidden" id="than-usable-hidden-${itemIdx}-${tIdx}" name="items[${itemIdx}][thans][${tIdx}][usable]" value="${than.usable}">
+            <input type="hidden" id="than-pieces-hidden-${itemIdx}-${tIdx}" name="items[${itemIdx}][thans][${tIdx}][pieces]" value="${than.pieces}">
+            <input type="hidden" name="items[${itemIdx}][thans][${tIdx}][unique_id]" value="${than.unique_id || ''}">
+            <input type="hidden" name="items[${itemIdx}][thans][${tIdx}][po_id]" value="${than.po_id || ''}">
+            <input type="hidden" name="items[${itemIdx}][thans][${tIdx}][po_item_id]" value="${than.po_item_id || ''}">
+            <input type="hidden" name="items[${itemIdx}][thans][${tIdx}][po_number]" value="${than.po_number || ''}">
+            <input type="hidden" name="items[${itemIdx}][thans][${tIdx}][challan_no]" value="${than.challan_no || ''}">
+            <input type="hidden" name="items[${itemIdx}][thans][${tIdx}][purchase_than_no]" value="${than.purchase_than_no || (than.than_no || '')}">
+          </td>
+          <td>
             ${challanBadge}
-          </div>
-          <div style="display:flex; align-items:center; gap:8px;">
-            <div style="display:inline-flex; align-items:center; gap:5px; background:#ecfdf5; border:1px solid #a7f3d0; padding:3px 9px; border-radius:6px;">
-              <span style="font-size:0.75rem; color:#065f46; font-weight:700;">Output:</span>
-              <strong style="font-size:0.9rem; color:#047857;" id="than-pcs-display-${itemIdx}-${tIdx}">${than.pieces} Pcs</strong>
-            </div>
-            <button type="button" onclick="removeTon(${itemIdx}, ${tIdx})" title="Remove than" style="background:#fee2e2; border:none; color:#dc2626; width:26px; height:26px; border-radius:6px; display:inline-flex; align-items:center; justify-content:center; font-size:1.15rem; font-weight:700; cursor:pointer; line-height:1; padding:0; flex-shrink:0;">&times;</button>
-          </div>
-        </div>
-
-        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:8px; align-items:flex-end;">
-          <div>
-            <label style="font-size:0.725rem; font-weight:700; color:#334155; margin-bottom:3px; display:block;">Than Qty (Mtr)</label>
+          </td>
+          <td>
             <input type="number" step="0.01" min="0" value="${than.meter}" name="items[${itemIdx}][thans][${tIdx}][meter]" 
               id="than-meter-input-${itemIdx}-${tIdx}"
               class="form-control" 
-              style="font-weight:800; font-size:0.95rem; padding:5px 8px; height:38px; border-radius:6px; border:1.5px solid #cbd5e1; text-align:right; width:100%; color:#0f172a;"
+              style="font-weight:800; font-size:0.875rem; padding:4px 8px; height:34px; border-radius:6px; border:1.5px solid #cbd5e1; text-align:right; width:100%; color:#0f172a;"
               oninput="updateThanMeter(${itemIdx}, ${tIdx}, this.value)"
               onfocus="this.select()">
-          </div>
-          <div>
-            <label style="font-size:0.725rem; font-weight:700; color:#dc2626; margin-bottom:3px; display:block;">Wastage (Mtr)</label>
+          </td>
+          <td>
             <input type="number" step="0.01" min="0" value="${than.wastage}" name="items[${itemIdx}][thans][${tIdx}][wastage]" 
               id="than-wastage-input-${itemIdx}-${tIdx}"
               class="form-control" 
-              style="font-weight:800; font-size:0.95rem; padding:5px 8px; height:38px; border-radius:6px; border:1.5px solid #fecaca; background:#fffbfb; text-align:right; width:100%; color:#dc2626;"
+              style="font-weight:800; font-size:0.875rem; padding:4px 8px; height:34px; border-radius:6px; border:1.5px solid #fecaca; background:#fffbfb; text-align:right; width:100%; color:#dc2626;"
               oninput="updateThanWastage(${itemIdx}, ${tIdx}, this.value)"
               onfocus="this.select()">
-          </div>
-          <div>
-            <label style="font-size:0.725rem; font-weight:700; color:#059669; margin-bottom:3px; display:block;">Usable Qty</label>
-            <div id="than-usable-display-${itemIdx}-${tIdx}" style="height:38px; background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:6px; display:flex; align-items:center; justify-content:flex-end; padding:0 8px; font-weight:800; color:#065f46; font-size:0.875rem;">
+          </td>
+          <td style="text-align:right;">
+            <div id="than-usable-display-${itemIdx}-${tIdx}" style="font-weight:800; color:#065f46; font-size:0.85rem;">
               ${than.usable.toFixed(2)} Mtr
+            </div>
+          </td>
+          <td style="text-align:center;">
+            <span style="display:inline-flex; align-items:center; background:#ecfdf5; border:1px solid #a7f3d0; padding:2px 8px; border-radius:6px;">
+              <strong style="font-size:0.85rem; color:#047857;" id="than-pcs-display-${itemIdx}-${tIdx}">${than.pieces} Pcs</strong>
+            </span>
+          </td>
+          <td style="text-align:center;">
+            <button type="button" onclick="removeTon(${itemIdx}, ${tIdx})" title="Remove than" style="background:#fee2e2; border:none; color:#dc2626; width:24px; height:24px; border-radius:5px; display:inline-flex; align-items:center; justify-content:center; font-size:1.1rem; font-weight:700; cursor:pointer; line-height:1; padding:0; margin:auto;">&times;</button>
+          </td>
+        `;
+
+        tableBody.appendChild(tr);
+      });
+    }
+
+    // 3. Update Toggle Bar State
+    const isExpanded = thanCardCollapseState[itemIdx] === true;
+    if (tableWrap) tableWrap.style.display = isExpanded ? 'block' : 'none';
+    if (toggleBtnText) {
+      toggleBtnText.textContent = isExpanded 
+        ? `▲ Hide Than Breakdown Table (${item.thans.length} Thans)` 
+        : `▼ View & Edit Than Breakdown Table (${item.thans.length} Thans)`;
+    }
+    if (toggleBtn) {
+      toggleBtn.style.background = isExpanded ? '#eef2ff' : '#ffffff';
+      toggleBtn.style.borderColor = isExpanded ? '#c7d2fe' : '#e2e8f0';
+    }
+  }
+
+  // --- Modal Logic for Than Multi-Selection ---
+  let activeModalItemIdx = null;
+  let modalSelectedUniqueIds = new Set();
+
+  function openThanSelectModal(itemIdx) {
+    activeModalItemIdx = itemIdx;
+    const item = itemsData[itemIdx];
+    if (!item) return;
+
+    const rawId = item.raw_item_id;
+    const rawName = (item.raw_item_name || '').toLowerCase().trim();
+    const availablePurchases = (rawId && purchasedTonsMap[rawId]) ? purchasedTonsMap[rawId] : (rawName && purchasedTonsMap[rawName] ? purchasedTonsMap[rawName] : []);
+
+    if (availablePurchases.length === 0) {
+      alert(`No purchase thans found in stock for "${item.raw_item_name || 'selected raw item'}".`);
+      return;
+    }
+
+    modalSelectedUniqueIds = new Set();
+    (item.thans || []).forEach(t => {
+      if (t.unique_id) modalSelectedUniqueIds.add(t.unique_id);
+    });
+
+    document.getElementById('thanModalTitle').textContent = `Select Purchase Thans (${item.raw_item_name || 'Raw Material'})`;
+    document.getElementById('thanModalSubtitle').textContent = `${availablePurchases.length} total thans in stock available for allocation`;
+    
+    const searchInput = document.getElementById('thanModalSearchInput');
+    if (searchInput) searchInput.value = '';
+
+    renderThanModalList();
+    
+    const modal = document.getElementById('thanSelectModal');
+    if (modal) {
+      modal.style.display = 'flex';
+      if (searchInput) setTimeout(() => searchInput.focus(), 50);
+    }
+  }
+
+  function closeThanSelectModal() {
+    const modal = document.getElementById('thanSelectModal');
+    if (modal) modal.style.display = 'none';
+    activeModalItemIdx = null;
+  }
+
+  function renderThanModalList() {
+    if (activeModalItemIdx === null) return;
+    const item = itemsData[activeModalItemIdx];
+    const container = document.getElementById('thanModalListContainer');
+    if (!container || !item) return;
+
+    const rawId = item.raw_item_id;
+    const rawName = (item.raw_item_name || '').toLowerCase().trim();
+    const availablePurchases = (rawId && purchasedTonsMap[rawId]) ? purchasedTonsMap[rawId] : (rawName && purchasedTonsMap[rawName] ? purchasedTonsMap[rawName] : []);
+
+    const query = (document.getElementById('thanModalSearchInput')?.value || '').toLowerCase().trim();
+    const clearBtn = document.getElementById('thanModalClearSearchBtn');
+    if (clearBtn) clearBtn.style.display = query ? 'inline-flex' : 'none';
+
+    const otherCardsUniqueIds = new Set();
+    itemsData.forEach((otherItm, oIdx) => {
+      if (oIdx !== activeModalItemIdx) {
+        (otherItm.thans || []).forEach(t => {
+          if (t.unique_id) otherCardsUniqueIds.add(t.unique_id);
+        });
+      }
+    });
+
+    const filtered = availablePurchases.filter(p => {
+      if (otherCardsUniqueIds.has(p.unique_id)) return false;
+      if (!query) return true;
+      const matchChallan = (p.challan_no || '').toString().toLowerCase().includes(query);
+      const matchThan = (p.than_no || '').toString().toLowerCase().includes(query);
+      const matchPO = (p.po_number || '').toString().toLowerCase().includes(query);
+      const matchMeter = (p.meter || '').toString().toLowerCase().includes(query);
+      const matchLabel = (p.label || '').toString().toLowerCase().includes(query);
+      return matchChallan || matchThan || matchPO || matchMeter || matchLabel;
+    });
+
+    if (filtered.length === 0) {
+      container.innerHTML = `
+        <div style="grid-column: 1 / -1; text-align:center; padding:36px 16px; color:#64748b;">
+          <div style="font-size:1.8rem; margin-bottom:8px;">🔍</div>
+          <div style="font-weight:700; font-size:0.95rem; color:#334155;">No matching Thans found</div>
+          <div style="font-size:0.8rem; color:#94a3b8; margin-top:4px;">Try refining your search keyword.</div>
+        </div>
+      `;
+      updateThanModalStats(availablePurchases.length, 0);
+      return;
+    }
+
+    container.innerHTML = filtered.map(p => {
+      const isSelected = modalSelectedUniqueIds.has(p.unique_id);
+      const isPartial = p.original_meter && p.used_meter > 0;
+      return `
+        <div class="modal-than-item ${isSelected ? 'selected' : ''}" 
+             id="modal-than-${p.unique_id}"
+             onclick="toggleModalThanItem('${p.unique_id}')">
+          <div style="display:flex; align-items:flex-start; gap:10px;">
+            <input type="checkbox" id="modal-chk-${p.unique_id}" ${isSelected ? 'checked' : ''} style="margin-top:3px; pointer-events:none; accent-color:#4338ca; width:16px; height:16px;">
+            <div style="flex:1; min-width:0;">
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:6px;">
+                <span style="font-weight:800; font-size:0.85rem; color:#1e293b;">Than #${p.than_no}</span>
+                <span style="font-weight:800; font-size:0.85rem; color:#059669; font-family:monospace;">${parseFloat(p.meter).toFixed(2)} ${p.unit || 'Mtr'}</span>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-top:3px; font-size:0.75rem; color:#64748b;">
+                <span>Challan #${p.challan_no}</span>
+                ${p.date ? `<span style="font-size:0.7rem; color:#94a3b8;">${p.date}</span>` : ''}
+              </div>
+              ${isPartial ? `
+                <div style="font-size:0.68rem; color:#d97706; font-weight:700; margin-top:3px; background:#fffbeb; padding:1px 6px; border-radius:4px; display:inline-block;">
+                  ⚡ ${parseFloat(p.meter).toFixed(2)} rem of ${parseFloat(p.original_meter).toFixed(2)} ${p.unit}
+                </div>
+              ` : ''}
             </div>
           </div>
         </div>
       `;
+    }).join('');
 
-      listBox.appendChild(row);
+    updateThanModalStats(availablePurchases.length, filtered.length);
+  }
+
+  function toggleModalThanItem(uniqueId) {
+    if (modalSelectedUniqueIds.has(uniqueId)) {
+      modalSelectedUniqueIds.delete(uniqueId);
+    } else {
+      modalSelectedUniqueIds.add(uniqueId);
+    }
+
+    const el = document.getElementById(`modal-than-${uniqueId}`);
+    const chk = document.getElementById(`modal-chk-${uniqueId}`);
+    if (el) {
+      if (modalSelectedUniqueIds.has(uniqueId)) {
+        el.classList.add('selected');
+        if (chk) chk.checked = true;
+      } else {
+        el.classList.remove('selected');
+        if (chk) chk.checked = false;
+      }
+    }
+
+    const item = itemsData[activeModalItemIdx];
+    const rawId = item.raw_item_id;
+    const rawName = (item.raw_item_name || '').toLowerCase().trim();
+    const availablePurchases = (rawId && purchasedTonsMap[rawId]) ? purchasedTonsMap[rawId] : (rawName && purchasedTonsMap[rawName] ? purchasedTonsMap[rawName] : []);
+    
+    updateThanModalStats(availablePurchases.length);
+  }
+
+  function modalSelectAllFiltered() {
+    if (activeModalItemIdx === null) return;
+    const item = itemsData[activeModalItemIdx];
+    const rawId = item.raw_item_id;
+    const rawName = (item.raw_item_name || '').toLowerCase().trim();
+    const availablePurchases = (rawId && purchasedTonsMap[rawId]) ? purchasedTonsMap[rawId] : (rawName && purchasedTonsMap[rawName] ? purchasedTonsMap[rawName] : []);
+    
+    const query = (document.getElementById('thanModalSearchInput')?.value || '').toLowerCase().trim();
+
+    const otherCardsUniqueIds = new Set();
+    itemsData.forEach((otherItm, oIdx) => {
+      if (oIdx !== activeModalItemIdx) {
+        (otherItm.thans || []).forEach(t => {
+          if (t.unique_id) otherCardsUniqueIds.add(t.unique_id);
+        });
+      }
     });
+
+    availablePurchases.forEach(p => {
+      if (otherCardsUniqueIds.has(p.unique_id)) return;
+      if (query) {
+        const matchChallan = (p.challan_no || '').toString().toLowerCase().includes(query);
+        const matchThan = (p.than_no || '').toString().toLowerCase().includes(query);
+        const matchPO = (p.po_number || '').toString().toLowerCase().includes(query);
+        const matchMeter = (p.meter || '').toString().toLowerCase().includes(query);
+        const matchLabel = (p.label || '').toString().toLowerCase().includes(query);
+        if (!(matchChallan || matchThan || matchPO || matchMeter || matchLabel)) return;
+      }
+      if (p.unique_id) {
+        modalSelectedUniqueIds.add(p.unique_id);
+      }
+    });
+
+    renderThanModalList();
+  }
+
+  function modalDeselectAllFiltered() {
+    if (activeModalItemIdx === null) return;
+    const item = itemsData[activeModalItemIdx];
+    const rawId = item.raw_item_id;
+    const rawName = (item.raw_item_name || '').toLowerCase().trim();
+    const availablePurchases = (rawId && purchasedTonsMap[rawId]) ? purchasedTonsMap[rawId] : (rawName && purchasedTonsMap[rawName] ? purchasedTonsMap[rawName] : []);
+    
+    const query = (document.getElementById('thanModalSearchInput')?.value || '').toLowerCase().trim();
+
+    availablePurchases.forEach(p => {
+      if (query) {
+        const matchChallan = (p.challan_no || '').toString().toLowerCase().includes(query);
+        const matchThan = (p.than_no || '').toString().toLowerCase().includes(query);
+        const matchPO = (p.po_number || '').toString().toLowerCase().includes(query);
+        const matchMeter = (p.meter || '').toString().toLowerCase().includes(query);
+        const matchLabel = (p.label || '').toString().toLowerCase().includes(query);
+        if (!(matchChallan || matchThan || matchPO || matchMeter || matchLabel)) return;
+      }
+      if (p.unique_id) {
+        modalSelectedUniqueIds.delete(p.unique_id);
+      }
+    });
+
+    renderThanModalList();
+  }
+
+  function modalClearAllSelection() {
+    modalSelectedUniqueIds.clear();
+    renderThanModalList();
+  }
+
+  function updateThanModalStats(totalAvailable) {
+    if (activeModalItemIdx === null) return;
+    const item = itemsData[activeModalItemIdx];
+    const rawId = item.raw_item_id;
+    const rawName = (item.raw_item_name || '').toLowerCase().trim();
+    const availablePurchases = (rawId && purchasedTonsMap[rawId]) ? purchasedTonsMap[rawId] : (rawName && purchasedTonsMap[rawName] ? purchasedTonsMap[rawName] : []);
+
+    let selectedMeters = 0;
+    let selectedCount = 0;
+    availablePurchases.forEach(p => {
+      if (modalSelectedUniqueIds.has(p.unique_id)) {
+        selectedCount++;
+        selectedMeters += (parseFloat(p.meter) || 0);
+      }
+    });
+
+    const badge = document.getElementById('thanModalTotalSelectedBadge');
+    if (badge) {
+      badge.textContent = `${selectedCount} Than${selectedCount === 1 ? '' : 's'} Selected (${selectedMeters.toFixed(2)} Mtr)`;
+    }
+
+    const stats = document.getElementById('modalSummaryStats');
+    if (stats) {
+      stats.innerHTML = `${selectedCount} of ${totalAvailable} Selected &bull; <strong style="color:#059669;">${selectedMeters.toFixed(2)} Mtr</strong>`;
+    }
+
+    const applyBtn = document.getElementById('thanModalApplyBtn');
+    if (applyBtn) {
+      applyBtn.textContent = `Apply Selection (${selectedCount})`;
+    }
+  }
+
+  function applyThanModalSelection() {
+    if (activeModalItemIdx === null) return;
+    const item = itemsData[activeModalItemIdx];
+    if (!item) return;
+
+    const rawId = item.raw_item_id;
+    const rawName = (item.raw_item_name || '').toLowerCase().trim();
+    const availablePurchases = (rawId && purchasedTonsMap[rawId]) ? purchasedTonsMap[rawId] : (rawName && purchasedTonsMap[rawName] ? purchasedTonsMap[rawName] : []);
+    const cons = parseFloat(item.consumption_per_pc) || 1.5;
+
+    // 1. Keep any custom thans (those without unique_id)
+    const customThans = (item.thans || []).filter(t => !t.unique_id);
+
+    // 2. Build map of already existing thans with unique_id to preserve user-edited wastages
+    const existingMap = new Map();
+    (item.thans || []).forEach(t => {
+      if (t.unique_id) existingMap.set(t.unique_id, t);
+    });
+
+    // 3. For each unique_id in modalSelectedUniqueIds, keep existing or create new
+    const updatedThans = [...customThans];
+    const visitedUids = new Set();
+    availablePurchases.forEach(p => {
+      if (p.unique_id && modalSelectedUniqueIds.has(p.unique_id)) {
+        visitedUids.add(p.unique_id);
+        if (existingMap.has(p.unique_id)) {
+          updatedThans.push(existingMap.get(p.unique_id));
+        } else {
+          const thanObj = calculateThanValues(p.meter, null, cons);
+          thanObj.unique_id = p.unique_id;
+          if (p.po_id) thanObj.po_id = p.po_id;
+          if (p.po_item_id) thanObj.po_item_id = p.po_item_id;
+          if (p.po_number) thanObj.po_number = p.po_number;
+          if (p.challan_no) thanObj.challan_no = p.challan_no;
+          if (p.than_no) thanObj.purchase_than_no = p.than_no;
+          if (p.unit) thanObj.unit = p.unit;
+          updatedThans.push(thanObj);
+        }
+      }
+    });
+
+    // In case existing thans had a unique_id that was selected and not in availablePurchases list
+    existingMap.forEach((thanObj, uid) => {
+      if (modalSelectedUniqueIds.has(uid) && !visitedUids.has(uid)) {
+        updatedThans.push(thanObj);
+      }
+    });
+
+    itemsData[activeModalItemIdx].thans = updatedThans;
+    closeThanSelectModal();
+    renderAllRawItemCards();
+    calculateOverallTotals();
   }
 
   function calculateOverallTotals() {
