@@ -543,7 +543,6 @@
             <th>Category</th>
             <th>UOM</th>
             <th style="text-align: right;">Raw Meter / Pc</th>
-            <th style="text-align: right;">Unit Cost</th>
             <th style="text-align: right;">Current Stock</th>
             <th style="text-align: right;">Reorder Min</th>
             <th style="text-align: center;">Stock Status</th>
@@ -597,9 +596,6 @@
                 @else
                   <span style="color:var(--slate-400); font-size:0.8rem;">—</span>
                 @endif
-              </td>
-              <td class="itm-cost-val" style="text-align: right; font-weight: 700; color: var(--slate-800);">
-                ₹{{ number_format($itm->unit_cost, 2) }}
               </td>
               <td class="itm-stock-val" style="text-align: right; font-weight: 800; color: {{ $isLowStock ? '#dc2626' : '#059669' }};">
                 {{ format_quantity($itm->current_stock) }}
@@ -1210,9 +1206,6 @@
       '<td class="itm-rawmeter-val" style="text-align: right; font-weight: 600;">' +
         rawMeterHtml +
       '</td>' +
-      '<td class="itm-cost-val" style="text-align: right; font-weight: 700; color: var(--slate-800);">' +
-        '₹' + Number(itm.unit_cost || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}) +
-      '</td>' +
       '<td class="itm-stock-val" style="text-align: right; font-weight: 800; color: ' + (isLow ? '#dc2626' : '#059669') + ';">' +
         Number(itm.current_stock || 0).toLocaleString('en-IN', {minimumFractionDigits: 0, maximumFractionDigits: 2}) +
       '</td>' +
@@ -1314,11 +1307,6 @@
       rawMeterCell.innerHTML = rawMeter > 0
         ? `<span style="display:inline-flex; align-items:center; gap:3px; font-weight:700; color:#1d4ed8; background:#eff6ff; padding:2px 8px; border-radius:6px; font-size:0.8rem; border:1px solid #bfdbfe;" title="Raw meter required per piece">${Number(rawMeter).toLocaleString('en-IN', {minimumFractionDigits: 0, maximumFractionDigits: 2})} m</span>`
         : `<span style="color:var(--slate-400); font-size:0.8rem;">—</span>`;
-    }
-
-    const costCell = row.querySelector('.itm-cost-val');
-    if (costCell) {
-      costCell.textContent = '₹' + Number(itm.unit_cost || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
     }
 
     const stockCell = row.querySelector('.itm-stock-val');

@@ -106,24 +106,22 @@ class ItemController extends Controller
             'size' => 'nullable|string|max:50',
             'unit' => 'nullable|string|max:50',
             'raw_meter_per_piece' => 'nullable|numeric|min:0',
-            'unit_cost' => 'required|numeric|min:0',
+            'unit_cost' => 'nullable|numeric|min:0',
             'current_stock' => 'nullable|numeric|min:0',
             'min_stock' => 'nullable|numeric|min:0',
             'hsn_code' => 'nullable|string|max:50',
             'location' => 'nullable|string|max:150',
             'status' => 'nullable|string|max:50'
         ], [
-            'name.required' => 'Item SKU Name is required.',
-            'unit_cost.required' => 'Standard Unit Cost is required.',
-            'unit_cost.numeric' => 'Standard Unit Cost must be a valid number.',
-            'unit_cost.min' => 'Standard Unit Cost cannot be negative.',
+            'name.required' => 'Item Description / Quality is required.',
+            'unit.required' => 'Unit of Measurement (UOM) is required.',
         ])->validate();
 
         $category = !empty($validated['category']) ? $validated['category'] : 'Fabric';
         $validated['category'] = $category;
         $validated['unit'] = !empty($validated['unit']) ? $validated['unit'] : 'Meters';
         $validated['raw_meter_per_piece'] = isset($validated['raw_meter_per_piece']) ? floatval($validated['raw_meter_per_piece']) : 0.00;
-        $validated['unit_cost'] = floatval($validated['unit_cost']);
+        $validated['unit_cost'] = isset($validated['unit_cost']) ? floatval($validated['unit_cost']) : 0.00;
         $validated['current_stock'] = isset($validated['current_stock']) ? floatval($validated['current_stock']) : 0.00;
         $validated['min_stock'] = isset($validated['min_stock']) ? floatval($validated['min_stock']) : 0.00;
         $validated['status'] = !empty($validated['status']) ? ucfirst(strtolower($validated['status'])) : 'Active';
@@ -195,17 +193,15 @@ class ItemController extends Controller
             'size' => 'nullable|string|max:50',
             'unit' => 'sometimes|nullable|string|max:50',
             'raw_meter_per_piece' => 'sometimes|nullable|numeric|min:0',
-            'unit_cost' => 'sometimes|required|numeric|min:0',
+            'unit_cost' => 'sometimes|nullable|numeric|min:0',
             'current_stock' => 'sometimes|nullable|numeric|min:0',
             'min_stock' => 'sometimes|nullable|numeric|min:0',
             'hsn_code' => 'nullable|string|max:50',
             'location' => 'nullable|string|max:150',
             'status' => 'nullable|string|max:50'
         ], [
-            'name.required' => 'Item SKU Name is required.',
-            'unit_cost.required' => 'Standard Unit Cost is required.',
-            'unit_cost.numeric' => 'Standard Unit Cost must be a valid number.',
-            'unit_cost.min' => 'Standard Unit Cost cannot be negative.',
+            'name.required' => 'Item Description / Quality is required.',
+            'unit.required' => 'Unit of Measurement (UOM) is required.',
         ])->validate();
 
         if (isset($validated['status'])) {

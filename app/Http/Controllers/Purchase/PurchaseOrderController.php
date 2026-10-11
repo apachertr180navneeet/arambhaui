@@ -45,6 +45,14 @@ class PurchaseOrderController extends Controller
             $items = Item::orderBy('name')->get();
         }
 
+        $latestRates = PurchaseOrderItem::whereNotNull('item_id')
+            ->where('rate', '>', 0)
+            ->latest('id')
+            ->get()
+            ->unique('item_id')
+            ->pluck('rate', 'item_id')
+            ->toArray();
+
         $units = Unit::all();
         $count = PurchaseOrder::count() + 1;
         $nextPoNumber = 'PE-2026-' . str_pad($count, 4, '0', STR_PAD_LEFT);
@@ -57,7 +65,7 @@ class PurchaseOrderController extends Controller
             $nextChallanNo = 'CH-' . $year . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
         }
 
-        return view('purchase.orders.create', compact('vendors', 'items', 'units', 'nextPoNumber', 'nextChallanNo'));
+        return view('purchase.orders.create', compact('vendors', 'items', 'units', 'nextPoNumber', 'nextChallanNo', 'latestRates'));
     }
 
     public function edit(PurchaseOrder $order)
@@ -72,10 +80,18 @@ class PurchaseOrderController extends Controller
             $items = Item::orderBy('name')->get();
         }
 
+        $latestRates = PurchaseOrderItem::whereNotNull('item_id')
+            ->where('rate', '>', 0)
+            ->latest('id')
+            ->get()
+            ->unique('item_id')
+            ->pluck('rate', 'item_id')
+            ->toArray();
+
         $units = Unit::all();
         $order->load(['items', 'vendor']);
 
-        return view('purchase.orders.edit', compact('order', 'vendors', 'items', 'units'));
+        return view('purchase.orders.edit', compact('order', 'vendors', 'items', 'units', 'latestRates'));
     }
 
     public function store(Request $request)
@@ -224,6 +240,10 @@ class PurchaseOrderController extends Controller
                 }
 
                 PurchaseOrderItem::create($itemData);
+
+                if (!empty($pItem['item_id']) && $pItem['rate'] > 0) {
+                    Item::where('id', $pItem['item_id'])->update(['unit_cost' => $pItem['rate']]);
+                }
             }
 
             if ($request->expectsJson() || $request->wantsJson() || $request->ajax() || $request->isJson() || str_contains((string)$request->header('Accept'), 'application/json')) {
@@ -367,6 +387,10 @@ class PurchaseOrderController extends Controller
                 }
 
                 PurchaseOrderItem::create($itemData);
+
+                if (!empty($pItem['item_id']) && $pItem['rate'] > 0) {
+                    Item::where('id', $pItem['item_id'])->update(['unit_cost' => $pItem['rate']]);
+                }
             }
 
             if ($request->expectsJson() || $request->wantsJson() || $request->ajax() || $request->isJson() || str_contains((string)$request->header('Accept'), 'application/json')) {

@@ -74,15 +74,16 @@ const PurchaseView = {
         const isSel = (i.name === currentVal || String(i.id) === String(currentVal)) ? 'selected' : '';
         const codeText = i.code ? ` [${i.code}]` : '';
         const catText = i.category ? ` (${i.category})` : '';
-        const rate = i.unit_cost || i.rate || 0;
-        return `<option value="${i.name}" data-id="${i.id}" data-code="${i.code || ''}" data-rate="${rate}" ${isSel}>${i.name}${codeText}${catText}</option>`;
+        const lastRate = i.latest_purchase_rate || i.lastPurchaseRate || '';
+        const rateText = lastRate ? ` [Last: ₹${parseFloat(lastRate).toFixed(2)}]` : '';
+        return `<option value="${i.name}" data-id="${i.id}" data-code="${i.code || ''}" data-latest-rate="${lastRate}" ${isSel}>${i.name}${codeText}${rateText}${catText}</option>`;
       }).join('');
   },
 
   onItemChange(selectEl) {
     const opt = selectEl.options[selectEl.selectedIndex];
     if (!opt) return;
-    const rate = opt.getAttribute('data-rate');
+    const rate = opt.getAttribute('data-latest-rate');
     const rateInput = document.getElementById('pe-rate');
     if (rate && rateInput && (!rateInput.value || parseFloat(rateInput.value) === 0)) {
       rateInput.value = parseFloat(rate).toFixed(2);
@@ -422,7 +423,7 @@ const PurchaseView = {
                 <label class="form-label" style="font-weight:700; color:var(--slate-800);">Rate Per Meter (₹) <span style="color:#ef4444;">*</span></label>
                 <div style="position:relative;">
                   <span style="position:absolute; left:12px; top:50%; transform:translateY(-50%); font-weight:700; color:#64748b;">₹</span>
-                  <input type="number" step="0.01" min="0" id="pe-rate" class="form-control" required placeholder="0.00" value="35.00" style="padding-left:28px; font-weight:700; font-size:1rem;" oninput="PurchaseView.calculateTotals()">
+                  <input type="number" step="0.01" min="0" id="pe-rate" class="form-control" required placeholder="0.00" value="" style="padding-left:28px; font-weight:700; font-size:1rem;" oninput="PurchaseView.calculateTotals()">
                 </div>
               </div>
 

@@ -270,6 +270,7 @@
 @push('scripts')
 <script>
   const masterItems = @json($items);
+  const latestRates = @json($latestRates ?? []);
   let activePasteItemIndex = 0;
 
   // Pre-load existing items from database
@@ -311,7 +312,7 @@
       item_id: '',
       item_name: '',
       item_code: '',
-      rate: 35.00,
+      rate: 0,
       tax_percent: 5,
       unit: 'Meters',
       thans: []
@@ -346,11 +347,13 @@
       itemsData[itemIdx].item_id = opt.getAttribute('data-id') || '';
       itemsData[itemIdx].item_name = opt.value;
       itemsData[itemIdx].item_code = opt.getAttribute('data-code') || '';
-      const r = parseFloat(opt.getAttribute('data-rate'));
-      if (r > 0) {
-        itemsData[itemIdx].rate = r;
-      }
       itemsData[itemIdx].unit = opt.getAttribute('data-unit') || 'Meters';
+
+      // Only suggest latest purchase rate if line item currently has no rate
+      const latestR = parseFloat(opt.getAttribute('data-latest-rate'));
+      if ((!itemsData[itemIdx].rate || itemsData[itemIdx].rate <= 0) && !isNaN(latestR) && latestR > 0) {
+        itemsData[itemIdx].rate = latestR;
+      }
     }
     renderAllItems();
     calculateOverallTotals();
@@ -464,7 +467,9 @@
       let itemOptions = `<option value="">-- Select Fabric / Raw Material SKU --</option>`;
       masterItems.forEach(itm => {
         const isSel = (item.item_name && (itm.name === item.item_name || itm.id == item.item_id)) ? 'selected' : '';
-        itemOptions += `<option value="${itm.name}" data-id="${itm.id}" data-code="${itm.code || ''}" data-rate="${itm.unit_cost || 0}" data-unit="${itm.unit || 'Meters'}" ${isSel}>${itm.name} [${itm.code || 'ITEM'}] (${itm.category || 'Fabric'})</option>`;
+        const lastRate = (latestRates && latestRates[itm.id]) ? parseFloat(latestRates[itm.id]) : '';
+        const rateNote = lastRate ? ` [Last Purchase: ₹${lastRate.toFixed(2)}]` : '';
+        itemOptions += `<option value="${itm.name}" data-id="${itm.id}" data-code="${itm.code || ''}" data-latest-rate="${lastRate}" data-unit="${itm.unit || 'Meters'}" ${isSel}>${itm.name} [${itm.code || 'ITEM'}]${rateNote} (${itm.category || 'Fabric'})</option>`;
       });
 
       const totalMeters = item.thans.reduce((a, b) => a + (parseFloat(b) || 0), 0);
@@ -526,11 +531,11 @@
 
           <div class="form-group" style="margin-bottom:0;">
             <label class="form-label" style="font-weight:700; color:var(--slate-800); margin-bottom:6px;">
-              Rate Per Meter (₹) <span style="color:#ef4444;">*</span>
+              Purchase Rate (₹ / ${item.unit || 'Mtr'}) <span style="color:#ef4444;">*</span>
             </label>
             <div style="position:relative;">
               <span style="position:absolute; left:12px; top:50%; transform:translateY(-50%); font-weight:700; color:#64748b;">₹</span>
-              <input type="number" step="0.01" min="0" name="items[${itemIdx}][rate]" class="form-control" required value="${parseFloat(item.rate).toFixed(2)}" style="padding-left:28px; font-weight:700; font-size:0.95rem;" oninput="onItemRateChange(${itemIdx}, this.value)">
+              <input type="number" step="0.01" min="0" name="items[${itemIdx}][rate]" class="form-control" required placeholder="0.00" value="${item.rate !== undefined && item.rate !== null && item.rate !== '' ? parseFloat(item.rate).toFixed(2) : ''}" style="padding-left:28px; font-weight:700; font-size:0.95rem;" oninput="onItemRateChange(${itemIdx}, this.value)">
             </div>
           </div>
 
