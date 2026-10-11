@@ -178,6 +178,11 @@
     padding: 16px;
     margin: 14px 18px 0;
   }
+  .active-filter-btn {
+    background-color: #0f172a !important;
+    color: #ffffff !important;
+    border-color: #0f172a !important;
+  }
 </style>
 @endpush
 

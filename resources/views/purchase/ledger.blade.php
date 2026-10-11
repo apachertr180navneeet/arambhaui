@@ -88,6 +88,39 @@
     border-color: #4338ca;
     color: #ffffff;
   }
+  .tally-hdr-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    border-radius: 8px;
+    cursor: pointer;
+    text-decoration: none !important;
+    transition: all 0.15s ease;
+    line-height: 1.25;
+  }
+  .tally-hdr-btn-primary {
+    background: #6366f1;
+    color: #ffffff !important;
+    border: 1px solid #4f46e5;
+    box-shadow: 0 2px 6px rgba(99, 102, 241, 0.4);
+  }
+  .tally-hdr-btn-primary:hover {
+    background: #4f46e5;
+    color: #ffffff !important;
+  }
+  .tally-hdr-btn-light {
+    background: #ffffff;
+    color: #0f172a !important;
+    border: 1px solid #cbd5e1;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+  .tally-hdr-btn-light:hover {
+    background: #f1f5f9;
+    color: #0f172a !important;
+  }
   @media print {
     .app-sidebar, .app-header, .tally-filter-bar, .tally-actions, .breadcrumb {
       display: none !important;
@@ -169,25 +202,25 @@
         <!-- Action Toolbar -->
         <div class="tally-actions" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
           @if($selectedVendor)
-            <a href="{{ route('purchase.payment-mapping', ['vendor_id' => $selectedVendor->id]) }}" class="btn btn-primary btn-sm" style="background:#4f46e5; border-color:#4f46e5; font-weight:700; display:inline-flex; align-items:center; gap:6px;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
-              Payment Mapping
+            <a href="{{ route('purchase.payment-mapping', ['vendor_id' => $selectedVendor->id]) }}" class="tally-hdr-btn tally-hdr-btn-primary">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+              <span>Payment Mapping</span>
             </a>
           @else
-            <a href="{{ route('purchase.payment-mapping') }}" class="btn btn-primary btn-sm" style="background:#4f46e5; border-color:#4f46e5; font-weight:700; display:inline-flex; align-items:center; gap:6px;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
-              Open Payment Mapping
+            <a href="{{ route('purchase.payment-mapping') }}" class="tally-hdr-btn tally-hdr-btn-primary">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+              <span>Open Payment Mapping</span>
             </a>
           @endif
 
-          <button type="button" class="btn btn-secondary btn-sm" onclick="window.print()" style="font-weight:700; background:#334155; border-color:#475569; color:#fff; display:inline-flex; align-items:center; gap:5px;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
-            Print
+          <button type="button" class="tally-hdr-btn tally-hdr-btn-light" onclick="window.print()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
+            <span>Print</span>
           </button>
 
-          <a href="{{ request()->fullUrlWithQuery(['export' => 'csv']) }}" class="btn btn-secondary btn-sm" style="font-weight:700; background:#334155; border-color:#475569; color:#fff; display:inline-flex; align-items:center; gap:5px;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Export CSV
+          <a href="{{ request()->fullUrlWithQuery(['export' => 'csv']) }}" class="tally-hdr-btn tally-hdr-btn-light">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <span>Export CSV</span>
           </a>
         </div>
       </div>
