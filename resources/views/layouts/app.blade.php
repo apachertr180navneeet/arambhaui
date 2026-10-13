@@ -59,19 +59,19 @@
     })();
   </script>
 
-  <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+  <!-- Google Fonts: Plus Jakarta Sans, Inter & JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-  <!-- Application Stylesheets -->
-  <link rel="stylesheet" href="{{ asset('css/main.css') }}">
-  <link rel="stylesheet" href="{{ asset('css/sidebar.css') }}">
-  <link rel="stylesheet" href="{{ asset('css/dashboard.css') }}">
-  <link rel="stylesheet" href="{{ asset('css/tables.css') }}">
-  <link rel="stylesheet" href="{{ asset('css/forms.css') }}">
-  <link rel="stylesheet" href="{{ asset('css/qr.css') }}">
-  <link rel="stylesheet" href="{{ asset('css/print.css') }}">
+  <!-- Application Stylesheets with Cache Busting -->
+  <link rel="stylesheet" href="{{ asset('css/main.css') }}?v={{ time() }}">
+  <link rel="stylesheet" href="{{ asset('css/sidebar.css') }}?v={{ time() }}">
+  <link rel="stylesheet" href="{{ asset('css/dashboard.css') }}?v={{ time() }}">
+  <link rel="stylesheet" href="{{ asset('css/tables.css') }}?v={{ time() }}">
+  <link rel="stylesheet" href="{{ asset('css/forms.css') }}?v={{ time() }}">
+  <link rel="stylesheet" href="{{ asset('css/qr.css') }}?v={{ time() }}">
+  <link rel="stylesheet" href="{{ asset('css/print.css') }}?v={{ time() }}">
 
   <!-- QR Scanning Engines: html5-qrcode + jsQR (multi-CDN resilient fallbacks) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>

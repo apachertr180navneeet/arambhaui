@@ -48,6 +48,9 @@ const UI = {
 
   // --- Modal Dialog System ---
   openModal({ title, content, footer = "", size = "modal-lg" }) {
+    // Automatically close any open drawer to avoid overlay collisions
+    this.closeDrawer();
+
     let backdrop = document.getElementById("global-modal-backdrop");
     if (!backdrop) {
       backdrop = document.createElement("div");
@@ -137,6 +140,11 @@ const UI = {
     const backdrop = document.getElementById("global-drawer-backdrop");
     if (backdrop) {
       backdrop.classList.remove("open");
+      setTimeout(() => {
+        if (!backdrop.classList.contains("open")) {
+          backdrop.innerHTML = "";
+        }
+      }, 300);
     }
   },
 
@@ -406,51 +414,201 @@ const UI = {
     }
   },
 
-  // --- Print Section Tool ---
-  printSection(elementId, title = "Document") {
-    const el = document.getElementById(elementId);
+  // --- Print Element & Report Tool ---
+  printElement(elementId, title = "Document") {
+    let el = null;
+    if (typeof elementId === "string") {
+      el = document.getElementById(elementId) || document.querySelector(`table#${elementId}`) || document.querySelector(elementId);
+    } else if (elementId instanceof HTMLElement) {
+      el = elementId;
+    }
+
     if (!el) {
       window.print();
       return;
     }
-    const printWindow = window.open('', '_blank', 'width=900,height=700');
-    if (!printWindow) {
-      window.print();
-      return;
-    }
-    printWindow.document.write(`
+
+    // Clone element to sanitize for print
+    const clone = el.cloneNode(true);
+    // Strip action buttons, toolbars, search boxes, modals
+    clone.querySelectorAll("button, .btn, .action-icon-btn, .table-action-btn, script, style, .modal, .dropdown-menu, .no-print").forEach(node => {
+      node.remove();
+    });
+
+    const companyName = window.COMPANY_NAME || (window.COMPANY_SETTINGS && window.COMPANY_SETTINGS.company_name) || "aarambh";
+    const gstin = (window.COMPANY_SETTINGS && window.COMPANY_SETTINGS.gstin) || "";
+    const dateStr = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+    const htmlContent = `
       <!DOCTYPE html>
       <html>
       <head>
+        <meta charset="utf-8">
         <title>${title}</title>
-        <link rel="stylesheet" href="/css/main.css">
-        <link rel="stylesheet" href="/css/print.css">
         <style>
-          body { padding: 24px; font-family: 'Plus Jakarta Sans', -apple-system, sans-serif; background: #fff; }
-          .no-print, .table-actions, .table-toolbar { display: none !important; }
-          table { width: 100%; border-collapse: collapse; margin-top: 16px; }
-          th, td { border: 1px solid #cbd5e1; padding: 8px 12px; text-align: left; font-size: 12px; }
-          th { background: #f8fafc; font-weight: 700; }
+          @page { size: auto; margin: 12mm 10mm 12mm 10mm; }
+          * { box-sizing: border-box; margin: 0; padding: 0; }
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            color: #0f172a;
+            background: #ffffff;
+            padding: 16px;
+            font-size: 11px;
+            line-height: 1.4;
+          }
+          .print-header {
+            border-bottom: 2px solid #0f172a;
+            padding-bottom: 10px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+          }
+          .company-title {
+            font-size: 18px;
+            font-weight: 800;
+            color: #0f172a;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+          .company-meta {
+            font-size: 10.5px;
+            color: #475569;
+            margin-top: 2px;
+          }
+          .report-info {
+            text-align: right;
+          }
+          .report-title {
+            font-size: 14px;
+            font-weight: 800;
+            color: #1e40af;
+          }
+          .report-date {
+            font-size: 10px;
+            color: #64748b;
+            margin-top: 2px;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+            font-size: 10.5px;
+          }
+          th, td {
+            border: 1px solid #cbd5e1;
+            padding: 6px 8px;
+            text-align: left;
+            vertical-align: middle;
+          }
+          th {
+            background-color: #f1f5f9 !important;
+            font-weight: 700;
+            color: #1e293b;
+            text-transform: uppercase;
+            font-size: 9.5px;
+            letter-spacing: 0.03em;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+          tr:nth-child(even) td {
+            background-color: #f8fafc;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+          .badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 9.5px;
+            font-weight: 700;
+            border: 1px solid #cbd5e1;
+          }
+          .print-footer {
+            margin-top: 18px;
+            padding-top: 8px;
+            border-top: 1px dashed #cbd5e1;
+            display: flex;
+            justify-content: space-between;
+            font-size: 9.5px;
+            color: #64748b;
+          }
         </style>
       </head>
       <body>
-        <div style="margin-bottom:20px; border-bottom:2px solid #0f172a; padding-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+        <div class="print-header">
           <div>
-            <h2 style="margin:0; font-size:18px; color:#0f172a;">${window.COMPANY_NAME || 'aarambh'}</h2>
-            <p style="margin:4px 0 0 0; font-size:12px; color:#64748b;">Generated on ${new Date().toLocaleString()}</p>
+            <div class="company-title">${companyName}</div>
+            <div class="company-meta">${gstin ? 'GSTIN: ' + gstin + ' &bull; ' : ''}Garment Manufacturing Operations</div>
           </div>
-          <div style="font-size:14px; font-weight:700; color:#2563eb;">${title}</div>
+          <div class="report-info">
+            <div class="report-title">${title}</div>
+            <div class="report-date">Generated on: ${dateStr}</div>
+          </div>
         </div>
-        ${el.innerHTML}
-        <script>
-          window.onload = function() {
-            window.print();
-            window.onafterprint = function() { window.close(); };
-          };
-        </script>
+        ${clone.outerHTML}
+        <div class="print-footer">
+          <div>Official ERP Generated Report &bull; Aarambh</div>
+          <div>Confidential</div>
+        </div>
       </body>
       </html>
-    `);
-    printWindow.document.close();
+    `;
+
+    // 1. Try hidden iframe first (Bypasses popup blockers)
+    let printFrame = document.getElementById("erp-print-iframe");
+    if (!printFrame) {
+      printFrame = document.createElement("iframe");
+      printFrame.id = "erp-print-iframe";
+      printFrame.style.position = "fixed";
+      printFrame.style.right = "0";
+      printFrame.style.bottom = "0";
+      printFrame.style.width = "0";
+      printFrame.style.height = "0";
+      printFrame.style.border = "0";
+      document.body.appendChild(printFrame);
+    }
+
+    try {
+      const frameDoc = printFrame.contentWindow.document;
+      frameDoc.open();
+      frameDoc.write(htmlContent);
+      frameDoc.close();
+
+      setTimeout(() => {
+        try {
+          printFrame.contentWindow.focus();
+          printFrame.contentWindow.print();
+        } catch (e) {
+          fallbackWindowPrint();
+        }
+      }, 300);
+    } catch (e) {
+      fallbackWindowPrint();
+    }
+
+    function fallbackWindowPrint() {
+      const printWindow = window.open('', '_blank', 'width=900,height=700');
+      if (printWindow) {
+        printWindow.document.write(htmlContent);
+        printWindow.document.close();
+        setTimeout(() => {
+          printWindow.focus();
+          printWindow.print();
+        }, 300);
+      } else {
+        window.print();
+      }
+    }
+  },
+
+  // --- Print Section Alias ---
+  printSection(elementId, title = "Document") {
+    return this.printElement(elementId, title);
   }
 };
+
+// Global bindings
+window.UI = UI;
+window.printElement = UI.printElement.bind(UI);
+window.printSection = UI.printSection.bind(UI);

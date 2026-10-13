@@ -47,55 +47,89 @@
   <!-- KPI Summary Cards -->
   <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:16px;">
     
-    <div class="card" style="padding:18px 20px; background:#fff; border-radius:14px; border:1px solid var(--slate-200); box-shadow:var(--shadow-sm);">
-      <span style="font-size:0.75rem; font-weight:700; color:var(--slate-500); text-transform:uppercase;">Total Finished Inward</span>
-      <div style="font-size:1.6rem; font-weight:800; color:#059669; margin:4px 0 2px;">{{ number_format($stats['totalInwardQty']) }} Pcs</div>
-      <span style="font-size:0.75rem; color:#16a34a; font-weight:600;">Ready Garments Received</span>
+    <div class="card" style="padding:20px 22px; background:#ffffff; border-radius:16px; border:1px solid #e2e8f0; box-shadow:0 1px 3px rgba(15,23,42,0.06); display:flex; flex-direction:column; justify-content:space-between;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+        <span style="font-size:0.75rem; font-weight:800; color:#64748b; text-transform:uppercase; letter-spacing:0.04em;">Total Finished Inward</span>
+        <div style="width:36px; height:36px; border-radius:10px; background:#ecfdf5; color:#059669; display:flex; align-items:center; justify-content:center;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:1.65rem; font-weight:800; color:#059669; margin:6px 0 2px; font-variant-numeric:tabular-nums;">{{ number_format($stats['totalInwardQty']) }} Pcs</div>
+        <span style="font-size:0.78rem; color:#10b981; font-weight:700;">Ready Garments Received</span>
+      </div>
     </div>
 
-    <div class="card" style="padding:18px 20px; background:#fff; border-radius:14px; border:1px solid var(--slate-200); box-shadow:var(--shadow-sm);">
-      <span style="font-size:0.75rem; font-weight:700; color:var(--slate-500); text-transform:uppercase;">QC Rejections</span>
-      <div style="font-size:1.6rem; font-weight:800; color:#dc2626; margin:4px 0 2px;">{{ number_format($stats['totalDefectQty']) }} Pcs</div>
-      <span style="font-size:0.75rem; color:#ef4444; font-weight:600;">Defect / Rework Pieces</span>
+    <div class="card" style="padding:20px 22px; background:#ffffff; border-radius:16px; border:1px solid #e2e8f0; box-shadow:0 1px 3px rgba(15,23,42,0.06); display:flex; flex-direction:column; justify-content:space-between;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+        <span style="font-size:0.75rem; font-weight:800; color:#64748b; text-transform:uppercase; letter-spacing:0.04em;">QC Rejections</span>
+        <div style="width:36px; height:36px; border-radius:10px; background:#fef2f2; color:#dc2626; display:flex; align-items:center; justify-content:center;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:1.65rem; font-weight:800; color:#dc2626; margin:6px 0 2px; font-variant-numeric:tabular-nums;">{{ number_format($stats['totalDefectQty']) }} Pcs</div>
+        <span style="font-size:0.78rem; color:#ef4444; font-weight:700;">Defect / Rework Pieces</span>
+      </div>
     </div>
 
-    <div class="card" style="padding:18px 20px; background:#fff; border-radius:14px; border:1px solid var(--slate-200); box-shadow:var(--shadow-sm);">
-      <span style="font-size:0.75rem; font-weight:700; color:var(--slate-500); text-transform:uppercase;">Total Inward Receipts</span>
-      <div style="font-size:1.6rem; font-weight:800; color:var(--primary-700); margin:4px 0 2px;">{{ number_format($stats['totalEntries']) }} Receipts</div>
-      <span style="font-size:0.75rem; color:var(--primary-600); font-weight:600;">Batch Deliveries</span>
+    <div class="card" style="padding:20px 22px; background:#ffffff; border-radius:16px; border:1px solid #e2e8f0; box-shadow:0 1px 3px rgba(15,23,42,0.06); display:flex; flex-direction:column; justify-content:space-between;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+        <span style="font-size:0.75rem; font-weight:800; color:#64748b; text-transform:uppercase; letter-spacing:0.04em;">Total Inward Receipts</span>
+        <div style="width:36px; height:36px; border-radius:10px; background:#eff6ff; color:#2563eb; display:flex; align-items:center; justify-content:center;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:1.65rem; font-weight:800; color:#2563eb; margin:6px 0 2px; font-variant-numeric:tabular-nums;">{{ number_format($stats['totalEntries']) }} Receipts</div>
+        <span style="font-size:0.78rem; color:#3b82f6; font-weight:700;">Batch Deliveries</span>
+      </div>
     </div>
 
-    <div class="card" style="padding:18px 20px; background:#fff; border-radius:14px; border:1px solid var(--slate-200); box-shadow:var(--shadow-sm);">
-      <span style="font-size:0.75rem; font-weight:700; color:var(--slate-500); text-transform:uppercase;">Fabric Wastage Returned</span>
-      <div style="font-size:1.6rem; font-weight:800; color:#475569; margin:4px 0 2px;">{{ number_format($stats['totalWastageReturned'], 2) }} Mtr</div>
-      <span style="font-size:0.75rem; color:#64748b; font-weight:600;">Challan Returns</span>
+    <div class="card" style="padding:20px 22px; background:#ffffff; border-radius:16px; border:1px solid #e2e8f0; box-shadow:0 1px 3px rgba(15,23,42,0.06); display:flex; flex-direction:column; justify-content:space-between;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+        <span style="font-size:0.75rem; font-weight:800; color:#64748b; text-transform:uppercase; letter-spacing:0.04em;">Fabric Wastage Returned</span>
+        <div style="width:36px; height:36px; border-radius:10px; background:#f8fafc; color:#475569; display:flex; align-items:center; justify-content:center; border:1px solid #e2e8f0;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:1.65rem; font-weight:800; color:#334155; margin:6px 0 2px; font-variant-numeric:tabular-nums;">{{ number_format($stats['totalWastageReturned'], 2) }} Mtr</div>
+        <span style="font-size:0.78rem; color:#64748b; font-weight:700;">Challan Returns</span>
+      </div>
     </div>
 
   </div>
 
   <!-- Inward Receipts Table Card -->
-  <div class="card" style="background:#fff; border-radius:var(--radius-xl); border:1px solid var(--slate-200); box-shadow:var(--shadow-sm); padding:20px;">
+  <div class="card" style="background:#ffffff; border-radius:16px; border:1px solid #e2e8f0; box-shadow:0 1px 3px rgba(15,23,42,0.06); padding:20px;">
     
-    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
-      <input type="text" class="form-control" style="max-width:320px; font-size:0.85rem;" placeholder="Search inward#, lot#, worker, challan..." onkeyup="UI.filterGenericTable('inward-entries-table', this.value)">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:18px;">
+      <div style="position:relative; width:100%; max-width:360px;">
+        <svg style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#94a3b8; pointer-events:none;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input type="text" class="form-control" style="padding-left:36px; height:40px; font-size:0.875rem; border-radius:10px; border:1px solid #cbd5e1; background:#f8fafc; font-weight:500;" placeholder="Search inward#, lot#, worker, challan..." onkeyup="UI.filterGenericTable('inward-entries-table', this.value)">
+      </div>
+      <div style="font-size:0.8rem; font-weight:700; color:#64748b; background:#f1f5f9; padding:6px 12px; border-radius:8px;">
+        {{ count($inwards) }} Total Records
+      </div>
     </div>
 
     <div class="table-responsive">
-      <table class="data-table" id="inward-entries-table" style="width:100%; font-size:0.85rem;">
+      <table class="data-table" id="inward-entries-table" style="width:100%; font-size:0.875rem;">
         <thead>
-          <tr>
-            <th>Inward Receipt #</th>
-            <th>Inward Date</th>
-            <th>Job Worker Contractor</th>
-            <th>Lot / Batch #</th>
-            <th>Job Order #</th>
-            <th>Style / Fabric</th>
-            <th style="text-align:center;">Thans / Meters</th>
-            <th style="text-align:right;">Good Pcs</th>
-            <th style="text-align:right;">Defect Pcs</th>
-            <th style="text-align:right;">Wastage (Mtr)</th>
-            <th>QC Status</th>
-            <th style="text-align:right;">Action</th>
+          <tr style="background:#f8fafc; border-bottom:2px solid #e2e8f0;">
+            <th style="padding:12px 14px; font-weight:700; color:#475569; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.04em;">Inward Receipt #</th>
+            <th style="padding:12px 14px; font-weight:700; color:#475569; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.04em;">Inward Date</th>
+            <th style="padding:12px 14px; font-weight:700; color:#475569; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.04em;">Job Worker Contractor</th>
+            <th style="padding:12px 14px; font-weight:700; color:#475569; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.04em;">Lot / Batch #</th>
+            <th style="padding:12px 14px; font-weight:700; color:#475569; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.04em;">Job Order #</th>
+            <th style="padding:12px 14px; font-weight:700; color:#475569; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.04em;">Style / Fabric</th>
+            <th style="padding:12px 14px; font-weight:700; color:#475569; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.04em; text-align:center;">Thans / Meters</th>
+            <th style="padding:12px 14px; font-weight:700; color:#475569; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.04em; text-align:right;">Good Pcs</th>
+            <th style="padding:12px 14px; font-weight:700; color:#475569; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.04em; text-align:right;">Defect Pcs</th>
+            <th style="padding:12px 14px; font-weight:700; color:#475569; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.04em; text-align:right;">Wastage (Mtr)</th>
+            <th style="padding:12px 14px; font-weight:700; color:#475569; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.04em;">QC Status</th>
+            <th style="padding:12px 14px; font-weight:700; color:#475569; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.04em; text-align:right;">Action</th>
           </tr>
         </thead>
         <tbody>
@@ -105,63 +139,78 @@
               $thanCount = $inw->total_thans_count;
               $totalMeters = $inw->total_meters_count;
             @endphp
-            <tr>
-              <td style="font-family:var(--font-mono, monospace); font-weight:800; color:var(--primary-700);">
-                {{ $inw->inward_number }}
+            <tr style="border-bottom:1px solid #f1f5f9; transition:background-color 0.15s ease;">
+              <td style="padding:12px 14px;">
+                <span style="font-weight:700; color:#1d4ed8; background:#eff6ff; padding:3px 8px; border-radius:6px; border:1px solid #dbeafe; display:inline-block; font-size:0.85rem;">
+                  {{ $inw->inward_number }}
+                </span>
                 @if($inw->challan_no)
-                  <div style="font-size:0.72rem; color:var(--slate-400);">DC: {{ $inw->challan_no }}</div>
+                  <div style="font-size:0.72rem; color:#64748b; margin-top:3px; font-weight:600;">DC: {{ $inw->challan_no }}</div>
                 @endif
               </td>
-              <td>{{ date('d M Y', strtotime($inw->inward_date)) }}</td>
-              <td style="font-weight:700; color:var(--slate-800);">
-                {{ $inw->job_worker_name }}
-                <div style="font-size:0.72rem; color:var(--slate-400);">{{ $inw->process_name }}</div>
+              <td style="padding:12px 14px; font-weight:600; color:#334155; font-size:0.85rem;">
+                {{ date('d M Y', strtotime($inw->inward_date)) }}
               </td>
-              <td style="font-family:var(--font-mono, monospace); font-weight:700; color:#4338ca;">
-                {{ $inw->lot_number }}
+              <td style="padding:12px 14px;">
+                <div style="font-weight:700; color:#0f172a; font-size:0.875rem;">{{ $inw->job_worker_name }}</div>
+                <div style="font-size:0.72rem; color:#64748b; font-weight:500;">{{ $inw->process_name }}</div>
               </td>
-              <td style="font-family:var(--font-mono, monospace); color:var(--slate-600);">
+              <td style="padding:12px 14px;">
+                <span style="font-weight:700; color:#4338ca; background:#eef2ff; padding:3px 8px; border-radius:6px; border:1px solid #e0e7ff; font-size:0.85rem;">
+                  {{ $inw->lot_number }}
+                </span>
+              </td>
+              <td style="padding:12px 14px; font-weight:600; color:#475569; font-size:0.85rem;">
                 {{ $inw->job_order_no }}
               </td>
-              <td style="max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-                {{ $inw->style_name ?: 'Garment Item' }}
+              <td style="padding:12px 14px; max-width:180px;">
+                <div style="font-weight:600; color:#1e293b; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:0.85rem;" title="{{ $inw->style_name }}">
+                  {{ $inw->style_name ?: 'Garment Item' }}
+                </div>
               </td>
-              <td style="text-align:center;">
+              <td style="padding:12px 14px; text-align:center;">
                 @if($thanCount > 0)
-                  <span class="badge" style="background:#ecfdf5; color:#059669; border:1px solid #a7f3d0; font-weight:800;">
+                  <span class="badge" style="background:#ecfdf5; color:#059669; border:1px solid #a7f3d0; font-weight:700; padding:3px 9px; border-radius:6px; font-size:0.8rem;">
                     {{ $thanCount }} Thans ({{ number_format($totalMeters, 2) }} M)
                   </span>
                 @else
-                  <span style="color:var(--slate-400);">—</span>
+                  <span style="color:#94a3b8;">—</span>
                 @endif
               </td>
-              <td style="text-align:right; font-family:var(--font-mono, monospace); font-weight:800; color:#059669; font-size:0.95rem;">
-                +{{ number_format($inw->received_qty) }} Pcs
-              </td>
-              <td style="text-align:right; font-family:var(--font-mono, monospace); font-weight:700; color:{{ $inw->defect_qty > 0 ? '#dc2626' : 'var(--slate-400)' }};">
-                {{ $inw->defect_qty > 0 ? $inw->defect_qty . ' Pcs' : '0' }}
-              </td>
-              <td style="text-align:right; font-family:var(--font-mono, monospace); color:var(--slate-700);">
-                {{ number_format($inw->wastage_returned_meters, 2) }} Mtr
-              </td>
-              <td>
-                <span class="badge" style="background:{{ $inw->qc_status === 'Passed QC' ? '#ecfdf5' : '#fef2f2' }}; color:{{ $inw->qc_status === 'Passed QC' ? '#059669' : '#dc2626' }}; border:1px solid {{ $inw->qc_status === 'Passed QC' ? '#a7f3d0' : '#fecaca' }}; font-weight:700; padding:3px 8px; border-radius:9999px;">
-                  ● {{ $inw->qc_status }}
+              <td style="padding:12px 14px; text-align:right;">
+                <span style="font-weight:800; color:#059669; font-size:0.95rem; font-variant-numeric:tabular-nums;">
+                  +{{ number_format($inw->received_qty) }} Pcs
                 </span>
               </td>
-              <td style="text-align:right;">
-                <div style="display:inline-flex; align-items:center; gap:4px;">
+              <td style="padding:12px 14px; text-align:right;">
+                <span style="font-weight:700; color:{{ $inw->defect_qty > 0 ? '#dc2626' : '#94a3b8' }}; font-variant-numeric:tabular-nums; font-size:0.875rem;">
+                  {{ $inw->defect_qty > 0 ? $inw->defect_qty . ' Pcs' : '0' }}
+                </span>
+              </td>
+              <td style="padding:12px 14px; text-align:right;">
+                <span style="font-weight:600; color:#475569; font-variant-numeric:tabular-nums; font-size:0.85rem;">
+                  {{ number_format($inw->wastage_returned_meters, 2) }} Mtr
+                </span>
+              </td>
+              <td style="padding:12px 14px;">
+                <span class="badge" style="background:{{ $inw->qc_status === 'Passed QC' ? '#ecfdf5' : '#fef2f2' }}; color:{{ $inw->qc_status === 'Passed QC' ? '#047857' : '#b91c1c' }}; border:1px solid {{ $inw->qc_status === 'Passed QC' ? '#a7f3d0' : '#fecaca' }}; font-weight:700; padding:4px 10px; border-radius:9999px; display:inline-flex; align-items:center; gap:5px; font-size:0.75rem;">
+                  <span style="width:6px; height:6px; border-radius:50%; background:{{ $inw->qc_status === 'Passed QC' ? '#10b981' : '#ef4444' }};"></span>
+                  {{ $inw->qc_status }}
+                </span>
+              </td>
+              <td style="padding:12px 14px; text-align:right;">
+                <div style="display:inline-flex; align-items:center; gap:6px;">
                   <a href="{{ route('jobwork.inward.edit', $inw->id) }}" class="action-icon-btn edit" title="Edit Inward Entry">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                   </a>
-                  <button type="button" class="action-icon-btn" onclick='printInwardSlip(@json($inw), @json($thanList), @json($inw->items_list ?: []))' title="Print Inward Slip & Than Matrix">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                  <button type="button" class="action-icon-btn print-btn" onclick='printInwardSlip(@json($inw), @json($thanList), @json($inw->items_list ?: []))' title="Print Inward Slip & Than Matrix">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
                   </button>
                   <form action="{{ route('jobwork.inward.destroy', $inw->id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this inward entry? Pending quantities on the Job Order will be restored.')">
                     @csrf
                     @method('DELETE')
                     <button type="submit" class="action-icon-btn danger" title="Delete Inward Entry">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                     </button>
                   </form>
                 </div>
