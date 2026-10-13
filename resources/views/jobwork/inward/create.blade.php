@@ -234,13 +234,6 @@
           </div>
         </div>
       </div>
-          <div id="pv-received" style="font-family:var(--font-mono, monospace); font-weight:800; color:#059669;">0 Pcs</div>
-        </div>
-        <div>
-          <span style="font-size:0.75rem; color:#64748b; font-weight:700; text-transform:uppercase;">Remaining Balance:</span>
-          <div id="pv-pending" style="font-family:var(--font-mono, monospace); font-weight:800; color:#dc2626; font-size:1.05rem;">0 Pcs</div>
-        </div>
-      </div>
 
     </div>
 
@@ -258,8 +251,13 @@
           </p>
         </div>
 
-        <div id="header-items-summary-badge" style="display:flex; gap:8px; align-items:center;">
-          <!-- Dynamically filled -->
+        <div style="display:flex; gap:8px; align-items:center;">
+          <button type="button" id="btn-add-direct-item" class="btn btn-sm btn-outline-primary" onclick="addNewDirectItem()" style="display:none; align-items:center; gap:6px; font-weight:700; padding:5px 12px; border-radius:8px;">
+            + Add Another Item
+          </button>
+          <div id="header-items-summary-badge" style="display:flex; gap:8px; align-items:center;">
+            <!-- Dynamically filled -->
+          </div>
         </div>
       </div>
 
