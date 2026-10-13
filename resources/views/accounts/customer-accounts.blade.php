@@ -138,7 +138,8 @@
         <div class="form-group">
           <label class="form-label">Payment Mode <span style="color:red;">*</span></label>
           <select name="payment_mode" class="form-control" required>
-            <option value="NEFT / RTGS">NEFT / RTGS Online</option>
+            <option value="Bank Transfer (NEFT)">Bank Transfer (NEFT)</option>
+            <option value="RTGS">RTGS Online</option>
             <option value="Cheque">Bank Cheque</option>
             <option value="UPI">UPI / QR Transfer</option>
             <option value="Cash">Cash Receipt</option>
@@ -164,19 +165,33 @@
   </div>
 </div>
 
-@push('scripts')
 <script>
-  function openReceiptModal() {
-    document.getElementById('receipt-modal').style.display = 'flex';
-  }
-  function openReceiptModalFor(custName, due) {
-    document.getElementById('receipt-modal').style.display = 'flex';
-    document.getElementById('rec_customer').value = custName;
-    if (due > 0) document.getElementById('rec_amount').value = due;
-  }
-  function closeReceiptModal() {
-    document.getElementById('receipt-modal').style.display = 'none';
-  }
+  window.openReceiptModal = function() {
+    const modal = document.getElementById('receipt-modal');
+    if (modal) modal.style.display = 'flex';
+  };
+
+  window.openReceiptModalFor = function(custName, due) {
+    const modal = document.getElementById('receipt-modal');
+    if (modal) modal.style.display = 'flex';
+    const custSelect = document.getElementById('rec_customer');
+    if (custSelect && custName) custSelect.value = custName;
+    const amtInput = document.getElementById('rec_amount');
+    if (amtInput && due > 0) amtInput.value = due;
+  };
+
+  window.closeReceiptModal = function() {
+    const modal = document.getElementById('receipt-modal');
+    if (modal) modal.style.display = 'none';
+  };
+
+  document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('receipt-modal');
+    if (modal) {
+      modal.addEventListener('click', function(e) {
+        if (e.target === this) window.closeReceiptModal();
+      });
+    }
+  });
 </script>
-@endpush
 @endsection

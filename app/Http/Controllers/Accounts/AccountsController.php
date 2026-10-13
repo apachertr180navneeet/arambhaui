@@ -91,6 +91,29 @@ class AccountsController extends Controller
             'notes' => 'nullable|string'
         ]);
 
+        // Attempt safe ALTER TABLE to avoid ENUM truncation in MySQL
+        try {
+            DB::statement("ALTER TABLE customer_payments MODIFY COLUMN payment_mode VARCHAR(100) NOT NULL DEFAULT 'Bank Transfer (NEFT)'");
+        } catch (\Throwable $e) {
+            // Ignore if already altered or no DDL permissions
+        }
+
+        // Map and normalize payment_mode safely to match valid DB values
+        $rawMode = trim($validated['payment_mode'] ?? '');
+        if (stripos($rawMode, 'neft') !== false || stripos($rawMode, 'bank') !== false) {
+            $validated['payment_mode'] = 'Bank Transfer (NEFT)';
+        } elseif (stripos($rawMode, 'rtgs') !== false) {
+            $validated['payment_mode'] = 'RTGS';
+        } elseif (stripos($rawMode, 'cheque') !== false || stripos($rawMode, 'chq') !== false) {
+            $validated['payment_mode'] = 'Cheque';
+        } elseif (stripos($rawMode, 'upi') !== false || stripos($rawMode, 'qr') !== false) {
+            $validated['payment_mode'] = 'UPI';
+        } elseif (stripos($rawMode, 'cash') !== false) {
+            $validated['payment_mode'] = 'Cash';
+        } else {
+            $validated['payment_mode'] = 'Bank Transfer (NEFT)';
+        }
+
         return DB::transaction(function () use ($validated, $request) {
             $count = CustomerPayment::count() + 1;
             $receiptNo = 'REC-2026-' . str_pad($count, 3, '0', STR_PAD_LEFT);
