@@ -8,11 +8,12 @@
         $cols = $cols ?? 5;
         if ($cols < 3 || $cols > 10) $cols = 5;
         $cellWidth = number_format(100 / $cols, 2, '.', '');
-        $cellHeight = $cols <= 3 ? '52mm' : ($cols <= 4 ? '44mm' : ($cols <= 5 ? '38mm' : ($cols <= 6 ? '32mm' : '26mm')));
-        $qrSize = $cols <= 3 ? '32mm' : ($cols <= 4 ? '26mm' : ($cols <= 5 ? '23mm' : ($cols <= 6 ? '19mm' : '15mm')));
+        $cellHeight = $cols <= 3 ? '58mm' : ($cols <= 4 ? '48mm' : ($cols <= 5 ? '42mm' : ($cols <= 6 ? '35mm' : '28mm')));
+        $qrSize = $cols <= 3 ? '28mm' : ($cols <= 4 ? '23mm' : ($cols <= 5 ? '19mm' : ($cols <= 6 ? '16mm' : '13mm')));
         $brandSize = $cols <= 3 ? '10pt' : ($cols <= 4 ? '8.5pt' : ($cols <= 5 ? '7.5pt' : ($cols <= 6 ? '6.5pt' : '5.5pt')));
         $amtSize = $cols <= 3 ? '13pt' : ($cols <= 4 ? '11pt' : ($cols <= 5 ? '9.5pt' : ($cols <= 6 ? '8pt' : '7pt')));
-        $codeSize = $cols <= 3 ? '9pt' : ($cols <= 4 ? '7.5pt' : ($cols <= 5 ? '6.5pt' : ($cols <= 6 ? '5.5pt' : '4.8pt')));
+        $codeSize = $cols <= 3 ? '8.5pt' : ($cols <= 4 ? '7.5pt' : ($cols <= 5 ? '6.5pt' : ($cols <= 6 ? '5.5pt' : '4.8pt')));
+        $metaSize = $cols <= 3 ? '7pt' : ($cols <= 4 ? '6.2pt' : ($cols <= 5 ? '5.5pt' : ($cols <= 6 ? '4.8pt' : '4.2pt')));
         $charLimit = $cols <= 3 ? 30 : ($cols <= 4 ? 24 : ($cols <= 5 ? 18 : 12));
     @endphp
     <style>
@@ -140,8 +141,32 @@
             font-weight: 700;
             color: #1e293b;
             font-family: monospace;
-            line-height: 1;
+            line-height: 1.1;
             letter-spacing: 0.2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 98%;
+        }
+
+        .qr-address {
+            font-size: {{ $metaSize }};
+            color: #475569;
+            line-height: 1.1;
+            margin-top: 1mm;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 98%;
+        }
+
+        .qr-gstin {
+            font-size: {{ $metaSize }};
+            font-weight: 700;
+            color: #0f172a;
+            line-height: 1.1;
+            margin-top: 0.5mm;
+            letter-spacing: 0.1px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -274,6 +299,8 @@
             <a href="{{ request()->fullUrlWithQuery(['cols' => 4]) }}" class="cols-pill {{ $cols == 4 ? 'active' : '' }}" title="4 Columns (Large 2 inch Stickers - Perfect for 12 QRs)">4</a>
             <a href="{{ request()->fullUrlWithQuery(['cols' => 5]) }}" class="cols-pill {{ $cols == 5 ? 'active' : '' }}" title="5 Columns (Standard 1.5 inch Stickers)">5</a>
             <a href="{{ request()->fullUrlWithQuery(['cols' => 6]) }}" class="cols-pill {{ $cols == 6 ? 'active' : '' }}" title="6 Columns (Compact 1.25 inch Stickers)">6</a>
+            <a href="{{ request()->fullUrlWithQuery(['cols' => 8]) }}" class="cols-pill {{ $cols == 8 ? 'active' : '' }}" title="8 Columns (Compact Grid)">8</a>
+            <a href="{{ request()->fullUrlWithQuery(['cols' => 10]) }}" class="cols-pill {{ $cols == 10 ? 'active' : '' }}" title="10 Columns (High Density: 100 QRs on 10x10 grid)">10</a>
 
             <a href="javascript:history.back()" class="back-btn" style="margin-left:8px;">&larr; Back</a>
             <button onclick="window.print()" class="print-btn">🖨️ Print / Save as PDF</button>
@@ -333,6 +360,19 @@
                                     </div>
                                     <div class="qr-amt">₹{{ number_format($amt) }}</div>
                                     <div class="qr-code">{{ $code }}</div>
+                                    @php
+                                        $fullAddr = !empty($item['address']) ? $item['address'] : ($defAddress ?? '');
+                                        $pin = !empty($item['pincode']) ? $item['pincode'] : ($defPincode ?? '');
+                                        $gst = !empty($item['gstin']) ? $item['gstin'] : ($defGstin ?? '');
+                                    @endphp
+                                    @if($cols <= 6)
+                                        @if(!empty($fullAddr))
+                                            <div class="qr-address">{{ \Illuminate\Support\Str::limit($fullAddr, $charLimit + 12) }}{{ !empty($pin) ? ' - ' . $pin : '' }}</div>
+                                        @endif
+                                        @if(!empty($gst))
+                                            <div class="qr-gstin">GSTIN: {{ $gst }}</div>
+                                        @endif
+                                    @endif
                                 </div>
                             @endif
                         </td>

@@ -121,20 +121,34 @@ class DispatchController extends Controller
         $validated = $request->validate([
             'order_no' => 'required|string',
             'customer_name' => 'required|string|max:255',
+            'customer_id' => 'nullable|integer',
             'dispatch_date' => 'required|date',
             'transporter_name' => 'required|string',
             'lr_number' => 'nullable|string',
+            'bilty_no' => 'nullable|string',
             'vehicle_number' => 'nullable|string',
             'destination_city' => 'nullable|string',
             'total_cartons' => 'nullable|integer|min:0',
-            'total_qty' => 'nullable|integer|min:0',
+            'total_qty' => 'nullable|numeric|min:0',
+            'total_thans' => 'nullable|integer|min:0',
+            'subtotal_amount' => 'nullable|numeric|min:0',
+            'tax_amount' => 'nullable|numeric|min:0',
+            'total_amount' => 'nullable|numeric|min:0',
+            'remarks' => 'nullable|string',
             'items' => 'nullable|array',
             'items.*.item_id' => 'nullable',
             'items.*.style_name' => 'nullable|string',
+            'items.*.item_category' => 'nullable|string',
             'items.*.batch_no' => 'nullable|string',
             'items.*.size' => 'nullable|string',
             'items.*.color' => 'nullable|string',
             'items.*.qty' => 'nullable|numeric|min:0',
+            'items.*.rate' => 'nullable|numeric|min:0',
+            'items.*.tax_percent' => 'nullable|numeric|min:0',
+            'items.*.tax_amount' => 'nullable|numeric|min:0',
+            'items.*.total_amount' => 'nullable|numeric|min:0',
+            'items.*.than_count' => 'nullable|integer|min:0',
+            'items.*.thans_data' => 'nullable',
             'items.*.unit' => 'nullable|string',
             'items.*.cartons' => 'nullable|integer|min:0',
             'items.*.carton_barcode' => 'nullable|string'
@@ -156,55 +170,94 @@ class DispatchController extends Controller
 
             $computedQty = 0;
             $computedCartons = 0;
+            $computedSubtotal = 0;
+            $computedTax = 0;
+            $computedTotalAmount = 0;
+            $computedThans = 0;
 
             foreach ($validItems as $row) {
-                $computedQty += (int)($row['qty'] ?? 0);
+                $q = (float)($row['qty'] ?? 0);
+                $r = (float)($row['rate'] ?? 0);
+                $taxP = (float)($row['tax_percent'] ?? 0);
+                $lineSub = round($q * $r, 2);
+                $lineTax = (float)($row['tax_amount'] ?? round(($lineSub * $taxP) / 100, 2));
+                $lineTot = (float)($row['total_amount'] ?? round($lineSub + $lineTax, 2));
+
+                $computedQty += $q;
                 $computedCartons += (int)($row['cartons'] ?? 1);
+                $computedSubtotal += $lineSub;
+                $computedTax += $lineTax;
+                $computedTotalAmount += $lineTot;
+                $computedThans += (int)($row['than_count'] ?? 0);
             }
 
-            $totalQty = $computedQty > 0 ? $computedQty : (int)($validated['total_qty'] ?? 1);
+            $totalQty = $computedQty > 0 ? $computedQty : (float)($validated['total_qty'] ?? 1);
             $totalCartons = $computedCartons > 0 ? $computedCartons : max(1, (int)($validated['total_cartons'] ?? 1));
+            $subtotalAmt = $computedSubtotal > 0 ? $computedSubtotal : (float)($validated['subtotal_amount'] ?? 0);
+            $taxAmt = $computedTax > 0 ? $computedTax : (float)($validated['tax_amount'] ?? 0);
+            $totalAmt = $computedTotalAmount > 0 ? $computedTotalAmount : (float)($validated['total_amount'] ?? ($subtotalAmt + $taxAmt));
+            $totalThans = $computedThans > 0 ? $computedThans : (int)($validated['total_thans'] ?? 0);
 
-            $challan = DispatchChallan::create([
+            $dcData = [
                 'challan_no' => $challanNo,
                 'order_no' => $validated['order_no'],
+                'customer_id' => $validated['customer_id'] ?? null,
                 'customer_name' => $validated['customer_name'],
                 'dispatch_date' => $validated['dispatch_date'],
                 'transporter_name' => $validated['transporter_name'],
                 'lr_number' => $validated['lr_number'] ?? null,
+                'bilty_no' => $validated['bilty_no'] ?? ($validated['lr_number'] ?? null),
                 'vehicle_number' => $validated['vehicle_number'] ?? null,
                 'destination_city' => $validated['destination_city'] ?? null,
                 'total_cartons' => $totalCartons,
                 'total_qty' => $totalQty,
+                'total_thans' => $totalThans,
+                'subtotal_amount' => $subtotalAmt,
+                'tax_amount' => $taxAmt,
+                'total_amount' => $totalAmt,
+                'remarks' => $validated['remarks'] ?? null,
                 'status' => 'In Transit'
-            ]);
+            ];
+
+            $challan = DispatchChallan::create($dcData);
 
             if (count($validItems) > 0) {
                 foreach ($validItems as $row) {
-                    $itemQty = (int)($row['qty'] ?? 0);
+                    $itemQty = (float)($row['qty'] ?? 0);
                     if ($itemQty <= 0) continue;
 
-                    $batchNo = !empty($row['batch_no']) ? strtoupper(trim($row['batch_no'])) : 'DEFAULT-LOT';
-                    $styleName = !empty($row['style_name']) ? $row['style_name'] : 'Finished Garment';
+                    $batchNo = !empty($row['batch_no']) ? strtoupper(trim($row['batch_no'])) : 'SALE-LOT';
+                    $styleName = !empty($row['style_name']) ? $row['style_name'] : 'Item';
                     $itemId = !empty($row['item_id']) ? (int)$row['item_id'] : null;
-
-                    // Style and batch assignments
                     $item = $itemId ? Item::find($itemId) : null;
+                    $rate = (float)($row['rate'] ?? ($item?->unit_cost ?? 0));
+                    $taxPercent = (float)($row['tax_percent'] ?? 5);
+                    $sub = round($itemQty * $rate, 2);
+                    $lineTax = (float)($row['tax_amount'] ?? round(($sub * $taxPercent) / 100, 2));
+                    $lineTotal = (float)($row['total_amount'] ?? round($sub + $lineTax, 2));
+                    $thanCount = (int)($row['than_count'] ?? 0);
+                    $thansData = is_array($row['thans_data'] ?? null) ? json_encode($row['thans_data']) : ($row['thans_data'] ?? null);
 
-                    // Create Dispatch Item record
                     DispatchItem::create([
                         'dispatch_challan_id' => $challan->id,
                         'item_id' => $itemId,
                         'batch_no' => $batchNo,
                         'style_name' => $styleName,
+                        'item_category' => $row['item_category'] ?? ($item?->category ?? 'Finished Goods'),
                         'size' => $row['size'] ?? 'All Sizes',
                         'color' => $row['color'] ?? 'Standard',
                         'qty' => $itemQty,
+                        'rate' => $rate,
+                        'tax_percent' => $taxPercent,
+                        'tax_amount' => $lineTax,
+                        'total_amount' => $lineTotal,
+                        'than_count' => $thanCount,
+                        'thans_data' => $thansData,
                         'unit' => $row['unit'] ?? ($item?->unit ?? 'Pcs'),
                         'carton_barcode' => $row['carton_barcode'] ?? ('CTN-' . rand(10000, 99999))
                     ]);
 
-                    // Record batch-wise stock debit transaction in ledger
+                    // Record stock debit in ledger (Raw or Finished alike)
                     try {
                         Transaction::create([
                             'transaction_no' => 'TXN-DC-' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 8)),
@@ -218,7 +271,7 @@ class DispatchController extends Controller
                             'credit' => $itemQty,
                             'running_balance' => $item ? (float)$item->current_stock : 0,
                             'created_by' => Auth::user()?->name ?? 'Admin',
-                            'description' => "Dispatched {$itemQty} pcs (Batch #{$batchNo}) via {$challan->challan_no} to {$challan->customer_name}"
+                            'description' => "Dispatched {$itemQty} {$row['unit']} ({$styleName}) via {$challan->challan_no} to {$challan->customer_name}"
                         ]);
                     } catch (\Throwable $e) {}
                 }

@@ -366,6 +366,7 @@
                 <button type="button" class="preset-pill-btn" onclick="setCount(50)">50</button>
                 <button type="button" class="preset-pill-btn" onclick="setCount(100)">100</button>
                 <button type="button" class="preset-pill-btn" onclick="setCount(500)">500</button>
+                <button type="button" class="preset-pill-btn" style="background:#e0e7ff; color:#3730a3; font-weight:800;" onclick="setCombo(100, 50)" title="Set 100 QRs of ₹50">🔥 100 = 50 Rs</button>
               </div>
             </div>
 
@@ -389,14 +390,52 @@
 
           </div>
 
-          <!-- Color Master PDF Generation Option -->
+          <!-- FIELD 5: Company Address & Tax Details (Included in QR Card / Print) -->
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:14px 16px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
+              <span style="font-size:0.8rem; font-weight:800; color:var(--slate-800); text-transform:uppercase; letter-spacing:0.04em;">
+                📍 Full Address & GSTIN (Printed on QR Card)
+              </span>
+              <span style="font-size:0.75rem; color:#059669; font-weight:700; background:#ecfdf5; padding:2px 8px; border-radius:12px; border:1px solid #a7f3d0;">
+                ✓ PIN Code & GSTIN Essential
+              </span>
+            </div>
+            <div style="display:grid; grid-template-columns:2fr 1fr 1fr; gap:12px;">
+              <div>
+                <label class="form-label" style="font-size:0.78rem; font-weight:700;">Full Factory / Office Address</label>
+                <input type="text" name="address" id="input_address" class="form-control" value="{{ $companySettings['company_address'] ?? 'Plot No. 45-B, Apparel Park MIDC, Mumbai, Maharashtra' }}" placeholder="Full Street / Factory Address" oninput="updateLivePreview()" style="font-size:0.85rem;">
+              </div>
+              <div>
+                <label class="form-label" style="font-size:0.78rem; font-weight:700;">PIN Code <span style="color:#ef4444;">*</span></label>
+                <input type="text" name="pincode" id="input_pincode" class="form-control" value="{{ $companySettings['pincode'] ?? '400093' }}" placeholder="e.g. 400093" required oninput="updateLivePreview()" style="font-weight:700; font-size:0.85rem;">
+              </div>
+              <div>
+                <label class="form-label" style="font-size:0.78rem; font-weight:700;">GSTIN Number</label>
+                <input type="text" name="gstin" id="input_gstin" class="form-control" value="{{ $companySettings['gstin'] ?? '27AABCF1234F1Z1' }}" placeholder="GSTIN" oninput="updateLivePreview()" style="font-weight:700; font-size:0.85rem; text-transform:uppercase;">
+              </div>
+            </div>
+          </div>
+
+          <!-- Color Master PDF Generation Option with Layout Selector -->
           <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:14px 16px; margin-top:4px;">
-            <label style="display:flex; align-items:center; gap:10px; font-weight:700; color:var(--slate-800); cursor:pointer; font-size:0.9rem; margin-bottom:0;">
-              <input type="checkbox" name="download_pdf" value="1" checked style="width:18px; height:18px; accent-color:#4f46e5;">
-              <span>Download A4 Multi-QR PDF Sheet immediately (Color Master Module Mode)</span>
-            </label>
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+              <label style="display:flex; align-items:center; gap:10px; font-weight:700; color:var(--slate-800); cursor:pointer; font-size:0.9rem; margin-bottom:0;">
+                <input type="checkbox" name="download_pdf" value="1" checked style="width:18px; height:18px; accent-color:#4f46e5;">
+                <span>Download A4 Multi-QR PDF Sheet immediately</span>
+              </label>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <label style="font-size:0.8rem; font-weight:700; color:var(--slate-700); margin:0;">Sheet Grid:</label>
+                <select name="cols" id="input_cols" class="form-control" style="width:auto; padding:4px 10px; font-size:0.85rem; font-weight:700; height:32px;">
+                  <option value="4">4 Columns (Large)</option>
+                  <option value="5" selected>5 Columns (Standard)</option>
+                  <option value="6">6 Columns (Compact)</option>
+                  <option value="8">8 Columns (Extra Dense)</option>
+                  <option value="10">10 Columns (100 QRs per A4 Sheet)</option>
+                </select>
+              </div>
+            </div>
             <div style="font-size:0.75rem; color:var(--slate-500); margin-left:28px; margin-top:4px;">
-              Arranges up to 100–120 QR codes tightly onto an A4 paper in a 10-column table grid with dashed cutting borders.
+              Arranges up to 100 QR codes tightly onto an A4 paper in a 10-column table grid with dashed cutting borders.
             </div>
           </div>
 
@@ -439,14 +478,16 @@
       </p>
 
       <!-- 1" x 1" STICKER BOX (PRINTABLE) -->
-      <div id="single-print-wrapper" class="majasol-sticker-box">
-        <div class="sticker-brand" id="prev-brand">AARAMBH BATCH #1</div>
-        <div class="sticker-qr">
+      <div id="single-print-wrapper" class="majasol-sticker-box" style="width:1.5in; height:auto; min-height:1.5in; padding:6px;">
+        <div class="sticker-brand" id="prev-brand" style="font-size:8.5px; font-weight:900;">AARAMBH BATCH #1</div>
+        <div id="prev-sticker-address" style="font-size:6px; color:#333; text-align:center; line-height:1.1; margin:2px 0; max-height:22px; overflow:hidden;">Plot No. 45-B, Apparel Park MIDC, Mumbai - 400093</div>
+        <div id="prev-sticker-gstin" style="font-size:6.5px; font-weight:800; color:#0f172a; text-align:center; line-height:1; margin-bottom:2px;">GST: 27AABCF1234F1Z1</div>
+        <div class="sticker-qr" style="margin:2px auto;">
           <div id="preview-qrcode-target"></div>
         </div>
-        <div class="sticker-footer">
-          <span class="sticker-amt" id="prev-amt">₹500</span>
-          <span class="sticker-code" id="prev-code">ARM-500-PREV</span>
+        <div class="sticker-footer" style="margin-top:2px;">
+          <span class="sticker-amt" id="prev-amt" style="font-size:10px;">₹500</span>
+          <span class="sticker-code" id="prev-code" style="font-size:7px;">ARM-500-PREV</span>
         </div>
       </div>
 
@@ -567,14 +608,39 @@
     updateLivePreview();
   }
 
+  function setCombo(c, a) {
+    document.getElementById('input_count').value = c;
+    document.getElementById('input_amount').value = a;
+    const colEl = document.getElementById('input_cols');
+    if (colEl && c >= 100) {
+      colEl.value = "10";
+    }
+    updateLivePreview();
+  }
+
   function updateLivePreview() {
     const batchName = document.getElementById('input_batch_name').value.trim() || 'AARAMBH BATCH #1';
     const count = parseInt(document.getElementById('input_count').value) || 1;
     const amount = parseFloat(document.getElementById('input_amount').value) || 500;
+    const address = (document.getElementById('input_address')?.value || '').trim();
+    const pincode = (document.getElementById('input_pincode')?.value || '').trim();
+    const gstin = (document.getElementById('input_gstin')?.value || '').trim();
     
     // Update labels
     document.getElementById('prev-brand').innerText = batchName;
     document.getElementById('prev-amt').innerText = '₹' + amount;
+
+    // Update address & GSTIN on sticker
+    const addrEl = document.getElementById('prev-sticker-address');
+    if (addrEl) {
+      addrEl.innerText = (address ? address : '') + (pincode ? ' - ' + pincode : '');
+      addrEl.style.display = (address || pincode) ? 'block' : 'none';
+    }
+    const gstinEl = document.getElementById('prev-sticker-gstin');
+    if (gstinEl) {
+      gstinEl.innerText = gstin ? 'GST: ' + gstin : '';
+      gstinEl.style.display = gstin ? 'block' : 'none';
+    }
     
     const sampleCode = `ARM-${Math.round(amount)}-SAMPLE`;
     document.getElementById('prev-code').innerText = sampleCode;

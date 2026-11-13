@@ -21,4 +21,13 @@ class DispatchItem extends Model
     {
         return $this->belongsTo(Item::class);
     }
+
+    public function getThansListAttribute(): array
+    {
+        if (!empty($this->thans_data)) {
+            $decoded = is_string($this->thans_data) ? json_decode($this->thans_data, true) : $this->thans_data;
+            if (is_array($decoded)) return $decoded;
+        }
+        return [];
+    }
 }

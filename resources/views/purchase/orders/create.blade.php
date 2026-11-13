@@ -56,14 +56,14 @@
           <select name="vendor_name" id="vendor-select" class="form-control" required onchange="onVendorChange(this)">
             <option value="">-- Select Vendor / Supplier --</option>
             @forelse($vendors as $v)
-              <option value="{{ $v->name }}" data-id="{{ $v->id }}" data-code="{{ $v->code }}" data-city="{{ $v->city ?? '' }}">
+              <option value="{{ $v->name }}" data-id="{{ $v->id }}" data-code="{{ $v->code }}" data-city="{{ $v->city ?? '' }}" {{ (request('vendor_id') == $v->id) ? 'selected' : '' }}>
                 {{ $v->name }} ({{ $v->code }}){{ !empty($v->city) ? ' - '.$v->city : '' }}
               </option>
             @empty
               <option value="" disabled>No vendors found in Vendor Master</option>
             @endforelse
           </select>
-          <input type="hidden" name="vendor_id" id="vendor_id">
+          <input type="hidden" name="vendor_id" id="vendor_id" value="{{ request('vendor_id') }}">
         </div>
 
         <!-- Supplier Challan / Bill No -->
@@ -93,6 +93,22 @@
             Challan / Entry Date <span style="color:#ef4444;">*</span>
           </label>
           <input type="date" name="po_date" class="form-control" required value="{{ date('Y-m-d') }}">
+        </div>
+
+        <!-- Transport Name (Tally Format Image 3) -->
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label" style="font-weight:700; color:var(--slate-800); margin-bottom:6px;">
+            Transport Name
+          </label>
+          <input type="text" name="transport_name" class="form-control" placeholder="e.g. VRL Logistics, SafeExpress" value="{{ old('transport_name') }}">
+        </div>
+
+        <!-- Bilty No (Tally Format Image 3) -->
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label" style="font-weight:700; color:var(--slate-800); margin-bottom:6px;">
+            Bilty No. / LR No.
+          </label>
+          <input type="text" name="bilty_no" class="form-control" placeholder="e.g. BLTY-88412" value="{{ old('bilty_no') }}">
         </div>
 
       </div>
@@ -734,6 +750,10 @@
   });
 
   document.addEventListener('DOMContentLoaded', () => {
+    const vSel = document.getElementById('vendor-select');
+    if (vSel && vSel.value) {
+      onVendorChange(vSel);
+    }
     renderAllItems();
     calculateOverallTotals();
   });

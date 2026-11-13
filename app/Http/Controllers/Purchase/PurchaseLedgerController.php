@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Purchase;
 
 use App\Http\Controllers\Controller;
 use App\Models\PurchaseOrder;
+use App\Models\PurchaseOrderItem;
 use App\Models\Vendor;
 use App\Models\CompanySetting;
 use Illuminate\Http\Request;
@@ -12,7 +13,7 @@ use Carbon\Carbon;
 class PurchaseLedgerController extends Controller
 {
     /**
-     * Display Tally-Style Purchase Ledger Report
+     * Display Tally-Style Purchase Ledger Report with Item Details
      */
     public function index(Request $request)
     {
@@ -52,7 +53,7 @@ class PurchaseLedgerController extends Controller
             $toDate = $request->input('to_date', $defaultToDate);
         }
 
-        $query = PurchaseOrder::query();
+        $query = PurchaseOrder::with(['items', 'vendor']);
 
         // Exclude cancelled bills
         $query->where('status', '!=', 'Cancelled');
@@ -71,6 +72,19 @@ class PurchaseLedgerController extends Controller
             $query->whereDate('po_date', '<=', $toDate);
         }
 
+        $search = $request->input('search');
+        if (!empty($search)) {
+            $query->where(function ($q) use ($search) {
+                $q->where('po_number', 'like', "%{$search}%")
+                  ->orWhere('challan_no', 'like', "%{$search}%")
+                  ->orWhere('vendor_name', 'like', "%{$search}%")
+                  ->orWhereHas('items', function ($sub) use ($search) {
+                      $sub->where('item_name', 'like', "%{$search}%")
+                          ->orWhere('item_code', 'like', "%{$search}%");
+                  });
+            });
+        }
+
         // Tally-style ledger is sorted chronologically
         $query->orderBy('po_date', 'asc')->orderBy('id', 'asc');
 
@@ -78,6 +92,12 @@ class PurchaseLedgerController extends Controller
 
         $totalAmount = (float) $bills->sum('grand_total');
         $billCount = $bills->count();
+
+        // Calculate total items quantity
+        $totalItemsQty = 0;
+        foreach ($bills as $b) {
+            $totalItemsQty += $b->items->sum('ordered_qty');
+        }
 
         // CSV Export handling
         if ($request->query('export') === 'csv') {
@@ -91,6 +111,7 @@ class PurchaseLedgerController extends Controller
                 'bills' => $bills,
                 'total_amount' => $totalAmount,
                 'bill_count' => $billCount,
+                'total_items_qty' => $totalItemsQty,
                 'from_date' => $fromDate,
                 'to_date' => $toDate
             ]);
@@ -105,15 +126,17 @@ class PurchaseLedgerController extends Controller
             'bills',
             'totalAmount',
             'billCount',
+            'totalItemsQty',
             'fromDate',
             'toDate',
             'periodPreset',
+            'search',
             'companySettings'
         ));
     }
 
     /**
-     * Export Tally-Style Purchase Ledger to CSV
+     * Export Tally-Style Purchase Ledger to CSV with Item Details
      */
     protected function exportCsv($bills, $vendor, $fromDate, $toDate, $totalAmount)
     {
@@ -121,7 +144,7 @@ class PurchaseLedgerController extends Controller
         $filename = "Purchase_Ledger_{$vendorTitle}_" . date('Ymd_His') . ".csv";
 
         $headers = [
-            'Content-Type' => 'text/csv',
+            'Content-Type' => 'text/csv; charset=UTF-8',
             'Content-Disposition' => "attachment; filename=\"{$filename}\"",
         ];
 
@@ -129,7 +152,7 @@ class PurchaseLedgerController extends Controller
             $handle = fopen('php://output', 'w');
 
             // Header info
-            fputcsv($handle, ['PURCHASE LEDGER (Tally-Style Accounting Report)']);
+            fputcsv($handle, ['PURCHASE LEDGER WITH ITEM DETAILS']);
             fputcsv($handle, ['Party / Supplier:', $vendor ? "{$vendor->name} [{$vendor->code}]" : 'All Suppliers']);
             if ($vendor && $vendor->gstin) {
                 fputcsv($handle, ['Supplier GSTIN:', $vendor->gstin]);
@@ -137,21 +160,69 @@ class PurchaseLedgerController extends Controller
             fputcsv($handle, ['Reporting Period:', ($fromDate ?: 'Start') . ' to ' . ($toDate ?: 'End')]);
             fputcsv($handle, []);
 
-            // 3 Standard Tally Columns
-            fputcsv($handle, ['Date', 'Bill Number', 'Amount']);
+            // Columns with item details
+            fputcsv($handle, [
+                'Date',
+                'Bill / Challan No',
+                'PO Number',
+                'Supplier Name',
+                'Item Name',
+                'Item Code / SKU',
+                'Quantity',
+                'Unit',
+                'Rate (Rs)',
+                'Discount (Rs)',
+                'Tax %',
+                'Tax Amount (Rs)',
+                'Item Total (Rs)',
+                'Bill Total (Rs)'
+            ]);
 
             foreach ($bills as $bill) {
                 $billNo = $bill->challan_no ?: $bill->po_number;
                 $dateFormatted = date('d-M-Y', strtotime($bill->po_date));
-                fputcsv($handle, [
-                    $dateFormatted,
-                    $billNo,
-                    number_format($bill->grand_total, 2, '.', '')
-                ]);
+
+                if ($bill->items && $bill->items->count() > 0) {
+                    foreach ($bill->items as $idx => $item) {
+                        fputcsv($handle, [
+                            $dateFormatted,
+                            $billNo,
+                            $bill->po_number,
+                            $bill->vendor_name,
+                            $item->item_name,
+                            $item->item_code ?: '—',
+                            format_quantity($item->ordered_qty),
+                            $item->unit ?: 'MTR',
+                            number_format($item->rate, 2, '.', ''),
+                            '0.00',
+                            number_format($item->tax_percent, 1, '.', '') . '%',
+                            number_format($item->tax_amount, 2, '.', ''),
+                            number_format($item->total_amount, 2, '.', ''),
+                            $idx === 0 ? number_format($bill->grand_total, 2, '.', '') : ''
+                        ]);
+                    }
+                } else {
+                    fputcsv($handle, [
+                        $dateFormatted,
+                        $billNo,
+                        $bill->po_number,
+                        $bill->vendor_name,
+                        'Fabric Quality',
+                        '—',
+                        '1',
+                        'MTR',
+                        number_format($bill->subtotal, 2, '.', ''),
+                        '0.00',
+                        '5.0%',
+                        number_format($bill->tax_total, 2, '.', ''),
+                        number_format($bill->grand_total, 2, '.', ''),
+                        number_format($bill->grand_total, 2, '.', '')
+                    ]);
+                }
             }
 
             fputcsv($handle, []);
-            fputcsv($handle, ['TOTAL PURCHASE AMOUNT', '', number_format($totalAmount, 2, '.', '')]);
+            fputcsv($handle, ['TOTAL PURCHASE AMOUNT', '', '', '', '', '', '', '', '', '', '', '', '', number_format($totalAmount, 2, '.', '')]);
 
             fclose($handle);
         };

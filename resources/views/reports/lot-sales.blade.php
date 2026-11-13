@@ -68,7 +68,12 @@
         <tbody>
           @forelse ($challans as $dc)
             <tr>
-              <td style="font-family:var(--font-mono); font-weight:700; color:var(--primary-600);">{{ $dc->challan_no }}</td>
+              <td style="font-family:var(--font-mono); font-weight:700; color:var(--primary-600);">
+                <a href="{{ route('dispatch.dispatch') }}?search={{ urlencode($dc->challan_no) }}" target="_blank" style="color:#4338ca; text-decoration:none; display:inline-flex; align-items:center; gap:4px;" title="View & Print Challan">
+                  <span>{{ $dc->challan_no }}</span>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                </a>
+              </td>
               <td style="font-weight:700; color:var(--slate-800);">{{ $dc->customer_name }}</td>
               <td>{{ date('d M Y', strtotime($dc->dispatch_date)) }}</td>
               <td>{{ $dc->transporter_name }}</td>

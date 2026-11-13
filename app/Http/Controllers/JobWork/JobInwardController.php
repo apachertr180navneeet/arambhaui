@@ -4,9 +4,12 @@ namespace App\Http\Controllers\JobWork;
 
 use App\Http\Controllers\Controller;
 use App\Models\JobAssignment;
+use App\Models\JobAssignmentItem;
 use App\Models\JobInward;
 use App\Models\JobWorker;
 use App\Models\Item;
+use App\Models\Transaction;
+use App\Services\StockLedgerService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -585,7 +588,22 @@ class JobInwardController extends Controller
                         }
                     }
 
-                    if (!empty($processedAssignedThans) && $sumThanReceivedPcs > 0) {
+                    if (isset($itm['received_qty']) && is_numeric($itm['received_qty']) && (int)$itm['received_qty'] >= 0) {
+                        $receivedQty = (int)$itm['received_qty'];
+                        // Distribute into assigned thans if sum differs
+                        if (!empty($processedAssignedThans) && $sumThanReceivedPcs != $receivedQty) {
+                            $remToAlloc = $receivedQty;
+                            foreach ($processedAssignedThans as &$pat) {
+                                $thMax = (int)($pat['assigned_pcs'] - $pat['previously_received_pcs']);
+                                $alloc = min(max(0, $remToAlloc), max(0, $thMax));
+                                $pat['received_pcs'] = $alloc;
+                                $pat['remaining_pcs'] = max(0, $thMax - $alloc);
+                                $pat['status'] = ($pat['remaining_pcs'] <= 0 && ($pat['previously_received_pcs'] + $alloc) > 0) ? 'Completed' : ((($pat['previously_received_pcs'] + $alloc) > 0) ? 'Partially Received' : 'Pending');
+                                $remToAlloc -= $alloc;
+                            }
+                            unset($pat);
+                        }
+                    } elseif (!empty($processedAssignedThans) && $sumThanReceivedPcs > 0) {
                         $receivedQty = $sumThanReceivedPcs;
                     }
                     if (!empty($processedAssignedThans) && $sumThanDefectPcs > 0 && $defectQty <= 0) {
@@ -737,21 +755,43 @@ class JobInwardController extends Controller
                 $inwardData['items_data'] = !empty($processedItems) ? json_encode($processedItems) : null;
             }
 
+            if ($assignment) {
+                $prevConfirmedReceived = (int)JobInward::where('job_assignment_id', $assignment->id)->sum('received_qty');
+                $pendingBalance = max(0, (int)$assignment->issued_qty - $prevConfirmedReceived);
+                if ($overallReceivedQty > $pendingBalance) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'received_qty' => ["Received quantity ({$overallReceivedQty} Pcs) cannot exceed pending balance ({$pendingBalance} Pcs) for Job Order {$assignment->job_order_no}."]
+                    ]);
+                }
+            }
+
             $inward = JobInward::create($inwardData);
+
+            // Update individual Job Assignment line items ready_qty and defect_qty
+            foreach ($processedItems as $pItem) {
+                if (!empty($pItem['job_assignment_item_id'])) {
+                    $jai = JobAssignmentItem::find($pItem['job_assignment_item_id']);
+                    if ($jai) {
+                        $jai->ready_qty = (int)$jai->ready_qty + (int)($pItem['received_qty'] ?? 0);
+                        $jai->defect_qty = (int)$jai->defect_qty + (int)($pItem['defect_qty'] ?? 0);
+                        $jai->save();
+                    }
+                }
+            }
 
             // Recompute total received on parent Job Assignment across all inwards (if linked)
             if ($assignment) {
                 $allAssignmentInwards = JobInward::where('job_assignment_id', $assignment->id)->get();
-                $totReceived = $allAssignmentInwards->sum('received_qty');
-                $totDefect = $allAssignmentInwards->sum('defect_qty');
+                $totReceived = (int)$allAssignmentInwards->sum('received_qty');
+                $totDefect = (int)$allAssignmentInwards->sum('defect_qty');
 
-                $assignment->received_qty = (int)$totReceived;
-                $assignment->rejected_qty = (int)$totDefect;
+                $assignment->received_qty = $totReceived;
+                $assignment->rejected_qty = $totDefect;
 
                 $totalIssued = (int)$assignment->issued_qty;
                 $pending = max(0, $totalIssued - $totReceived);
 
-                if ($pending <= 0) {
+                if ($pending <= 0 && $totalIssued > 0) {
                     $assignment->status = 'Completed';
                 } elseif ($totReceived > 0) {
                     $assignment->status = 'Partial Ready';
@@ -760,6 +800,18 @@ class JobInwardController extends Controller
                 }
                 $assignment->save();
             }
+
+            // Update Job Worker outstanding balance
+            if ($resolvedWorkerId && $totalAmount > 0) {
+                $worker = JobWorker::find($resolvedWorkerId);
+                if ($worker) {
+                    $worker->outstanding = round((float)$worker->outstanding + (float)$totalAmount, 2);
+                    $worker->save();
+                }
+            }
+
+            // Sync finished goods stock into Stock Ledger
+            StockLedgerService::syncJobInwardStock($inward);
 
             if ($request->wantsJson() || $request->ajax()) {
                 return response()->json([
@@ -936,7 +988,22 @@ class JobInwardController extends Controller
                         }
                     }
 
-                    if (!empty($processedAssignedThans) && $sumThanReceivedPcs > 0) {
+                    if (isset($itm['received_qty']) && is_numeric($itm['received_qty']) && (int)$itm['received_qty'] >= 0) {
+                        $receivedQty = (int)$itm['received_qty'];
+                        // Distribute into assigned thans if sum differs
+                        if (!empty($processedAssignedThans) && $sumThanReceivedPcs != $receivedQty) {
+                            $remToAlloc = $receivedQty;
+                            foreach ($processedAssignedThans as &$pat) {
+                                $thMax = (int)($pat['assigned_pcs'] - $pat['previously_received_pcs']);
+                                $alloc = min(max(0, $remToAlloc), max(0, $thMax));
+                                $pat['received_pcs'] = $alloc;
+                                $pat['remaining_pcs'] = max(0, $thMax - $alloc);
+                                $pat['status'] = ($pat['remaining_pcs'] <= 0 && ($pat['previously_received_pcs'] + $alloc) > 0) ? 'Completed' : ((($pat['previously_received_pcs'] + $alloc) > 0) ? 'Partially Received' : 'Pending');
+                                $remToAlloc -= $alloc;
+                            }
+                            unset($pat);
+                        }
+                    } elseif (!empty($processedAssignedThans) && $sumThanReceivedPcs > 0) {
                         $receivedQty = $sumThanReceivedPcs;
                     }
                     if (!empty($processedAssignedThans) && $sumThanDefectPcs > 0 && $defectQty <= 0) {
@@ -1078,21 +1145,22 @@ class JobInwardController extends Controller
                 $updateData['items_data'] = !empty($processedItems) ? json_encode($processedItems) : null;
             }
 
+            $oldAmount = (float)$inward->total_amount;
             $inward->update($updateData);
 
             // Update assignment status if linked
             if ($assignment) {
                 $allAssignmentInwards = JobInward::where('job_assignment_id', $assignment->id)->get();
-                $totReceived = $allAssignmentInwards->sum('received_qty');
-                $totDefect = $allAssignmentInwards->sum('defect_qty');
+                $totReceived = (int)$allAssignmentInwards->sum('received_qty');
+                $totDefect = (int)$allAssignmentInwards->sum('defect_qty');
 
-                $assignment->received_qty = (int)$totReceived;
-                $assignment->rejected_qty = (int)$totDefect;
+                $assignment->received_qty = $totReceived;
+                $assignment->rejected_qty = $totDefect;
 
                 $totalIssued = (int)$assignment->issued_qty;
                 $pending = max(0, $totalIssued - $totReceived);
 
-                if ($pending <= 0) {
+                if ($pending <= 0 && $totalIssued > 0) {
                     $assignment->status = 'Completed';
                 } elseif ($totReceived > 0) {
                     $assignment->status = 'Partial Ready';
@@ -1101,6 +1169,19 @@ class JobInwardController extends Controller
                 }
                 $assignment->save();
             }
+
+            // Update Job Worker outstanding adjustment
+            $diffAmount = round((float)$totalAmount - $oldAmount, 2);
+            if ($workerId && $diffAmount != 0) {
+                $worker = JobWorker::find($workerId);
+                if ($worker) {
+                    $worker->outstanding = round(max(0, (float)$worker->outstanding + $diffAmount), 2);
+                    $worker->save();
+                }
+            }
+
+            // Sync stock ledger
+            StockLedgerService::syncJobInwardStock($inward);
 
             if ($request->wantsJson() || $request->ajax()) {
                 return response()->json([
@@ -1120,8 +1201,20 @@ class JobInwardController extends Controller
         $inward = JobInward::findOrFail($id);
 
         DB::transaction(function () use ($inward) {
-            // Note: Stock is not altered on deletion.
             $assignId = $inward->job_assignment_id;
+
+            // Revert Job Worker outstanding
+            if ($inward->job_worker_id && (float)$inward->total_amount > 0) {
+                $worker = JobWorker::find($inward->job_worker_id);
+                if ($worker) {
+                    $worker->outstanding = round(max(0, (float)$worker->outstanding - (float)$inward->total_amount), 2);
+                    $worker->save();
+                }
+            }
+
+            // Remove stock transaction
+            Transaction::where('source_type', 'JobInward')->where('source_id', $inward->id)->delete();
+
             $inward->delete();
 
             if ($assignId) {

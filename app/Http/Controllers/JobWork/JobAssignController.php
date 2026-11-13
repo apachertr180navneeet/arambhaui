@@ -9,6 +9,8 @@ use App\Models\JobWorker;
 use App\Models\Item;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
+use App\Models\Transaction;
+use App\Services\StockLedgerService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -531,6 +533,9 @@ class JobAssignController extends Controller
                 'instructions' => $validated['instructions'] ?? null
             ];
 
+            if (Schema::hasColumn('job_assignments', 'maintain_stock')) {
+                $assignmentData['maintain_stock'] = $request->has('maintain_stock') ? $request->boolean('maintain_stock') : true;
+            }
             if (Schema::hasColumn('job_assignments', 'total_thans')) {
                 $assignmentData['total_thans'] = $totalThansCount;
             }
@@ -582,8 +587,10 @@ class JobAssignController extends Controller
                 if ($hasItemThanDetails) $itemPayload['than_details'] = $pItem['than_details'];
 
                 JobAssignmentItem::create($itemPayload);
-                // Note: Stock maintenance disabled as per business requirements.
             }
+
+            // Sync raw materials deduction into Stock Ledger
+            StockLedgerService::syncJobAssignmentStock($jobAssignment);
 
             if ($request->wantsJson() || $request->ajax()) {
                 return response()->json([
@@ -821,6 +828,9 @@ class JobAssignController extends Controller
                 'instructions' => $validated['instructions'] ?? null
             ];
 
+            if (Schema::hasColumn('job_assignments', 'maintain_stock')) {
+                $assignmentData['maintain_stock'] = $request->has('maintain_stock') ? $request->boolean('maintain_stock') : true;
+            }
             if (Schema::hasColumn('job_assignments', 'total_thans')) {
                 $assignmentData['total_thans'] = $totalThansCount;
             }
@@ -875,8 +885,10 @@ class JobAssignController extends Controller
                 if ($hasItemThanDetails) $itemPayload['than_details'] = $pItem['than_details'];
 
                 JobAssignmentItem::create($itemPayload);
-                // Note: Stock maintenance disabled as per business requirements.
             }
+
+            // Sync raw materials deduction into Stock Ledger
+            StockLedgerService::syncJobAssignmentStock($assign);
 
             if ($request->wantsJson() || $request->ajax()) {
                 return response()->json([
@@ -898,10 +910,16 @@ class JobAssignController extends Controller
     public function destroy(JobAssignment $assign)
     {
         $no = $assign->job_order_no;
+        $assignId = $assign->id;
+        $rawItemIds = $assign->items()->whereNotNull('raw_item_id')->pluck('raw_item_id')->all();
 
-        // Note: Stock maintenance disabled as per business requirements.
+        Transaction::where('source_type', 'JobAssignment')->where('source_id', $assignId)->delete();
         $assign->items()->delete();
         $assign->delete();
+
+        foreach ($rawItemIds as $rId) {
+            StockLedgerService::recalculateItemStock($rId);
+        }
 
         if (request()->wantsJson() || request()->ajax()) {
             return response()->json(['success' => true, 'message' => "Job order {$no} removed."]);

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class CustomerController extends Controller
 {
@@ -80,7 +81,12 @@ class CustomerController extends Controller
             'code' => 'nullable|string|max:50',
             'company_name' => 'nullable|string|max:255',
             'contact_person' => 'nullable|string|max:255',
-            'email' => 'nullable|email|max:255',
+            'email' => [
+                'nullable',
+                'email',
+                'max:255',
+                Rule::unique('customers', 'email')->whereNull('deleted_at'),
+            ],
             'gstin' => 'nullable|string|max:50',
             'pan_number' => 'nullable|string|max:50',
             'address' => 'nullable|string',
@@ -145,7 +151,12 @@ class CustomerController extends Controller
             'code' => 'nullable|string|max:50',
             'company_name' => 'nullable|string|max:255',
             'contact_person' => 'nullable|string|max:255',
-            'email' => 'nullable|email|max:255',
+            'email' => [
+                'nullable',
+                'email',
+                'max:255',
+                Rule::unique('customers', 'email')->ignore($customer->id)->whereNull('deleted_at'),
+            ],
             'gstin' => 'nullable|string|max:50',
             'pan_number' => 'nullable|string|max:50',
             'address' => 'nullable|string',

@@ -8,6 +8,7 @@ use App\Models\PurchaseOrderItem;
 use App\Models\Vendor;
 use App\Models\Item;
 use App\Models\Unit;
+use App\Services\StockLedgerService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -208,6 +209,12 @@ class PurchaseOrderController extends Controller
             if (Schema::hasColumn('purchase_orders', 'challan_no')) {
                 $poData['challan_no'] = $challanNo;
             }
+            if (Schema::hasColumn('purchase_orders', 'transport_name')) {
+                $poData['transport_name'] = $request->input('transport_name');
+            }
+            if (Schema::hasColumn('purchase_orders', 'bilty_no')) {
+                $poData['bilty_no'] = $request->input('bilty_no');
+            }
             if (Schema::hasColumn('purchase_orders', 'total_thans')) {
                 $poData['total_thans'] = $overallTotalThans;
             }
@@ -245,6 +252,9 @@ class PurchaseOrderController extends Controller
                     Item::where('id', $pItem['item_id'])->update(['unit_cost' => $pItem['rate']]);
                 }
             }
+
+            // Sync purchased item stock and Stock Ledger transactions
+            StockLedgerService::syncPurchaseOrderStock($po);
 
             if ($request->expectsJson() || $request->wantsJson() || $request->ajax() || $request->isJson() || str_contains((string)$request->header('Accept'), 'application/json')) {
                 return response()->json(['success' => true, 'order' => $po->load('items')]);
@@ -353,6 +363,12 @@ class PurchaseOrderController extends Controller
             if (Schema::hasColumn('purchase_orders', 'challan_no')) {
                 $updateData['challan_no'] = $challanNo;
             }
+            if (Schema::hasColumn('purchase_orders', 'transport_name')) {
+                $updateData['transport_name'] = $request->input('transport_name', $order->transport_name);
+            }
+            if (Schema::hasColumn('purchase_orders', 'bilty_no')) {
+                $updateData['bilty_no'] = $request->input('bilty_no', $order->bilty_no);
+            }
             if (Schema::hasColumn('purchase_orders', 'total_thans')) {
                 $updateData['total_thans'] = $overallTotalThans;
             }
@@ -392,6 +408,9 @@ class PurchaseOrderController extends Controller
                     Item::where('id', $pItem['item_id'])->update(['unit_cost' => $pItem['rate']]);
                 }
             }
+
+            // Sync purchased item stock and Stock Ledger transactions
+            StockLedgerService::syncPurchaseOrderStock($order);
 
             if ($request->expectsJson() || $request->wantsJson() || $request->ajax() || $request->isJson() || str_contains((string)$request->header('Accept'), 'application/json')) {
                 return response()->json(['success' => true, 'order' => $order->load('items')]);
@@ -524,6 +543,8 @@ class PurchaseOrderController extends Controller
     public function destroy(PurchaseOrder $order)
     {
         $poNumber = $order->po_number;
+        $order->status = 'Cancelled';
+        StockLedgerService::syncPurchaseOrderStock($order);
         $order->items()->delete();
         $order->delete();
 

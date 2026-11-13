@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\JobWorker;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class JobWorkerController extends Controller
 {
@@ -61,7 +62,12 @@ class JobWorkerController extends Controller
             'phone' => 'required|string|max:30',
             'code' => 'nullable|string|max:50',
             'contact_person' => 'nullable|string|max:255',
-            'email' => 'nullable|email|max:255',
+            'email' => [
+                'nullable',
+                'email',
+                'max:255',
+                Rule::unique('job_workers', 'email')->whereNull('deleted_at'),
+            ],
             'address' => 'nullable|string',
             'city' => 'nullable|string|max:100',
             'state' => 'nullable|string|max:100',
@@ -120,7 +126,12 @@ class JobWorkerController extends Controller
             'phone' => 'sometimes|required|string|max:30',
             'code' => 'nullable|string|max:50',
             'contact_person' => 'nullable|string|max:255',
-            'email' => 'nullable|email|max:255',
+            'email' => [
+                'nullable',
+                'email',
+                'max:255',
+                Rule::unique('job_workers', 'email')->ignore($jobworker->id)->whereNull('deleted_at'),
+            ],
             'address' => 'nullable|string',
             'city' => 'nullable|string|max:100',
             'state' => 'nullable|string|max:100',

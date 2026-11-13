@@ -16,6 +16,7 @@ class JobAssignment extends Model
         'photos' => 'array',
         'issue_date' => 'date',
         'due_date' => 'date',
+        'maintain_stock' => 'boolean',
     ];
 
     public function getPhotosListAttribute(): array

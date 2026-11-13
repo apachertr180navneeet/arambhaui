@@ -333,7 +333,7 @@
         </button>
         <a href="{{ route('dispatch.challans.create') }}" class="btn btn-primary btn-sm" style="display:inline-flex; align-items:center; gap:6px; font-weight:700; box-shadow:0 2px 8px rgba(37, 99, 235, 0.3);">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
-          Generate Delivery Challan
+          + New Sales / Delivery Challan
         </a>
       </div>
     </div>
@@ -372,6 +372,7 @@
             <th>LR Number</th>
             <th>Vehicle #</th>
             <th>Cartons</th>
+            <th>Thans</th>
             <th>Total Qty</th>
             <th>Status</th>
             <th style="text-align:right; width:130px;">Actions</th>
@@ -445,6 +446,16 @@
               <td>
                 <span class="badge" style="background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; font-weight:700;">
                   {{ $dc->total_cartons }} CTN
+                </span>
+              </td>
+
+              <!-- Thans Count (Image 4 Requirement) -->
+              <td>
+                @php
+                  $thansCount = $dc->total_thans ?: $dc->items->sum('than_count');
+                @endphp
+                <span class="badge" style="background:#f5f3ff; color:#7c3aed; border:1px solid #ddd6fe; font-weight:700;">
+                  {{ $thansCount }} {{ Str::plural('Than', $thansCount) }}
                 </span>
               </td>
 

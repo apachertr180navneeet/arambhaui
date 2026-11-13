@@ -172,7 +172,7 @@
           </div>
         </div>
 
-        <!-- 3. QR CODE MANAGEMENT -->
+        <!-- 3. QR CODE MANAGEMENT (Image 2: QR mgmt) -->
         <div class="nav-section">
           <div class="nav-section-title">Barcodes & QR</div>
           <div class="nav-item nav-group {{ request()->is('qr*') ? 'expanded' : '' }}">
@@ -185,32 +185,31 @@
             </a>
             <div class="nav-submenu">
               <a href="{{ route('qr.history') }}" class="submenu-link {{ request()->routeIs('qr.history') ? 'active' : '' }}">Admin QR & Expiry Ledger</a>
-              <a href="{{ route('qr.generator') }}" class="submenu-link {{ request()->routeIs('qr.generator') ? 'active' : '' }}">+ Generate Single-Use QR</a>
+              <a href="{{ route('qr.generator') }}" class="submenu-link {{ request()->routeIs('qr.generator') ? 'active' : '' }}">QR Generator & Sheet Print</a>
             </div>
           </div>
         </div>
 
-        <!-- 4. PURCHASE MANAGEMENT -->
+        <!-- 4. PURCHASE MANAGEMENT (Image 2: Purchase Book) -->
         <div class="nav-section">
           <div class="nav-section-title">Purchasing</div>
           <div class="nav-item nav-group {{ request()->is('purchase*') ? 'expanded' : '' }}">
             <a href="javascript:void(0)" class="nav-link nav-group-toggle {{ request()->is('purchase*') ? 'active' : '' }}">
               <div class="nav-link-content">
                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-                <span class="nav-title">Purchase Mgmt</span>
+                <span class="nav-title">Purchase Book</span>
               </div>
               <svg class="nav-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
             </a>
             <div class="nav-submenu">
-              <a href="{{ route('purchase.orders.index') }}" class="submenu-link {{ request()->routeIs('purchase.orders.index') ? 'active' : '' }}">Purchase Entry</a>
-              <a href="{{ route('purchase.orders.create') }}" class="submenu-link {{ request()->routeIs('purchase.orders.create') ? 'active' : '' }}">+ New Purchase Entry</a>
+              <a href="{{ route('purchase.orders.index') }}" class="submenu-link {{ request()->routeIs('purchase.orders.index') ? 'active' : '' }}">Purchase Entries</a>
               <a href="{{ route('purchase.ledger') }}" class="submenu-link {{ request()->routeIs('purchase.ledger') ? 'active' : '' }}">Purchase Ledger (Tally)</a>
               <a href="{{ route('purchase.payment-mapping') }}" class="submenu-link {{ request()->routeIs('purchase.payment-mapping') ? 'active' : '' }}">Payment Mapping</a>
             </div>
           </div>
         </div>
 
-        <!-- 5. JOB WORK & ASSIGN -->
+        <!-- 5. JOB WORK & ASSIGN (Image 2: Jobwork Assign & Jobwork Inward) -->
         <div class="nav-section">
           <div class="nav-section-title">Job Assignment</div>
           <div class="nav-item nav-group {{ request()->is('jobwork*') ? 'expanded' : '' }}">
@@ -224,26 +223,26 @@
             <div class="nav-submenu">
               <a href="{{ route('jobwork.assign.index') }}" class="submenu-link {{ request()->routeIs('jobwork.assign.*') ? 'active' : '' }}">Job Assign Orders</a>
               <a href="{{ route('jobwork.inward.index') }}" class="submenu-link {{ request()->routeIs('jobwork.inward.index') ? 'active' : '' }}">Job Inward Entries</a>
-              <a href="{{ route('jobwork.inward.create') }}" class="submenu-link {{ request()->routeIs('jobwork.inward.create') ? 'active' : '' }}">+ New Inward Entry</a>
-              <a href="{{ route('jobwork.inward-report') }}" class="submenu-link {{ request()->routeIs('jobwork.inward-report') ? 'active' : '' }}">Job Inward & Ready Report</a>
+              <a href="{{ route('jobwork.inward-report') }}" class="submenu-link {{ request()->routeIs('jobwork.inward-report') ? 'active' : '' }}">Job Inward Register</a>
+              <a href="{{ route('reports.job-work-register') }}" class="submenu-link {{ request()->routeIs('reports.job-work-register') || request()->routeIs('jobwork.register') ? 'active' : '' }}">Job Work Register</a>
             </div>
           </div>
         </div>
 
-        <!-- 6. DISPATCH MANAGEMENT -->
+        <!-- 6. DISPATCH MANAGEMENT (Image 2: Dispatch challan) -->
         <div class="nav-section">
-          <div class="nav-section-title">Shipping</div>
+          <div class="nav-section-title">Shipping & Sales</div>
           <div class="nav-item nav-group {{ request()->is('dispatch*') ? 'expanded' : '' }}">
             <a href="javascript:void(0)" class="nav-link nav-group-toggle {{ request()->is('dispatch*') ? 'active' : '' }}">
               <div class="nav-link-content">
                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>
-                <span class="nav-title">Dispatch Management</span>
+                <span class="nav-title">Dispatch Challan</span>
               </div>
               <svg class="nav-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
             </a>
             <div class="nav-submenu">
-              <a href="{{ route('dispatch.ready') }}" class="submenu-link {{ request()->routeIs('dispatch.ready') ? 'active' : '' }}">Ready for Dispatch</a>
               <a href="{{ route('dispatch.dispatch') }}" class="submenu-link {{ request()->routeIs('dispatch.dispatch') || request()->routeIs('dispatch.challans.*') ? 'active' : '' }}">Dispatch Challans</a>
+              <a href="{{ route('dispatch.ready') }}" class="submenu-link {{ request()->routeIs('dispatch.ready') ? 'active' : '' }}">Ready for Dispatch</a>
             </div>
           </div>
         </div>
@@ -269,11 +268,11 @@
           </div>
         </div>
 
-        <!-- 8. REPORTS HUB -->
+        <!-- 8. REPORTS HUB (Image 2: Reports Section) -->
         <div class="nav-section">
-          <div class="nav-section-title">Analytics</div>
-          <div class="nav-item nav-group {{ request()->is('reports*') ? 'expanded' : '' }}">
-            <a href="javascript:void(0)" class="nav-link nav-group-toggle {{ request()->is('reports*') ? 'active' : '' }}">
+          <div class="nav-section-title">Analytics & Reports</div>
+          <div class="nav-item nav-group {{ request()->is('reports*') || request()->routeIs('purchase.ledger') ? 'expanded' : '' }}">
+            <a href="javascript:void(0)" class="nav-link nav-group-toggle {{ request()->is('reports*') || request()->routeIs('purchase.ledger') ? 'active' : '' }}">
               <div class="nav-link-content">
                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
                 <span class="nav-title">Reports Hub</span>
@@ -281,11 +280,12 @@
               <svg class="nav-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
             </a>
             <div class="nav-submenu">
-              <a href="{{ route('purchase.ledger') }}" class="submenu-link {{ request()->routeIs('purchase.ledger') || request()->routeIs('reports.purchase-ledger') ? 'active' : '' }}">Purchase Ledger (Tally)</a>
+              <a href="{{ route('purchase.ledger') }}" class="submenu-link {{ request()->routeIs('purchase.ledger') || request()->routeIs('reports.purchase-ledger') ? 'active' : '' }}">Purchase Register (Tally)</a>
+              <a href="{{ route('reports.job-work-register') }}" class="submenu-link {{ request()->routeIs('reports.job-work-register') ? 'active' : '' }}">Job Assign Register</a>
+              <a href="{{ route('jobwork.inward-report') }}" class="submenu-link {{ request()->routeIs('jobwork.inward-report') ? 'active' : '' }}">Job Inward Register</a>
+              <a href="{{ route('reports.lot-sales') }}" class="submenu-link {{ request()->routeIs('reports.lot-sales') ? 'active' : '' }}">Dispatch Register</a>
               <a href="{{ route('reports.ledger') }}" class="submenu-link {{ request()->routeIs('reports.ledger') ? 'active' : '' }}">Item Stock Ledger</a>
-              <a href="{{ route('reports.stock') }}" class="submenu-link {{ request()->routeIs('reports.stock') ? 'active' : '' }}">Stock Report</a>
-              <a href="{{ route('reports.lot-purchase') }}" class="submenu-link {{ request()->routeIs('reports.lot-purchase') ? 'active' : '' }}">Lot-Wise Purchase</a>
-              <a href="{{ route('reports.lot-sales') }}" class="submenu-link {{ request()->routeIs('reports.lot-sales') ? 'active' : '' }}">Lot-Wise Sales</a>
+              <a href="{{ route('reports.stock') }}" class="submenu-link {{ request()->routeIs('reports.stock') ? 'active' : '' }}">Stock Summary Report</a>
             </div>
           </div>
         </div>

@@ -82,6 +82,7 @@ Route::middleware('auth')->group(function () {
         Route::resource('assign', JobAssignController::class);
         Route::resource('inward', JobInwardController::class);
         Route::get('inward-report', [JobInwardReportController::class, 'index'])->name('inward-report');
+        Route::get('register', [ReportsController::class, 'jobWorkRegister'])->name('register');
     });
 
     // ==========================================
@@ -143,6 +144,7 @@ Route::middleware('auth')->group(function () {
     // 9. CENTRAL REPORTS HUB
     // ==========================================
     Route::prefix('reports')->name('reports.')->group(function () {
+        Route::get('job-work-register', [ReportsController::class, 'jobWorkRegister'])->name('job-work-register');
         Route::get('ledger', [ReportsController::class, 'itemLedger'])->name('ledger');
         Route::get('purchase-ledger', [PurchaseLedgerController::class, 'index'])->name('purchase-ledger');
         Route::get('stock', [ReportsController::class, 'stockReport'])->name('stock');
@@ -188,72 +190,72 @@ Route::get('/run-migration', function (\Illuminate\Http\Request $request) {
         }
 
         return "<!DOCTYPE html>
-<html lang='en'>
-<head>
-    <meta charset='UTF-8'>
-    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
-    <title>Migration Status - aarambh</title>
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #f8fafc; padding: 40px 20px; margin: 0; }
-        .container { max-width: 760px; margin: 0 auto; background: #1e293b; border-radius: 16px; border: 1px solid #334155; padding: 30px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); }
-        .header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
-        .badge { background: #059669; color: white; padding: 4px 12px; border-radius: 20px; font-weight: 700; font-size: 0.85rem; }
-        h2 { margin: 0; font-size: 1.4rem; color: #ffffff; }
-        pre { background: #090d16; color: #34d399; padding: 20px; border-radius: 10px; font-family: 'Fira Code', Consolas, monospace; font-size: 0.9rem; overflow-x: auto; border: 1px solid #1e293b; line-height: 1.5; }
-        .actions { margin-top: 24px; display: flex; gap: 12px; flex-wrap: wrap; }
-        .btn { padding: 10px 18px; border-radius: 8px; font-weight: 600; text-decoration: none; font-size: 0.875rem; transition: all 0.2s; }
-        .btn-primary { background: #2563eb; color: white; }
-        .btn-secondary { background: #334155; color: #cbd5e1; }
-        .btn-primary:hover { background: #1d4ed8; }
-        .btn-secondary:hover { background: #475569; color: white; }
-    </style>
-</head>
-<body>
-    <div class='container'>
-        <div class='header'>
-            <span class='badge'>SUCCESS</span>
-            <h2>Database Migrations Executed</h2>
-        </div>
-        <p style='color:#94a3b8; margin: 0 0 16px; font-size: 0.95rem;'>Command: <code style='color:#60a5fa;'>php artisan migrate --force</code></p>
-        <pre>" . (trim($output) ?: 'Nothing to migrate. All migrations are already up to date.') . "</pre>
-        <div class='actions'>
-            <a href='" . url('/clear-cache') . "' class='btn btn-secondary'>Clear Cache / Optimize</a>
-            <a href='" . url('/dashboard') . "' class='btn btn-primary'>Go to Dashboard &rarr;</a>
-        </div>
-    </div>
-</body>
-</html>";
+                <html lang='en'>
+                <head>
+                    <meta charset='UTF-8'>
+                    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                    <title>Migration Status - aarambh</title>
+                    <style>
+                        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #f8fafc; padding: 40px 20px; margin: 0; }
+                        .container { max-width: 760px; margin: 0 auto; background: #1e293b; border-radius: 16px; border: 1px solid #334155; padding: 30px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); }
+                        .header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+                        .badge { background: #059669; color: white; padding: 4px 12px; border-radius: 20px; font-weight: 700; font-size: 0.85rem; }
+                        h2 { margin: 0; font-size: 1.4rem; color: #ffffff; }
+                        pre { background: #090d16; color: #34d399; padding: 20px; border-radius: 10px; font-family: 'Fira Code', Consolas, monospace; font-size: 0.9rem; overflow-x: auto; border: 1px solid #1e293b; line-height: 1.5; }
+                        .actions { margin-top: 24px; display: flex; gap: 12px; flex-wrap: wrap; }
+                        .btn { padding: 10px 18px; border-radius: 8px; font-weight: 600; text-decoration: none; font-size: 0.875rem; transition: all 0.2s; }
+                        .btn-primary { background: #2563eb; color: white; }
+                        .btn-secondary { background: #334155; color: #cbd5e1; }
+                        .btn-primary:hover { background: #1d4ed8; }
+                        .btn-secondary:hover { background: #475569; color: white; }
+                    </style>
+                </head>
+                <body>
+                    <div class='container'>
+                        <div class='header'>
+                            <span class='badge'>SUCCESS</span>
+                            <h2>Database Migrations Executed</h2>
+                        </div>
+                        <p style='color:#94a3b8; margin: 0 0 16px; font-size: 0.95rem;'>Command: <code style='color:#60a5fa;'>php artisan migrate --force</code></p>
+                        <pre>" . (trim($output) ?: 'Nothing to migrate. All migrations are already up to date.') . "</pre>
+                        <div class='actions'>
+                            <a href='" . url('/clear-cache') . "' class='btn btn-secondary'>Clear Cache / Optimize</a>
+                            <a href='" . url('/dashboard') . "' class='btn btn-primary'>Go to Dashboard &rarr;</a>
+                        </div>
+                    </div>
+                </body>
+                </html>";
 
-    } catch (\Throwable $e) {
-        if ($request->wantsJson() || $request->ajax()) {
-            return response()->json([
-                'status' => 'error',
-                'message' => $e->getMessage()
-            ], 500);
-        }
+                    } catch (\Throwable $e) {
+                        if ($request->wantsJson() || $request->ajax()) {
+                            return response()->json([
+                                'status' => 'error',
+                                'message' => $e->getMessage()
+                            ], 500);
+                        }
 
-        return "<!DOCTYPE html>
-<html lang='en'>
-<head>
-    <meta charset='UTF-8'>
-    <title>Migration Error - aarambh</title>
-    <style>
-        body { font-family: sans-serif; background: #0f172a; color: #f8fafc; padding: 40px 20px; }
-        .container { max-width: 760px; margin: 0 auto; background: #1e293b; border-radius: 16px; border: 1px solid #ef4444; padding: 30px; }
-        .badge { background: #dc2626; color: white; padding: 4px 12px; border-radius: 20px; font-weight: 700; }
-        pre { background: #090d16; color: #f87171; padding: 20px; border-radius: 10px; font-family: monospace; overflow-x: auto; line-height: 1.5; }
-        .btn { padding: 10px 18px; border-radius: 8px; font-weight: 600; text-decoration: none; display: inline-block; margin-top: 16px; background: #2563eb; color: white; }
-    </style>
-</head>
-<body>
-    <div class='container'>
-        <span class='badge'>MIGRATION ERROR</span>
-        <h2 style='margin-top:12px;'>Database Migration Failed</h2>
-        <pre>" . htmlspecialchars($e->getMessage()) . "\n\nFile: " . htmlspecialchars($e->getFile()) . ":" . $e->getLine() . "</pre>
-        <a href='" . url('/run-migration') . "' class='btn'>Retry Migration</a>
-    </div>
-</body>
-</html>";
+                        return "<!DOCTYPE html>
+                <html lang='en'>
+                <head>
+                    <meta charset='UTF-8'>
+                    <title>Migration Error - aarambh</title>
+                    <style>
+                        body { font-family: sans-serif; background: #0f172a; color: #f8fafc; padding: 40px 20px; }
+                        .container { max-width: 760px; margin: 0 auto; background: #1e293b; border-radius: 16px; border: 1px solid #ef4444; padding: 30px; }
+                        .badge { background: #dc2626; color: white; padding: 4px 12px; border-radius: 20px; font-weight: 700; }
+                        pre { background: #090d16; color: #f87171; padding: 20px; border-radius: 10px; font-family: monospace; overflow-x: auto; line-height: 1.5; }
+                        .btn { padding: 10px 18px; border-radius: 8px; font-weight: 600; text-decoration: none; display: inline-block; margin-top: 16px; background: #2563eb; color: white; }
+                    </style>
+                </head>
+                <body>
+                    <div class='container'>
+                        <span class='badge'>MIGRATION ERROR</span>
+                        <h2 style='margin-top:12px;'>Database Migration Failed</h2>
+                        <pre>" . htmlspecialchars($e->getMessage()) . "\n\nFile: " . htmlspecialchars($e->getFile()) . ":" . $e->getLine() . "</pre>
+                        <a href='" . url('/run-migration') . "' class='btn'>Retry Migration</a>
+                    </div>
+                </body>
+                </html>";
     }
 })->name('server.migrate');
 

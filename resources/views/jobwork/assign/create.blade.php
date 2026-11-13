@@ -424,6 +424,23 @@
           <input type="date" name="due_date" class="form-control" value="{{ date('Y-m-d', strtotime('+7 days')) }}">
         </div>
 
+        <!-- Stock Maintenance Mode: Dynamic vs Dummy (Image 1 Requirement 3) -->
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label" style="font-weight:700; color:var(--slate-800); margin-bottom:6px;">
+            Stock Maintenance Mode <span style="color:#ef4444;">*</span>
+          </label>
+          <div style="display:flex; align-items:center; gap:14px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:6px 12px; height:42px;">
+            <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-weight:700; font-size:0.8rem; color:#047857; margin:0;" title="Deducts raw stock and increases finished stock">
+              <input type="radio" name="maintain_stock" value="1" checked style="accent-color:#059669; width:15px; height:15px;">
+              <span>Dynamic (Maintain Stock)</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-weight:700; font-size:0.8rem; color:#b45309; margin:0;" title="Job work without deducting raw materials or adding finished stock">
+              <input type="radio" name="maintain_stock" value="0" style="accent-color:#d97706; width:15px; height:15px;">
+              <span>Dummy (Skip Stock)</span>
+            </label>
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -740,7 +757,7 @@
       finished_item_id: '',
       finished_item_name: '',
       consumption_per_pc: 1.50,
-      rate_per_piece: 25.00,
+      rate_per_piece: 0.00,
       thans: [] // Array of { meter: 25.0, wastage: 1.0, usable: 24.0, pieces: 12 }
     }
   ];
@@ -802,15 +819,12 @@
       document.getElementById('ja_worker_id').value = workerId;
     }
 
-    if (rate && parseFloat(rate) > 0) {
-      itemsData.forEach((item) => {
-        if (!item.rate_per_piece || parseFloat(item.rate_per_piece) === 0 || item.rate_per_piece === 25.00) {
-          item.rate_per_piece = parseFloat(rate);
-        }
-      });
-      renderAllRawItemCards();
-      calculateOverallTotals();
-    }
+    const workerRate = (rate && parseFloat(rate) > 0) ? parseFloat(rate) : 0.00;
+    itemsData.forEach((item) => {
+      item.rate_per_piece = workerRate;
+    });
+    renderAllRawItemCards();
+    calculateOverallTotals();
 
     if (process) {
       const procSelect = document.getElementById('ja_process');
@@ -827,7 +841,7 @@
 
   function addNewRawItemCard() {
     const workerSelect = document.getElementById('ja_worker');
-    let defaultRate = 25.00;
+    let defaultRate = 0.00;
     if (workerSelect && workerSelect.selectedIndex > 0) {
       const opt = workerSelect.options[workerSelect.selectedIndex];
       const r = parseFloat(opt.getAttribute('data-rate'));
@@ -1121,12 +1135,36 @@
     calculateOverallTotals();
   }
 
-  function addManualThan(itemIdx) {
+  function addCustomMeterEntry(itemIdx, meterVal = null) {
+    let m = 0;
+    if (meterVal !== null && meterVal !== undefined && meterVal !== '') {
+      m = parseFloat(meterVal);
+    } else {
+      const promptVal = prompt('Enter custom meter quantity (e.g. 12.50 MTR):', '12.50');
+      if (promptVal === null) return;
+      m = parseFloat(promptVal);
+    }
+
+    if (isNaN(m) || m <= 0) {
+      alert('Please enter a valid meter quantity greater than 0.');
+      return;
+    }
+
     const cons = parseFloat(itemsData[itemIdx].consumption_per_pc) || 1.5;
-    const thanObj = calculateThanValues(0, null, cons);
+    const thanObj = calculateThanValues(m, null, cons);
+    thanObj.unit = 'Mtr';
+    thanObj.po_number = 'Custom';
+    thanObj.challan_no = '';
+    thanObj.unique_id = 'custom_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+
     itemsData[itemIdx].thans.push(thanObj);
+    thanCardCollapseState[itemIdx] = true;
     renderAllRawItemCards();
     calculateOverallTotals();
+  }
+
+  function addManualThan(itemIdx) {
+    addCustomMeterEntry(itemIdx, 12.50);
   }
 
   function removeTon(itemIdx, tonIdx) {
@@ -1454,6 +1492,10 @@
             </div>
             
             <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+              <button type="button" class="btn btn-secondary btn-xs" onclick="addCustomMeterEntry(${itemIdx})" style="font-weight:700; font-size:0.75rem; padding:5px 12px; background:#fff; color:#4338ca; border-color:#c7d2fe; display:inline-flex; align-items:center; gap:5px;" title="Manually enter custom meters (e.g. 12.50 MTR)">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="12" y2="12"/></svg>
+                + Add Custom Meter / Than
+              </button>
               ${item.raw_item_name ? `
                 <button type="button" class="btn btn-primary btn-xs" onclick="openThanSelectModal(${itemIdx})" style="font-weight:700; font-size:0.75rem; padding:5px 12px; display:inline-flex; align-items:center; gap:5px; box-shadow:0 1px 4px rgba(79, 70, 229, 0.25);">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -1471,13 +1513,21 @@
           <!-- Empty State Box (When 0 selected) -->
           <div id="tons-empty-box-${itemIdx}" style="text-align:center; padding:16px 14px; color:#64748b; border:1.5px dashed #cbd5e1; border-radius:10px; background:#ffffff; margin-top:8px; ${item.thans.length > 0 ? 'display:none;' : 'display:block;'}">
             ${!item.raw_item_name ? `
-              <div style="font-size:0.8rem; color:#64748b;">Please select a <strong>Raw Item</strong> above to load available Purchase Thans from stock.</div>
+              <div style="font-size:0.8rem; color:#64748b; margin-bottom:8px;">Please select a <strong>Raw Item</strong> above or add a custom meter quantity.</div>
+              <button type="button" class="btn btn-secondary btn-xs" onclick="addCustomMeterEntry(${itemIdx})" style="font-weight:700; color:#4338ca; border-color:#c7d2fe; background:#fff;">
+                + Add Custom Meter (e.g. 12.50 MTR)
+              </button>
             ` : `
-              <div style="font-weight:700; font-size:0.85rem; color:#475569; margin-bottom:3px;">No Purchase Thans selected yet</div>
-              <p style="font-size:0.75rem; color:#94a3b8; margin:0 0 8px;">Choose from ${availablePurchases.length} available rolls in stock.</p>
-              ${availablePurchases.length > 0 ? `
-                <button type="button" class="btn btn-primary btn-xs" onclick="openThanSelectModal(${itemIdx})" style="font-weight:700;">Open Thans Selector (${availablePurchases.length} Available)</button>
-              ` : ''}
+              <div style="font-weight:700; font-size:0.85rem; color:#475569; margin-bottom:3px;">No Purchase Thans or Custom Meters selected yet</div>
+              <p style="font-size:0.75rem; color:#94a3b8; margin:0 0 8px;">Choose from ${availablePurchases.length} available rolls in stock or enter custom meter quantities.</p>
+              <div style="display:flex; justify-content:center; gap:8px; flex-wrap:wrap;">
+                <button type="button" class="btn btn-secondary btn-xs" onclick="addCustomMeterEntry(${itemIdx})" style="font-weight:700; color:#4338ca; border-color:#c7d2fe; background:#fff;">
+                  + Add Custom Meter (e.g. 12.50 MTR)
+                </button>
+                ${availablePurchases.length > 0 ? `
+                  <button type="button" class="btn btn-primary btn-xs" onclick="openThanSelectModal(${itemIdx})" style="font-weight:700;">Open Thans Selector (${availablePurchases.length} Available)</button>
+                ` : ''}
+              </div>
             `}
           </div>
 
@@ -1779,7 +1829,9 @@
     const availablePurchases = (rawId && purchasedTonsMap[rawId]) ? purchasedTonsMap[rawId] : (rawName && purchasedTonsMap[rawName] ? purchasedTonsMap[rawName] : []);
 
     if (availablePurchases.length === 0) {
-      alert(`No purchase thans found in stock for "${item.raw_item_name || 'selected raw item'}".`);
+      if (confirm(`No purchase thans found in stock for "${item.raw_item_name || 'selected raw item'}".\n\nWould you like to enter a custom meter quantity (e.g. 12.50 MTR)?`)) {
+        addCustomMeterEntry(itemIdx);
+      }
       return;
     }
 

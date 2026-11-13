@@ -22,8 +22,9 @@ class QrController extends Controller
         }
 
         $customers = Customer::all();
+        $companySettings = CompanySetting::all()->pluck('value', 'key')->toArray();
 
-        return view('qr.generator', compact('vouchers', 'customers'));
+        return view('qr.generator', compact('vouchers', 'customers', 'companySettings'));
     }
 
     public static function cleanVoucherCode($input)
@@ -328,6 +329,9 @@ class QrController extends Controller
             'voucher_code' => 'nullable|string|max:50',
             'customer_name' => 'nullable|string|max:255',
             'customer_phone' => 'nullable|string|max:25',
+            'address' => 'nullable|string',
+            'pincode' => 'nullable|string|max:20',
+            'gstin' => 'nullable|string|max:50',
             'discount_type' => 'nullable|in:Flat,Percentage',
             'discount_amount' => 'nullable|numeric',
             'discount_percent' => 'nullable|numeric',
@@ -346,6 +350,11 @@ class QrController extends Controller
         $maxCap = (float)($validated['max_discount_cap'] ?? $amount);
         $minOrder = (float)($validated['min_order_value'] ?? 0);
         $validUntil = $validated['valid_until'] ?? date('Y-m-d', strtotime('+365 days', strtotime($qrDate)));
+
+        $companySettings = CompanySetting::all()->pluck('value', 'key')->toArray();
+        $address = !empty($validated['address']) ? trim($validated['address']) : ($companySettings['company_address'] ?? 'Plot No. 45-B, Apparel Park MIDC, Mumbai, Maharashtra 400093');
+        $pincode = !empty($validated['pincode']) ? trim($validated['pincode']) : ($companySettings['pincode'] ?? '400093');
+        $gstin = !empty($validated['gstin']) ? strtoupper(trim($validated['gstin'])) : ($companySettings['gstin'] ?? '27AABCF1234F1Z1');
 
         $dirPath = public_path('images/qrcodes');
         if (!file_exists($dirPath)) {
@@ -377,6 +386,9 @@ class QrController extends Controller
                 'amount' => $amount,
                 'customer_name' => $customerName,
                 'customer_phone' => $customerPhone,
+                'address' => $address,
+                'pincode' => $pincode,
+                'gstin' => $gstin,
                 'title' => $batchName,
                 'discount_type' => $discountType,
                 'discount_percent' => $amount,
@@ -493,6 +505,11 @@ class QrController extends Controller
      */
     private function generatePdfFromVouchers($vouchers, $batchName = 'Aarambh Vouchers', $cols = 5)
     {
+        $companySettings = CompanySetting::all()->pluck('value', 'key')->toArray();
+        $defAddress = $companySettings['company_address'] ?? 'Plot No. 45-B, Apparel Park MIDC, Mumbai, Maharashtra 400093';
+        $defPincode = $companySettings['pincode'] ?? '400093';
+        $defGstin = $companySettings['gstin'] ?? '27AABCF1234F1Z1';
+
         $qrs = [];
         foreach ($vouchers as $v) {
             $code = $v->voucher_code;
@@ -508,6 +525,9 @@ class QrController extends Controller
                 'qr_base64' => base64_encode($svg),
                 'svg_clean' => $cleanSvg,
                 'claim_url' => $claimUrl,
+                'address' => $v->address ?: $defAddress,
+                'pincode' => $v->pincode ?: $defPincode,
+                'gstin' => $v->gstin ?: $defGstin,
             ];
         }
 
@@ -516,7 +536,7 @@ class QrController extends Controller
         // Check if DomPDF is installed on this environment
         if (class_exists(\Barryvdh\DomPDF\Facade\Pdf::class)) {
             try {
-                $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('qr.pdf', compact('qrs', 'cols', 'batchName', 'generatedAt'));
+                $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('qr.pdf', compact('qrs', 'cols', 'batchName', 'generatedAt', 'companySettings', 'defAddress', 'defPincode', 'defGstin'));
                 $pdf->setPaper('a4', 'portrait');
 
                 $filename = 'qr_records_' . count($qrs) . '_' . now()->format('Y-m-d_H-i-s') . '.pdf';
@@ -528,7 +548,7 @@ class QrController extends Controller
 
         // Fallback if DomPDF package is not installed or failed: Render high-fidelity print view
         $isPrintFallback = true;
-        return response()->view('qr.pdf', compact('qrs', 'cols', 'batchName', 'generatedAt', 'isPrintFallback'));
+        return response()->view('qr.pdf', compact('qrs', 'cols', 'batchName', 'generatedAt', 'isPrintFallback', 'companySettings', 'defAddress', 'defPincode', 'defGstin'));
     }
 
     /**
@@ -536,6 +556,11 @@ class QrController extends Controller
      */
     private function previewPdfFromVouchers($vouchers, $batchName = 'Aarambh Vouchers', $cols = 5)
     {
+        $companySettings = CompanySetting::all()->pluck('value', 'key')->toArray();
+        $defAddress = $companySettings['company_address'] ?? 'Plot No. 45-B, Apparel Park MIDC, Mumbai, Maharashtra 400093';
+        $defPincode = $companySettings['pincode'] ?? '400093';
+        $defGstin = $companySettings['gstin'] ?? '27AABCF1234F1Z1';
+
         $qrs = [];
         foreach ($vouchers as $v) {
             $code = $v->voucher_code;
@@ -551,11 +576,14 @@ class QrController extends Controller
                 'qr_base64' => base64_encode($svg),
                 'svg_clean' => $cleanSvg,
                 'claim_url' => $claimUrl,
+                'address' => $v->address ?: $defAddress,
+                'pincode' => $v->pincode ?: $defPincode,
+                'gstin' => $v->gstin ?: $defGstin,
             ];
         }
 
         $generatedAt = now()->format('d M Y, h:i A');
-        return view('qr.pdf', compact('qrs', 'cols', 'batchName', 'generatedAt'));
+        return view('qr.pdf', compact('qrs', 'cols', 'batchName', 'generatedAt', 'companySettings', 'defAddress', 'defPincode', 'defGstin'));
     }
 
     /**

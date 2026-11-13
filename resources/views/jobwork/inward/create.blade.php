@@ -486,10 +486,10 @@
           item_code: '',
           assigned_qty: 0,
           previously_received_qty: 0,
-          current_inward_qty: 100,
+          current_inward_qty: 0,
           defect_qty: 0,
           remaining_qty: 999999,
-          rate: 25.00,
+          rate: 0.00,
           assigned_thans: [],
           thans: []
         }];
@@ -521,10 +521,10 @@
       item_code: '',
       assigned_qty: 0,
       previously_received_qty: 0,
-      current_inward_qty: 50,
+      current_inward_qty: 0,
       defect_qty: 0,
       remaining_qty: 999999,
-      rate: 25.00,
+      rate: 0.00,
       assigned_thans: [],
       thans: []
     });
@@ -609,7 +609,8 @@
     // Populate items Data from Job Assignment
     itemsData = [];
     (currentAssignmentData.items || []).forEach(it => {
-      const initInward = it.remaining_qty > 0 ? it.remaining_qty : 0;
+      // Do not prefill full remaining balance so user enters actual partial received pieces
+      const initInward = 0;
 
       let remToDistribute = initInward;
       let thansList = [];
@@ -1246,6 +1247,13 @@
       e.preventDefault();
       alert('Please enter at least 1 piece in Current Inward Quantity before saving.');
       return false;
+    }
+
+    // Prevent duplicate receipt submission
+    const submitBtn = document.getElementById('submit-btn') || this.querySelector('button[type="submit"]');
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerText = 'Recording Inward...';
     }
   });
 
