@@ -109,7 +109,7 @@
     <aside class="app-sidebar">
       <!-- Sidebar Header & Brand -->
       @php
-        $cName = $companyName ?? 'aarambh';
+        $cName = !empty($companyName) ? $companyName : 'Aarambh';
         $words = preg_split('/\s+/', trim($cName));
         $brandInitials = '';
         foreach ($words as $w) {
@@ -119,7 +119,7 @@
         if (strlen($brandInitials) < 2 && !empty($cName)) {
           $brandInitials = mb_strtoupper(mb_substr($cName, 0, 2));
         }
-        if (empty($brandInitials)) $brandInitials = 'AA';
+        if (empty($brandInitials) || $cName === 'Aarambh') $brandInitials = 'AA';
       @endphp
       <div class="sidebar-header">
         <a href="{{ route('dashboard') }}" style="display:flex; align-items:center; gap:10px; text-decoration:none; min-width:0; overflow:hidden;">

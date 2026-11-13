@@ -163,7 +163,7 @@
 
         <button type="button" class="btn btn-secondary btn-sm" onclick="addNewDispatchRow()" style="font-weight:700; display:inline-flex; align-items:center; gap:6px; background:#f0fdf4; border-color:#86efac; color:#166534;">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          + Add Product / Batch Row
+          Add Product / Batch Row
         </button>
       </div>
 

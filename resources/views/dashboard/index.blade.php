@@ -25,7 +25,7 @@
     <div style="display:flex; gap:10px; flex-wrap:wrap;">
       <a href="{{ route('purchase.orders.create') }}" class="btn btn-primary" style="display:inline-flex; align-items:center; gap:6px;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-        + New Purchase Order
+        New Purchase Order
       </a>
       <a href="{{ route('qr.scanner') }}" class="btn btn-secondary" style="display:inline-flex; align-items:center; gap:6px;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/></svg>

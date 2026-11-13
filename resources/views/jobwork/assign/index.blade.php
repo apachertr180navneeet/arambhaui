@@ -350,7 +350,7 @@
         </a>
         <a href="{{ route('jobwork.inward.create') }}" class="btn btn-sm" style="background:#059669; color:#fff; display:inline-flex; align-items:center; gap:6px; font-weight:700;">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
-          + Receive Inward
+          Receive Inward
         </a>
         <button class="btn btn-secondary btn-sm" onclick="UI.exportTableToCSV('job-assign-table', 'Job_Assignments.csv')" style="display:inline-flex; align-items:center; gap:6px; font-weight:700;">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -358,7 +358,7 @@
         </button>
         <a href="{{ route('jobwork.assign.create') }}" class="btn btn-primary btn-sm" style="display:inline-flex; align-items:center; gap:6px; font-weight:700; box-shadow:0 2px 8px rgba(79, 70, 229, 0.3);">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
-          + Issue New Job Order
+          Issue New Job Order
         </a>
       </div>
     </div>

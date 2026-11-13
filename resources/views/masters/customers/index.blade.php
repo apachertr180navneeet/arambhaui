@@ -594,7 +594,7 @@
                 <div style="display:inline-flex; align-items:center; gap:6px;">
                   <a href="{{ route('dispatch.challans.create', ['customer_id' => $customer->id]) }}" class="btn btn-primary btn-sm" title="Create Sales / Dispatch Challan for this Customer" style="padding:4px 8px; font-size:0.75rem; font-weight:700; display:inline-flex; align-items:center; gap:4px; text-decoration:none; border-radius:6px;">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                    + Sales
+                    Sales
                   </a>
                   <button type="button" class="btn btn-secondary btn-icon" onclick='editCustomer(@json($customer))' title="Edit Customer" style="width:30px; height:30px; padding:0; display:inline-flex; align-items:center; justify-content:center;">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

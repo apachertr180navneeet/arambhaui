@@ -239,7 +239,7 @@
         <div class="tally-actions" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
           <a href="{{ route('purchase.orders.create') }}" class="tally-hdr-btn tally-hdr-btn-primary">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            <span>+ New Purchase</span>
+            <span>New Purchase</span>
           </a>
 
           <button type="button" class="tally-hdr-btn tally-hdr-btn-light" onclick="window.print()">

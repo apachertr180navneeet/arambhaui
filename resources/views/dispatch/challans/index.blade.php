@@ -333,7 +333,7 @@
         </button>
         <a href="{{ route('dispatch.challans.create') }}" class="btn btn-primary btn-sm" style="display:inline-flex; align-items:center; gap:6px; font-weight:700; box-shadow:0 2px 8px rgba(37, 99, 235, 0.3);">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
-          + New Sales / Delivery Challan
+          New Sales / Delivery Challan
         </a>
       </div>
     </div>

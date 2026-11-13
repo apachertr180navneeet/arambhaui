@@ -446,7 +446,7 @@
 
         <button type="button" class="btn btn-primary btn-sm" onclick="addNewRawItemCard()" style="display:inline-flex; align-items:center; gap:6px; font-weight:700; box-shadow:0 2px 6px rgba(79, 70, 229, 0.25);">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          + Add Another Raw Material
+          Add Another Raw Material
         </button>
       </div>
 
@@ -1595,7 +1595,7 @@
             <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
               <button type="button" class="btn btn-secondary btn-xs" onclick="addCustomMeterEntry(${itemIdx})" style="font-weight:700; font-size:0.75rem; padding:5px 12px; background:#fff; color:#4338ca; border-color:#c7d2fe; display:inline-flex; align-items:center; gap:5px;" title="Manually enter custom meters (e.g. 12.50 MTR)">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="12" y2="12"/></svg>
-                + Add Custom Meter / Than
+                Add Custom Meter / Than
               </button>
               ${item.raw_item_name ? `
                 <button type="button" class="btn btn-primary btn-xs" onclick="openThanSelectModal(${itemIdx})" style="font-weight:700; font-size:0.75rem; padding:5px 12px; display:inline-flex; align-items:center; gap:5px; box-shadow:0 1px 4px rgba(79, 70, 229, 0.25);">

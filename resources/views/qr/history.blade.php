@@ -621,7 +621,7 @@
 
         <a href="{{ route('qr.generator') }}" class="btn btn-primary btn-sm" style="height:34px; display:inline-flex; align-items:center; gap:6px; font-weight:700; box-shadow:0 2px 8px rgba(79, 70, 229, 0.3);">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
-          + Generate New Batch
+          Generate New Batch
         </a>
       </div>
     </div>
