@@ -425,6 +425,15 @@
                 <div style="font-size:0.72rem; color:var(--slate-500); margin-top:2px;">
                   {{ date('d M Y', strtotime($ja->issue_date)) }}
                 </div>
+                @if(isset($ja->maintain_stock) && !$ja->maintain_stock)
+                  <span class="badge" style="background:#fef3c7; color:#b45309; border:1px solid #fde68a; font-size:0.68rem; font-weight:800; padding:2px 6px; border-radius:4px; margin-top:3px; display:inline-flex; align-items:center; gap:3px;" title="Dummy Job Work - No stock deducted or added">
+                    ⚠ Dummy (No Stock)
+                  </span>
+                @else
+                  <span class="badge" style="background:#ecfdf5; color:#047857; border:1px solid #a7f3d0; font-size:0.68rem; font-weight:700; padding:2px 6px; border-radius:4px; margin-top:3px; display:inline-flex; align-items:center; gap:3px;" title="Dynamic Job Work - Auto stock maintenance active">
+                    ✓ Dynamic
+                  </span>
+                @endif
               </td>
 
               <!-- Lot Number Badge -->

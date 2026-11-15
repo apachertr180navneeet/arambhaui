@@ -427,6 +427,23 @@
           </select>
         </div>
 
+        <!-- Stock Maintenance Mode: Dynamic vs Dummy (Image 1 Requirement 3) -->
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label" style="font-weight:700; color:var(--slate-800); margin-bottom:6px;">
+            Stock Maintenance Mode <span style="color:#ef4444;">*</span>
+          </label>
+          <div style="display:flex; align-items:center; gap:14px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:6px 12px; height:42px;">
+            <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-weight:700; font-size:0.8rem; color:#047857; margin:0;" title="Deducts raw stock and increases finished stock">
+              <input type="radio" name="maintain_stock" value="1" {{ (!isset($assign->maintain_stock) || $assign->maintain_stock) ? 'checked' : '' }} style="accent-color:#059669; width:15px; height:15px;">
+              <span>Dynamic (Maintain Stock)</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-weight:700; font-size:0.8rem; color:#b45309; margin:0;" title="Job work without deducting raw materials or adding finished stock">
+              <input type="radio" name="maintain_stock" value="0" {{ (isset($assign->maintain_stock) && !$assign->maintain_stock) ? 'checked' : '' }} style="accent-color:#d97706; width:15px; height:15px;">
+              <span>Dummy (Skip Stock)</span>
+            </label>
+          </div>
+        </div>
+
       </div>
     </div>
 

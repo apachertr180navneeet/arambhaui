@@ -273,6 +273,10 @@ class DispatchController extends Controller
                             'created_by' => Auth::user()?->name ?? 'Admin',
                             'description' => "Dispatched {$itemQty} {$row['unit']} ({$styleName}) via {$challan->challan_no} to {$challan->customer_name}"
                         ]);
+
+                        if ($itemId) {
+                            \App\Services\StockLedgerService::recalculateItemStock($itemId);
+                        }
                     } catch (\Throwable $e) {}
                 }
             } else {
