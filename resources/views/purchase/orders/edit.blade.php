@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Edit Purchase Entry - aarambh')
+@section('title', 'Edit Purchase Entry - Aarambh ERP')
 
 @section('breadcrumb')
   <div class="breadcrumb-item"><a href="{{ route('purchase.orders.index') }}" style="color:inherit; text-decoration:none;">Purchase Entries</a></div>
@@ -9,56 +9,193 @@
 @endsection
 
 @php
-  $existingItems = [];
+  $preloadedItems = [];
   if ($order->items && $order->items->isNotEmpty()) {
     foreach ($order->items as $itm) {
-      $thans = $itm->than_list;
-      if (empty($thans) && $itm->ordered_qty > 0) {
-        $thans = [(float)$itm->ordered_qty];
+      $thans = $itm->than_list ?: [];
+      $qty = (float)$itm->ordered_qty;
+      if (empty($thans) && $qty > 0) {
+        $thans = [$qty];
       }
-      $existingItems[] = [
+      $rate = (float)$itm->rate;
+      $taxPct = (float)($itm->tax_percent ?: 5);
+      $amount = round($rate * $qty * 100) / 100;
+      $taxAmt = round(($amount * $taxPct / 100.0) * 100) / 100;
+      $total = round(($amount + $taxAmt) * 100) / 100;
+
+      $preloadedItems[] = [
         'item_id' => $itm->item_id ?: '',
         'item_name' => $itm->item_name,
         'item_code' => $itm->item_code ?: '',
-        'rate' => (float)$itm->rate,
-        'tax_percent' => (float)$itm->tax_percent,
-        'unit' => $itm->unit ?: 'Meters',
-        'thans' => $thans
+        'rate' => $rate,
+        'qty' => $qty,
+        'ordered_qty' => $qty,
+        'unit' => $itm->unit ?: 'MTR',
+        'tax_percent' => $taxPct,
+        'amount' => $amount,
+        'subtotal' => $amount,
+        'tax_amount' => $taxAmt,
+        'total_amount' => $total,
+        'thans' => $thans,
+        'than_count' => count($thans)
       ];
     }
   }
-  if (empty($existingItems)) {
-    $existingThans = $order->than_list;
-    $existingItems[] = [
-      'item_id' => '',
-      'item_name' => '',
-      'item_code' => '',
-      'rate' => 35.00,
-      'tax_percent' => 5,
-      'unit' => 'Meters',
-      'thans' => $existingThans ?: []
-    ];
+
+  $challanNumber = $order->challan_no ?: ($order->challan_number ?: '');
+
+  $userRemarks = '';
+  if (!empty($order->notes)) {
+    if (str_starts_with(trim($order->notes), '{')) {
+      $parsed = json_decode($order->notes, true);
+      $userRemarks = $parsed['user_notes'] ?? ($parsed['notes'] ?? '');
+    } else {
+      $userRemarks = $order->notes;
+    }
   }
-  $challanNumber = $order->challan_number;
 @endphp
+
+@push('styles')
+<style>
+  .pe-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    max-width: 1380px;
+    margin: 0 auto;
+  }
+  .pe-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+    padding: 20px 24px;
+  }
+  .pe-section-title {
+    font-size: 0.95rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #1e293b;
+    margin: 0 0 16px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid #f1f5f9;
+    padding-bottom: 10px;
+  }
+  .pe-section-title .badge-num {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    background: #eff6ff;
+    color: #2563eb;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 800;
+  }
+  .pe-grid-header {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+  }
+  .pe-item-entry-panel {
+    background: #f8fafc;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 12px;
+    padding: 16px 18px;
+    margin-bottom: 18px;
+  }
+  .pe-item-entry-grid {
+    display: grid;
+    grid-template-columns: 2.2fr 1fr 1.1fr 1fr 0.9fr 1.1fr auto;
+    gap: 12px;
+    align-items: flex-end;
+  }
+  @media (max-width: 1100px) {
+    .pe-item-entry-grid {
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    }
+  }
+  .pe-table th {
+    background: #f1f5f9 !important;
+    color: #475569 !important;
+    font-weight: 700 !important;
+    font-size: 0.8rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.03em !important;
+    padding: 10px 12px !important;
+    border-bottom: 2px solid #cbd5e1 !important;
+  }
+  .pe-table td {
+    padding: 10px 12px !important;
+    font-size: 0.85rem !important;
+    vertical-align: middle !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+  }
+  .pe-table tbody tr:hover {
+    background-color: #f8fafc !important;
+  }
+  .pe-summary-box {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 18px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .unit-summary-pill {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 6px 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #334155;
+  }
+  .than-tag {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    color: #1e40af;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+  }
+</style>
+@endpush
 
 @section('content')
 <form action="{{ route('purchase.orders.update', $order->id) }}" method="POST" id="pe-form">
   @csrf
   @method('PUT')
 
-  <div style="display:flex; flex-direction:column; gap:22px;">
+  <div class="pe-container">
     
     <!-- Top Action Header -->
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px;">
       <div>
         <div style="display:flex; align-items:center; gap:8px;">
-          <h2 style="margin:0; font-size:1.45rem; font-weight:800; color:var(--slate-900); letter-spacing:-0.02em;">Edit Purchase Entry</h2>
-          <span style="font-family:var(--font-mono, monospace); font-weight:800; font-size:1rem; background:#eff6ff; color:#1d4ed8; padding:3px 10px; border-radius:8px; border:1px solid #bfdbfe;">
+          <h2 style="margin:0; font-size:1.45rem; font-weight:800; color:var(--slate-900); letter-spacing:-0.02em;">
+            Edit Purchase Entry
+          </h2>
+          <span style="font-family:var(--font-mono, monospace); font-weight:800; font-size:0.95rem; background:#eff6ff; color:#1d4ed8; padding:3px 10px; border-radius:8px; border:1px solid #bfdbfe;">
             {{ $order->po_number }}
           </span>
         </div>
-        <p style="margin:4px 0 0; font-size:0.85rem; color:var(--slate-500);">Modify supplier challan details, multi-item than-wise meters, or procurement billing terms.</p>
+        <p style="margin:3px 0 0; font-size:0.85rem; color:var(--slate-500);">
+          Modify supplier challan details, multi-item than-wise meters, or procurement billing terms.
+        </p>
       </div>
 
       <div style="display:flex; gap:10px; align-items:center;">
@@ -70,198 +207,369 @@
       </div>
     </div>
 
-    <!-- 1. Header Information (Vendor, Challan, Date) -->
-    <div class="card" style="background:#fff; border-radius:var(--radius-xl); border:1px solid var(--slate-200); box-shadow:var(--shadow-sm); padding:24px;">
-      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--slate-100); padding-bottom:12px; margin-bottom:18px;">
-        <h3 style="font-size:0.95rem; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; margin:0; color:var(--slate-800); display:flex; align-items:center; gap:8px;">
-          <span style="width:24px; height:24px; border-radius:6px; background:#eff6ff; color:#2563eb; display:inline-flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:800;">1</span>
-          Challan & Supplier Information
-        </h3>
+    <!-- 1. PURCHASE HEADER -->
+    <div class="pe-card">
+      <div class="pe-section-title">
+        <span class="badge-num">1</span>
+        <span>Purchase Header & Transport Details</span>
       </div>
 
-      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:18px;">
+      <div class="pe-grid-header">
         
-        <!-- Vendor Select with Add Link -->
+        <!-- Vendor Master Dropdown with Add Option -->
         <div class="form-group" style="margin-bottom:0;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-            <label class="form-label" style="font-weight:700; color:var(--slate-800); margin:0;">Vendor / Supplier <span style="color:#ef4444;">*</span></label>
-            <a href="{{ route('masters.vendors.index') }}" target="_blank" style="font-size:0.75rem; color:#2563eb; text-decoration:none; font-weight:600;" title="Open Vendor Master">+ Manage Vendors</a>
+            <label class="form-label" style="font-weight:700; color:var(--slate-800); margin:0;">
+              Vendor [Master] <span style="color:#ef4444;">*</span>
+            </label>
+            <a href="{{ route('masters.vendors.index') }}" target="_blank" style="font-size:0.75rem; color:#2563eb; text-decoration:none; font-weight:700;" title="Open Vendor Master to register new supplier">+ Add New</a>
           </div>
-          <select name="vendor_name" id="vendor-select" class="form-control" required onchange="onVendorChange(this)">
-            <option value="{{ $order->vendor_name }}" data-id="{{ $order->vendor_id }}" selected>{{ $order->vendor_name }}</option>
+          <select name="vendor_name" id="vendor-select" class="form-control" required onchange="onVendorChange(this)" style="font-weight:600; font-size:0.875rem;">
+            <option value="">-- Select Vendor / Supplier --</option>
             @foreach($vendors as $v)
-              @if($v->name !== $order->vendor_name)
-                <option value="{{ $v->name }}" data-id="{{ $v->id }}">{{ $v->name }} ({{ $v->code }}){{ !empty($v->city) ? ' - '.$v->city : '' }}</option>
-              @endif
+              <option value="{{ $v->name }}" data-id="{{ $v->id }}" data-code="{{ $v->code }}" data-city="{{ $v->city ?? '' }}" {{ ($order->vendor_id == $v->id || $order->vendor_name == $v->name) ? 'selected' : '' }}>
+                {{ $v->name }} ({{ $v->code ?: 'Vendor' }}){{ !empty($v->city) ? ' - '.$v->city : '' }}
+              </option>
             @endforeach
           </select>
           <input type="hidden" name="vendor_id" id="vendor_id" value="{{ $order->vendor_id }}">
         </div>
 
-        <!-- Supplier Challan / Bill No -->
+        <!-- Purchase Bill Number (Challan No) -->
         <div class="form-group" style="margin-bottom:0;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-            <label class="form-label" style="font-weight:700; color:var(--slate-800); margin:0;">Supplier Challan / Bill No. <span style="color:#ef4444;">*</span></label>
-            <button type="button" onclick="autoGenerateChallanNo()" style="font-size:0.75rem; color:#2563eb; background:#eff6ff; border:1px solid #bfdbfe; border-radius:6px; padding:2px 8px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:all 0.2s ease;" title="Auto generate unique challan number">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-              Auto Generate
-            </button>
-          </div>
-          <div style="position:relative; display:flex; align-items:center;">
-            <input type="text" name="challan_no" id="challan_no" class="form-control" required value="{{ $challanNumber ?: '' }}" placeholder="e.g. 1076 / CH-9821" style="font-weight:700; letter-spacing:0.5px; padding-right:75px;">
-            <button type="button" onclick="autoGenerateChallanNo()" class="btn btn-secondary btn-sm" style="position:absolute; right:4px; height:calc(100% - 8px); padding:0 10px; font-size:0.75rem; font-weight:700; display:inline-flex; align-items:center; gap:4px; border-radius:6px; background:#f8fafc; color:#334155; border:1px solid #cbd5e1;" title="Regenerate Challan Number">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            <label class="form-label" style="font-weight:700; color:var(--slate-800); margin:0;">
+              Purchase Bill / Challan No. <span style="color:#ef4444;">*</span>
+            </label>
+            <button type="button" onclick="autoGenerateChallanNo()" style="font-size:0.75rem; color:#2563eb; background:#eff6ff; border:1px solid #bfdbfe; border-radius:6px; padding:2px 8px; font-weight:700; cursor:pointer;" title="Generate unique bill number">
               Auto
             </button>
           </div>
-          <small style="font-size:0.72rem; color:var(--slate-500); margin-top:4px; display:block;">Auto-generated or enter vendor's physical invoice / challan #</small>
+          <input type="text" name="challan_no" id="challan_no" class="form-control" required value="{{ old('challan_no', $challanNumber) }}" placeholder="e.g. 1076 / BILL-9821" style="font-weight:700; letter-spacing:0.5px;">
         </div>
 
-        <!-- Challan / Entry Date -->
+        <!-- Purchase Type -->
         <div class="form-group" style="margin-bottom:0;">
-          <label class="form-label" style="font-weight:700; color:var(--slate-800); margin-bottom:6px;">Challan / Entry Date <span style="color:#ef4444;">*</span></label>
-          <input type="date" name="po_date" class="form-control" required value="{{ is_string($order->po_date) ? substr($order->po_date, 0, 10) : $order->po_date->format('Y-m-d') }}">
+          <label class="form-label" style="font-weight:700; color:var(--slate-800); margin-bottom:6px;">
+            Purchase Type <span style="color:#ef4444;">*</span>
+          </label>
+          <select name="purchase_type" id="purchase_type" class="form-control" style="font-weight:600; font-size:0.875rem;">
+            <option value="Fabric / Raw Material" {{ ($order->purchase_type ?? '') === 'Fabric / Raw Material' ? 'selected' : '' }}>Fabric / Raw Material</option>
+            <option value="Grey Fabric" {{ ($order->purchase_type ?? '') === 'Grey Fabric' ? 'selected' : '' }}>Grey Fabric</option>
+            <option value="Finished Goods" {{ ($order->purchase_type ?? '') === 'Finished Goods' ? 'selected' : '' }}>Finished Goods</option>
+            <option value="Trims & Accessories" {{ ($order->purchase_type ?? '') === 'Trims & Accessories' ? 'selected' : '' }}>Trims & Accessories</option>
+            <option value="Packaging Material" {{ ($order->purchase_type ?? '') === 'Packaging Material' ? 'selected' : '' }}>Packaging Material</option>
+            <option value="Job Work Return" {{ ($order->purchase_type ?? '') === 'Job Work Return' ? 'selected' : '' }}>Job Work Return</option>
+          </select>
+        </div>
+
+        <!-- Purchase Date -->
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label" style="font-weight:700; color:var(--slate-800); margin-bottom:6px;">
+            Purchase Date <span style="color:#ef4444;">*</span>
+          </label>
+          <input type="date" name="po_date" id="po_date" class="form-control" required value="{{ date('Y-m-d', strtotime($order->po_date)) }}" style="font-weight:600;">
+        </div>
+
+        <!-- Transport Name -->
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label" style="font-weight:700; color:var(--slate-800); margin-bottom:6px;">
+            Transport Name
+          </label>
+          <input type="text" name="transport_name" id="transport_name" class="form-control" placeholder="e.g. VRL Logistics, SafeExpress" value="{{ old('transport_name', $order->transport_name ?? '') }}" style="font-weight:600;">
+        </div>
+
+        <!-- Bilty Number -->
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label" style="font-weight:700; color:var(--slate-800); margin-bottom:6px;">
+            Bilty No. / LR No.
+          </label>
+          <input type="text" name="bilty_no" id="bilty_no" class="form-control" placeholder="e.g. BLTY-88412" value="{{ old('bilty_no', $order->bilty_no ?? '') }}" style="font-weight:600;">
         </div>
 
       </div>
     </div>
 
-    <!-- 2. Multi-Item & Than-Wise Breakdown Section -->
-    <div style="display:flex; flex-direction:column; gap:16px;">
-      
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-        <div>
-          <h3 style="font-size:1.05rem; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; margin:0; color:var(--slate-900); display:flex; align-items:center; gap:8px;">
-            <span style="width:26px; height:26px; border-radius:6px; background:#ecfdf5; color:#059669; display:inline-flex; align-items:center; justify-content:center; font-size:0.8rem; font-weight:800;">2</span>
-            Fabric Items & Than Breakdown
-          </h3>
-          <p style="margin:3px 0 0; font-size:0.825rem; color:var(--slate-500);">
-            Modify fabric qualities with independent than meter readings, rate & taxes.
-          </p>
+    <!-- 2. ITEMS SECTION: ITEM ENTRY PANEL + PURCHASE ITEMS TABLE -->
+    <div class="pe-card">
+      <div class="pe-section-title">
+        <span class="badge-num">2</span>
+        <span>Items & Multi-Than Breakdown (Tally Format)</span>
+      </div>
+
+      <!-- Item Entry Input Row (Matching Reference Sketch) -->
+      <div class="pe-item-entry-panel">
+        <div style="font-size:0.8rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+          <span>⚡ Quick Item Entry</span>
+          <span style="font-size:0.75rem; color:#64748b; font-weight:600;">Select item, enter rate & quantity (or click <strong>[+] Than</strong> for roll meter entry)</span>
         </div>
 
-        <button type="button" class="btn btn-primary btn-sm" onclick="addNewItem()" style="display:inline-flex; align-items:center; gap:6px; font-weight:700; box-shadow:0 2px 6px rgba(37, 99, 235, 0.25);">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Add Another Item
-        </button>
+        <div class="pe-item-entry-grid">
+          
+          <!-- Fabric / Item Dropdown -->
+          <div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+              <label class="form-label" style="font-size:0.75rem; font-weight:700; margin:0; color:#334155;">Fabric / Item (Item Master) <span style="color:#ef4444;">*</span></label>
+              <a href="{{ route('masters.items.index') }}" target="_blank" style="font-size:0.7rem; color:#2563eb; text-decoration:none; font-weight:600;">+ New Item</a>
+            </div>
+            <select id="entry-item-select" class="form-control" onchange="onEntryItemSelect(this)" style="font-weight:700; font-size:0.85rem;">
+              <option value="">-- Select Fabric / Item --</option>
+              @foreach($items as $itm)
+                <option value="{{ $itm->id }}" data-name="{{ $itm->name }}" data-code="{{ $itm->code }}" data-unit="{{ $itm->unit ?? 'MTR' }}" data-cost="{{ $itm->unit_cost ?? 0 }}" data-stock="{{ $itm->current_stock ?? 0 }}">
+                  {{ $itm->name }} ({{ $itm->code ?: 'SKU' }}) [{{ $itm->unit ?? 'MTR' }}]
+                </option>
+              @endforeach
+            </select>
+          </div>
+
+          <!-- Rate Input -->
+          <div>
+            <label class="form-label" style="font-size:0.75rem; font-weight:700; margin-bottom:4px; color:#334155;">Rate (₹) <span style="color:#ef4444;">*</span></label>
+            <div style="position:relative;">
+              <span style="position:absolute; left:10px; top:50%; transform:translateY(-50%); font-weight:700; color:#64748b; font-size:0.8rem;">₹</span>
+              <input type="number" id="entry-rate" class="form-control" step="0.01" min="0" placeholder="0.00" oninput="calculateEntryPreview()" style="padding-left:24px; font-weight:700; font-size:0.9rem;">
+            </div>
+          </div>
+
+          <!-- Quantity Input with Than Modal Trigger -->
+          <div>
+            <label class="form-label" style="font-size:0.75rem; font-weight:700; margin-bottom:4px; color:#334155;">Qty <span style="color:#ef4444;">*</span></label>
+            <div style="display:flex; align-items:center; gap:4px;">
+              <input type="number" id="entry-qty" class="form-control" step="0.01" min="0.01" placeholder="0.00" oninput="onEntryQtyManualInput()" style="font-weight:800; color:#059669; font-size:0.95rem;">
+              <!-- Add Multiple Than Button (Single clean plus icon) -->
+              <button type="button" class="btn btn-secondary btn-sm" onclick="openEntryThanModal()" title="Add / Paste multiple than meter readings" style="padding:6px 10px; font-size:0.75rem; font-weight:800; background:#eff6ff; color:#2563eb; border-color:#bfdbfe; white-space:nowrap; display:inline-flex; align-items:center; gap:4px;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <span id="entry-than-btn-text">Than</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Unit Dropdown -->
+          <div>
+            <label class="form-label" style="font-size:0.75rem; font-weight:700; margin-bottom:4px; color:#334155;">Unit</label>
+            <select id="entry-unit" class="form-control" style="font-weight:700; font-size:0.85rem;">
+              <option value="MTR" selected>MTR (Meters)</option>
+              <option value="PCS">PCS (Pieces)</option>
+              <option value="KG">KG (Kilograms)</option>
+              <option value="THN">THN (Than)</option>
+              <option value="ROL">ROL (Rolls)</option>
+              <option value="YD">YD (Yards)</option>
+            </select>
+          </div>
+
+          <!-- Tax % Dropdown -->
+          <div>
+            <label class="form-label" style="font-size:0.75rem; font-weight:700; margin-bottom:4px; color:#334155;">Tax %</label>
+            <select id="entry-tax" class="form-control" onchange="calculateEntryPreview()" style="font-weight:700; font-size:0.85rem;">
+              <option value="5" selected>5%</option>
+              <option value="12">12%</option>
+              <option value="18">18%</option>
+              <option value="0">0%</option>
+            </select>
+          </div>
+
+          <!-- Line Preview Info (Amt + Tax) -->
+          <div>
+            <label class="form-label" style="font-size:0.75rem; font-weight:700; margin-bottom:4px; color:#334155;">Line Total</label>
+            <div id="entry-preview-total" style="height:38px; display:flex; align-items:center; font-weight:800; font-size:0.95rem; color:#1e293b; background:#ffffff; border:1px solid #cbd5e1; border-radius:6px; padding:0 10px;">
+              ₹0.00
+            </div>
+          </div>
+
+          <!-- Add Item / Add More Button -->
+          <div>
+            <button type="button" id="btn-add-item-to-table" class="btn btn-primary" onclick="addItemToTable()" style="height:38px; font-weight:700; display:inline-flex; align-items:center; gap:6px; white-space:nowrap; padding:0 18px; box-shadow:0 2px 6px rgba(37, 99, 235, 0.25);">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <span>Add Item</span>
+            </button>
+          </div>
+
+        </div>
+
+        <!-- Thans Badge preview if entered -->
+        <div id="entry-thans-summary-line" style="display:none; margin-top:10px; font-size:0.75rem; color:#2563eb; font-weight:700; background:#eff6ff; padding:4px 10px; border-radius:6px; align-items:center; gap:8px;">
+          <span>📦 Thans Added: <strong id="entry-thans-count-display">0 Thans</strong> (<span id="entry-thans-meters-display">0.00 MTR</span>)</span>
+          <button type="button" onclick="clearEntryThans()" style="border:none; background:none; color:#ef4444; font-size:0.75rem; font-weight:700; cursor:pointer;">Clear Thans</button>
+        </div>
       </div>
 
-      <!-- Container where Item Cards are dynamically rendered -->
-      <div id="items-container" style="display:flex; flex-direction:column; gap:20px;"></div>
-
-      <!-- Add Item Large Footer Trigger Button -->
-      <div style="text-align:center; padding:10px 0;">
-        <button type="button" class="btn btn-secondary" onclick="addNewItem()" style="border:2px dashed #cbd5e1; background:#f8fafc; color:#334155; font-weight:700; width:100%; padding:12px; display:inline-flex; align-items:center; justify-content:center; gap:8px; border-radius:12px; transition:all 0.2s ease;">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Add Another Product / Fabric Quality (Multi-Item Inward)
-        </button>
+      <!-- 3. PURCHASE ITEMS TABLE -->
+      <div class="table-responsive">
+        <table class="data-table pe-table" id="purchase-items-table" style="width:100%;">
+          <thead>
+            <tr>
+              <th style="width:50px; text-align:center;">S.No.</th>
+              <th style="width:28%;">Item Name</th>
+              <th style="width:10%; text-align:right;">Rate (₹)</th>
+              <th style="width:11%; text-align:right;">Qty</th>
+              <th style="width:7%; text-align:center;">Unit</th>
+              <th style="width:10%; text-align:center;">Than Detail</th>
+              <th style="width:7%; text-align:center;">Tax %</th>
+              <th style="width:11%; text-align:right;">Amt (₹)</th>
+              <th style="width:10%; text-align:right;">Tax (₹)</th>
+              <th style="width:12%; text-align:right;">Total (₹)</th>
+              <th style="width:70px; text-align:center;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="purchase-items-tbody">
+            <!-- Dynamic Item Rows Injected Here -->
+          </tbody>
+          <tfoot id="purchase-items-tfoot" style="background:#f8fafc; font-weight:800; border-top:2px solid #cbd5e1;">
+            <tr>
+              <td colspan="3" style="text-align:right; font-size:0.9rem; color:#334155;">Total:</td>
+              <td id="tbl-total-qty" style="text-align:right; color:#059669; font-size:0.95rem;">0.00</td>
+              <td colspan="3"></td>
+              <td id="tbl-total-amt" style="text-align:right; font-size:0.95rem; color:#1e293b;">₹0.00</td>
+              <td id="tbl-total-tax" style="text-align:right; font-size:0.95rem; color:#dc2626;">₹0.00</td>
+              <td id="tbl-total-grand" style="text-align:right; font-size:1.05rem; color:#059669;">₹0.00</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
       </div>
+
+      <!-- Empty State if no items added -->
+      <div id="no-items-empty-state" style="text-align:center; padding:36px 16px; color:#94a3b8; border:2px dashed #cbd5e1; border-radius:10px; margin-top:12px; display:none;">
+        <div style="font-weight:700; font-size:0.95rem; color:#64748b; margin-bottom:4px;">No items added to this purchase bill yet</div>
+        <p style="font-size:0.8rem; margin:0 0 10px;">Select an item from the quick entry panel above and click <strong>Add Item</strong>.</p>
+      </div>
+
+      <!-- Hidden container holding normalized form inputs for Laravel backend -->
+      <div id="hidden-inputs-container"></div>
 
     </div>
 
-    <!-- 3. Financial Calculation Summary & Notes Card -->
-    <div class="card" style="background:#fff; border-radius:var(--radius-xl); border:1px solid var(--slate-200); box-shadow:var(--shadow-sm); padding:24px;">
-      <h3 style="font-size:0.95rem; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; margin-top:0; margin-bottom:18px; color:var(--slate-800); border-bottom:1px solid var(--slate-100); padding-bottom:10px; display:flex; align-items:center; gap:8px;">
-        <span style="width:24px; height:24px; border-radius:6px; background:#f5f3ff; color:#7c3aed; display:inline-flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:800;">3</span>
-        Overall Calculation & Procurement Terms
-      </h3>
+    <!-- 4. BOTTOM SECTION: REMARKS, UNIT-WISE SUMMARY & GRAND TOTALS -->
+    <div class="pe-card">
+      <div class="pe-section-title">
+        <span class="badge-num">3</span>
+        <span>Summary & Billing Terms</span>
+      </div>
 
-      <div style="display:grid; grid-template-columns: 1.2fr 1fr; gap:24px;">
+      <div style="display:grid; grid-template-columns: 1.2fr 1fr; gap:24px; align-items:start;">
         
-        <!-- Notes & Terms -->
+        <!-- Left: Remarks & Status -->
         <div>
           <label class="form-label" style="font-weight:700; color:var(--slate-800); margin-bottom:6px;">
-            Notes / Transport / Delivery Remarks
+            Remarks / Delivery Notes
           </label>
-          @php
-            $rawNotes = $order->notes;
-            $displayNotes = '';
-            if (!empty($rawNotes)) {
-              if (str_starts_with(trim($rawNotes), '{')) {
-                $decoded = json_decode($rawNotes, true);
-                $displayNotes = $decoded['user_notes'] ?? '';
-              } else {
-                $displayNotes = $rawNotes;
-              }
-            }
-          @endphp
-          <textarea name="notes" class="form-control" rows="4" placeholder="e.g. Transport: Shree Balaji Roadlines, Shade tolerance acceptable, Haste: Gaysubhai...">{{ $displayNotes }}</textarea>
+          <textarea name="notes" class="form-control" rows="4" placeholder="Enter delivery terms, shade remarks, transport instructions, or bill references...">{{ old('notes', $userRemarks) }}</textarea>
           
           <div style="display:flex; gap:16px; margin-top:14px;">
             <div style="flex:1;">
               <label class="form-label" style="font-weight:700; color:var(--slate-800); font-size:0.8rem; margin-bottom:4px;">Payment Status</label>
-              <select name="payment_status" class="form-control">
-                <option value="Pending" {{ strtolower($order->payment_status) === 'pending' ? 'selected' : '' }}>Pending / Credit</option>
-                <option value="Partially Paid" {{ strtolower($order->payment_status) === 'partially paid' ? 'selected' : '' }}>Partially Paid</option>
-                <option value="Paid" {{ strtolower($order->payment_status) === 'paid' ? 'selected' : '' }}>Paid Fully</option>
+              <select name="payment_status" class="form-control" style="font-weight:600;">
+                <option value="Pending" {{ ($order->payment_status ?? '') === 'Pending' ? 'selected' : '' }}>Pending / Credit</option>
+                <option value="Partially Paid" {{ ($order->payment_status ?? '') === 'Partially Paid' ? 'selected' : '' }}>Partially Paid</option>
+                <option value="Paid" {{ ($order->payment_status ?? '') === 'Paid' ? 'selected' : '' }}>Paid Fully</option>
               </select>
             </div>
             <div style="flex:1;">
-              <label class="form-label" style="font-weight:700; color:var(--slate-800); font-size:0.8rem; margin-bottom:4px;">Status</label>
-              <select name="status" class="form-control">
-                <option value="Approved" {{ strtolower($order->status) === 'approved' ? 'selected' : '' }}>Approved</option>
-                <option value="Draft" {{ strtolower($order->status) === 'draft' ? 'selected' : '' }}>Draft</option>
-                <option value="Cancelled" {{ strtolower($order->status) === 'cancelled' ? 'selected' : '' }}>Cancelled</option>
+              <label class="form-label" style="font-weight:700; color:var(--slate-800); font-size:0.8rem; margin-bottom:4px;">Order Status</label>
+              <select name="status" class="form-control" style="font-weight:600;">
+                <option value="Approved" {{ ($order->status ?? '') === 'Approved' ? 'selected' : '' }}>Approved</option>
+                <option value="Draft" {{ ($order->status ?? '') === 'Draft' ? 'selected' : '' }}>Draft</option>
+                <option value="Partially Received" {{ ($order->status ?? '') === 'Partially Received' ? 'selected' : '' }}>Partially Received</option>
+                <option value="Received" {{ ($order->status ?? '') === 'Received' ? 'selected' : '' }}>Received</option>
+                <option value="Cancelled" {{ ($order->status ?? '') === 'Cancelled' ? 'selected' : '' }}>Cancelled</option>
               </select>
             </div>
           </div>
         </div>
 
-        <!-- Calculated Summary Box -->
-        <div style="background:#f8fafc; border:1px solid var(--slate-200); border-radius:14px; padding:20px; display:flex; flex-direction:column; gap:12px;">
-          <div style="display:flex; justify-content:space-between; font-size:0.9rem; color:#64748b;">
-            <span>Total Fabric Items:</span>
-            <span style="font-weight:700; color:#0f172a;" id="summary-items-count">{{ count($existingItems) }} {{ count($existingItems) === 1 ? 'Item' : 'Items' }}</span>
+        <!-- Right: Unit-Wise Quantity Summary & Overall Financials -->
+        <div class="pe-summary-box">
+          
+          <!-- Unit Wise Summary Pills (MTR, PCS, KG) -->
+          <div style="border-bottom:1px solid #e2e8f0; padding-bottom:12px;">
+            <div style="font-size:0.75rem; font-weight:800; color:#64748b; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:8px;">
+              Unit-Wise Quantity Breakdown:
+            </div>
+            <div id="unit-summary-container" style="display:flex; gap:8px; flex-wrap:wrap;">
+              <div class="unit-summary-pill">
+                <span>MTR:</span>
+                <strong id="unit-sum-mtr" style="color:#059669;">0.00 MTR</strong>
+              </div>
+              <div class="unit-summary-pill">
+                <span>PCS:</span>
+                <strong id="unit-sum-pcs" style="color:#2563eb;">0 PCS</strong>
+              </div>
+              <div class="unit-summary-pill">
+                <span>KG:</span>
+                <strong id="unit-sum-kg" style="color:#7c3aed;">0.00 KG</strong>
+              </div>
+            </div>
           </div>
 
-          <div style="display:flex; justify-content:space-between; font-size:0.9rem; color:#64748b;">
+          <!-- Total Amount Calculation Breakdown -->
+          <div style="display:flex; justify-content:space-between; font-size:0.9rem; color:#475569;">
+            <span>Total Items:</span>
+            <strong id="sum-items-count" style="color:#0f172a;">0 Items</strong>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; font-size:0.9rem; color:#475569;">
             <span>Total Than Count:</span>
-            <span style="font-weight:700; color:#0f172a;" id="summary-than-count">0 Thans</span>
+            <strong id="sum-thans-count" style="color:#0f172a;">0 Thans</strong>
           </div>
 
-          <div style="display:flex; justify-content:space-between; font-size:0.9rem; color:#64748b;">
-            <span>Total Inward Quantity:</span>
-            <span style="font-weight:700; color:#059669; font-size:1rem;" id="summary-total-meters">0.00 Mtr</span>
+          <div style="display:flex; justify-content:space-between; font-size:0.9rem; color:#475569; border-top:1px dashed #cbd5e1; padding-top:8px;">
+            <span>Taxable Subtotal (Amt):</span>
+            <strong id="sum-subtotal" style="color:#0f172a;">₹0.00</strong>
           </div>
 
-          <div style="display:flex; justify-content:space-between; font-size:0.9rem; color:#64748b; border-top:1px dashed #cbd5e1; padding-top:10px;">
-            <span>Taxable Subtotal:</span>
-            <span style="font-weight:700; color:#0f172a;" id="summary-subtotal">₹0.00</span>
-          </div>
-
-          <div style="display:flex; justify-content:space-between; font-size:0.9rem; color:#64748b;">
-            <span>Total GST Taxes:</span>
-            <span style="font-weight:700; color:#0f172a;" id="summary-tax">₹0.00</span>
+          <div style="display:flex; justify-content:space-between; font-size:0.9rem; color:#475569;">
+            <span>Total GST Tax:</span>
+            <strong id="sum-tax" style="color:#dc2626;">₹0.00</strong>
           </div>
 
           <div style="border-top:2px solid #cbd5e1; padding-top:12px; margin-top:4px; display:flex; justify-content:space-between; align-items:baseline;">
-            <span style="font-weight:800; font-size:1.1rem; color:var(--slate-900);">Grand Total:</span>
-            <span style="font-weight:800; font-size:1.4rem; color:#059669;" id="summary-grand">₹0.00</span>
+            <span style="font-weight:800; font-size:1.1rem; color:var(--slate-900);">Total Amount:</span>
+            <span style="font-weight:800; font-size:1.45rem; color:#059669;" id="sum-grand-total">₹0.00</span>
           </div>
+
         </div>
 
       </div>
-
     </div>
 
   </div>
 </form>
 
-<!-- Modal: Quick Paste Multiple Thans -->
-<div id="paste-modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(15,23,42,0.6); z-index:99999; align-items:center; justify-content:center; padding:16px;">
-  <div style="background:#fff; border-radius:16px; max-width:480px; width:100%; padding:24px; box-shadow:0 20px 40px rgba(0,0,0,0.2);">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-      <h4 style="margin:0; font-weight:800; font-size:1.1rem; color:#0f172a;" id="paste-modal-title">Paste Than Meter Readings</h4>
-      <button type="button" onclick="closePasteModal()" style="background:none; border:none; font-size:1.4rem; cursor:pointer; color:#94a3b8;">&times;</button>
+<!-- Modal: Multi-Than Meter Entry & Paste -->
+<div id="than-modal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.65); z-index:99999; align-items:center; justify-content:center; padding:16px;">
+  <div style="background:#fff; border-radius:16px; max-width:540px; width:100%; padding:24px; box-shadow:0 20px 40px rgba(0,0,0,0.25);">
+    
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid #e2e8f0; padding-bottom:10px;">
+      <h4 style="margin:0; font-weight:800; font-size:1.1rem; color:#0f172a;" id="than-modal-title">
+        📦 Roll / Than Meter Readings
+      </h4>
+      <button type="button" onclick="closeThanModal()" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:#94a3b8; line-height:1;">&times;</button>
     </div>
-    <p style="font-size:0.8rem; color:#64748b; margin:0 0 12px;">
-      Paste numbers separated by space, comma, or new line:
+
+    <p style="font-size:0.8rem; color:#64748b; margin:0 0 14px;">
+      Type or paste roll meters separated by commas, spaces, or new lines (e.g. from WhatsApp, packing slip, or challan):
     </p>
-    <textarea id="paste-textarea" class="form-control" rows="6" placeholder="148, 72.50, 112.50, 103.50, 110.50, 105&#10;99.50, 116.00, 126.50, 89.50, 117.50, 98, 117, 99.50" style="font-family:monospace; font-size:0.9rem;"></textarea>
-    <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
-      <button type="button" class="btn btn-secondary" onclick="closePasteModal()">Cancel</button>
-      <button type="button" class="btn btn-primary" onclick="applyPastedThans()" style="font-weight:700;">Add to Fabric Item</button>
+
+    <!-- Paste Textarea -->
+    <textarea id="modal-than-textarea" class="form-control" rows="5" placeholder="e.g. 100, 105, 102.50, 102.50" oninput="updateModalThanPreview()" style="font-family:monospace; font-size:0.9rem; font-weight:600;"></textarea>
+
+    <!-- Live Than Preview Info -->
+    <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px 14px; margin-top:12px;">
+      <div>
+        <span style="font-size:0.75rem; color:#64748b; font-weight:700; text-transform:uppercase;">Count:</span>
+        <strong id="modal-preview-count" style="font-size:0.95rem; color:#2563eb; margin-left:4px;">0 Thans</strong>
+      </div>
+      <div>
+        <span style="font-size:0.75rem; color:#64748b; font-weight:700; text-transform:uppercase;">Total Meters:</span>
+        <strong id="modal-preview-meters" style="font-size:1.05rem; color:#059669; margin-left:4px;">0.00 MTR</strong>
+      </div>
     </div>
+
+    <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:18px;">
+      <button type="button" class="btn btn-secondary" onclick="closeThanModal()">Cancel</button>
+      <button type="button" class="btn btn-primary" onclick="applyModalThans()" style="font-weight:700;">Apply to Quantity</button>
+    </div>
+
   </div>
 </div>
 
@@ -271,10 +579,16 @@
 <script>
   const masterItems = @json($items);
   const latestRates = @json($latestRates ?? []);
-  let activePasteItemIndex = 0;
 
-  // Pre-load existing items from database
-  let itemsData = @json($existingItems);
+  // Preload Existing Items from DB for this order
+  let billItems = @json($preloadedItems ?? []);
+  
+  // Active editing index (-1 when adding new)
+  let editingRowIndex = -1;
+
+  // Active Than modal buffer
+  let currentModalThans = [];
+  let modalTargetContext = 'entry'; // 'entry' or row index number
 
   function autoGenerateChallanNo() {
     const input = document.getElementById('challan_no');
@@ -282,24 +596,16 @@
 
     const now = new Date();
     const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
     const rand = Math.floor(1000 + Math.random() * 9000);
+    input.value = 'CH-' + year + '-' + rand;
 
-    // Format: CH-YYYY-XXXX (e.g. CH-2026-8492)
-    const genNo = 'CH-' + year + '-' + rand;
-    input.value = genNo;
-
-    // Visual pulse feedback
     input.style.transition = 'all 0.25s ease';
     input.style.borderColor = '#2563eb';
     input.style.backgroundColor = '#eff6ff';
-    input.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.2)';
     setTimeout(() => {
       input.style.borderColor = '';
       input.style.backgroundColor = '';
-      input.style.boxShadow = '';
-    }, 500);
+    }, 400);
   }
 
   function onVendorChange(select) {
@@ -307,463 +613,509 @@
     document.getElementById('vendor_id').value = opt ? (opt.getAttribute('data-id') || '') : '';
   }
 
-  function addNewItem() {
-    itemsData.push({
-      item_id: '',
-      item_name: '',
-      item_code: '',
-      rate: 0,
-      tax_percent: 5,
-      unit: 'Meters',
-      thans: []
-    });
-    renderAllItems();
-    calculateOverallTotals();
-  }
-
-  function removeItem(itemIdx) {
-    if (itemsData.length <= 1) {
-      alert('A purchase entry must have at least one fabric item.');
-      return;
-    }
-    const item = itemsData[itemIdx];
-    if (item.thans.length > 0) {
-      if (!confirm(`Remove Item #${itemIdx + 1} (${item.item_name || 'Fabric'}) and its ${item.thans.length} than readings?`)) {
-        return;
-      }
-    }
-    itemsData.splice(itemIdx, 1);
-    renderAllItems();
-    calculateOverallTotals();
-  }
-
-  function onItemSelectChange(itemIdx, select) {
+  function onEntryItemSelect(select) {
     const opt = select.options[select.selectedIndex];
     if (!opt || !opt.value) {
-      itemsData[itemIdx].item_id = '';
-      itemsData[itemIdx].item_name = '';
-      itemsData[itemIdx].item_code = '';
-    } else {
-      itemsData[itemIdx].item_id = opt.getAttribute('data-id') || '';
-      itemsData[itemIdx].item_name = opt.value;
-      itemsData[itemIdx].item_code = opt.getAttribute('data-code') || '';
-      itemsData[itemIdx].unit = opt.getAttribute('data-unit') || 'Meters';
-
-      // Only suggest latest purchase rate if line item currently has no rate
-      const latestR = parseFloat(opt.getAttribute('data-latest-rate'));
-      if ((!itemsData[itemIdx].rate || itemsData[itemIdx].rate <= 0) && !isNaN(latestR) && latestR > 0) {
-        itemsData[itemIdx].rate = latestR;
-      }
-    }
-    renderAllItems();
-    calculateOverallTotals();
-  }
-
-  function onItemRateChange(itemIdx, val) {
-    const r = parseFloat(val);
-    itemsData[itemIdx].rate = !isNaN(r) && r >= 0 ? r : 0;
-    updateItemSummaryHeader(itemIdx);
-    calculateOverallTotals();
-  }
-
-  function onItemTaxChange(itemIdx, val) {
-    const t = parseFloat(val);
-    itemsData[itemIdx].tax_percent = !isNaN(t) && t >= 0 ? t : 0;
-    updateItemSummaryHeader(itemIdx);
-    calculateOverallTotals();
-  }
-
-  function addThanToItem(itemIdx, meterValue) {
-    const val = parseFloat(meterValue);
-    if (isNaN(val) || val <= 0) return;
-    itemsData[itemIdx].thans.push(Math.round(val * 100) / 100);
-    renderItemThans(itemIdx);
-    calculateOverallTotals();
-  }
-
-  function addSingleThanFromInput(itemIdx) {
-    const input = document.getElementById(`quick-than-input-${itemIdx}`);
-    if (!input) return;
-    const val = input.value.trim();
-    if (val) {
-      addThanToItem(itemIdx, val);
-      input.value = '';
-      input.focus();
-    }
-  }
-
-  function removeThan(itemIdx, thanIdx) {
-    itemsData[itemIdx].thans.splice(thanIdx, 1);
-    renderItemThans(itemIdx);
-    calculateOverallTotals();
-  }
-
-  function updateThanMeter(itemIdx, thanIdx, newMeter) {
-    const val = parseFloat(newMeter);
-    if (!isNaN(val) && val >= 0) {
-      itemsData[itemIdx].thans[thanIdx] = Math.round(val * 100) / 100;
-      updateItemThansSubtotals(itemIdx);
-      calculateOverallTotals();
-    }
-  }
-
-  function clearItemThans(itemIdx) {
-    if (itemsData[itemIdx].thans.length === 0) return;
-    if (confirm(`Clear all thans for Item #${itemIdx + 1}?`)) {
-      itemsData[itemIdx].thans = [];
-      renderItemThans(itemIdx);
-      calculateOverallTotals();
-    }
-  }
-
-  function loadSampleChallanForItem(itemIdx) {
-    itemsData[itemIdx].thans = [148, 72.50, 112.50, 103.50, 110.50, 105, 99.50, 116, 126.50, 89.50, 117.50, 98, 117, 99.50];
-    renderItemThans(itemIdx);
-    calculateOverallTotals();
-  }
-
-  function openPasteModalForItem(itemIdx) {
-    activePasteItemIndex = itemIdx;
-    document.getElementById('paste-modal-title').textContent = `Paste Thans for Item #${itemIdx + 1} (${itemsData[itemIdx].item_name || 'Fabric'})`;
-    document.getElementById('paste-modal').style.display = 'flex';
-    document.getElementById('paste-textarea').focus();
-  }
-
-  function closePasteModal() {
-    document.getElementById('paste-modal').style.display = 'none';
-    document.getElementById('paste-textarea').value = '';
-  }
-
-  function applyPastedThans() {
-    const text = document.getElementById('paste-textarea').value;
-    if (!text) {
-      closePasteModal();
+      calculateEntryPreview();
       return;
     }
-    const matches = text.match(/\d+(?:\.\d+)?/g);
-    if (matches && matches.length > 0) {
-      matches.forEach(m => {
-        const val = parseFloat(m);
-        if (val > 0) itemsData[activePasteItemIndex].thans.push(Math.round(val * 100) / 100);
-      });
-      renderItemThans(activePasteItemIndex);
-      calculateOverallTotals();
+
+    const itemId = opt.value;
+    const itemUnit = opt.getAttribute('data-unit') || 'MTR';
+    const itemCost = parseFloat(opt.getAttribute('data-cost') || 0);
+
+    // Auto-select unit
+    const unitSelect = document.getElementById('entry-unit');
+    if (unitSelect) {
+      const match = Array.from(unitSelect.options).find(o => o.value.toUpperCase() === itemUnit.toUpperCase());
+      if (match) unitSelect.value = match.value;
+      else unitSelect.value = 'MTR';
     }
-    closePasteModal();
+
+    // Auto-fill rate if available
+    const rateInput = document.getElementById('entry-rate');
+    if (rateInput && (!rateInput.value || parseFloat(rateInput.value) === 0)) {
+      if (latestRates[itemId]) {
+        rateInput.value = latestRates[itemId];
+      } else if (itemCost > 0) {
+        rateInput.value = itemCost;
+      }
+    }
+
+    calculateEntryPreview();
   }
 
-  function renderAllItems() {
-    const container = document.getElementById('items-container');
-    if (!container) return;
+  function onEntryQtyManualInput() {
+    calculateEntryPreview();
+  }
 
-    container.innerHTML = '';
+  function calculateEntryPreview() {
+    const rate = parseFloat(document.getElementById('entry-rate')?.value || 0);
+    const qty = parseFloat(document.getElementById('entry-qty')?.value || 0);
+    const taxPct = parseFloat(document.getElementById('entry-tax')?.value || 0);
 
-    itemsData.forEach((item, itemIdx) => {
-      const itemCard = document.createElement('div');
-      itemCard.className = 'card item-card-box';
-      itemCard.id = `item-card-${itemIdx}`;
-      itemCard.style.cssText = 'background:#fff; border-radius:var(--radius-xl); border:1px solid var(--slate-200); box-shadow:var(--shadow-sm); padding:22px; transition:border-color 0.2s ease;';
+    const amt = Math.round(rate * qty * 100) / 100;
+    const taxAmt = Math.round((amt * taxPct / 100.0) * 100) / 100;
+    const total = Math.round((amt + taxAmt) * 100) / 100;
 
-      let itemOptions = `<option value="">-- Select Fabric / Raw Material SKU --</option>`;
-      masterItems.forEach(itm => {
-        const isSel = (item.item_name && (itm.name === item.item_name || itm.id == item.item_id)) ? 'selected' : '';
-        const lastRate = (latestRates && latestRates[itm.id]) ? parseFloat(latestRates[itm.id]) : '';
-        const rateNote = lastRate ? ` [Last Purchase: ₹${lastRate.toFixed(2)}]` : '';
-        itemOptions += `<option value="${itm.name}" data-id="${itm.id}" data-code="${itm.code || ''}" data-latest-rate="${lastRate}" data-unit="${itm.unit || 'Meters'}" ${isSel}>${itm.name} [${itm.code || 'ITEM'}]${rateNote} (${itm.category || 'Fabric'})</option>`;
-      });
+    const previewEl = document.getElementById('entry-preview-total');
+    if (previewEl) {
+      previewEl.textContent = '₹' + total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+  }
 
-      const totalMeters = item.thans.reduce((a, b) => a + (parseFloat(b) || 0), 0);
-      const subtotal = Math.round(totalMeters * (item.rate || 0) * 100) / 100;
-      const taxAmount = Math.round((subtotal * (item.tax_percent || 0) / 100.0) * 100) / 100;
-      const lineTotal = Math.round((subtotal + taxAmount) * 100) / 100;
+  // Than Modal Handlers
+  function openEntryThanModal() {
+    modalTargetContext = 'entry';
+    document.getElementById('than-modal-title').textContent = '📦 Entry Roll / Than Meter Readings';
+    document.getElementById('modal-than-textarea').value = currentModalThans.length > 0 ? currentModalThans.join(', ') : '';
+    updateModalThanPreview();
+    document.getElementById('than-modal').style.display = 'flex';
+  }
 
-      itemCard.innerHTML = `
-        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--slate-100); padding-bottom:12px; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
-          <div style="display:flex; align-items:center; gap:10px;">
-            <span style="width:26px; height:26px; border-radius:8px; background:#eff6ff; color:#2563eb; display:inline-flex; align-items:center; justify-content:center; font-size:0.85rem; font-weight:800;">
-              #${itemIdx + 1}
-            </span>
-            <span style="font-weight:800; font-size:1rem; color:var(--slate-900);" id="item-title-display-${itemIdx}">
-              ${item.item_name || 'Fabric Item ' + (itemIdx + 1)}
-            </span>
-            ${item.item_code ? `<span style="font-family:monospace; font-size:0.75rem; background:#f1f5f9; padding:2px 6px; border-radius:6px; color:#475569;">${item.item_code}</span>` : ''}
-          </div>
+  function openRowThanModal(index) {
+    modalTargetContext = index;
+    const item = billItems[index];
+    if (!item) return;
 
-          <div style="display:flex; align-items:center; gap:10px;">
-            <div style="display:flex; gap:8px; align-items:center;">
-              <span class="badge" style="background:#f1f5f9; color:#334155; border:1px solid #cbd5e1; font-weight:700; font-size:0.8rem;" id="item-badge-thans-${itemIdx}">
-                ${item.thans.length} Thans
-              </span>
-              <span class="badge" style="background:#ecfdf5; color:#059669; border:1px solid #a7f3d0; font-weight:800; font-size:0.85rem;" id="item-badge-meters-${itemIdx}">
-                ${totalMeters.toFixed(2)} Mtr
-              </span>
-              <span class="badge" style="background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; font-weight:800; font-size:0.85rem;" id="item-badge-total-${itemIdx}">
-                ₹${lineTotal.toFixed(2)}
-              </span>
-            </div>
+    document.getElementById('than-modal-title').textContent = `📦 Than Readings for: ${item.item_name}`;
+    document.getElementById('modal-than-textarea').value = (item.thans && item.thans.length > 0) ? item.thans.join(', ') : '';
+    updateModalThanPreview();
+    document.getElementById('than-modal').style.display = 'flex';
+  }
 
-            ${itemsData.length > 1 ? `
-              <button type="button" class="btn btn-secondary btn-sm" onclick="removeItem(${itemIdx})" style="color:#ef4444; font-weight:700; padding:4px 8px; border-color:#fecaca;" title="Remove this entire fabric item">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                Remove Item
-              </button>
-            ` : ''}
-          </div>
-        </div>
+  function closeThanModal() {
+    document.getElementById('than-modal').style.display = 'none';
+  }
 
-        <input type="hidden" name="items[${itemIdx}][item_id]" id="item-id-input-${itemIdx}" value="${item.item_id}">
-        <input type="hidden" name="items[${itemIdx}][item_code]" id="item-code-input-${itemIdx}" value="${item.item_code}">
-        <input type="hidden" name="items[${itemIdx}][unit]" value="${item.unit || 'Meters'}">
+  function parseThansFromText(text) {
+    if (!text) return [];
+    const parts = text.split(/[,\s\n\t]+/);
+    const res = [];
+    parts.forEach(p => {
+      const v = parseFloat(p.trim());
+      if (!isNaN(v) && v > 0) {
+        res.push(Math.round(v * 100) / 100);
+      }
+    });
+    return res;
+  }
 
-        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:16px; margin-bottom:18px;">
-          
-          <div class="form-group" style="margin-bottom:0; grid-column:span 2;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-              <label class="form-label" style="font-weight:700; color:var(--slate-800); margin:0;">
-                Fabric Quality / Item SKU <span style="color:#ef4444;">*</span>
-              </label>
-              <a href="{{ route('masters.items.index') }}" target="_blank" style="font-size:0.75rem; color:#2563eb; text-decoration:none; font-weight:600;">+ Manage Items</a>
-            </div>
-            <select name="items[${itemIdx}][item_name]" class="form-control item-sku-select" required onchange="onItemSelectChange(${itemIdx}, this)">
-              ${itemOptions}
-            </select>
-          </div>
+  function updateModalThanPreview() {
+    const raw = document.getElementById('modal-than-textarea').value;
+    const thans = parseThansFromText(raw);
+    const sum = thans.reduce((a, b) => a + b, 0);
 
-          <div class="form-group" style="margin-bottom:0;">
-            <label class="form-label" style="font-weight:700; color:var(--slate-800); margin-bottom:6px;">
-              Purchase Rate (₹ / ${item.unit || 'Mtr'}) <span style="color:#ef4444;">*</span>
-            </label>
-            <div style="position:relative;">
-              <span style="position:absolute; left:12px; top:50%; transform:translateY(-50%); font-weight:700; color:#64748b;">₹</span>
-              <input type="number" step="0.01" min="0" name="items[${itemIdx}][rate]" class="form-control" required placeholder="0.00" value="${item.rate !== undefined && item.rate !== null && item.rate !== '' ? parseFloat(item.rate).toFixed(2) : ''}" style="padding-left:28px; font-weight:700; font-size:0.95rem;" oninput="onItemRateChange(${itemIdx}, this.value)">
-            </div>
-          </div>
+    document.getElementById('modal-preview-count').textContent = thans.length + ' Thans';
+    document.getElementById('modal-preview-meters').textContent = sum.toFixed(2) + ' MTR';
+  }
 
-          <div class="form-group" style="margin-bottom:0;">
-            <label class="form-label" style="font-weight:700; color:var(--slate-800); margin-bottom:6px;">
-              GST Tax Rate
-            </label>
-            <select name="items[${itemIdx}][tax_percent]" class="form-control" onchange="onItemTaxChange(${itemIdx}, this.value)">
-              <option value="5" ${item.tax_percent == 5 ? 'selected' : ''}>5% GST (Standard Fabric)</option>
-              <option value="0" ${item.tax_percent == 0 ? 'selected' : ''}>0% Excluded / Exempted</option>
-              <option value="12" ${item.tax_percent == 12 ? 'selected' : ''}>12% GST</option>
-              <option value="18" ${item.tax_percent == 18 ? 'selected' : ''}>18% GST</option>
-            </select>
-          </div>
+  function applyModalThans() {
+    const raw = document.getElementById('modal-than-textarea').value;
+    const thans = parseThansFromText(raw);
+    const sum = thans.reduce((a, b) => a + b, 0);
 
-        </div>
+    if (modalTargetContext === 'entry') {
+      currentModalThans = thans;
+      if (thans.length > 0) {
+        document.getElementById('entry-qty').value = sum.toFixed(2);
+        document.getElementById('entry-than-btn-text').textContent = `${thans.length} Thans`;
+        
+        const summaryLine = document.getElementById('entry-thans-summary-line');
+        if (summaryLine) {
+          summaryLine.style.display = 'flex';
+          document.getElementById('entry-thans-count-display').textContent = `${thans.length} Thans`;
+          document.getElementById('entry-thans-meters-display').textContent = `${sum.toFixed(2)} MTR`;
+        }
+      }
+      calculateEntryPreview();
+    } else {
+      // Editing an existing row
+      const idx = modalTargetContext;
+      if (billItems[idx]) {
+        billItems[idx].thans = thans;
+        billItems[idx].than_count = thans.length;
+        if (thans.length > 0) {
+          billItems[idx].qty = sum;
+          billItems[idx].ordered_qty = sum;
+        }
+        recalculateRow(idx);
+        renderTable();
+        calculateBillTotals();
+      }
+    }
 
-        <div style="background:#fafafa; border:1px solid #e2e8f0; border-radius:14px; padding:16px;">
-          
-          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
-            <div style="font-weight:800; font-size:0.85rem; color:#475569; text-transform:uppercase; letter-spacing:0.04em;">
-              Than Meter Breakdown for Item #${itemIdx + 1}
-            </div>
-            
-            <div style="display:flex; gap:8px;">
-              <button type="button" class="btn btn-secondary btn-sm" onclick="openPasteModalForItem(${itemIdx})" style="font-weight:700; font-size:0.8rem; display:inline-flex; align-items:center; gap:5px;">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
-                Paste Multi-Thans
-              </button>
-              <button type="button" class="btn btn-secondary btn-sm" onclick="clearItemThans(${itemIdx})" style="font-weight:700; font-size:0.8rem; color:#dc2626;" title="Clear thans for this item">
-                Clear Thans
-              </button>
-            </div>
-          </div>
+    closeThanModal();
+  }
 
-          <div style="display:flex; gap:8px; margin-bottom:14px;">
-            <input type="number" step="0.01" min="0" id="quick-than-input-${itemIdx}" class="form-control" placeholder="Type meter reading (e.g. 148) and press Enter" style="font-size:0.9rem; font-weight:600;" onkeydown="if(event.key==='Enter'){event.preventDefault();addSingleThanFromInput(${itemIdx});}">
-            <button type="button" class="btn btn-primary btn-sm" onclick="addSingleThanFromInput(${itemIdx})" style="font-weight:700; white-space:nowrap; display:inline-flex; align-items:center; gap:6px;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              Add Than
+  function clearEntryThans() {
+    currentModalThans = [];
+    document.getElementById('entry-than-btn-text').textContent = 'Than';
+    const summaryLine = document.getElementById('entry-thans-summary-line');
+    if (summaryLine) summaryLine.style.display = 'none';
+  }
+
+  // Adding Item to Table
+  function addItemToTable() {
+    const itemSelect = document.getElementById('entry-item-select');
+    const itemId = itemSelect.value;
+    const opt = itemSelect.options[itemSelect.selectedIndex];
+    
+    if (!itemId) {
+      alert('Please select an item from the Item Master.');
+      itemSelect.focus();
+      return;
+    }
+
+    const itemName = opt.getAttribute('data-name') || opt.text;
+    const itemCode = opt.getAttribute('data-code') || '';
+    const rate = parseFloat(document.getElementById('entry-rate').value || 0);
+    const qty = parseFloat(document.getElementById('entry-qty').value || 0);
+    const unit = document.getElementById('entry-unit').value || 'MTR';
+    const taxPct = parseFloat(document.getElementById('entry-tax').value || 0);
+
+    if (qty <= 0) {
+      alert('Please enter a valid quantity greater than 0.');
+      document.getElementById('entry-qty').focus();
+      return;
+    }
+
+    if (rate < 0) {
+      alert('Please enter a valid rate.');
+      document.getElementById('entry-rate').focus();
+      return;
+    }
+
+    const amount = Math.round(rate * qty * 100) / 100;
+    const taxAmount = Math.round((amount * taxPct / 100.0) * 100) / 100;
+    const total = Math.round((amount + taxAmount) * 100) / 100;
+
+    const itemObj = {
+      item_id: itemId,
+      item_name: itemName,
+      item_code: itemCode,
+      rate: rate,
+      qty: qty,
+      ordered_qty: qty,
+      unit: unit,
+      tax_percent: taxPct,
+      amount: amount,
+      subtotal: amount,
+      tax_amount: taxAmount,
+      total_amount: total,
+      thans: [...currentModalThans],
+      than_count: currentModalThans.length
+    };
+
+    if (editingRowIndex >= 0) {
+      billItems[editingRowIndex] = itemObj;
+      editingRowIndex = -1;
+      document.getElementById('btn-add-item-to-table').innerHTML = `
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <span>Add Item</span>
+      `;
+    } else {
+      billItems.push(itemObj);
+    }
+
+    itemSelect.value = '';
+    document.getElementById('entry-rate').value = '';
+    document.getElementById('entry-qty').value = '';
+    clearEntryThans();
+    calculateEntryPreview();
+
+    renderTable();
+    calculateBillTotals();
+  }
+
+  function editItem(index) {
+    const item = billItems[index];
+    if (!item) return;
+
+    editingRowIndex = index;
+
+    const itemSelect = document.getElementById('entry-item-select');
+    itemSelect.value = item.item_id;
+
+    document.getElementById('entry-rate').value = item.rate;
+    document.getElementById('entry-qty').value = item.qty;
+    document.getElementById('entry-unit').value = item.unit;
+    document.getElementById('entry-tax').value = item.tax_percent;
+
+    currentModalThans = item.thans ? [...item.thans] : [];
+    if (currentModalThans.length > 0) {
+      document.getElementById('entry-than-btn-text').textContent = `${currentModalThans.length} Thans`;
+      const summaryLine = document.getElementById('entry-thans-summary-line');
+      if (summaryLine) {
+        summaryLine.style.display = 'flex';
+        document.getElementById('entry-thans-count-display').textContent = `${currentModalThans.length} Thans`;
+        document.getElementById('entry-thans-meters-display').textContent = `${item.qty.toFixed(2)} MTR`;
+      }
+    } else {
+      clearEntryThans();
+    }
+
+    calculateEntryPreview();
+
+    document.getElementById('btn-add-item-to-table').innerHTML = `
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Update Row #${index + 1}</span>
+    `;
+
+    document.getElementById('entry-rate').focus();
+  }
+
+  function deleteItem(index) {
+    if (confirm(`Remove item #${index + 1} (${billItems[index].item_name}) from this purchase?`)) {
+      billItems.splice(index, 1);
+      if (editingRowIndex === index) {
+        editingRowIndex = -1;
+        document.getElementById('btn-add-item-to-table').innerHTML = `
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <span>Add Item</span>
+        `;
+      }
+      renderTable();
+      calculateBillTotals();
+    }
+  }
+
+  function recalculateRow(index) {
+    const item = billItems[index];
+    if (!item) return;
+
+    item.amount = Math.round(item.rate * item.qty * 100) / 100;
+    item.subtotal = item.amount;
+    item.tax_amount = Math.round((item.amount * item.tax_percent / 100.0) * 100) / 100;
+    item.total_amount = Math.round((item.amount + item.tax_amount) * 100) / 100;
+  }
+
+  function onInlineRowChange(index, field, value) {
+    const item = billItems[index];
+    if (!item) return;
+
+    if (field === 'rate') item.rate = parseFloat(value) || 0;
+    if (field === 'qty') {
+      item.qty = parseFloat(value) || 0;
+      item.ordered_qty = item.qty;
+    }
+    if (field === 'tax_percent') item.tax_percent = parseFloat(value) || 0;
+
+    recalculateRow(index);
+    renderTable();
+    calculateBillTotals();
+  }
+
+  // Render Table
+  function renderTable() {
+    const tbody = document.getElementById('purchase-items-tbody');
+    const emptyState = document.getElementById('no-items-empty-state');
+    const tfoot = document.getElementById('purchase-items-tfoot');
+    const hiddenContainer = document.getElementById('hidden-inputs-container');
+
+    tbody.innerHTML = '';
+    hiddenContainer.innerHTML = '';
+
+    if (billItems.length === 0) {
+      emptyState.style.display = 'block';
+      tfoot.style.display = 'none';
+      return;
+    }
+
+    emptyState.style.display = 'none';
+    tfoot.style.display = 'table-footer-group';
+
+    billItems.forEach((item, idx) => {
+      const tr = document.createElement('tr');
+      const hasThans = item.thans && item.thans.length > 0;
+      const thanText = hasThans ? `${item.thans.length} Thans` : '-';
+
+      tr.innerHTML = `
+        <td style="text-align:center; font-weight:700; color:#64748b;">${idx + 1}</td>
+        <td>
+          <div style="font-weight:700; color:#0f172a;">${item.item_name}</div>
+          ${item.item_code ? `<span style="font-size:0.75rem; color:#64748b; font-family:monospace;">${item.item_code}</span>` : ''}
+        </td>
+        <td style="text-align:right;">
+          <input type="number" step="0.01" min="0" value="${item.rate}" 
+            class="form-control form-control-sm text-end" 
+            style="width:90px; display:inline-block; font-weight:700;"
+            onchange="onInlineRowChange(${idx}, 'rate', this.value)">
+        </td>
+        <td style="text-align:right;">
+          <input type="number" step="0.01" min="0.01" value="${item.qty}" 
+            class="form-control form-control-sm text-end" 
+            style="width:90px; display:inline-block; font-weight:800; color:#059669;"
+            onchange="onInlineRowChange(${idx}, 'qty', this.value)">
+        </td>
+        <td style="text-align:center;">
+          <span class="badge" style="background:#f1f5f9; color:#475569; font-weight:700; border:1px solid #cbd5e1;">${item.unit}</span>
+        </td>
+        <td style="text-align:center;">
+          <span class="than-tag" onclick="openRowThanModal(${idx})" title="Click to view or edit roll readings">
+            <span>${thanText}</span>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </span>
+        </td>
+        <td style="text-align:center;">
+          <select class="form-control form-control-sm" style="width:75px; display:inline-block; font-weight:700; padding:2px 4px;" onchange="onInlineRowChange(${idx}, 'tax_percent', this.value)">
+            <option value="5" ${item.tax_percent == 5 ? 'selected' : ''}>5%</option>
+            <option value="12" ${item.tax_percent == 12 ? 'selected' : ''}>12%</option>
+            <option value="18" ${item.tax_percent == 18 ? 'selected' : ''}>18%</option>
+            <option value="0" ${item.tax_percent == 0 ? 'selected' : ''}>0%</option>
+          </select>
+        </td>
+        <td style="text-align:right; font-weight:700; color:#1e293b;">
+          ₹${item.amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        </td>
+        <td style="text-align:right; font-weight:700; color:#dc2626;">
+          ₹${item.tax_amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        </td>
+        <td style="text-align:right; font-weight:800; color:#059669; font-size:0.95rem;">
+          ₹${item.total_amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        </td>
+        <td style="text-align:center;">
+          <div style="display:inline-flex; align-items:center; gap:4px;">
+            <button type="button" class="btn btn-secondary btn-xs" onclick="editItem(${idx})" title="Edit in panel" style="padding:4px 8px; font-size:0.75rem;">
+              ✏️
+            </button>
+            <button type="button" class="btn btn-danger btn-xs" onclick="deleteItem(${idx})" title="Delete row" style="padding:4px 8px; font-size:0.75rem; background:#fee2e2; border-color:#fca5a5; color:#dc2626;">
+              &times;
             </button>
           </div>
-
-          <div id="than-empty-box-${itemIdx}" style="text-align:center; padding:24px 14px; color:#94a3b8; border:2px dashed #cbd5e1; border-radius:10px; background:#ffffff; ${item.thans.length > 0 ? 'display:none;' : 'display:block;'}">
-            <div style="font-weight:700; font-size:0.9rem; color:#64748b; margin-bottom:3px;">No Thans added for this item yet</div>
-            <p style="font-size:0.775rem; margin:0 0 10px;">Type meter reading above or paste multiple readings.</p>
-            <button type="button" class="btn btn-secondary btn-xs" onclick="loadSampleChallanForItem(${itemIdx})">Load Challan Sample (14 Thans)</button>
-          </div>
-
-          <div id="than-sheet-box-${itemIdx}" style="${item.thans.length > 0 ? 'display:grid;' : 'display:none;'} grid-template-columns:1fr 1fr; gap:14px;">
-            <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:10px; padding:12px;">
-              <div style="font-weight:700; font-size:0.75rem; color:#64748b; text-transform:uppercase; border-bottom:1px solid #e2e8f0; padding-bottom:6px; margin-bottom:8px; display:flex; justify-content:space-between;">
-                <span>Column 1</span>
-                <span id="col1-badge-${itemIdx}" style="color:#2563eb; font-weight:800;">0.00 Mtr</span>
-              </div>
-              <div id="col1-thans-${itemIdx}" style="display:flex; flex-direction:column; gap:6px;"></div>
-            </div>
-
-            <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:10px; padding:12px;">
-              <div style="font-weight:700; font-size:0.75rem; color:#64748b; text-transform:uppercase; border-bottom:1px solid #e2e8f0; padding-bottom:6px; margin-bottom:8px; display:flex; justify-content:space-between;">
-                <span>Column 2</span>
-                <span id="col2-badge-${itemIdx}" style="color:#2563eb; font-weight:800;">0.00 Mtr</span>
-              </div>
-              <div id="col2-thans-${itemIdx}" style="display:flex; flex-direction:column; gap:6px;"></div>
-            </div>
-          </div>
-
-        </div>
+        </td>
       `;
 
-      container.appendChild(itemCard);
-      renderItemThans(itemIdx);
-    });
-  }
+      tbody.appendChild(tr);
 
-  function renderItemThans(itemIdx) {
-    const item = itemsData[itemIdx];
-    if (!item) return;
-
-    const emptyBox = document.getElementById(`than-empty-box-${itemIdx}`);
-    const sheetBox = document.getElementById(`than-sheet-box-${itemIdx}`);
-    const col1 = document.getElementById(`col1-thans-${itemIdx}`);
-    const col2 = document.getElementById(`col2-thans-${itemIdx}`);
-
-    if (!emptyBox || !sheetBox || !col1 || !col2) return;
-
-    col1.innerHTML = '';
-    col2.innerHTML = '';
-
-    if (item.thans.length === 0) {
-      emptyBox.style.display = 'block';
-      sheetBox.style.display = 'none';
-      updateItemSummaryHeader(itemIdx);
-      return;
-    }
-
-    emptyBox.style.display = 'none';
-    sheetBox.style.display = 'grid';
-
-    const midpoint = Math.ceil(item.thans.length / 2);
-
-    item.thans.forEach((meter, tIdx) => {
-      const row = document.createElement('div');
-      row.style.cssText = 'display:flex; align-items:center; gap:6px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:4px 8px;';
-      row.innerHTML = `
-        <span style="font-weight:700; font-size:0.725rem; color:#64748b; width:54px;">Than #${tIdx + 1}</span>
-        <div style="flex:1;">
-          <input type="number" step="0.01" min="0" value="${meter}" name="items[${itemIdx}][thans][]" 
-            class="form-control form-control-sm than-input" 
-            style="font-weight:700; font-size:0.85rem; padding:3px 6px; height:28px;"
-            oninput="updateThanMeter(${itemIdx}, ${tIdx}, this.value)"
-            onfocus="this.select()">
-        </div>
-        <span style="font-size:0.7rem; color:#94a3b8; font-weight:600;">Mtr</span>
-        <button type="button" onclick="removeThan(${itemIdx}, ${tIdx})" title="Remove than" style="background:none; border:none; color:#ef4444; font-size:1.1rem; cursor:pointer; line-height:1; padding:0 3px;">&times;</button>
+      // Generate hidden form inputs for Laravel backend
+      const thansJson = (item.thans && item.thans.length > 0) ? JSON.stringify(item.thans) : '';
+      hiddenContainer.innerHTML += `
+        <input type="hidden" name="items[${idx}][item_id]" value="${item.item_id}">
+        <input type="hidden" name="items[${idx}][item_name]" value="${item.item_name}">
+        <input type="hidden" name="items[${idx}][item_code]" value="${item.item_code}">
+        <input type="hidden" name="items[${idx}][rate]" value="${item.rate}">
+        <input type="hidden" name="items[${idx}][ordered_qty]" value="${item.qty}">
+        <input type="hidden" name="items[${idx}][unit]" value="${item.unit}">
+        <input type="hidden" name="items[${idx}][tax_percent]" value="${item.tax_percent}">
+        <input type="hidden" name="items[${idx}][tax_amount]" value="${item.tax_amount}">
+        <input type="hidden" name="items[${idx}][total_amount]" value="${item.total_amount}">
+        <input type="hidden" name="items[${idx}][than_count]" value="${item.than_count || 0}">
+        <input type="hidden" name="items[${idx}][thans]" value='${thansJson}'>
       `;
-
-      if (tIdx < midpoint) {
-        col1.appendChild(row);
-      } else {
-        col2.appendChild(row);
-      }
     });
-
-    updateItemThansSubtotals(itemIdx);
-    updateItemSummaryHeader(itemIdx);
   }
 
-  function updateItemThansSubtotals(itemIdx) {
-    const item = itemsData[itemIdx];
-    if (!item) return;
-
-    const midpoint = Math.ceil(item.thans.length / 2);
-    let c1 = 0;
-    let c2 = 0;
-    item.thans.forEach((m, i) => {
-      if (i < midpoint) c1 += (parseFloat(m) || 0);
-      else c2 += (parseFloat(m) || 0);
-    });
-
-    const b1 = document.getElementById(`col1-badge-${itemIdx}`);
-    const b2 = document.getElementById(`col2-badge-${itemIdx}`);
-    if (b1) b1.textContent = c1.toFixed(2) + ' Mtr (' + Math.min(midpoint, item.thans.length) + ')';
-    if (b2) b2.textContent = c2.toFixed(2) + ' Mtr (' + Math.max(0, item.thans.length - midpoint) + ')';
-  }
-
-  function updateItemSummaryHeader(itemIdx) {
-    const item = itemsData[itemIdx];
-    if (!item) return;
-
-    const totalMeters = item.thans.reduce((a, b) => a + (parseFloat(b) || 0), 0);
-    const subtotal = Math.round(totalMeters * (item.rate || 0) * 100) / 100;
-    const taxAmount = Math.round((subtotal * (item.tax_percent || 0) / 100.0) * 100) / 100;
-    const lineTotal = Math.round((subtotal + taxAmount) * 100) / 100;
-
-    const thansBadge = document.getElementById(`item-badge-thans-${itemIdx}`);
-    const metersBadge = document.getElementById(`item-badge-meters-${itemIdx}`);
-    const totalBadge = document.getElementById(`item-badge-total-${itemIdx}`);
-    const titleDisplay = document.getElementById(`item-title-display-${itemIdx}`);
-
-    if (thansBadge) thansBadge.textContent = `${item.thans.length} Thans`;
-    if (metersBadge) metersBadge.textContent = `${totalMeters.toFixed(2)} Mtr`;
-    if (totalBadge) totalBadge.textContent = `₹${lineTotal.toFixed(2)}`;
-    if (titleDisplay && item.item_name) titleDisplay.textContent = item.item_name;
-  }
-
-  function calculateOverallTotals() {
-    let grandTotalMeters = 0;
-    let grandTotalThans = 0;
-    let grandSubtotal = 0;
+  // Calculate Overall Totals & Unit-Wise Breakdowns
+  function calculateBillTotals() {
+    let grandQty = 0;
+    let grandAmt = 0;
     let grandTax = 0;
+    let grandTotal = 0;
+    let grandThans = 0;
 
-    itemsData.forEach(item => {
-      const itemMeters = item.thans.reduce((a, b) => a + (parseFloat(b) || 0), 0);
-      const itemSub = Math.round(itemMeters * (item.rate || 0) * 100) / 100;
-      const itemTax = Math.round((itemSub * (item.tax_percent || 0) / 100.0) * 100) / 100;
+    const unitTotals = {};
 
-      grandTotalMeters += itemMeters;
-      grandTotalThans += item.thans.length;
-      grandSubtotal += itemSub;
-      grandTax += itemTax;
+    billItems.forEach(item => {
+      grandQty += item.qty;
+      grandAmt += item.amount;
+      grandTax += item.tax_amount;
+      grandTotal += item.total_amount;
+      grandThans += (item.than_count || 0);
+
+      const u = (item.unit || 'MTR').toUpperCase();
+      unitTotals[u] = (unitTotals[u] || 0) + item.qty;
     });
 
-    const grandFinal = Math.round((grandSubtotal + grandTax) * 100) / 100;
+    grandAmt = Math.round(grandAmt * 100) / 100;
+    grandTax = Math.round(grandTax * 100) / 100;
+    grandTotal = Math.round(grandTotal * 100) / 100;
 
-    document.getElementById('summary-items-count').textContent = itemsData.length + (itemsData.length === 1 ? ' Item' : ' Items');
-    document.getElementById('summary-than-count').textContent = grandTotalThans + ' Thans';
-    document.getElementById('summary-total-meters').textContent = grandTotalMeters.toFixed(2) + ' Mtr';
-    document.getElementById('summary-subtotal').textContent = '₹' + grandSubtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    document.getElementById('summary-tax').textContent = '₹' + grandTax.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    document.getElementById('summary-grand').textContent = '₹' + grandFinal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    // Table Footer
+    document.getElementById('tbl-total-qty').textContent = grandQty.toFixed(2);
+    document.getElementById('tbl-total-amt').textContent = '₹' + grandAmt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    document.getElementById('tbl-total-tax').textContent = '₹' + grandTax.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    document.getElementById('tbl-total-grand').textContent = '₹' + grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    // Summary Box
+    document.getElementById('sum-items-count').textContent = billItems.length + (billItems.length === 1 ? ' Item' : ' Items');
+    document.getElementById('sum-thans-count').textContent = grandThans + ' Thans';
+    document.getElementById('sum-subtotal').textContent = '₹' + grandAmt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    document.getElementById('sum-tax').textContent = '₹' + grandTax.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    document.getElementById('sum-grand-total').textContent = '₹' + grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    // Unit-Wise Breakdown Box (MTR, PCS, KG)
+    const mtrVal = (unitTotals['MTR'] || unitTotals['METERS'] || 0);
+    const pcsVal = (unitTotals['PCS'] || unitTotals['PIECES'] || 0);
+    const kgVal  = (unitTotals['KG']  || unitTotals['KGS'] || 0);
+
+    document.getElementById('unit-sum-mtr').textContent = mtrVal > 0 ? `${mtrVal.toFixed(2)} MTR` : '-';
+    document.getElementById('unit-sum-pcs').textContent = pcsVal > 0 ? `${Math.round(pcsVal)} PCS` : '-';
+    document.getElementById('unit-sum-kg').textContent  = kgVal > 0  ? `${kgVal.toFixed(2)} KG`  : '-';
+
+    const container = document.getElementById('unit-summary-container');
+    container.innerHTML = `
+      <div class="unit-summary-pill">
+        <span>MTR:</span>
+        <strong id="unit-sum-mtr" style="color:#059669;">${mtrVal > 0 ? mtrVal.toFixed(2) + ' MTR' : '-'}</strong>
+      </div>
+      <div class="unit-summary-pill">
+        <span>PCS:</span>
+        <strong id="unit-sum-pcs" style="color:#2563eb;">${pcsVal > 0 ? Math.round(pcsVal) + ' PCS' : '-'}</strong>
+      </div>
+      <div class="unit-summary-pill">
+        <span>KG:</span>
+        <strong id="unit-sum-kg" style="color:#7c3aed;">${kgVal > 0 ? kgVal.toFixed(2) + ' KG' : '-'}</strong>
+      </div>
+    `;
+
+    Object.keys(unitTotals).forEach(u => {
+      if (!['MTR', 'METERS', 'PCS', 'PIECES', 'KG', 'KGS'].includes(u)) {
+        const val = unitTotals[u];
+        container.innerHTML += `
+          <div class="unit-summary-pill">
+            <span>${u}:</span>
+            <strong style="color:#0f172a;">${val.toFixed(2)} ${u}</strong>
+          </div>
+        `;
+      }
+    });
   }
 
+  // Form Validation on Submit
   document.getElementById('pe-form')?.addEventListener('submit', function(e) {
-    if (itemsData.length === 0) {
+    const vSel = document.getElementById('vendor-select');
+    if (!vSel.value) {
       e.preventDefault();
-      alert('Please add at least one fabric item.');
+      alert('Please select a Vendor / Supplier.');
+      vSel.focus();
       return false;
     }
 
-    let hasMissingSku = false;
-    let hasZeroThans = false;
-
-    itemsData.forEach((item, idx) => {
-      if (!item.item_name) {
-        hasMissingSku = true;
-      }
-      if (item.thans.length === 0) {
-        hasZeroThans = true;
-      }
-    });
-
-    if (hasMissingSku) {
+    const challanNo = document.getElementById('challan_no');
+    if (!challanNo.value.trim()) {
       e.preventDefault();
-      alert('Please select a Fabric Quality / Item SKU for all item entries.');
+      alert('Please enter a Supplier Challan / Bill Number.');
+      challanNo.focus();
       return false;
     }
 
-    if (hasZeroThans) {
+    if (billItems.length === 0) {
       e.preventDefault();
-      alert('Please enter at least one Than / Roll meter reading for each fabric item before saving.');
+      alert('Please add at least one item to the purchase items table.');
+      document.getElementById('entry-item-select').focus();
       return false;
     }
   });
 
   document.addEventListener('DOMContentLoaded', () => {
-    renderAllItems();
-    calculateOverallTotals();
+    const vSel = document.getElementById('vendor-select');
+    if (vSel && vSel.value) {
+      onVendorChange(vSel);
+    }
+
+    renderTable();
+    calculateBillTotals();
   });
 </script>
 @endpush
