@@ -221,7 +221,8 @@
               <svg class="nav-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
             </a>
             <div class="nav-submenu">
-              <a href="{{ route('dispatch.dispatch') }}" class="submenu-link {{ request()->routeIs('dispatch.dispatch') || request()->routeIs('dispatch.challans.*') ? 'active' : '' }}">Dispatch Challans</a>
+              <a href="{{ route('dispatch.challans.create') }}" class="submenu-link {{ request()->routeIs('dispatch.challans.create') ? 'active' : '' }}">New Sales Entry</a>
+              <a href="{{ route('dispatch.challans.index') }}" class="submenu-link {{ request()->routeIs('dispatch.challans.index') || request()->routeIs('dispatch.dispatch') ? 'active' : '' }}">Sales & Dispatch Challans</a>
               <a href="{{ route('dispatch.ready') }}" class="submenu-link {{ request()->routeIs('dispatch.ready') ? 'active' : '' }}">Ready for Dispatch</a>
             </div>
           </div>
