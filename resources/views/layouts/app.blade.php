@@ -132,14 +132,30 @@
           </div>
         </div>
 
-        <!-- 2. CORE MASTERS MANAGEMENT -->
+        <!-- 2. Q.R. MGMT (User Sketch Item 1) -->
         <div class="nav-section">
-          <div class="nav-section-title">Core Masters</div>
+          <div class="nav-item nav-group {{ request()->is('qr*') ? 'expanded' : '' }}">
+            <a href="javascript:void(0)" class="nav-link nav-group-toggle {{ request()->is('qr*') ? 'active' : '' }}">
+              <div class="nav-link-content">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/><path d="M3 12h.01"/><path d="M12 3h.01"/><path d="M12 16v.01"/><path d="M16 12h1"/><path d="M21 12v.01"/><path d="M12 21v-1"/></svg>
+                <span class="nav-title">Q.R. Mgmt</span>
+              </div>
+              <svg class="nav-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+            </a>
+            <div class="nav-submenu">
+              <a href="{{ route('qr.history') }}" class="submenu-link {{ request()->routeIs('qr.history') ? 'active' : '' }}">QR Management & Expiry</a>
+              <a href="{{ route('qr.generator') }}" class="submenu-link {{ request()->routeIs('qr.generator') ? 'active' : '' }}">QR Generator & Print</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. MASTER MGMT (User Sketch Item 2: with dropdown) -->
+        <div class="nav-section">
           <div class="nav-item nav-group {{ request()->is('masters*') ? 'expanded' : '' }}">
             <a href="javascript:void(0)" class="nav-link nav-group-toggle {{ request()->is('masters*') ? 'active' : '' }}">
               <div class="nav-link-content">
                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h14a2 2 0 0 0 2-2V7.5L14.5 2H6a2 2 0 0 0-2 2v4"/><polyline points="14 2 14 8 20 8"/><path d="M2 15h10"/><path d="m9 18 3-3-3-3"/></svg>
-                <span class="nav-title">Masters Management</span>
+                <span class="nav-title">Master Mgmt</span>
               </div>
               <svg class="nav-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
             </a>
@@ -153,136 +169,88 @@
           </div>
         </div>
 
-        <!-- 3. QR CODE MANAGEMENT (Image 2: QR mgmt) -->
+        <!-- 4. PURCHASE BOOK (User Sketch Item 3) -->
         <div class="nav-section">
-          <div class="nav-section-title">Barcodes & QR</div>
-          <div class="nav-item nav-group {{ request()->is('qr*') ? 'expanded' : '' }}">
-            <a href="javascript:void(0)" class="nav-link nav-group-toggle {{ request()->is('qr*') ? 'active' : '' }}">
-              <div class="nav-link-content">
-                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/><path d="M3 12h.01"/><path d="M12 3h.01"/><path d="M12 16v.01"/><path d="M16 12h1"/><path d="M21 12v.01"/><path d="M12 21v-1"/></svg>
-                <span class="nav-title">QR Management</span>
-              </div>
-              <svg class="nav-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-            </a>
-            <div class="nav-submenu">
-              <a href="{{ route('qr.history') }}" class="submenu-link {{ request()->routeIs('qr.history') ? 'active' : '' }}">Admin QR & Expiry Ledger</a>
-              <a href="{{ route('qr.generator') }}" class="submenu-link {{ request()->routeIs('qr.generator') ? 'active' : '' }}">QR Generator & Sheet Print</a>
-            </div>
-          </div>
-        </div>
-
-        <!-- 4. PURCHASE MANAGEMENT (Image 2: Purchase Book) -->
-        <div class="nav-section">
-          <div class="nav-section-title">Purchasing</div>
-          <div class="nav-item nav-group {{ request()->is('purchase*') ? 'expanded' : '' }}">
-            <a href="javascript:void(0)" class="nav-link nav-group-toggle {{ request()->is('purchase*') ? 'active' : '' }}">
+          <div class="nav-item">
+            <a href="{{ route('purchase.orders.index') }}" class="nav-link {{ request()->routeIs('purchase.orders.*') && !request()->is('purchase/orders/create') ? 'active' : '' }}">
               <div class="nav-link-content">
                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
                 <span class="nav-title">Purchase Book</span>
               </div>
-              <svg class="nav-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
             </a>
-            <div class="nav-submenu">
-              <a href="{{ route('purchase.orders.index') }}" class="submenu-link {{ request()->routeIs('purchase.orders.*') ? 'active' : '' }}">Purchase Entries</a>
-              <a href="{{ route('purchase.payment-mapping') }}" class="submenu-link {{ request()->routeIs('purchase.payment-mapping') ? 'active' : '' }}">Payment Mapping</a>
-            </div>
           </div>
         </div>
 
-        <!-- 5. JOB WORK & ASSIGN (Image 2: Jobwork Assign & Jobwork Inward) -->
+        <!-- 5. JOBWORK ASSIGN (User Sketch Item 4) -->
         <div class="nav-section">
-          <div class="nav-section-title">Job Assignment</div>
-          <div class="nav-item nav-group {{ request()->is('jobwork*') ? 'expanded' : '' }}">
-            <a href="javascript:void(0)" class="nav-link nav-group-toggle {{ request()->is('jobwork*') ? 'active' : '' }}">
+          <div class="nav-item">
+            <a href="{{ route('jobwork.assign.index') }}" class="nav-link {{ request()->routeIs('jobwork.assign.*') && !request()->is('jobwork/assign/create') ? 'active' : '' }}">
               <div class="nav-link-content">
                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
-                <span class="nav-title">Job Work & Assign</span>
+                <span class="nav-title">Jobwork Assign</span>
               </div>
-              <svg class="nav-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
             </a>
-            <div class="nav-submenu">
-              <a href="{{ route('jobwork.assign.index') }}" class="submenu-link {{ request()->routeIs('jobwork.assign.*') ? 'active' : '' }}">Job Assign Orders</a>
-              <a href="{{ route('jobwork.inward.index') }}" class="submenu-link {{ request()->routeIs('jobwork.inward.index') ? 'active' : '' }}">Job Inward Entries</a>
-              <a href="{{ route('jobwork.inward-report') }}" class="submenu-link {{ request()->routeIs('jobwork.inward-report') ? 'active' : '' }}">Job Inward Register</a>
-              <a href="{{ route('reports.job-work-register') }}" class="submenu-link {{ request()->routeIs('reports.job-work-register') || request()->routeIs('jobwork.register') ? 'active' : '' }}">Job Work Register</a>
-            </div>
           </div>
         </div>
 
-        <!-- 6. DISPATCH MANAGEMENT (Image 2: Dispatch challan) -->
+        <!-- 6. JOBWORK INWARD (User Sketch Item 5) -->
         <div class="nav-section">
-          <div class="nav-section-title">Shipping & Sales</div>
-          <div class="nav-item nav-group {{ request()->is('dispatch*') ? 'expanded' : '' }}">
-            <a href="javascript:void(0)" class="nav-link nav-group-toggle {{ request()->is('dispatch*') ? 'active' : '' }}">
+          <div class="nav-item">
+            <a href="{{ route('jobwork.inward.index') }}" class="nav-link {{ request()->routeIs('jobwork.inward.index') ? 'active' : '' }}">
+              <div class="nav-link-content">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                <span class="nav-title">Jobwork Inward</span>
+              </div>
+            </a>
+          </div>
+        </div>
+
+        <!-- 7. DISPATCH CHALLAN (User Sketch Item 6) -->
+        <div class="nav-section">
+          <div class="nav-item">
+            <a href="{{ route('dispatch.challans.index') }}" class="nav-link {{ request()->routeIs('dispatch.challans.*') && !request()->is('dispatch/challans/create') ? 'active' : '' }}">
               <div class="nav-link-content">
                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>
                 <span class="nav-title">Dispatch Challan</span>
               </div>
-              <svg class="nav-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
             </a>
-            <div class="nav-submenu">
-              <a href="{{ route('dispatch.challans.create') }}" class="submenu-link {{ request()->routeIs('dispatch.challans.create') ? 'active' : '' }}">New Sales Entry</a>
-              <a href="{{ route('dispatch.challans.index') }}" class="submenu-link {{ request()->routeIs('dispatch.challans.index') || request()->routeIs('dispatch.dispatch') ? 'active' : '' }}">Sales & Dispatch Challans</a>
-              <a href="{{ route('dispatch.ready') }}" class="submenu-link {{ request()->routeIs('dispatch.ready') ? 'active' : '' }}">Ready for Dispatch</a>
-            </div>
           </div>
         </div>
 
-        <!-- 7. ACCOUNTS & SETTLEMENTS -->
+        <!-- 8. REPORTS (User Sketch Reports Section) -->
         <div class="nav-section">
-          <div class="nav-section-title">Financials</div>
-          <div class="nav-item nav-group {{ request()->is('accounts*') ? 'expanded' : '' }}">
-            <a href="javascript:void(0)" class="nav-link nav-group-toggle {{ request()->is('accounts*') ? 'active' : '' }}">
-              <div class="nav-link-content">
-                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                <span class="nav-title">Accounts & Settlements</span>
-              </div>
-              <svg class="nav-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-            </a>
-            <div class="nav-submenu">
-              <a href="{{ route('accounts.customer-accounts') }}" class="submenu-link {{ request()->routeIs('accounts.customer-accounts') ? 'active' : '' }}">Customer Settlements</a>
-              <a href="{{ route('accounts.customer-outstanding') }}" class="submenu-link {{ request()->routeIs('accounts.customer-outstanding') ? 'active' : '' }}">Customer Outstanding</a>
-              <a href="{{ route('accounts.vendor-outstanding') }}" class="submenu-link {{ request()->routeIs('accounts.vendor-outstanding') ? 'active' : '' }}">Vendor Outstanding</a>
-              <a href="{{ route('purchase.payment-mapping') }}" class="submenu-link {{ request()->routeIs('purchase.payment-mapping') ? 'active' : '' }}">Vendor Payment Mapping</a>
-              <a href="{{ route('accounts.jobworker-outstanding') }}" class="submenu-link {{ request()->routeIs('accounts.jobworker-outstanding') ? 'active' : '' }}">Job Worker Outstanding</a>
-            </div>
-          </div>
-        </div>
-
-        <!-- 8. REPORTS HUB (Image 2: Reports Section) -->
-        <div class="nav-section">
-          <div class="nav-section-title">Analytics & Reports</div>
-          <div class="nav-item nav-group {{ request()->is('reports*') || request()->routeIs('purchase.ledger') ? 'expanded' : '' }}">
-            <a href="javascript:void(0)" class="nav-link nav-group-toggle {{ request()->is('reports*') || request()->routeIs('purchase.ledger') ? 'active' : '' }}">
+          <div class="nav-section-title">Reports</div>
+          <div class="nav-item nav-group {{ request()->is('reports*') || request()->routeIs('purchase.ledger') || request()->routeIs('jobwork.inward-report') ? 'expanded' : '' }}">
+            <a href="javascript:void(0)" class="nav-link nav-group-toggle {{ request()->is('reports*') || request()->routeIs('purchase.ledger') || request()->routeIs('jobwork.inward-report') ? 'active' : '' }}">
               <div class="nav-link-content">
                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
-                <span class="nav-title">Reports Hub</span>
+                <span class="nav-title">Reports</span>
               </div>
               <svg class="nav-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
             </a>
             <div class="nav-submenu">
-              <a href="{{ route('purchase.ledger') }}" class="submenu-link {{ request()->routeIs('purchase.ledger') || request()->routeIs('reports.purchase-ledger') ? 'active' : '' }}">Purchase Register (Tally)</a>
+              <a href="{{ route('purchase.ledger') }}" class="submenu-link {{ request()->routeIs('purchase.ledger') ? 'active' : '' }}">Purchase Register</a>
               <a href="{{ route('reports.job-work-register') }}" class="submenu-link {{ request()->routeIs('reports.job-work-register') ? 'active' : '' }}">Job Assign Register</a>
               <a href="{{ route('jobwork.inward-report') }}" class="submenu-link {{ request()->routeIs('jobwork.inward-report') ? 'active' : '' }}">Job Inward Register</a>
               <a href="{{ route('reports.lot-sales') }}" class="submenu-link {{ request()->routeIs('reports.lot-sales') ? 'active' : '' }}">Dispatch Register</a>
-              <a href="{{ route('reports.ledger') }}" class="submenu-link {{ request()->routeIs('reports.ledger') ? 'active' : '' }}">Item Stock Ledger</a>
-              <a href="{{ route('reports.stock') }}" class="submenu-link {{ request()->routeIs('reports.stock') ? 'active' : '' }}">Stock Summary Report</a>
             </div>
           </div>
         </div>
 
-        <!-- 9. ADMINISTRATION -->
+        <!-- 9. FINANCIALS & ADMINISTRATION -->
         <div class="nav-section">
-          <div class="nav-section-title">Administration</div>
-          <div class="nav-item nav-group {{ request()->is('admin*') ? 'expanded' : '' }}">
-            <a href="javascript:void(0)" class="nav-link nav-group-toggle {{ request()->is('admin*') ? 'active' : '' }}">
+          <div class="nav-section-title">Settings & Admin</div>
+          <div class="nav-item nav-group {{ request()->is('accounts*') || request()->is('admin*') ? 'expanded' : '' }}">
+            <a href="javascript:void(0)" class="nav-link nav-group-toggle {{ request()->is('accounts*') || request()->is('admin*') ? 'active' : '' }}">
               <div class="nav-link-content">
-                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                 <span class="nav-title">Administration</span>
               </div>
               <svg class="nav-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
             </a>
             <div class="nav-submenu">
+              <a href="{{ route('accounts.customer-outstanding') }}" class="submenu-link {{ request()->routeIs('accounts.customer-outstanding') ? 'active' : '' }}">Customer Outstanding</a>
+              <a href="{{ route('accounts.vendor-outstanding') }}" class="submenu-link {{ request()->routeIs('accounts.vendor-outstanding') ? 'active' : '' }}">Vendor Outstanding</a>
               <a href="{{ route('admin.users.index') }}" class="submenu-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}">User Accounts</a>
               <a href="{{ route('admin.roles') }}" class="submenu-link {{ request()->routeIs('admin.roles') ? 'active' : '' }}">Roles & Permissions</a>
               <a href="{{ route('admin.activity') }}" class="submenu-link {{ request()->routeIs('admin.activity') ? 'active' : '' }}">Activity Audit Logs</a>
@@ -505,6 +473,7 @@
     @endif
   </script>
 
+  @yield('scripts')
   @stack('scripts')
 </body>
 </html>

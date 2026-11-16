@@ -22,11 +22,16 @@ class PurchaseLedgerController extends Controller
             $vendors = Vendor::orderBy('name')->get();
         }
 
+        $items = \App\Models\Item::orderBy('name')->get();
+
         $selectedVendorId = $request->input('vendor_id');
         $selectedVendor = null;
         if (!empty($selectedVendorId)) {
             $selectedVendor = Vendor::find($selectedVendorId);
         }
+
+        $selectedItemId = $request->input('item_id');
+        $selectedStatus = $request->input('status');
 
         // Period Filtering: Financial Year default (India FY: Apr 1 - Mar 31)
         $currentYear = (int) date('Y');
@@ -55,13 +60,23 @@ class PurchaseLedgerController extends Controller
 
         $query = PurchaseOrder::with(['items', 'vendor']);
 
-        // Exclude cancelled bills
-        $query->where('status', '!=', 'Cancelled');
+        // Exclude cancelled bills unless specifically requested
+        if ($selectedStatus && $selectedStatus !== 'all') {
+            $query->where('status', $selectedStatus);
+        } else {
+            $query->where('status', '!=', 'Cancelled');
+        }
 
         if ($selectedVendor) {
             $query->where(function ($q) use ($selectedVendor) {
                 $q->where('vendor_id', $selectedVendor->id)
                   ->orWhere('vendor_name', $selectedVendor->name);
+            });
+        }
+
+        if (!empty($selectedItemId)) {
+            $query->whereHas('items', function ($q) use ($selectedItemId) {
+                $q->where('item_id', $selectedItemId);
             });
         }
 
@@ -121,8 +136,11 @@ class PurchaseLedgerController extends Controller
 
         return view('purchase.ledger', compact(
             'vendors',
+            'items',
             'selectedVendor',
             'selectedVendorId',
+            'selectedItemId',
+            'selectedStatus',
             'bills',
             'totalAmount',
             'billCount',

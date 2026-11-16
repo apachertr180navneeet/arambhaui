@@ -147,9 +147,12 @@ Route::middleware('auth')->group(function () {
         Route::get('job-work-register', [ReportsController::class, 'jobWorkRegister'])->name('job-work-register');
         Route::get('ledger', [ReportsController::class, 'itemLedger'])->name('ledger');
         Route::get('purchase-ledger', [PurchaseLedgerController::class, 'index'])->name('purchase-ledger');
+        Route::get('purchase-register', [PurchaseLedgerController::class, 'index'])->name('purchase-register');
         Route::get('stock', [ReportsController::class, 'stockReport'])->name('stock');
         Route::get('lot-purchase', [ReportsController::class, 'lotPurchase'])->name('lot-purchase');
         Route::get('lot-sales', [ReportsController::class, 'lotSales'])->name('lot-sales');
+        Route::get('dispatch-register', [ReportsController::class, 'lotSales'])->name('dispatch-register');
+        Route::get('job-inward-register', [\App\Http\Controllers\JobWork\JobInwardReportController::class, 'index'])->name('job-inward-register');
     });
 
     // ==========================================

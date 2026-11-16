@@ -1,1280 +1,984 @@
 @extends('layouts.app')
 
-@section('title', 'Record Job Work Inward Receipt - aarambh')
+@section('title', 'Aarambh - JOB WORK INWARD')
 
 @section('breadcrumb')
   <div class="breadcrumb-item"><a href="{{ route('jobwork.assign.index') }}" style="color:inherit; text-decoration:none;">Job Work & Assign</a></div>
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
   <div class="breadcrumb-item"><a href="{{ route('jobwork.inward.index') }}" style="color:inherit; text-decoration:none;">Job Inward Entries</a></div>
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-  <div class="breadcrumb-item active"><span>New Inward Receipt</span></div>
+  <div class="breadcrumb-item active"><span>Job Work Inward</span></div>
 @endsection
+
+@php
+  $finishedGoods = $items->filter(function($i) {
+    return stripos($i->category ?? '', 'finish') !== false 
+        || stripos($i->type ?? '', 'finish') !== false 
+        || in_array(strtoupper($i->unit ?? ''), ['PCS', 'PIECES', 'SETS']);
+  });
+  if ($finishedGoods->isEmpty()) $finishedGoods = $items;
+
+  $rawGoods = $items->filter(function($i) {
+    return stripos($i->category ?? '', 'raw') !== false 
+        || stripos($i->type ?? '', 'raw') !== false 
+        || stripos($i->category ?? '', 'fabric') !== false 
+        || in_array(strtoupper($i->unit ?? ''), ['MTR', 'METERS', 'METER', 'KG', 'YDS']);
+  });
+  if ($rawGoods->isEmpty()) $rawGoods = $items;
+@endphp
 
 @push('styles')
 <style>
-  .inward-item-card {
+  .jwi-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    max-width: 1380px;
+    margin: 0 auto;
+  }
+  .jwi-card {
     background: #ffffff;
-    border-radius: var(--radius-xl, 16px);
-    border: 1px solid var(--slate-200, #e2e8f0);
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
     box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
-    padding: 22px;
-    transition: all 0.2s ease;
+    padding: 20px 24px;
   }
-  .inward-item-card:hover {
-    border-color: #cbd5e1;
-    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.07);
+  .jwi-header-title {
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 16px 0;
+    letter-spacing: -0.01em;
   }
-  .inward-item-card.completed-item {
-    background: #f8fafc;
-    border-color: #e2e8f0;
-    opacity: 0.9;
+  .jwi-section-title {
+    font-size: 0.925rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #1e293b;
+    margin: 0 0 16px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid #f1f5f9;
+    padding-bottom: 10px;
   }
-  .tracking-badge {
+  .jwi-section-title .badge-num {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    background: #0284c7;
+    color: #ffffff;
     display: inline-flex;
     align-items: center;
-    gap: 5px;
-    padding: 3px 9px;
-    border-radius: 6px;
-    font-size: 0.775rem;
-    font-weight: 700;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 800;
   }
-  .tracking-badge.assigned {
-    background: #eef2ff;
-    color: #4338ca;
-    border: 1px solid #c7d2fe;
+  .jwi-header-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
   }
-  .tracking-badge.received {
-    background: #ecfdf5;
-    color: #065f46;
-    border: 1px solid #a7f3d0;
+  .jwi-item-entry-panel {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 16px 18px;
   }
-  .tracking-badge.remaining {
-    background: #fffbeb;
-    color: #b45309;
-    border: 1px solid #fde68a;
+  .jwi-item-entry-grid {
+    display: grid;
+    grid-template-columns: 2.2fr 1.1fr 44px 1fr 1.1fr auto;
+    gap: 12px;
+    align-items: flex-end;
   }
-  .tracking-badge.status-pending {
+  .jwi-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin-top: 14px;
+    font-size: 0.875rem;
+  }
+  .jwi-table th {
     background: #f1f5f9;
-    color: #475569;
-    border: 1px solid #cbd5e1;
+    color: #334155;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    padding: 10px 14px;
+    border-top: 1px solid #e2e8f0;
+    border-bottom: 1px solid #cbd5e1;
   }
-  .tracking-badge.status-partial {
+  .jwi-table td {
+    padding: 12px 14px;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+    color: #1e293b;
+  }
+  .jwi-table tbody tr:hover {
+    background: #f8fafc;
+  }
+  .jwi-table tfoot td {
+    background: #f8fafc;
+    font-weight: 800;
+    border-top: 2px solid #cbd5e1;
+    border-bottom: 2px solid #cbd5e1;
+    padding: 12px 14px;
+    color: #0f172a;
+  }
+  .jwi-bottom-grid {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr;
+    gap: 24px;
+  }
+  .jwi-summary-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .jwi-summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.95rem;
+    color: #475569;
+    padding-bottom: 8px;
+    border-bottom: 1px dashed #e2e8f0;
+  }
+  .jwi-summary-row:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+  .jwi-summary-row.total-row {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: #0f172a;
+    border-top: 2px solid #e2e8f0;
+    padding-top: 10px;
+    border-bottom: none;
+  }
+  .btn-remove-row {
+    background: #fee2e2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+    border-radius: 6px;
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-weight: 800;
+    transition: all 0.15s ease;
+  }
+  .btn-remove-row:hover {
+    background: #dc2626;
+    color: #ffffff;
+  }
+  .btn-quick-add {
     background: #eff6ff;
     color: #1d4ed8;
     border: 1px solid #bfdbfe;
+    border-radius: 6px;
+    width: 38px;
+    height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-weight: 800;
+    font-size: 1.1rem;
+    transition: all 0.15s ease;
   }
-  .tracking-badge.status-completed {
-    background: #ecfdf5;
-    color: #047857;
-    border: 1px solid #6ee7b7;
+  .btn-quick-add:hover {
+    background: #2563eb;
+    color: #ffffff;
+  }
+  @media (max-width: 992px) {
+    .jwi-header-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+    .jwi-item-entry-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+    .jwi-bottom-grid {
+      grid-template-columns: 1fr;
+    }
   }
 </style>
 @endpush
 
 @section('content')
-<form action="{{ route('jobwork.inward.store') }}" method="POST" id="inward-form">
-  @csrf
+<div class="jwi-container">
 
-  <div style="display:flex; flex-direction:column; gap:22px;">
-
-    <!-- Top Action Header -->
-    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px;">
-      <div>
-        <div style="display:flex; align-items:center; gap:10px;">
-          <h2 style="margin:0; font-size:1.45rem; font-weight:800; color:var(--slate-900); letter-spacing:-0.02em;">
-            Record Job Work Inward Receipt
-          </h2>
-          <span style="font-family:var(--font-mono, monospace); font-weight:800; font-size:0.9rem; background:#ecfdf5; color:#059669; padding:3px 10px; border-radius:8px; border:1px solid #a7f3d0;">
-            {{ $nextInwardNo }}
-          </span>
-        </div>
-        <p style="margin:4px 0 0; font-size:0.85rem; color:var(--slate-500);">
-          Select Job Worker, choose assigned Job Order, and record inward quantities per item with live balance tracking.
-        </p>
+  <!-- Header Card -->
+  <div class="jwi-card" style="padding-bottom: 16px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
+      <div class="jwi-header-title" style="margin-bottom:0;">
+        <span style="color:#0284c7;">☆</span>
+        <span>Aarambh - JOB WORK INWARD</span>
       </div>
-
       <div style="display:flex; gap:10px; align-items:center;">
-        <a href="{{ route('jobwork.inward.index') }}" class="btn btn-secondary" style="font-weight:700;">Cancel</a>
-        <button type="submit" id="save-inward-btn-top" class="btn btn-primary" style="display:inline-flex; align-items:center; gap:8px; font-weight:700; box-shadow:0 2px 8px rgba(5, 150, 105, 0.3); background:#059669; border-color:#059669; padding:10px 22px;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-          Confirm Inward Receipt
-        </button>
+        <a href="{{ route('jobwork.inward.index') }}" class="btn btn-secondary" style="font-weight:600;">
+          View All Inwards
+        </a>
       </div>
     </div>
 
-    <!-- 1. Selection Card: Job Worker & Job Assignment -->
-    <div class="card" style="background:#fff; border-radius:var(--radius-xl, 16px); border:1px solid var(--slate-200, #e2e8f0); box-shadow:var(--shadow-sm); padding:24px;">
-      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--slate-100, #f1f5f9); padding-bottom:12px; margin-bottom:18px; flex-wrap:wrap; gap:10px;">
-        <h3 style="font-size:0.95rem; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; margin:0; color:var(--slate-800); display:flex; align-items:center; gap:8px;">
-          <span style="width:24px; height:24px; border-radius:6px; background:#eff6ff; color:#2563eb; display:inline-flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:800;">1</span>
-          Contractor & Inward Mode
-        </h3>
+    <!-- Main Inward Form -->
+    <form action="{{ route('jobwork.inward.store') }}" method="POST" id="job-inward-form" onsubmit="return validateBeforeSubmit(event)">
+      @csrf
+
+      <!-- 1. FORM HEADER FIELDS (Handwritten Sketch 2) -->
+      <div class="jwi-section-title">
+        <span class="badge-num">1</span>
+        <span>Header Information</span>
+      </div>
+
+      <div class="jwi-header-grid">
         
-        <!-- Mode Switcher: Linked vs Standalone Direct -->
-        <div style="display:flex; gap:8px; background:#f1f5f9; padding:3px; border-radius:8px;">
-          <button type="button" id="tab-linked-btn" class="btn btn-sm" onclick="switchInwardMode('linked')" style="background:#ffffff; color:#1d4ed8; font-weight:800; box-shadow:0 1px 2px rgba(0,0,0,0.06); padding:4px 12px; border-radius:6px; border:none;">
-            Linked to Job Order
-          </button>
-          <button type="button" id="tab-direct-btn" class="btn btn-sm" onclick="switchInwardMode('direct')" style="background:transparent; color:#64748b; font-weight:700; padding:4px 12px; border-radius:6px; border:none;">
-            ⭐ Direct Standalone Inward
-          </button>
-        </div>
-      </div>
-
-      <!-- Mode 1: Linked to Job Order (Default) -->
-      <div id="linked-mode-controls">
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:18px; margin-bottom:18px;">
-          
-          <!-- Step 1: Select Job Worker -->
-          <div class="form-group" style="margin-bottom:0;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-              <label class="form-label" style="font-weight:700; color:var(--slate-800); margin:0;">
-                1. Select Job Worker / Contractor <span style="color:#ef4444;">*</span>
-              </label>
-              <span style="font-size:0.75rem; color:var(--slate-500);">Filters active assignments</span>
-            </div>
-            <select id="worker_select" name="job_worker_id" class="form-control" onchange="onWorkerSelectChange(this)" style="font-size:0.95rem; font-weight:700;">
-              <option value="">-- Select Job Worker / Contractor --</option>
-              @foreach($jobworkers as $jw)
-                @php
-                  $wKey = (string)$jw->id;
-                  $activeCount = isset($assignmentsByWorker[$wKey]) ? count($assignmentsByWorker[$wKey]) : 0;
-                  $isWorkerSel = ($preselectedWorkerId && $preselectedWorkerId == $jw->id);
-                @endphp
-                <option value="{{ $jw->id }}" data-name="{{ $jw->name }}" data-process="{{ $jw->process_type }}" {{ $isWorkerSel ? 'selected' : '' }}>
-                  {{ $jw->name }} [{{ $jw->process_type ?? 'Contractor' }}] — {{ $activeCount }} Active Job(s)
-                </option>
-              @endforeach
-            </select>
-          </div>
-
-          <!-- Step 2: Select Job Assignment -->
-          <div class="form-group" style="margin-bottom:0;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-              <label class="form-label" style="font-weight:700; color:var(--slate-800); margin:0;">
-                2. Select Job Assignment (Order / Lot) <span style="color:#ef4444;">*</span>
-              </label>
-              <span style="font-size:0.75rem; color:var(--slate-500);">Auto-loads assigned items</span>
-            </div>
-            <select name="job_assignment_id" id="ja_select" class="form-control" onchange="onJobOrderChange(this)" style="font-size:0.95rem; font-weight:700;">
-              <option value="">-- First select a Job Worker above --</option>
-            </select>
-          </div>
-
-        </div>
-
-        <!-- Live Job Order Details Preview Banner -->
-        <div id="job-order-preview-box" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px; display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:14px;">
-          <div>
-            <span style="font-size:0.75rem; color:#64748b; font-weight:700; text-transform:uppercase;">Contractor:</span>
-            <div id="pv-worker" style="font-weight:800; color:var(--slate-800); font-size:0.95rem;">—</div>
-          </div>
-          <div>
-            <span style="font-size:0.75rem; color:#64748b; font-weight:700; text-transform:uppercase;">Process:</span>
-            <div id="pv-process" style="font-weight:700; color:var(--slate-700);">—</div>
-          </div>
-          <div>
-            <span style="font-size:0.75rem; color:#64748b; font-weight:700; text-transform:uppercase;">Lot / Batch #:</span>
-            <div id="pv-lot" style="font-family:var(--font-mono, monospace); font-weight:800; color:#4338ca;">—</div>
-          </div>
-          <div>
-            <span style="font-size:0.75rem; color:#64748b; font-weight:700; text-transform:uppercase;">Style / Primary Item:</span>
-            <div id="pv-style" style="font-weight:700; color:var(--slate-700);">—</div>
-          </div>
-          <div>
-            <span style="font-size:0.75rem; color:#64748b; font-weight:700; text-transform:uppercase;">Total Assigned:</span>
-            <div id="pv-issued" style="font-family:var(--font-mono, monospace); font-weight:800; color:var(--slate-900);">0 Pcs</div>
-          </div>
-          <div>
-            <span style="font-size:0.75rem; color:#64748b; font-weight:700; text-transform:uppercase;">Previously Received:</span>
-            <div id="pv-received" style="font-family:var(--font-mono, monospace); font-weight:800; color:#059669;">0 Pcs</div>
-          </div>
-          <div>
-            <span style="font-size:0.75rem; color:#64748b; font-weight:700; text-transform:uppercase;">Remaining Balance:</span>
-            <div id="pv-pending" style="font-family:var(--font-mono, monospace); font-weight:800; color:#dc2626; font-size:1.05rem;">0 Pcs</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Mode 2: Direct Standalone Inward (No Job Order Required) -->
-      <div id="direct-mode-controls" style="display:none;">
-        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:18px;">
-          <div class="form-group" style="margin-bottom:0;">
-            <label class="form-label" style="font-weight:700; color:var(--slate-800); margin-bottom:6px;">
-              Contractor / Job Worker Name <span style="color:#ef4444;">*</span>
-            </label>
-            <input type="text" name="job_worker_name" id="direct_worker_name" class="form-control" placeholder="Enter Job Worker / Contractor Name">
-          </div>
-
-          <div class="form-group" style="margin-bottom:0;">
-            <label class="form-label" style="font-weight:700; color:var(--slate-800); margin-bottom:6px;">
-              Process / Operation
-            </label>
-            <select name="process_name" id="direct_process_name" class="form-control">
-              <option value="Stitching & Assembly">Stitching & Assembly</option>
-              <option value="Fabric Cutting">Fabric Cutting</option>
-              <option value="Embroidery & Design">Embroidery & Design</option>
-              <option value="Washing & Finishing">Washing & Finishing</option>
-              <option value="Ironing & Packing">Ironing & Packing</option>
-            </select>
-          </div>
-
-          <div class="form-group" style="margin-bottom:0;">
-            <label class="form-label" style="font-weight:700; color:var(--slate-800); margin-bottom:6px;">
-              Lot / Batch Number
-            </label>
-            <input type="text" name="lot_number" id="direct_lot_number" class="form-control" placeholder="e.g. LOT-2026-001" style="font-family:var(--font-mono, monospace); font-weight:700;">
-          </div>
-
-          <div class="form-group" style="margin-bottom:0;">
-            <label class="form-label" style="font-weight:700; color:var(--slate-800); margin-bottom:6px;">
-              Style / Garment Name
-            </label>
-            <input type="text" name="style_name" id="direct_style_name" class="form-control" placeholder="e.g. Cotton Kurta / Shirt">
-          </div>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- 2. Step 3: Assigned Items & Inward Quantity Tracking -->
-    <div style="display:flex; flex-direction:column; gap:16px;">
-      
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-        <div>
-          <h3 style="font-size:1.05rem; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; margin:0; color:var(--slate-900); display:flex; align-items:center; gap:8px;">
-            <span style="width:26px; height:26px; border-radius:6px; background:#ecfdf5; color:#059669; display:inline-flex; align-items:center; justify-content:center; font-size:0.8rem; font-weight:800;">2</span>
-            Assigned Items & Current Inward Quantities
-          </h3>
-          <p style="margin:3px 0 0; font-size:0.825rem; color:var(--slate-500);">
-            Live tracking of Assigned Quantity, Previously Received Quantity, and Remaining Balance per item.
-          </p>
-        </div>
-
-        <div style="display:flex; gap:8px; align-items:center;">
-          <button type="button" id="btn-add-direct-item" class="btn btn-sm btn-outline-primary" onclick="addNewDirectItem()" style="display:none; align-items:center; gap:6px; font-weight:700; padding:5px 12px; border-radius:8px;">
-            + Add Another Item
-          </button>
-          <div id="header-items-summary-badge" style="display:flex; gap:8px; align-items:center;">
-            <!-- Dynamically filled -->
-          </div>
-        </div>
-      </div>
-
-      <!-- Container where Item Cards are dynamically rendered -->
-      <div id="items-container" style="display:flex; flex-direction:column; gap:18px;">
-        <div style="text-align:center; padding:32px 18px; color:#64748b; border:2px dashed #cbd5e1; border-radius:16px; background:#ffffff;">
-          <div style="font-weight:700; font-size:0.95rem; color:#475569; margin-bottom:4px;">No Job Assignment Selected</div>
-          <p style="font-size:0.8rem; color:#94a3b8; margin:0;">Please select a <strong>Job Worker</strong> and <strong>Job Assignment</strong> above to load assigned items and quantities.</p>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- 3. Delivery Challan, QC Status & Storage Location -->
-    <div class="card" style="background:#fff; border-radius:var(--radius-xl, 16px); border:1px solid var(--slate-200, #e2e8f0); box-shadow:var(--shadow-sm); padding:24px;">
-      <h3 style="font-size:0.95rem; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; margin:0; color:var(--slate-800); border-bottom:1px solid var(--slate-100, #f1f5f9); padding-bottom:12px; margin-bottom:18px; display:flex; align-items:center; gap:8px;">
-        <span style="width:24px; height:24px; border-radius:6px; background:#f5f3ff; color:#7c3aed; display:inline-flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:800;">3</span>
-        Delivery Challan & Quality Control (QC)
-      </h3>
-
-      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:18px;">
-        
-        <!-- Inward Date -->
+        <!-- Jobworker (Master Dropdown) -->
         <div class="form-group" style="margin-bottom:0;">
-          <label class="form-label" style="font-weight:700; color:var(--slate-800); margin-bottom:6px;">
-            Inward Receipt Date <span style="color:#ef4444;">*</span>
+          <label class="form-label" style="font-weight:700; font-size:0.825rem; color:#334155; margin-bottom:5px;">
+            Jobworker [MASTER] <span style="color:#ef4444;">*</span>
           </label>
-          <input type="date" name="inward_date" class="form-control" required value="{{ date('Y-m-d') }}">
-        </div>
-
-        <!-- Contractor Return DC / Challan No with Auto Generate -->
-        <div class="form-group" style="margin-bottom:0;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-            <label class="form-label" style="font-weight:700; color:var(--slate-800); margin:0;">
-              Contractor Return DC / Challan No. <span style="color:#ef4444;">*</span>
-            </label>
-            <button type="button" onclick="autoGenerateChallanNo()" style="font-size:0.75rem; color:#2563eb; background:#eff6ff; border:1px solid #bfdbfe; border-radius:6px; padding:2px 8px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:all 0.2s ease;" title="Auto generate unique challan number">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-              Auto Generate
-            </button>
-          </div>
-          <div style="position:relative; display:flex; align-items:center;">
-            <input type="text" name="challan_no" id="challan_no" class="form-control" required value="{{ $nextChallanNo ?? '' }}" placeholder="e.g. DC-984 / CH-104" style="font-weight:700; letter-spacing:0.5px; padding-right:75px;">
-            <button type="button" onclick="autoGenerateChallanNo()" class="btn btn-secondary btn-sm" style="position:absolute; right:4px; height:calc(100% - 8px); padding:0 10px; font-size:0.75rem; font-weight:700; display:inline-flex; align-items:center; gap:4px; border-radius:6px; background:#f8fafc; color:#334155; border:1px solid #cbd5e1;" title="Regenerate Challan Number">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-              Auto
-            </button>
-          </div>
-          <small style="font-size:0.72rem; color:var(--slate-500); margin-top:4px; display:block;">Contractor's delivery challan reference</small>
-        </div>
-
-        <!-- QC Inspection Status -->
-        <div class="form-group" style="margin-bottom:0;">
-          <label class="form-label" style="font-weight:700; color:var(--slate-800); margin-bottom:6px;">
-            Quality Inspection (QC) Status <span style="color:#ef4444;">*</span>
-          </label>
-          <select name="qc_status" id="inw_qc_status" class="form-control" required>
-            <option value="Passed QC" selected>Passed Quality Inspection (Ready for Stock)</option>
-            <option value="Minor Touchup">Passed with Minor Iron/Thread Touchup</option>
-            <option value="Under Lab QC">Under Lab QC Review</option>
-            <option value="Rejected">Batch Rejected / Sent for Rework</option>
+          <select name="job_worker_id" id="jwi-jobworker-select" class="form-control" required onchange="onJobWorkerChanged()">
+            <option value="">-- Select Job worker --</option>
+            @foreach($jobworkers as $jw)
+              <option value="{{ $jw->id }}" 
+                      data-name="{{ $jw->name }}"
+                      {{ (old('job_worker_id', $preselectedWorkerId) == $jw->id) ? 'selected' : '' }}>
+                {{ $jw->name }} {{ $jw->phone ? '('.$jw->phone.')' : '' }}
+              </option>
+            @endforeach
           </select>
+          <input type="hidden" name="job_worker_name" id="jwi-jobworker-name" value="">
         </div>
 
-        <!-- Destination Stock Location -->
+        <!-- Job Inward NO. (Dropdown / Input defaulting to Auto) -->
         <div class="form-group" style="margin-bottom:0;">
-          <label class="form-label" style="font-weight:700; color:var(--slate-800); margin-bottom:6px;">
-            Destination Stock Location
+          <label class="form-label" style="font-weight:700; font-size:0.825rem; color:#334155; margin-bottom:5px;">
+            Job Inward NO. [Auto] <span style="color:#ef4444;">*</span>
           </label>
-          <input type="text" name="storage_location" class="form-control" value="Finished Goods Stock" placeholder="e.g. Finished Goods Stock / Packing Hub">
+          <div style="display:flex; gap:6px;">
+            <input type="text" 
+                   name="inward_number" 
+                   id="jwi-inward-no" 
+                   class="form-control" 
+                   required 
+                   value="{{ old('inward_number', $nextInwardNo) }}" 
+                   style="font-family:var(--font-mono, monospace); font-weight:700;">
+          </div>
+        </div>
+
+        <!-- Job work order NO. (Select dropdown linked to open orders) -->
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label" style="font-weight:700; font-size:0.825rem; color:#334155; margin-bottom:5px;">
+            Job work order NO. <span style="color:#ef4444;">*</span>
+          </label>
+          <select name="job_assignment_id" id="jwi-order-select" class="form-control" onchange="onJobOrderChanged()">
+            <option value="">-- Select Job work order NO. --</option>
+            @foreach($formattedAssignments as $jaId => $ja)
+              <option value="{{ $jaId }}" 
+                      data-worker-id="{{ $ja['job_worker_id'] }}"
+                      data-worker-name="{{ $ja['job_worker_name'] }}"
+                      data-order-no="{{ $ja['job_order_no'] }}"
+                      data-rem-qty="{{ $ja['total_remaining_qty'] }}"
+                      {{ (old('job_assignment_id', $preselectedId) == $jaId) ? 'selected' : '' }}>
+                {{ $ja['job_order_no'] }} — {{ $ja['job_worker_name'] }} (Bal: {{ $ja['total_remaining_qty'] }} Pcs)
+              </option>
+            @endforeach
+          </select>
+          <input type="hidden" name="job_order_no" id="jwi-order-no" value="">
+          <input type="hidden" name="lot_number" id="jwi-lot-number" value="">
+          <input type="hidden" name="process_name" id="jwi-process-name" value="Stitching / Jobwork">
+          <input type="hidden" name="challan_no" value="{{ $nextChallanNo }}">
+          <input type="hidden" name="qc_status" value="Passed">
+          <input type="hidden" name="storage_location" value="Main Warehouse">
+        </div>
+
+        <!-- Date (Date Picker) -->
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label" style="font-weight:700; font-size:0.825rem; color:#334155; margin-bottom:5px;">
+            Date <span style="color:#ef4444;">*</span>
+          </label>
+          <input type="date" 
+                 name="inward_date" 
+                 id="jwi-date" 
+                 class="form-control" 
+                 required 
+                 value="{{ old('inward_date', date('Y-m-d')) }}" 
+                 style="font-weight:600;">
         </div>
 
       </div>
+  </div>
+
+  <!-- 2. INLINE ITEM ENTRY BAR (Handwritten Sketch 2) -->
+  <div class="jwi-card" style="margin-bottom: 20px;">
+    <div class="jwi-section-title">
+      <span class="badge-num">2</span>
+      <span>Item Inward Entry</span>
     </div>
 
-    <!-- 4. Calculation Summary Card & Remarks -->
-    <div style="display:grid; grid-template-columns:1fr 420px; gap:20px; align-items:start;">
-      
-      <!-- Remarks -->
-      <div class="card" style="background:#fff; border-radius:var(--radius-xl, 16px); border:1px solid var(--slate-200, #e2e8f0); box-shadow:var(--shadow-sm); padding:22px;">
-        <h4 style="font-size:0.9rem; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; margin-top:0; margin-bottom:10px; color:var(--slate-800);">
-          Inward Remarks & Inspection Notes
-        </h4>
-        <textarea name="remarks" id="inw-remarks" class="form-control" rows="5" placeholder="Finished goods received in good condition, stitching and finishing verified, ready for ironing & dispatch..."></textarea>
-      </div>
-
-      <!-- Live Calculation Card: Yield & Contractor Payable -->
-      <div class="card" style="background:linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border:1px solid #cbd5e1; border-radius:var(--radius-xl, 16px); box-shadow:var(--shadow-sm); padding:22px; display:flex; flex-direction:column; gap:10px;">
+    <div class="jwi-item-entry-panel">
+      <div class="jwi-item-entry-grid">
         
-        <div style="font-size:0.85rem; font-weight:800; color:var(--slate-800); text-transform:uppercase; letter-spacing:0.05em; border-bottom:1px solid #cbd5e1; padding-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
-          <span>Inward Yield & Billing Summary</span>
-          <span class="badge" id="summary-items-count" style="background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; font-size:0.75rem;">0 Items</span>
+        <!-- ITEM recd (Finished Goods Dropdown) -->
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label" style="font-weight:700; font-size:0.8rem; color:#475569; margin-bottom:4px;">
+            ITEM recd (Finished Goods) <span style="color:#ef4444;">*</span>
+          </label>
+          <select id="entry-item-recd" class="form-control" style="font-weight:600;" onchange="onRecdItemSelectChanged()">
+            <option value="">-- Select Finished Goods --</option>
+            @foreach($finishedGoods as $fg)
+              <option value="{{ $fg->id }}" 
+                      data-name="{{ $fg->name }}" 
+                      data-code="{{ $fg->code }}" 
+                      data-unit="{{ $fg->unit ?? 'Pcs' }}">
+                {{ $fg->name }} ({{ $fg->code ?? 'N/A' }})
+              </option>
+            @endforeach
+          </select>
+          <input type="hidden" id="entry-used-raw-name" value="">
+          <input type="hidden" id="entry-jai-id" value="">
+          <input type="hidden" id="entry-assigned-qty" value="0">
+          <input type="hidden" id="entry-prev-qty" value="0">
+          <input type="hidden" id="entry-rem-balance" value="0">
         </div>
 
-        <div style="display:flex; justify-content:space-between; font-size:0.85rem;">
-          <span style="color:var(--slate-600);">Total Assigned in Order:</span>
-          <strong id="summary-total-assigned" style="color:var(--slate-800);">0 Pcs</strong>
+        <!-- Qty (Number input) -->
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label" style="font-weight:700; font-size:0.8rem; color:#475569; margin-bottom:4px;">
+            Qty <span style="color:#ef4444;">*</span>
+          </label>
+          <input type="number" 
+                 step="0.01" 
+                 min="0.01" 
+                 id="entry-inward-qty" 
+                 class="form-control" 
+                 placeholder="0.00" 
+                 style="font-weight:700; text-align:right;">
         </div>
 
-        <div style="display:flex; justify-content:space-between; font-size:0.85rem;">
-          <span style="color:var(--slate-600);">Total Previously Received:</span>
-          <strong id="summary-prev-received" style="color:#059669;">0 Pcs</strong>
+        <!-- + Button (Multiple Than modal / Quick Add) -->
+        <div class="form-group" style="margin-bottom:0; display:flex; align-items:center;">
+          <button type="button" 
+                  class="btn-quick-add" 
+                  title="Add Multiple Than Breakdown" 
+                  onclick="openThanModalForEntry()">
+            +
+          </button>
         </div>
 
-        <div style="display:flex; justify-content:space-between; font-size:0.85rem;">
-          <span style="color:var(--slate-600); font-weight:700;">Good Pcs Inwarded Now:</span>
-          <strong id="summary-good-inward" style="color:#059669; font-size:0.95rem; font-weight:800;">0 Pcs</strong>
+        <!-- THAN (Number input) -->
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label" style="font-weight:700; font-size:0.8rem; color:#475569; margin-bottom:4px;">
+            THAN <span style="color:#ef4444;">*</span>
+          </label>
+          <input type="number" 
+                 step="1" 
+                 min="0" 
+                 id="entry-than-count" 
+                 class="form-control" 
+                 placeholder="0" 
+                 style="font-weight:700; text-align:center;">
         </div>
 
-        <div style="display:flex; justify-content:space-between; font-size:0.85rem;">
-          <span style="color:var(--slate-600);">QC Defect / Rejected:</span>
-          <strong id="summary-defect-inward" style="color:#dc2626;">0 Pcs</strong>
+        <!-- Actual waste (Manual number input) -->
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label" style="font-weight:700; font-size:0.8rem; color:#475569; margin-bottom:4px;">
+            Actual waste
+          </label>
+          <input type="number" 
+                 step="0.01" 
+                 min="0" 
+                 id="entry-actual-waste" 
+                 class="form-control" 
+                 placeholder="0.00" 
+                 value="0.00"
+                 style="font-weight:700; text-align:right;">
         </div>
 
-        <div style="display:flex; justify-content:space-between; font-size:0.85rem; border-top:1px dashed #cbd5e1; padding-top:6px;">
-          <span style="color:var(--slate-600); font-weight:700;">Net Balance Remaining After Inward:</span>
-          <strong id="summary-remaining-pending" style="color:#dc2626; font-size:1.05rem; font-weight:800;">0 Pcs</strong>
-        </div>
-
-        <div style="border-top:2px dashed #cbd5e1; padding-top:10px; display:flex; justify-content:space-between; align-items:baseline; font-size:1.15rem;">
-          <span style="font-weight:800; color:var(--slate-900);">Contractor Payable:</span>
-          <span style="font-weight:800; color:#059669;" id="summary-grand">₹0.00</span>
+        <!-- Add Item Button -->
+        <div class="form-group" style="margin-bottom:0;">
+          <button type="button" 
+                  class="btn btn-primary" 
+                  onclick="addItemToInwardTable()" 
+                  style="font-weight:700; padding:9px 18px; display:inline-flex; align-items:center; gap:6px;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            Add Item
+          </button>
         </div>
 
       </div>
 
+      <!-- Live Thans preview chip line -->
+      <div id="entry-than-chips-line" style="display:none; align-items:center; gap:8px; margin-top:10px; padding:6px 12px; background:#e0f2fe; border-radius:6px; font-size:0.8rem; color:#0369a1;">
+        <strong>Than Breakdown:</strong>
+        <span id="entry-than-chips-text"></span>
+        <span style="margin-left:auto; cursor:pointer; color:#ef4444; font-weight:700;" onclick="clearEntryThans()">Clear</span>
+      </div>
+
     </div>
 
-    <!-- Bottom Action Bar -->
-    <div style="display:flex; justify-content:flex-end; align-items:center; gap:12px; padding:16px 24px; background:#ffffff; border:1px solid var(--slate-200, #e2e8f0); border-radius:var(--radius-xl, 16px); box-shadow:var(--shadow-sm); margin-top:4px;">
-      <a href="{{ route('jobwork.inward.index') }}" class="btn btn-secondary" style="font-weight:700; padding:10px 20px;">Cancel</a>
-      <button type="submit" id="save-inward-btn-bottom" class="btn btn-primary" style="display:inline-flex; align-items:center; gap:8px; font-weight:700; box-shadow:0 2px 8px rgba(5, 150, 105, 0.3); background:#059669; border-color:#059669; padding:10px 24px;">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-        Confirm Inward Receipt
-      </button>
+    <!-- 3. LINE ITEMS TABLE (Handwritten Sketch 2) -->
+    <div style="overflow-x:auto;">
+      <table class="jwi-table" id="jwi-items-table">
+        <thead>
+          <tr>
+            <th style="width:50px; text-align:center;">SNO.</th>
+            <th style="width:24%;">ITEM (Recd)</th>
+            <th style="width:22%;">NAME used item</th>
+            <th style="width:12%; text-align:right;">Qty</th>
+            <th style="width:11%; text-align:center;">Pcs / THAN</th>
+            <th style="width:12%; text-align:right;">WASTAGE</th>
+            <th style="width:12%; text-align:right;">Pending Qty</th>
+            <th style="width:7%; text-align:center;">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="jwi-items-tbody">
+          <!-- Populated dynamically by JS -->
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="3" style="text-align:right; font-weight:800; text-transform:uppercase; color:#475569;">
+              Total:
+            </td>
+            <td id="tfoot-sum-qty" style="text-align:right; color:#0284c7; font-size:1rem;">0.00</td>
+            <td id="tfoot-sum-thans" style="text-align:center; color:#475569; font-size:0.95rem;">0</td>
+            <td id="tfoot-sum-waste" style="text-align:right; color:#d97706; font-size:0.95rem;">0.00</td>
+            <td id="tfoot-sum-pending" style="text-align:right; color:#64748b; font-size:0.95rem;">0.00</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <!-- Empty Table State -->
+    <div id="jwi-empty-banner" style="text-align:center; padding:30px 20px; color:#94a3b8; font-size:0.9rem;">
+      No items added yet. Select Finished Item from above or Job Order and click <strong>Add Item</strong>.
     </div>
 
   </div>
-</form>
 
-<!-- Modal: Paste Than Meter Readings (Bulk) -->
-<div id="paste-modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(15, 23, 42, 0.6); z-index:9999; align-items:center; justify-content:center; backdrop-filter:blur(3px);">
-  <div style="background:#fff; border-radius:16px; padding:24px; width:90%; max-width:520px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.2);">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-      <h4 style="margin:0; font-weight:800; font-size:1.1rem; color:#0f172a;" id="paste-modal-title">Paste Than Meter Readings</h4>
-      <button type="button" onclick="closePasteModal()" style="background:none; border:none; font-size:1.4rem; cursor:pointer; color:#94a3b8;">&times;</button>
+  <!-- 4. BOTTOM SECTION: REMARKS & SUMMARY (Handwritten Sketch 2) -->
+  <div class="jwi-card">
+    <div class="jwi-bottom-grid">
+      
+      <!-- Remarks (Left) -->
+      <div>
+        <label class="form-label" style="font-weight:700; font-size:0.85rem; color:#334155; margin-bottom:6px;">
+          Remarks
+        </label>
+        <textarea name="remarks" 
+                  id="jwi-remarks" 
+                  rows="4" 
+                  class="form-control" 
+                  placeholder="Enter inward remarks, QC notes, delivery details, etc."></textarea>
+      </div>
+
+      <!-- Right Summary Card (Sketch 2) -->
+      <div class="jwi-summary-card">
+        <div style="font-weight:800; font-size:0.85rem; text-transform:uppercase; letter-spacing:0.04em; color:#64748b; border-bottom:1px solid #f1f5f9; padding-bottom:6px;">
+          Inward Summary
+        </div>
+
+        <div class="jwi-summary-row">
+          <span>- T Recd Item</span>
+          <span style="font-weight:800; color:#0284c7; font-size:1.05rem;" id="summary-total-recd">0.00</span>
+        </div>
+
+        <div class="jwi-summary-row">
+          <span>- Total Wastage</span>
+          <span style="font-weight:800; color:#d97706; font-size:1.05rem;" id="summary-total-wastage">0.00</span>
+        </div>
+
+        <div class="jwi-summary-row total-row">
+          <span>- Net Inward</span>
+          <span style="font-weight:800; color:#059669; font-size:1.25rem;" id="summary-net-inward">0.00</span>
+        </div>
+
+        <div style="margin-top:14px; display:flex; justify-content:flex-end; gap:10px;">
+          <button type="submit" 
+                  id="btn-submit-inward" 
+                  class="btn btn-primary" 
+                  style="width:100%; font-weight:800; padding:12px; font-size:1rem; background:#0284c7; border-color:#0284c7; display:inline-flex; align-items:center; justify-content:center; gap:8px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            Save Job Work Inward
+          </button>
+        </div>
+
+      </div>
+
     </div>
-    <p style="font-size:0.8rem; color:#64748b; margin:0 0 12px;">
-      Paste numbers separated by space, comma, or new line (e.g. from WhatsApp or Challan sheet):
-    </p>
-    <textarea id="paste-textarea" class="form-control" rows="6" placeholder="148, 72.50, 112.50, 103.50, 110.50, 105&#10;99.50, 116.00, 126.50, 89.50, 117.50, 98, 117, 99.50" style="font-family:monospace; font-size:0.9rem;"></textarea>
-    <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
-      <button type="button" class="btn btn-secondary" onclick="closePasteModal()">Cancel</button>
-      <button type="button" class="btn btn-primary" onclick="applyPastedThans()" style="font-weight:700; background:#059669; border-color:#059669;">Add to Item Thans</button>
+  </div>
+
+  </form>
+</div>
+
+<!-- MULTIPLE THAN POPUP MODAL (Sketch requirement: Add multiple than pop up) -->
+<div class="modal fade" id="thanBreakdownModal" tabindex="-1" style="display:none; background:rgba(15,23,42,0.6); z-index:9999;" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:520px; margin: 1.75rem auto;">
+    <div class="modal-content" style="border-radius:14px; border:none; box-shadow:0 20px 25px -5px rgba(0,0,0,0.2);">
+      <div class="modal-header" style="background:#f8fafc; border-bottom:1px solid #e2e8f0; padding:16px 20px; border-radius:14px 14px 0 0;">
+        <h5 class="modal-title" style="font-weight:800; color:#0f172a; font-size:1.1rem; display:flex; align-items:center; gap:8px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          Multiple Than Breakdown
+        </h5>
+        <button type="button" class="btn-close" onclick="closeThanModal()" style="border:none; background:transparent; font-size:1.2rem; cursor:pointer;">&times;</button>
+      </div>
+      <div class="modal-body" style="padding:20px;">
+        <p style="font-size:0.85rem; color:#64748b; margin-top:0; margin-bottom:12px;">
+          Enter individual Than meter/pieces values (separated by comma, space or newline). Example: <code>100, 105, 95.5, 109.5</code>
+        </p>
+
+        <div class="form-group" style="margin-bottom:14px;">
+          <label class="form-label" style="font-weight:700; font-size:0.825rem; color:#334155;">Than Values (Pcs/Meters)</label>
+          <textarea id="than-modal-textarea" 
+                    rows="5" 
+                    class="form-control" 
+                    placeholder="100&#10;105&#10;95.5&#10;109.5" 
+                    oninput="recalculateThanModalPreview()" 
+                    style="font-family:var(--font-mono, monospace); font-weight:600;"></textarea>
+        </div>
+
+        <!-- Live Modal Calculation -->
+        <div style="background:#f1f5f9; border-radius:8px; padding:12px 14px; display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:#64748b;">Total Thans</div>
+            <div style="font-weight:800; font-size:1.15rem; color:#0f172a;" id="modal-thans-count">0</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:#64748b;">Total Sum</div>
+            <div style="font-weight:800; font-size:1.15rem; color:#0284c7;" id="modal-thans-sum">0.00</div>
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer" style="background:#f8fafc; border-top:1px solid #e2e8f0; padding:12px 20px; border-radius:0 0 14px 14px; display:flex; justify-content:flex-end; gap:10px;">
+        <button type="button" class="btn btn-secondary" onclick="closeThanModal()" style="font-weight:700;">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="confirmThanModal()" style="font-weight:700; background:#0284c7; border-color:#0284c7;">
+          Apply Thans
+        </button>
+      </div>
     </div>
   </div>
 </div>
 
-@endsection
-
 @push('scripts')
 <script>
-  const masterItems = @json($items);
-  const formattedAssignmentsMap = @json($formattedAssignments);
-  const assignmentsByWorkerMap = @json($assignmentsByWorker);
-  const initialPreselectedId = @json($preselectedId);
-  const initialPreselectedWorkerId = @json($preselectedWorkerId);
+  // Global formatted assignments from Controller
+  const assignmentData = @json($formattedAssignments);
+  
+  // Line items state
+  let inwardItems = [];
+  let modalTargetContext = 'entry'; // 'entry' or row index
+  let currentModalThans = [];
 
-  let activePasteItemIndex = 0;
-  let currentAssignmentData = null;
-  let itemsData = [];
-
-  function autoGenerateChallanNo() {
-    const input = document.getElementById('challan_no');
-    if (!input) return;
-
-    const now = new Date();
-    const year = now.getFullYear();
-    const rand = Math.floor(1000 + Math.random() * 9000);
-
-    const genNo = 'JDC-' + year + '-' + rand;
-    input.value = genNo;
-
-    input.style.transition = 'all 0.25s ease';
-    input.style.borderColor = '#059669';
-    input.style.backgroundColor = '#ecfdf5';
-    input.style.boxShadow = '0 0 0 3px rgba(5, 150, 105, 0.2)';
-    setTimeout(() => {
-      input.style.borderColor = '';
-      input.style.backgroundColor = '';
-      input.style.boxShadow = '';
-    }, 500);
-  }
-
-  let currentInwardMode = 'linked';
-
-  function switchInwardMode(mode) {
-    currentInwardMode = mode;
-    const linkedBox = document.getElementById('linked-mode-controls');
-    const directBox = document.getElementById('direct-mode-controls');
-    const tabLinked = document.getElementById('tab-linked-btn');
-    const tabDirect = document.getElementById('tab-direct-btn');
-    const addDirectBtn = document.getElementById('btn-add-direct-item');
-
-    if (mode === 'direct') {
-      if (linkedBox) linkedBox.style.display = 'none';
-      if (directBox) directBox.style.display = 'block';
-      if (tabDirect) {
-        tabDirect.style.background = '#ffffff';
-        tabDirect.style.color = '#1d4ed8';
-        tabDirect.style.boxShadow = '0 1px 2px rgba(0,0,0,0.06)';
-      }
-      if (tabLinked) {
-        tabLinked.style.background = 'transparent';
-        tabLinked.style.color = '#64748b';
-        tabLinked.style.boxShadow = 'none';
-      }
-      if (addDirectBtn) addDirectBtn.style.display = 'inline-flex';
-
-      // Setup default item if empty
-      if (itemsData.length === 0) {
-        itemsData = [{
-          job_assignment_item_id: null,
-          item_id: null,
-          item_name: 'Finished Garment',
-          item_code: '',
-          assigned_qty: 0,
-          previously_received_qty: 0,
-          current_inward_qty: 0,
-          defect_qty: 0,
-          remaining_qty: 999999,
-          rate: 0.00,
-          assigned_thans: [],
-          thans: []
-        }];
-        renderAllItems();
-        calculateOverallTotals();
-      }
-    } else {
-      if (linkedBox) linkedBox.style.display = 'block';
-      if (directBox) directBox.style.display = 'none';
-      if (tabLinked) {
-        tabLinked.style.background = '#ffffff';
-        tabLinked.style.color = '#1d4ed8';
-        tabLinked.style.boxShadow = '0 1px 2px rgba(0,0,0,0.06)';
-      }
-      if (tabDirect) {
-        tabDirect.style.background = 'transparent';
-        tabDirect.style.color = '#64748b';
-        tabDirect.style.boxShadow = 'none';
-      }
-      if (addDirectBtn) addDirectBtn.style.display = 'none';
-    }
-  }
-
-  function addNewDirectItem() {
-    itemsData.push({
-      job_assignment_item_id: null,
-      item_id: null,
-      item_name: 'Finished Item #' + (itemsData.length + 1),
-      item_code: '',
-      assigned_qty: 0,
-      previously_received_qty: 0,
-      current_inward_qty: 0,
-      defect_qty: 0,
-      remaining_qty: 999999,
-      rate: 0.00,
-      assigned_thans: [],
-      thans: []
-    });
-    renderAllItems();
-    calculateOverallTotals();
-  }
-
-  // 1. When Job Worker is selected
-  function onWorkerSelectChange(workerSelect) {
-    const workerId = workerSelect.value;
-    const jaSelect = document.getElementById('ja_select');
-    if (!jaSelect) return;
-
-    jaSelect.innerHTML = '';
-
-    if (!workerId) {
-      jaSelect.innerHTML = '<option value="">-- First select a Job Worker above --</option>';
-      resetJobOrderView();
-      return;
-    }
-
-    const wKey = String(workerId);
-    const workerAssignments = assignmentsByWorkerMap[wKey] || [];
-
-    if (workerAssignments.length === 0) {
-      jaSelect.innerHTML = '<option value="">-- No active/pending job orders found for this contractor --</option>';
-      resetJobOrderView();
-      return;
-    }
-
-    jaSelect.innerHTML = '<option value="">-- Select Active Job Order / Lot --</option>';
-    workerAssignments.forEach(ja => {
-      const opt = document.createElement('option');
-      opt.value = ja.id;
-      opt.textContent = `Lot: ${ja.lot_number} | ${ja.job_order_no} — ${ja.style_name} (${ja.total_remaining_qty} Pcs Pending / Assigned: ${ja.total_assigned_qty})`;
-      jaSelect.appendChild(opt);
-    });
-
-    // If only 1 assignment exists, auto select it!
-    if (workerAssignments.length === 1) {
-      jaSelect.selectedIndex = 1;
-      onJobOrderChange(jaSelect);
-    } else {
-      resetJobOrderView();
-    }
-  }
-
-  function resetJobOrderView() {
-    currentAssignmentData = null;
-    document.getElementById('pv-worker').innerText = '—';
-    document.getElementById('pv-process').innerText = '—';
-    document.getElementById('pv-lot').innerText = '—';
-    document.getElementById('pv-style').innerText = '—';
-    document.getElementById('pv-issued').innerText = '0 Pcs';
-    document.getElementById('pv-received').innerText = '0 Pcs';
-    document.getElementById('pv-pending').innerText = '0 Pcs';
-
-    itemsData = [];
-    renderAllItems();
-    calculateOverallTotals();
-  }
-
-  // 2. When Job Assignment is selected
-  function onJobOrderChange(jaSelect) {
-    const jaId = jaSelect.value;
-    if (!jaId || !formattedAssignmentsMap[jaId]) {
-      resetJobOrderView();
-      return;
-    }
-
-    currentAssignmentData = formattedAssignmentsMap[jaId];
-
-    // Populate Banner Preview
-    document.getElementById('pv-worker').innerText = currentAssignmentData.job_worker_name || '—';
-    document.getElementById('pv-process').innerText = currentAssignmentData.process_name || '—';
-    document.getElementById('pv-lot').innerText = currentAssignmentData.lot_number || '—';
-    document.getElementById('pv-style').innerText = currentAssignmentData.style_name || '—';
-    document.getElementById('pv-issued').innerText = currentAssignmentData.total_assigned_qty + ' Pcs';
-    document.getElementById('pv-received').innerText = currentAssignmentData.total_previously_received_qty + ' Pcs';
-    document.getElementById('pv-pending').innerText = currentAssignmentData.total_remaining_qty + ' Pcs';
-
-    // Populate items Data from Job Assignment
-    itemsData = [];
-    (currentAssignmentData.items || []).forEach(it => {
-      // Do not prefill full remaining balance so user enters actual partial received pieces
-      const initInward = 0;
-
-      let remToDistribute = initInward;
-      let thansList = [];
-
-      (it.assigned_thans || []).forEach((at, atIdx) => {
-        let thInward = 0;
-        const thRem = parseInt(at.remaining_pcs) || 0;
-        if (remToDistribute > 0 && thRem > 0) {
-          thInward = Math.min(remToDistribute, thRem);
-          remToDistribute -= thInward;
-        }
-
-        thansList.push({
-          than_key: at.than_key || ('jai_' + it.job_assignment_item_id + '_than_' + (atIdx + 1)),
-          than_no: at.than_no || (atIdx + 1),
-          unique_id: at.unique_id || '',
-          challan_no: at.challan_no || '',
-          po_number: at.po_number || '',
-          purchase_than_no: at.purchase_than_no || '',
-          meter: parseFloat(at.meter) || 0,
-          usable: parseFloat(at.usable) || parseFloat(at.meter) || 0,
-          assigned_pcs: parseInt(at.assigned_pcs) || 0,
-          previously_received_pcs: parseInt(at.previously_received_pcs) || 0,
-          remaining_pcs: thRem,
-          current_inward_pcs: thInward,
-          defect_pcs: 0,
-          status: at.status || 'Pending'
-        });
-      });
-
-      itemsData.push({
-        job_assignment_item_id: it.job_assignment_item_id || '',
-        raw_item_id: it.raw_item_id || '',
-        raw_item_name: it.raw_item_name || '',
-        finished_item_id: it.finished_item_id || '',
-        finished_item_name: it.finished_item_name || '',
-        item_id: it.item_id || '',
-        item_name: it.item_name || currentAssignmentData.style_name,
-        item_code: it.item_code || '',
-        unit: 'Pcs',
-        fabric_unit: 'Meter',
-        rate: it.rate || currentAssignmentData.rate_per_piece || 0,
-        assigned_qty: it.assigned_qty || 0,
-        previously_received_qty: it.previously_received_qty || 0,
-        remaining_qty: it.remaining_qty || 0,
-        current_inward_qty: initInward,
-        defect_qty: 0,
-        status: it.status || 'Pending',
-        assigned_thans: thansList,
-        thans: [],
-        showThans: false
-      });
-    });
-
-    renderAllItems();
-    calculateOverallTotals();
-  }
-
-  // 3. Render Assigned Items
-  function renderAllItems() {
-    const container = document.getElementById('items-container');
-    if (!container) return;
-
-    if ((currentInwardMode === 'linked' && !currentAssignmentData) || itemsData.length === 0) {
-      container.innerHTML = `
-        <div style="text-align:center; padding:32px 18px; color:#64748b; border:2px dashed #cbd5e1; border-radius:16px; background:#ffffff;">
-          <div style="font-weight:700; font-size:0.95rem; color:#475569; margin-bottom:4px;">No Items to Inward</div>
-          <p style="font-size:0.8rem; color:#94a3b8; margin:0;">Select a Job Order above or click <strong>⭐ Direct Standalone Inward</strong> to record without a Job Order.</p>
-        </div>
-      `;
-      return;
-    }
-
-    container.innerHTML = '';
-
-    itemsData.forEach((item, itemIdx) => {
-      const isCompleted = item.remaining_qty <= 0 && item.previously_received_qty > 0;
-      const isPartial = item.previously_received_qty > 0 && item.remaining_qty > 0;
-
-      let statusBadge = '';
-      if (isCompleted) {
-        statusBadge = `<span class="tracking-badge status-completed">✓ Completed (${item.previously_received_qty} Pcs Received)</span>`;
-      } else if (isPartial) {
-        statusBadge = `<span class="tracking-badge status-partial">⚡ Partially Received (${item.previously_received_qty} Rec / ${item.remaining_qty} Pending)</span>`;
-      } else {
-        statusBadge = `<span class="tracking-badge status-pending">⏳ Pending (${item.assigned_qty} Pcs Assigned)</span>`;
-      }
-
-      const newRemaining = Math.max(0, item.remaining_qty - (parseFloat(item.current_inward_qty) || 0));
-      const calcQty = (parseFloat(item.current_inward_qty) || 0);
-      const lineTotal = Math.round(calcQty * (item.rate || 0) * 100) / 100;
-      const totalFabricMeters = (item.assigned_thans || []).reduce((a, b) => a + (parseFloat(b.meter) || 0), 0);
-      const totalThanCount = (item.assigned_thans || []).length;
-
-      const card = document.createElement('div');
-      card.className = `inward-item-card ${isCompleted ? 'completed-item' : ''}`;
-      card.id = `inward-item-card-${itemIdx}`;
-
-      // Build Than-wise Table Rows
-      let thansTableRowsHtml = '';
-      (item.assigned_thans || []).forEach((th, tIdx) => {
-        const isThanCompleted = th.remaining_pcs <= 0 && th.previously_received_pcs > 0;
-        const isThanPartial = th.previously_received_pcs > 0 && th.remaining_pcs > 0;
-        const thNewRemaining = Math.max(0, th.remaining_pcs - (parseInt(th.current_inward_pcs) || 0));
-
-        let thBadge = '';
-        if (isThanCompleted) {
-          thBadge = `<span style="font-size:0.7rem; font-weight:800; background:#ecfdf5; color:#059669; padding:2px 7px; border-radius:5px; border:1px solid #a7f3d0;">✓ Completed</span>`;
-        } else if (isThanPartial) {
-          thBadge = `<span style="font-size:0.7rem; font-weight:800; background:#eff6ff; color:#1d4ed8; padding:2px 7px; border-radius:5px; border:1px solid #bfdbfe;">⚡ Partial</span>`;
-        } else {
-          thBadge = `<span style="font-size:0.7rem; font-weight:800; background:#f1f5f9; color:#475569; padding:2px 7px; border-radius:5px; border:1px solid #cbd5e1;">⏳ Pending</span>`;
-        }
-
-        thansTableRowsHtml += `
-          <tr id="than-row-${itemIdx}-${tIdx}" style="border-bottom:1px solid #f1f5f9; ${isThanCompleted ? 'background:#f8fafc;' : ''}">
-            <td style="padding:10px 12px; font-weight:700; color:var(--slate-800);">
-              <div style="font-weight:800; color:#1e293b;">Than #${th.than_no}</div>
-              ${th.challan_no ? `<div style="font-size:0.72rem; color:#64748b; font-family:monospace;">Challan: ${th.challan_no}</div>` : ''}
-              ${th.purchase_than_no ? `<div style="font-size:0.7rem; color:#94a3b8;">Ref Than #${th.purchase_than_no}</div>` : ''}
-              <input type="hidden" name="items[${itemIdx}][assigned_thans][${tIdx}][than_key]" value="${th.than_key}">
-              <input type="hidden" name="items[${itemIdx}][assigned_thans][${tIdx}][than_no]" value="${th.than_no}">
-              <input type="hidden" name="items[${itemIdx}][assigned_thans][${tIdx}][unique_id]" value="${th.unique_id || ''}">
-              <input type="hidden" name="items[${itemIdx}][assigned_thans][${tIdx}][challan_no]" value="${th.challan_no || ''}">
-              <input type="hidden" name="items[${itemIdx}][assigned_thans][${tIdx}][po_number]" value="${th.po_number || ''}">
-              <input type="hidden" name="items[${itemIdx}][assigned_thans][${tIdx}][purchase_than_no]" value="${th.purchase_than_no || ''}">
-              <input type="hidden" name="items[${itemIdx}][assigned_thans][${tIdx}][meter]" value="${th.meter}">
-              <input type="hidden" name="items[${itemIdx}][assigned_thans][${tIdx}][usable]" value="${th.usable}">
-              <input type="hidden" name="items[${itemIdx}][assigned_thans][${tIdx}][assigned_pcs]" value="${th.assigned_pcs}">
-              <input type="hidden" name="items[${itemIdx}][assigned_thans][${tIdx}][previously_received_pcs]" value="${th.previously_received_pcs}">
-            </td>
-            <td style="padding:10px 12px; text-align:right; font-family:var(--font-mono, monospace); font-weight:700; color:#475569;">
-              <div>${th.meter.toFixed(2)} Mtr</div>
-              <div style="font-size:0.7rem; color:#475569;">Usable: <strong>${th.usable.toFixed(2)}m</strong></div>
-            </td>
-            <td style="padding:10px 12px; text-align:right; font-family:var(--font-mono, monospace); font-weight:800; color:#4338ca;">
-              ${th.assigned_pcs} Pcs
-            </td>
-            <td style="padding:10px 12px; text-align:right; font-family:var(--font-mono, monospace); font-weight:800; color:#059669;">
-              ${th.previously_received_pcs} Pcs
-            </td>
-            <td style="padding:10px 12px; text-align:right; font-family:var(--font-mono, monospace); font-weight:800; color:#dc2626;">
-              ${th.remaining_pcs} Pcs
-            </td>
-            <td style="padding:8px 12px; text-align:center;">
-              <div style="position:relative; max-width:130px; margin:0 auto;">
-                <input type="number" step="1" min="0" max="${th.remaining_pcs}" 
-                  id="than-inward-input-${itemIdx}-${tIdx}"
-                  name="items[${itemIdx}][assigned_thans][${tIdx}][received_pcs]" 
-                  class="form-control" 
-                  value="${th.current_inward_pcs}" 
-                  ${isThanCompleted ? 'readonly disabled style="background:#f1f5f9; color:#94a3b8; font-weight:800; text-align:center; height:36px;"' : 'style="font-weight:800; color:#059669; font-size:1rem; text-align:center; height:36px; border-color:#6ee7b7; background:#f0fdf4;"'}
-                  oninput="onThanInwardPcsChange(${itemIdx}, ${tIdx}, this.value)"
-                  onfocus="this.select()">
-              </div>
-            </td>
-            <td style="padding:10px 12px; text-align:right; font-family:var(--font-mono, monospace); font-weight:800;" id="than-new-remaining-${itemIdx}-${tIdx}">
-              <span style="color:${thNewRemaining === 0 ? '#059669' : '#b45309'};">${thNewRemaining} Pcs</span>
-              <div style="font-size:0.7rem; font-weight:700; color:${thNewRemaining === 0 ? '#059669' : '#64748b'};">
-                ${thNewRemaining === 0 ? '✓ Cleared' : 'Pending'}
-              </div>
-            </td>
-            <td style="padding:10px 12px; text-align:center;">
-              ${thBadge}
-            </td>
-          </tr>
-        `;
-      });
-
-      card.innerHTML = `
-        <!-- Item Header -->
-        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--slate-100, #f1f5f9); padding-bottom:12px; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
-          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-            <span style="width:28px; height:28px; border-radius:8px; background:#ecfdf5; color:#059669; display:inline-flex; align-items:center; justify-content:center; font-size:0.85rem; font-weight:800;">
-              #${itemIdx + 1}
-            </span>
-            <div>
-              <div style="font-weight:800; font-size:1.05rem; color:var(--slate-900);">
-                ${item.item_name} ${item.item_code ? `<span style="font-family:monospace; font-size:0.8rem; font-weight:600; color:#64748b;">[${item.item_code}]</span>` : ''}
-              </div>
-              ${item.raw_item_name ? `<div style="font-size:0.75rem; color:#64748b;">Raw Material Source: <strong>${item.raw_item_name}</strong></div>` : ''}
-            </div>
-            ${statusBadge}
-          </div>
-
-          <!-- Quantity Overview Pills -->
-          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-            <span class="tracking-badge assigned" title="Total pieces and fabric assigned in Job Order">
-              Assigned: <strong>${item.assigned_qty} Pcs</strong> (${totalFabricMeters.toFixed(1)} Mtr Fabric)
-            </span>
-            <span class="tracking-badge received" title="Total pieces previously received across past receipts">
-              Prev Rec: <strong>${item.previously_received_qty} Pcs</strong>
-            </span>
-            <span class="tracking-badge remaining" title="Pending pieces available to receive">
-              Pending: <strong>${item.remaining_qty} Pcs</strong>
-            </span>
-            <span class="tracking-badge" style="background:#f1f5f9; color:#1e293b; border:1px solid #cbd5e1;" id="item-line-total-badge-${itemIdx}">
-              ₹${lineTotal.toFixed(2)}
-            </span>
-          </div>
-        </div>
-
-        <input type="hidden" name="items[${itemIdx}][job_assignment_item_id]" value="${item.job_assignment_item_id || ''}">
-        <input type="hidden" name="items[${itemIdx}][item_id]" value="${item.item_id || ''}">
-        <input type="hidden" name="items[${itemIdx}][item_name]" value="${item.item_name || ''}">
-        <input type="hidden" name="items[${itemIdx}][item_code]" value="${item.item_code || ''}">
-        <input type="hidden" name="items[${itemIdx}][unit]" value="Pcs">
-        <input type="hidden" name="items[${itemIdx}][assigned_qty]" value="${item.assigned_qty}">
-        <input type="hidden" name="items[${itemIdx}][previously_received_qty]" value="${item.previously_received_qty}">
-
-        <!-- Than-wise Piece Tracking Breakdown Table -->
-        <div style="margin-bottom:18px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:14px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
-            <span style="font-size:0.8rem; font-weight:800; color:#1e293b; text-transform:uppercase; letter-spacing:0.04em; display:flex; align-items:center; gap:6px;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-              Assigned Than Breakdown & Piece Verification (${totalThanCount} ${totalThanCount === 1 ? 'Than' : 'Thans'})
-            </span>
-            <div style="display:flex; gap:6px;">
-              <button type="button" class="btn btn-secondary btn-xs" onclick="receiveAllThansForItem(${itemIdx})" style="background:#fff; font-weight:700; color:#059669; border-color:#a7f3d0;" title="Receive all remaining pieces for all thans">
-                ✓ Receive All Pending
-              </button>
-              <button type="button" class="btn btn-secondary btn-xs" onclick="clearAllThansForItem(${itemIdx})" style="background:#fff; font-weight:700; color:#ef4444; border-color:#fecaca;" title="Set current inward to zero">
-                ✕ Clear
-              </button>
-            </div>
-          </div>
-
-          <div class="table-responsive" style="margin:0; background:#fff; border-radius:8px; border:1px solid #e2e8f0; overflow-x:auto;">
-            <table class="data-table" style="width:100%; margin:0; font-size:0.825rem;">
-              <thead style="background:#f1f5f9;">
-                <tr>
-                  <th style="padding:8px 12px; font-size:0.75rem; text-transform:uppercase;">Than # / Challan</th>
-                  <th style="padding:8px 12px; font-size:0.75rem; text-transform:uppercase; text-align:right;">Than Fabric</th>
-                  <th style="padding:8px 12px; font-size:0.75rem; text-transform:uppercase; text-align:right;">Assigned Pcs</th>
-                  <th style="padding:8px 12px; font-size:0.75rem; text-transform:uppercase; text-align:right;">Prev Received</th>
-                  <th style="padding:8px 12px; font-size:0.75rem; text-transform:uppercase; text-align:right;">Pending Pcs</th>
-                  <th style="padding:8px 12px; font-size:0.75rem; text-transform:uppercase; text-align:center; min-width:130px;">Current Inward (Pcs)</th>
-                  <th style="padding:8px 12px; font-size:0.75rem; text-transform:uppercase; text-align:right;">Balance After Inward</th>
-                  <th style="padding:8px 12px; font-size:0.75rem; text-transform:uppercase; text-align:center;">Than Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${thansTableRowsHtml}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Overall Item Quantity Inputs Row -->
-        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr)); gap:16px; align-items:flex-end;">
-          
-          <!-- Total Current Inward Qty (Pcs) -->
-          <div class="form-group" style="margin-bottom:0;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-              <label class="form-label" style="font-weight:800; color:#059669; font-size:0.825rem; margin:0;">
-                Total Inward (Pcs) <span style="color:#ef4444;">*</span>
-              </label>
-              <span style="font-size:0.7rem; color:#64748b;">Max: <strong>${item.remaining_qty} Pcs</strong></span>
-            </div>
-            <div style="position:relative;">
-              <input type="number" step="1" min="0" max="${item.remaining_qty}" 
-                id="inward-qty-input-${itemIdx}"
-                name="items[${itemIdx}][received_qty]" 
-                class="form-control" 
-                value="${item.current_inward_qty}" 
-                ${isCompleted ? 'readonly disabled style="background:#f1f5f9; color:#94a3b8; font-weight:800; height:42px;"' : 'style="font-weight:800; color:#059669; font-size:1.05rem; height:42px; border-color:#6ee7b7; background:#f0fdf4;"'}
-                oninput="onItemInwardQtyChange(${itemIdx}, this.value)"
-                onfocus="this.select()">
-              <span style="position:absolute; right:10px; top:50%; transform:translateY(-50%); font-size:0.75rem; font-weight:700; color:${isCompleted ? '#94a3b8' : '#059669'};">
-                Pcs
-              </span>
-            </div>
-            <div id="inward-qty-error-${itemIdx}" style="display:none; color:#dc2626; font-size:0.72rem; font-weight:700; margin-top:3px;"></div>
-          </div>
-
-          <!-- New Remaining Balance Live Display -->
-          <div class="form-group" style="margin-bottom:0;">
-            <label class="form-label" style="font-weight:700; color:#475569; font-size:0.825rem; margin-bottom:4px;">
-              Balance After Inward
-            </label>
-            <div id="new-remaining-display-${itemIdx}" style="height:42px; background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:8px; display:flex; align-items:center; justify-content:space-between; padding:0 12px; font-weight:800; font-size:0.95rem; color:${newRemaining === 0 ? '#059669' : '#b45309'};">
-              <span>${newRemaining} Pcs</span>
-              <span style="font-size:0.725rem; font-weight:700; color:${newRemaining === 0 ? '#059669' : '#64748b'};">
-                ${newRemaining === 0 ? '✓ Fully Cleared' : 'Pending'}
-              </span>
-            </div>
-          </div>
-
-          <!-- QC Defect / Rejection (Pcs) -->
-          <div class="form-group" style="margin-bottom:0;">
-            <label class="form-label" style="font-weight:700; color:#dc2626; font-size:0.825rem; margin-bottom:4px;">
-              QC Defect (Pcs)
-            </label>
-            <input type="number" step="1" min="0" name="items[${itemIdx}][defect_qty]" 
-              class="form-control" 
-              value="${item.defect_qty || 0}" 
-              style="font-weight:700; color:#dc2626; height:42px;" 
-              oninput="onItemDefectQtyChange(${itemIdx}, this.value)">
-          </div>
-
-          <!-- Contractor Rate (₹/Pc) -->
-          <div class="form-group" style="margin-bottom:0;">
-            <label class="form-label" style="font-weight:700; color:var(--slate-800); font-size:0.825rem; margin-bottom:4px;">
-              Contractor Rate (₹) <span style="color:#ef4444;">*</span>
-            </label>
-            <div style="position:relative;">
-              <span style="position:absolute; left:10px; top:50%; transform:translateY(-50%); font-weight:700; color:#64748b;">₹</span>
-              <input type="number" step="0.5" min="0" name="items[${itemIdx}][rate]" 
-                class="form-control" 
-                required 
-                value="${parseFloat(item.rate || 0).toFixed(2)}" 
-                style="padding-left:24px; font-weight:700; height:42px;" 
-                oninput="onItemRateChange(${itemIdx}, this.value)">
-            </div>
-          </div>
-
-        </div>
-      `;
-
-      container.appendChild(card);
-    });
-  }
-
-  // When an individual Than's inward pieces are modified
-  function onThanInwardPcsChange(itemIdx, tIdx, val) {
-    const item = itemsData[itemIdx];
-    if (!item || !item.assigned_thans || !item.assigned_thans[tIdx]) return;
-
-    const th = item.assigned_thans[tIdx];
-    let num = parseInt(val);
-    if (isNaN(num) || num < 0) num = 0;
-
-    // Clamping to than remaining
-    if (num > th.remaining_pcs) {
-      num = th.remaining_pcs;
-      const input = document.getElementById(`than-inward-input-${itemIdx}-${tIdx}`);
-      if (input) input.value = num;
-    }
-
-    th.current_inward_pcs = num;
-
-    // Update Than's live balance display
-    const thNewRem = Math.max(0, th.remaining_pcs - num);
-    const thRemDisp = document.getElementById(`than-new-remaining-${itemIdx}-${tIdx}`);
-    if (thRemDisp) {
-      thRemDisp.innerHTML = `
-        <span style="color:${thNewRem === 0 ? '#059669' : '#b45309'};">${thNewRem} Pcs</span>
-        <div style="font-size:0.7rem; font-weight:700; color:${thNewRem === 0 ? '#059669' : '#64748b'};">
-          ${thNewRem === 0 ? '✓ Cleared' : 'Pending'}
-        </div>
-      `;
-    }
-
-    // Recompute Item Overall Current Inward Qty as sum of Thans
-    let totalThanInward = 0;
-    item.assigned_thans.forEach(t => {
-      totalThanInward += (parseInt(t.current_inward_pcs) || 0);
-    });
-
-    item.current_inward_qty = totalThanInward;
-
-    // Update Item input
-    const itemInp = document.getElementById(`inward-qty-input-${itemIdx}`);
-    if (itemInp) itemInp.value = totalThanInward;
-
-    // Update Item New Remaining Display
-    const itemNewRem = Math.max(0, item.remaining_qty - totalThanInward);
-    const itemRemDisp = document.getElementById(`new-remaining-display-${itemIdx}`);
-    if (itemRemDisp) {
-      itemRemDisp.innerHTML = `
-        <span>${itemNewRem} Pcs</span>
-        <span style="font-size:0.725rem; font-weight:700; color:${itemNewRem === 0 ? '#059669' : '#64748b'};">
-          ${itemNewRem === 0 ? '✓ Fully Cleared' : 'Pending'}
-        </span>
-      `;
-      itemRemDisp.style.color = itemNewRem === 0 ? '#059669' : '#b45309';
-    }
-
-    // Update Line Total
-    const lineTotal = Math.round(totalThanInward * (item.rate || 0) * 100) / 100;
-    const badge = document.getElementById(`item-line-total-badge-${itemIdx}`);
-    if (badge) badge.textContent = `₹${lineTotal.toFixed(2)}`;
-
-    calculateOverallTotals();
-  }
-
-  // When Item-level total inward input is modified directly
-  function onItemInwardQtyChange(itemIdx, val) {
-    const item = itemsData[itemIdx];
-    if (!item) return;
-
-    let num = parseFloat(val);
-    if (isNaN(num) || num < 0) num = 0;
-
-    const errorDisp = document.getElementById(`inward-qty-error-${itemIdx}`);
-
-    // Validation: Cannot exceed remaining
-    if (num > item.remaining_qty) {
-      if (errorDisp) {
-        errorDisp.textContent = `Cannot exceed pending balance of ${item.remaining_qty} Pcs!`;
-        errorDisp.style.display = 'block';
-      }
-      num = item.remaining_qty;
-      const input = document.getElementById(`inward-qty-input-${itemIdx}`);
-      if (input) input.value = num;
-    } else {
-      if (errorDisp) errorDisp.style.display = 'none';
-    }
-
-    item.current_inward_qty = num;
-
-    // Distribute across assigned thans sequentially
-    let remToDistribute = num;
-    (item.assigned_thans || []).forEach((th, tIdx) => {
-      let thInward = 0;
-      if (remToDistribute > 0 && th.remaining_pcs > 0) {
-        thInward = Math.min(remToDistribute, th.remaining_pcs);
-        remToDistribute -= thInward;
-      }
-      th.current_inward_pcs = thInward;
-
-      const thInput = document.getElementById(`than-inward-input-${itemIdx}-${tIdx}`);
-      if (thInput) thInput.value = thInward;
-
-      const thNewRem = Math.max(0, th.remaining_pcs - thInward);
-      const thRemDisp = document.getElementById(`than-new-remaining-${itemIdx}-${tIdx}`);
-      if (thRemDisp) {
-        thRemDisp.innerHTML = `
-          <span style="color:${thNewRem === 0 ? '#059669' : '#b45309'};">${thNewRem} Pcs</span>
-          <div style="font-size:0.7rem; font-weight:700; color:${thNewRem === 0 ? '#059669' : '#64748b'};">
-            ${thNewRem === 0 ? '✓ Cleared' : 'Pending'}
-          </div>
-        `;
-      }
-    });
-
-    // Update Live New Remaining Display
-    const newRemaining = Math.max(0, item.remaining_qty - num);
-    const remDisp = document.getElementById(`new-remaining-display-${itemIdx}`);
-    if (remDisp) {
-      remDisp.innerHTML = `
-        <span>${newRemaining} Pcs</span>
-        <span style="font-size:0.725rem; font-weight:700; color:${newRemaining === 0 ? '#059669' : '#64748b'};">
-          ${newRemaining === 0 ? '✓ Fully Cleared' : 'Pending'}
-        </span>
-      `;
-      remDisp.style.color = newRemaining === 0 ? '#059669' : '#b45309';
-    }
-
-    // Update Line Total
-    const lineTotal = Math.round(num * (item.rate || 0) * 100) / 100;
-    const badge = document.getElementById(`item-line-total-badge-${itemIdx}`);
-    if (badge) badge.textContent = `₹${lineTotal.toFixed(2)}`;
-
-    calculateOverallTotals();
-  }
-
-  function receiveAllThansForItem(itemIdx) {
-    const item = itemsData[itemIdx];
-    if (!item) return;
-
-    (item.assigned_thans || []).forEach((th, tIdx) => {
-      th.current_inward_pcs = th.remaining_pcs;
-
-      const thInput = document.getElementById(`than-inward-input-${itemIdx}-${tIdx}`);
-      if (thInput) thInput.value = th.remaining_pcs;
-
-      const thRemDisp = document.getElementById(`than-new-remaining-${itemIdx}-${tIdx}`);
-      if (thRemDisp) {
-        thRemDisp.innerHTML = `
-          <span style="color:#059669;">0 Pcs</span>
-          <div style="font-size:0.7rem; font-weight:700; color:#059669;">✓ Cleared</div>
-        `;
-      }
-    });
-
-    item.current_inward_qty = item.remaining_qty;
-
-    const itemInp = document.getElementById(`inward-qty-input-${itemIdx}`);
-    if (itemInp) itemInp.value = item.remaining_qty;
-
-    const remDisp = document.getElementById(`new-remaining-display-${itemIdx}`);
-    if (remDisp) {
-      remDisp.innerHTML = `
-        <span>0 Pcs</span>
-        <span style="font-size:0.725rem; font-weight:700; color:#059669;">✓ Fully Cleared</span>
-      `;
-      remDisp.style.color = '#059669';
-    }
-
-    const lineTotal = Math.round(item.remaining_qty * (item.rate || 0) * 100) / 100;
-    const badge = document.getElementById(`item-line-total-badge-${itemIdx}`);
-    if (badge) badge.textContent = `₹${lineTotal.toFixed(2)}`;
-
-    calculateOverallTotals();
-  }
-
-  function clearAllThansForItem(itemIdx) {
-    const item = itemsData[itemIdx];
-    if (!item) return;
-
-    (item.assigned_thans || []).forEach((th, tIdx) => {
-      th.current_inward_pcs = 0;
-
-      const thInput = document.getElementById(`than-inward-input-${itemIdx}-${tIdx}`);
-      if (thInput) thInput.value = 0;
-
-      const thRemDisp = document.getElementById(`than-new-remaining-${itemIdx}-${tIdx}`);
-      if (thRemDisp) {
-        thRemDisp.innerHTML = `
-          <span style="color:#b45309;">${th.remaining_pcs} Pcs</span>
-          <div style="font-size:0.7rem; font-weight:700; color:#64748b;">Pending</div>
-        `;
-      }
-    });
-
-    item.current_inward_qty = 0;
-
-    const itemInp = document.getElementById(`inward-qty-input-${itemIdx}`);
-    if (itemInp) itemInp.value = 0;
-
-    const remDisp = document.getElementById(`new-remaining-display-${itemIdx}`);
-    if (remDisp) {
-      remDisp.innerHTML = `
-        <span>${item.remaining_qty} Pcs</span>
-        <span style="font-size:0.725rem; font-weight:700; color:#64748b;">Pending</span>
-      `;
-      remDisp.style.color = '#b45309';
-    }
-
-    const badge = document.getElementById(`item-line-total-badge-${itemIdx}`);
-    if (badge) badge.textContent = `₹0.00`;
-
-    calculateOverallTotals();
-  }
-
-  function onItemDefectQtyChange(itemIdx, val) {
-    const item = itemsData[itemIdx];
-    if (!item) return;
-    const num = parseInt(val);
-    item.defect_qty = !isNaN(num) && num >= 0 ? num : 0;
-    calculateOverallTotals();
-  }
-
-  function onItemRateChange(itemIdx, val) {
-    const item = itemsData[itemIdx];
-    if (!item) return;
-    const num = parseFloat(val);
-    item.rate = !isNaN(num) && num >= 0 ? num : 0;
-
-    const calcQty = (parseFloat(item.current_inward_qty) || 0);
-    const lineTotal = Math.round(calcQty * item.rate * 100) / 100;
-    const badge = document.getElementById(`item-line-total-badge-${itemIdx}`);
-    if (badge) badge.textContent = `₹${lineTotal.toFixed(2)}`;
-
-    calculateOverallTotals();
-  }
-
-  // 4. Overall Totals Calculation
-  function calculateOverallTotals() {
-    let grandAssigned = 0;
-    let grandPrevReceived = 0;
-    let grandGoodQty = 0;
-    let grandDefectQty = 0;
-    let grandContractorAmount = 0;
-
-    itemsData.forEach(item => {
-      const inwardQty = parseFloat(item.current_inward_qty) || 0;
-      const defectQty = parseInt(item.defect_qty) || 0;
-      const rate = parseFloat(item.rate) || 0;
-      const itemTotal = Math.round(inwardQty * rate * 100) / 100;
-
-      grandAssigned += (parseInt(item.assigned_qty) || 0);
-      grandPrevReceived += (parseInt(item.previously_received_qty) || 0);
-      grandGoodQty += inwardQty;
-      grandDefectQty += defectQty;
-      grandContractorAmount += itemTotal;
-    });
-
-    const totalRemainingPending = Math.max(0, grandAssigned - (grandPrevReceived + grandGoodQty));
-
-    const sItemsCount = document.getElementById('summary-items-count');
-    const sAssigned = document.getElementById('summary-total-assigned');
-    const sPrevReceived = document.getElementById('summary-prev-received');
-    const sGood = document.getElementById('summary-good-inward');
-    const sDefect = document.getElementById('summary-defect-inward');
-    const sPending = document.getElementById('summary-remaining-pending');
-    const sGrand = document.getElementById('summary-grand');
-
-    if (sItemsCount) sItemsCount.textContent = `${itemsData.length} ${itemsData.length === 1 ? 'Item' : 'Items'}`;
-    if (sAssigned) sAssigned.textContent = `${grandAssigned} Pcs`;
-    if (sPrevReceived) sPrevReceived.textContent = `${grandPrevReceived} Pcs`;
-    if (sGood) sGood.textContent = `${grandGoodQty} Pcs`;
-    if (sDefect) sDefect.textContent = `${grandDefectQty} Pcs`;
-    if (sPending) sPending.textContent = `${totalRemainingPending} Pcs`;
-    if (sGrand) sGrand.textContent = '₹' + grandContractorAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  }
-
-  // 5. Submit validation
-  document.getElementById('inward-form')?.addEventListener('submit', function(e) {
-    if (currentInwardMode === 'linked') {
-      if (!document.getElementById('worker_select').value) {
-        e.preventDefault();
-        alert('Please select a Job Worker / Contractor.');
-        return false;
-      }
-      if (!document.getElementById('ja_select').value) {
-        e.preventDefault();
-        alert('Please select an Active Job Assignment or switch to Direct Standalone Inward.');
-        return false;
-      }
-    } else {
-      const directWorker = document.getElementById('direct_worker_name')?.value?.trim();
-      if (!directWorker) {
-        e.preventDefault();
-        alert('Please enter Contractor / Job Worker Name.');
-        return false;
-      }
-    }
-
-    if (itemsData.length === 0) {
-      e.preventDefault();
-      alert('No items found to inward.');
-      return false;
-    }
-
-    let totalInwarding = 0;
-    itemsData.forEach((item, idx) => {
-      const q = parseFloat(item.current_inward_qty) || 0;
-      totalInwarding += q;
-    });
-
-    if (totalInwarding <= 0) {
-      e.preventDefault();
-      alert('Please enter at least 1 piece in Current Inward Quantity before saving.');
-      return false;
-    }
-
-    // Prevent duplicate receipt submission
-    const submitBtn = document.getElementById('submit-btn') || this.querySelector('button[type="submit"]');
-    if (submitBtn) {
-      submitBtn.disabled = true;
-      submitBtn.innerText = 'Recording Inward...';
-    }
-  });
-
-  // Initial Load Trigger
   document.addEventListener('DOMContentLoaded', () => {
-    const workerSelect = document.getElementById('worker_select');
-
-    if (initialPreselectedId && formattedAssignmentsMap[initialPreselectedId]) {
-      const preData = formattedAssignmentsMap[initialPreselectedId];
-      if (preData.job_worker_id && workerSelect) {
-        workerSelect.value = preData.job_worker_id;
-        onWorkerSelectChange(workerSelect);
-        const jaSelect = document.getElementById('ja_select');
-        if (jaSelect) {
-          jaSelect.value = initialPreselectedId;
-          onJobOrderChange(jaSelect);
-        }
-      }
-    } else if (workerSelect && workerSelect.value) {
-      onWorkerSelectChange(workerSelect);
+    // If worker or order was preselected, trigger change
+    const workerSelect = document.getElementById('jwi-jobworker-select');
+    if (workerSelect.value) {
+      onJobWorkerChanged();
+    }
+    const orderSelect = document.getElementById('jwi-order-select');
+    if (orderSelect.value) {
+      onJobOrderChanged();
     }
   });
+
+  // When Jobworker changes, filter open Job Work Orders
+  function onJobWorkerChanged() {
+    const workerSelect = document.getElementById('jwi-jobworker-select');
+    const workerId = workerSelect.value;
+    const workerOpt = workerSelect.options[workerSelect.selectedIndex];
+    const workerName = workerOpt ? (workerOpt.getAttribute('data-name') || workerOpt.text) : '';
+    document.getElementById('jwi-jobworker-name').value = workerName;
+
+    const orderSelect = document.getElementById('jwi-order-select');
+    const currentVal = orderSelect.value;
+    let foundCurrent = false;
+
+    for (let i = 0; i < orderSelect.options.length; i++) {
+      const opt = orderSelect.options[i];
+      if (!opt.value) continue;
+      const optWorkerId = opt.getAttribute('data-worker-id');
+
+      if (!workerId || optWorkerId == workerId) {
+        opt.style.display = '';
+        if (opt.value === currentVal) foundCurrent = true;
+      } else {
+        opt.style.display = 'none';
+      }
+    }
+
+    if (!foundCurrent && workerId) {
+      // Auto-select first matching order
+      for (let i = 0; i < orderSelect.options.length; i++) {
+        const opt = orderSelect.options[i];
+        if (opt.value && opt.style.display !== 'none') {
+          orderSelect.value = opt.value;
+          onJobOrderChanged();
+          break;
+        }
+      }
+    }
+  }
+
+  // When Job Work Order is selected, auto-populate item options & details
+  function onJobOrderChanged() {
+    const orderSelect = document.getElementById('jwi-order-select');
+    const orderId = orderSelect.value;
+    if (!orderId || !assignmentData[orderId]) {
+      return;
+    }
+
+    const ja = assignmentData[orderId];
+    document.getElementById('jwi-order-no').value = ja.job_order_no || '';
+    document.getElementById('jwi-lot-number').value = ja.lot_number || '';
+    document.getElementById('jwi-process-name').value = ja.process_name || 'Stitching / Jobwork';
+
+    // Auto-select worker if not already matching
+    const workerSelect = document.getElementById('jwi-jobworker-select');
+    if (ja.job_worker_id && workerSelect.value != ja.job_worker_id) {
+      workerSelect.value = ja.job_worker_id;
+      const wOpt = workerSelect.options[workerSelect.selectedIndex];
+      if (wOpt) {
+        document.getElementById('jwi-jobworker-name').value = wOpt.getAttribute('data-name') || wOpt.text;
+      }
+    }
+
+    // Refresh entry item dropdown with items from this job assignment
+    const recdSelect = document.getElementById('entry-item-recd');
+    recdSelect.innerHTML = '<option value="">-- Select Finished Goods (From Order) --</option>';
+
+    if (ja.items && ja.items.length > 0) {
+      ja.items.forEach(itm => {
+        const opt = document.createElement('option');
+        opt.value = itm.finished_item_id || itm.item_id || itm.job_assignment_item_id;
+        opt.setAttribute('data-jai-id', itm.job_assignment_item_id || '');
+        opt.setAttribute('data-name', itm.finished_item_name || itm.item_name);
+        opt.setAttribute('data-raw-name', itm.raw_item_name || '');
+        opt.setAttribute('data-assigned-qty', itm.assigned_qty || 0);
+        opt.setAttribute('data-prev-qty', itm.previously_received_qty || 0);
+        opt.setAttribute('data-rem-qty', itm.remaining_qty || 0);
+        opt.setAttribute('data-thans', itm.than_count || 1);
+        opt.setAttribute('data-rate', itm.rate || 0);
+        opt.textContent = `${itm.finished_item_name || itm.item_name} (Raw: ${itm.raw_item_name || 'N/A'}, Bal: ${itm.remaining_qty} Pcs)`;
+        recdSelect.appendChild(opt);
+      });
+
+      // Auto-select first item
+      if (ja.items.length === 1) {
+        recdSelect.selectedIndex = 1;
+        onRecdItemSelectChanged();
+      }
+    }
+  }
+
+  function onRecdItemSelectChanged() {
+    const recdSelect = document.getElementById('entry-item-recd');
+    const opt = recdSelect.options[recdSelect.selectedIndex];
+    if (!opt || !opt.value) {
+      document.getElementById('entry-used-raw-name').value = '';
+      document.getElementById('entry-jai-id').value = '';
+      document.getElementById('entry-assigned-qty').value = '0';
+      document.getElementById('entry-prev-qty').value = '0';
+      document.getElementById('entry-rem-balance').value = '0';
+      return;
+    }
+
+    const rawName = opt.getAttribute('data-raw-name') || '';
+    const jaiId = opt.getAttribute('data-jai-id') || '';
+    const assignedQty = parseFloat(opt.getAttribute('data-assigned-qty') || 0);
+    const prevQty = parseFloat(opt.getAttribute('data-prev-qty') || 0);
+    const remQty = parseFloat(opt.getAttribute('data-rem-qty') || 0);
+    const thans = parseInt(opt.getAttribute('data-thans') || 1);
+
+    document.getElementById('entry-used-raw-name').value = rawName;
+    document.getElementById('entry-jai-id').value = jaiId;
+    document.getElementById('entry-assigned-qty').value = assignedQty;
+    document.getElementById('entry-prev-qty').value = prevQty;
+    document.getElementById('entry-rem-balance').value = remQty;
+
+    // Suggest remaining quantity if available
+    if (remQty > 0) {
+      document.getElementById('entry-inward-qty').value = remQty;
+      document.getElementById('entry-than-count').value = thans;
+    }
+  }
+
+  // Multiple Than Modal Functions
+  function openThanModalForEntry() {
+    modalTargetContext = 'entry';
+    document.getElementById('than-modal-textarea').value = currentModalThans.join(', ');
+    recalculateThanModalPreview();
+    const modalEl = document.getElementById('thanBreakdownModal');
+    modalEl.classList.add('show');
+    modalEl.style.display = 'block';
+  }
+
+  function closeThanModal() {
+    const modalEl = document.getElementById('thanBreakdownModal');
+    modalEl.classList.remove('show');
+    modalEl.style.display = 'none';
+  }
+
+  function parseThansFromText(text) {
+    if (!text) return [];
+    return text.split(/[\n,\s]+/)
+      .map(v => parseFloat(v.trim()))
+      .filter(v => !isNaN(v) && v > 0);
+  }
+
+  function recalculateThanModalPreview() {
+    const raw = document.getElementById('than-modal-textarea').value;
+    const thans = parseThansFromText(raw);
+    const sum = thans.reduce((a, b) => a + b, 0);
+
+    document.getElementById('modal-thans-count').textContent = thans.length;
+    document.getElementById('modal-thans-sum').textContent = sum.toFixed(2);
+  }
+
+  function confirmThanModal() {
+    const raw = document.getElementById('than-modal-textarea').value;
+    const thans = parseThansFromText(raw);
+    const sum = thans.reduce((a, b) => a + b, 0);
+
+    if (modalTargetContext === 'entry') {
+      currentModalThans = thans;
+      if (thans.length > 0) {
+        document.getElementById('entry-inward-qty').value = sum.toFixed(2);
+        document.getElementById('entry-than-count').value = thans.length;
+        
+        const banner = document.getElementById('entry-than-chips-line');
+        banner.style.display = 'flex';
+        document.getElementById('entry-than-chips-text').textContent = `${thans.length} Thans = ${sum.toFixed(2)} Pcs/Mtr`;
+      }
+    }
+    closeThanModal();
+  }
+
+  function clearEntryThans() {
+    currentModalThans = [];
+    document.getElementById('entry-than-chips-line').style.display = 'none';
+  }
+
+  // Adding item to Inward Table
+  function addItemToInwardTable() {
+    const recdSelect = document.getElementById('entry-item-recd');
+    const recdId = recdSelect.value;
+    if (!recdId) {
+      alert('Please select the Received (Finished) Item.');
+      recdSelect.focus();
+      return;
+    }
+
+    const opt = recdSelect.options[recdSelect.selectedIndex];
+    const recdName = opt.getAttribute('data-name') || opt.text;
+    const rawName = document.getElementById('entry-used-raw-name').value || 'Fabric';
+    const jaiId = document.getElementById('entry-jai-id').value || null;
+    const assignedQty = parseFloat(document.getElementById('entry-assigned-qty').value || 0);
+    const prevQty = parseFloat(document.getElementById('entry-prev-qty').value || 0);
+    const remBalance = parseFloat(document.getElementById('entry-rem-balance').value || 0);
+
+    const qty = parseFloat(document.getElementById('entry-inward-qty').value || 0);
+    const thanCount = parseInt(document.getElementById('entry-than-count').value || currentModalThans.length || 0);
+    const actualWaste = parseFloat(document.getElementById('entry-actual-waste').value || 0);
+
+    if (qty <= 0) {
+      alert('Please enter a valid inward Quantity greater than 0.');
+      document.getElementById('entry-inward-qty').focus();
+      return;
+    }
+
+    // Pending Qty = Remaining Balance - current inward Qty
+    const pendingQty = Math.max(0, remBalance > 0 ? (remBalance - qty) : 0);
+
+    inwardItems.push({
+      item_id: recdId,
+      item_name: recdName,
+      raw_item_name: rawName,
+      job_assignment_item_id: jaiId,
+      assigned_qty: assignedQty,
+      previously_received_qty: prevQty,
+      received_qty: qty,
+      than_count: thanCount,
+      wastage_returned_meters: actualWaste,
+      pending_qty: pendingQty,
+      thans: [...currentModalThans]
+    });
+
+    // Reset entry inputs
+    recdSelect.value = '';
+    document.getElementById('entry-inward-qty').value = '';
+    document.getElementById('entry-than-count').value = '';
+    document.getElementById('entry-actual-waste').value = '0.00';
+    clearEntryThans();
+
+    renderInwardTable();
+    calculateInwardTotals();
+  }
+
+  function renderInwardTable() {
+    const tbody = document.getElementById('jwi-items-tbody');
+    const emptyBanner = document.getElementById('jwi-empty-banner');
+    tbody.innerHTML = '';
+
+    if (inwardItems.length === 0) {
+      emptyBanner.style.display = 'block';
+      return;
+    }
+    emptyBanner.style.display = 'none';
+
+    inwardItems.forEach((itm, idx) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td style="text-align:center; font-weight:700; color:#64748b;">${idx + 1}</td>
+        <td>
+          <div style="font-weight:700; color:#0f172a;">${escapeHtml(itm.item_name)}</div>
+          <input type="hidden" name="items[${idx}][item_name]" value="${escapeHtml(itm.item_name)}">
+          <input type="hidden" name="items[${idx}][item_id]" value="${itm.item_id || ''}">
+          <input type="hidden" name="items[${idx}][job_assignment_item_id]" value="${itm.job_assignment_item_id || ''}">
+          <input type="hidden" name="items[${idx}][assigned_qty]" value="${itm.assigned_qty || 0}">
+          <input type="hidden" name="items[${idx}][previously_received_qty]" value="${itm.previously_received_qty || 0}">
+        </td>
+        <td>
+          <div style="font-weight:600; color:#475569;">${escapeHtml(itm.raw_item_name)}</div>
+          <input type="hidden" name="items[${idx}][raw_item_name]" value="${escapeHtml(itm.raw_item_name)}">
+        </td>
+        <td style="text-align:right;">
+          <input type="number" 
+                 step="0.01" 
+                 class="form-control" 
+                 style="text-align:right; font-weight:700; padding:4px 8px; width:100px; display:inline-block;" 
+                 value="${itm.received_qty}" 
+                 name="items[${idx}][received_qty]"
+                 onchange="updateRowQty(${idx}, this.value)">
+        </td>
+        <td style="text-align:center;">
+          <input type="number" 
+                 step="1" 
+                 class="form-control" 
+                 style="text-align:center; font-weight:700; padding:4px 8px; width:70px; display:inline-block;" 
+                 value="${itm.than_count}" 
+                 name="items[${idx}][than_count]"
+                 onchange="updateRowThans(${idx}, this.value)">
+        </td>
+        <td style="text-align:right;">
+          <input type="number" 
+                 step="0.01" 
+                 class="form-control" 
+                 style="text-align:right; font-weight:700; padding:4px 8px; width:90px; display:inline-block; color:#d97706;" 
+                 value="${itm.wastage_returned_meters}" 
+                 name="items[${idx}][wastage_returned_meters]"
+                 onchange="updateRowWaste(${idx}, this.value)">
+        </td>
+        <td style="text-align:right; font-weight:700; color:#64748b;">
+          ${(itm.pending_qty || 0).toFixed(2)}
+          <input type="hidden" name="items[${idx}][pending_qty]" value="${itm.pending_qty || 0}">
+        </td>
+        <td style="text-align:center;">
+          <button type="button" class="btn-remove-row" onclick="removeInwardRow(${idx})" title="Delete Item">
+            &times;
+          </button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function updateRowQty(idx, val) {
+    const q = parseFloat(val) || 0;
+    inwardItems[idx].received_qty = q;
+    if (inwardItems[idx].assigned_qty > 0) {
+      const rem = Math.max(0, inwardItems[idx].assigned_qty - (inwardItems[idx].previously_received_qty + q));
+      inwardItems[idx].pending_qty = rem;
+    }
+    renderInwardTable();
+    calculateInwardTotals();
+  }
+
+  function updateRowThans(idx, val) {
+    inwardItems[idx].than_count = parseInt(val) || 0;
+    calculateInwardTotals();
+  }
+
+  function updateRowWaste(idx, val) {
+    inwardItems[idx].wastage_returned_meters = parseFloat(val) || 0;
+    calculateInwardTotals();
+  }
+
+  function removeInwardRow(idx) {
+    inwardItems.splice(idx, 1);
+    renderInwardTable();
+    calculateInwardTotals();
+  }
+
+  function calculateInwardTotals() {
+    let sumQty = 0;
+    let sumThans = 0;
+    let sumWaste = 0;
+    let sumPending = 0;
+
+    inwardItems.forEach(i => {
+      sumQty += (i.received_qty || 0);
+      sumThans += (i.than_count || 0);
+      sumWaste += (i.wastage_returned_meters || 0);
+      sumPending += (i.pending_qty || 0);
+    });
+
+    document.getElementById('tfoot-sum-qty').textContent = sumQty.toFixed(2);
+    document.getElementById('tfoot-sum-thans').textContent = sumThans;
+    document.getElementById('tfoot-sum-waste').textContent = sumWaste.toFixed(2);
+    document.getElementById('tfoot-sum-pending').textContent = sumPending.toFixed(2);
+
+    // Summary Card
+    document.getElementById('summary-total-recd').textContent = sumQty.toFixed(2);
+    document.getElementById('summary-total-wastage').textContent = sumWaste.toFixed(2);
+    const net = Math.max(0, sumQty - sumWaste);
+    document.getElementById('summary-net-inward').textContent = net.toFixed(2);
+  }
+
+  function validateBeforeSubmit(e) {
+    const worker = document.getElementById('jwi-jobworker-select').value;
+    if (!worker) {
+      alert('Please select a Jobworker.');
+      document.getElementById('jwi-jobworker-select').focus();
+      e.preventDefault();
+      return false;
+    }
+
+    if (inwardItems.length === 0) {
+      alert('Please add at least one line item to the Inward Table.');
+      e.preventDefault();
+      return false;
+    }
+    return true;
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  // Window global bindings
+  window.openThanModalForEntry = openThanModalForEntry;
+  window.openEntryThanModal = openThanModalForEntry;
+  window.openThanModalForRow = openThanModalForRow;
+  window.closeThanModal = closeThanModal;
+  window.applyModalThans = applyModalThans;
+  window.addInwardLineItem = addInwardLineItem;
+  window.removeInwardRow = removeInwardRow;
 </script>
 @endpush
+@endsection

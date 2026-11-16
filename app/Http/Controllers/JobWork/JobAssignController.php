@@ -902,9 +902,14 @@ class JobAssignController extends Controller
         });
     }
 
-    public function show(JobAssignment $assign)
+    public function show(Request $request, JobAssignment $assign)
     {
-        return response()->json($assign->load(['items.rawItem', 'items.finishedItem', 'jobWorker']));
+        $assign->load(['items.rawItem', 'items.finishedItem', 'jobWorker']);
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json($assign);
+        }
+        $companySettings = \App\Models\CompanySetting::first();
+        return view('jobwork.assign.show', compact('assign', 'companySettings'));
     }
 
     public function destroy(JobAssignment $assign)

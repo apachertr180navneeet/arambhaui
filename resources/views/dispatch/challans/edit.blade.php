@@ -845,7 +845,7 @@
 
 @endsection
 
-@section('scripts')
+@push('scripts')
 <script>
   // State: preloaded items for Edit
   let billItems = {!! json_encode($preloadedItems) !!};
@@ -1383,10 +1383,23 @@
     }
   });
 
+  // Ensure modal and action handlers are globally accessible on window
+  window.openEntryThanModal = openEntryThanModal;
+  window.openRowThanModal = openRowThanModal;
+  window.closeThanModal = closeThanModal;
+  window.applyModalThans = applyModalThans;
+  window.updateModalThanPreview = updateModalThanPreview;
+  window.openBulkItemModal = openBulkItemModal;
+  window.closeBulkItemModal = closeBulkItemModal;
+  window.applyBulkSelectedItems = applyBulkSelectedItems;
+  window.addEntryLineItem = addEntryLineItem;
+  window.deleteItem = deleteItem;
+  window.editItem = editItem;
+
   // Initialize
   document.addEventListener('DOMContentLoaded', function() {
     renderTable();
     calculateBillTotals();
   });
 </script>
-@endsection
+@endpush

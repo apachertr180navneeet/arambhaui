@@ -174,6 +174,27 @@ class ReportsController extends Controller
         $fromDate = $request->input('from_date');
         $toDate = $request->input('to_date');
         $search = $request->input('search');
+        $preset = $request->input('preset');
+
+        if ($preset === 'today') {
+            $fromDate = date('Y-m-d');
+            $toDate = date('Y-m-d');
+        } elseif ($preset === 'this_month') {
+            $fromDate = date('Y-m-01');
+            $toDate = date('Y-m-t');
+        } elseif ($preset === 'last_month') {
+            $fromDate = date('Y-m-01', strtotime('-1 month'));
+            $toDate = date('Y-m-t', strtotime('-1 month'));
+        } elseif ($preset === 'fy') {
+            $currentYear = (int) date('Y');
+            $currentMonth = (int) date('n');
+            $fyStartYear = ($currentMonth >= 4) ? $currentYear : ($currentYear - 1);
+            $fromDate = "{$fyStartYear}-04-01";
+            $toDate = date('Y-m-d');
+        } elseif ($preset === 'all') {
+            $fromDate = null;
+            $toDate = null;
+        }
 
         $query = JobAssignment::with(['items.rawItem', 'items.finishedItem', 'jobWorker', 'inwards'])
             ->whereNotIn('status', ['Cancelled']);
@@ -390,6 +411,7 @@ class ReportsController extends Controller
             'itemId',
             'jobOrderNo',
             'status',
+            'preset',
             'fromDate',
             'toDate',
             'search',
@@ -552,12 +574,163 @@ class ReportsController extends Controller
 
     public function lotSales(Request $request)
     {
-        $challans = DispatchChallan::with('items')->latest()->get();
+        $customers = \App\Models\Customer::orderBy('name')->get();
+        $items = Item::orderBy('name')->get();
 
-        if ($request->wantsJson() || $request->ajax()) {
-            return response()->json($challans);
+        $customerId = $request->input('customer_id');
+        $itemId = $request->input('item_id');
+        $status = $request->input('status');
+        $fromDate = $request->input('from_date');
+        $toDate = $request->input('to_date');
+        $search = $request->input('search');
+        $preset = $request->input('preset');
+
+        if ($preset === 'today') {
+            $fromDate = date('Y-m-d');
+            $toDate = date('Y-m-d');
+        } elseif ($preset === 'this_month') {
+            $fromDate = date('Y-m-01');
+            $toDate = date('Y-m-t');
+        } elseif ($preset === 'last_month') {
+            $fromDate = date('Y-m-01', strtotime('-1 month'));
+            $toDate = date('Y-m-t', strtotime('-1 month'));
+        } elseif ($preset === 'fy') {
+            $currentYear = (int) date('Y');
+            $currentMonth = (int) date('n');
+            $fyStartYear = ($currentMonth >= 4) ? $currentYear : ($currentYear - 1);
+            $fromDate = "{$fyStartYear}-04-01";
+            $toDate = date('Y-m-d');
+        } elseif ($preset === 'all') {
+            $fromDate = null;
+            $toDate = null;
         }
 
-        return view('reports.lot-sales', compact('challans'));
+        $query = DispatchChallan::with(['items.item', 'customer'])->latest('dispatch_date')->latest('id');
+
+        if ($customerId) {
+            $query->where('customer_id', $customerId);
+        }
+
+        if ($itemId) {
+            $query->whereHas('items', function ($q) use ($itemId) {
+                $q->where('item_id', $itemId);
+            });
+        }
+
+        if ($status && $status !== 'all') {
+            $query->where('status', $status);
+        }
+
+        if ($fromDate) {
+            $query->whereDate('dispatch_date', '>=', $fromDate);
+        }
+
+        if ($toDate) {
+            $query->whereDate('dispatch_date', '<=', $toDate);
+        }
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('challan_no', 'like', "%{$search}%")
+                  ->orWhere('customer_name', 'like', "%{$search}%")
+                  ->orWhere('transporter_name', 'like', "%{$search}%")
+                  ->orWhere('lr_number', 'like', "%{$search}%")
+                  ->orWhere('vehicle_number', 'like', "%{$search}%")
+                  ->orWhere('remarks', 'like', "%{$search}%");
+            });
+        }
+
+        $challans = $query->get();
+
+        $totalQty = 0;
+        $totalThans = 0;
+        $totalAmount = 0;
+        $totalCartons = 0;
+
+        foreach ($challans as $dc) {
+            $totalQty += (float)$dc->total_qty;
+            $totalThans += (int)($dc->total_thans ?: $dc->items->sum('than_count'));
+            $totalAmount += (float)$dc->total_amount;
+            $totalCartons += (int)$dc->total_cartons;
+        }
+
+        if ($request->query('export') === 'csv') {
+            return $this->exportDispatchCsv($challans, $totalQty, $totalThans, $totalAmount);
+        }
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'challans' => $challans,
+                'total_qty' => $totalQty,
+                'total_thans' => $totalThans,
+                'total_amount' => $totalAmount,
+                'total_cartons' => $totalCartons,
+                'total_count' => $challans->count()
+            ]);
+        }
+
+        $companySettings = CompanySetting::first();
+        $companyName = $companySettings?->company_name ?? 'aarambh';
+
+        return view('reports.lot-sales', compact(
+            'challans',
+            'customers',
+            'items',
+            'customerId',
+            'itemId',
+            'status',
+            'fromDate',
+            'toDate',
+            'preset',
+            'search',
+            'totalQty',
+            'totalThans',
+            'totalAmount',
+            'totalCartons',
+            'companySettings',
+            'companyName'
+        ));
+    }
+
+    protected function exportDispatchCsv($challans, $totalQty, $totalThans, $totalAmount)
+    {
+        $filename = "Dispatch_Register_" . date('Ymd_His') . ".csv";
+        $headers = [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+            'Pragma' => 'no-cache',
+            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+            'Expires' => '0'
+        ];
+
+        $callback = function () use ($challans, $totalQty, $totalThans, $totalAmount) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, ['DISPATCH & SALES REGISTER REPORT']);
+            fputcsv($handle, ['Generated on', date('d-M-Y H:i:s')]);
+            fputcsv($handle, []);
+            fputcsv($handle, ['S.No.', 'Challan #', 'Dispatch Date', 'Customer', 'Transporter', 'LR / Bilty #', 'Cartons', 'Thans', 'Dispatched Qty', 'Total Amount (INR)', 'Status']);
+
+            foreach ($challans as $idx => $dc) {
+                fputcsv($handle, [
+                    $idx + 1,
+                    $dc->challan_no,
+                    date('d-M-Y', strtotime($dc->dispatch_date)),
+                    $dc->customer_name,
+                    $dc->transporter_name ?: '—',
+                    $dc->bilty_no ?: ($dc->lr_number ?: '—'),
+                    $dc->total_cartons,
+                    $dc->total_thans ?: $dc->items->sum('than_count'),
+                    $dc->total_qty,
+                    $dc->total_amount,
+                    $dc->status ?: 'Dispatched'
+                ]);
+            }
+
+            fputcsv($handle, []);
+            fputcsv($handle, ['TOTALS', '', '', '', '', '', '', $totalThans, $totalQty, $totalAmount, '']);
+            fclose($handle);
+        };
+
+        return response()->stream($callback, 200, $headers);
     }
 }

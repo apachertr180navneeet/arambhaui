@@ -268,7 +268,7 @@
         </div>
 
         <!-- Supplier / Party Filter -->
-        <div style="min-width:220px; flex:1; max-width:300px;">
+        <div style="min-width:200px; flex:1; max-width:260px;">
           <label style="display:block; font-size:0.75rem; font-weight:700; color:#475569; margin-bottom:4px;">
             Select Party / Supplier:
           </label>
@@ -279,6 +279,33 @@
                 {{ $v->name }} ({{ $v->code ?: 'Vendor' }})
               </option>
             @endforeach
+          </select>
+        </div>
+
+        <!-- Item / Fabric Filter -->
+        <div style="min-width:180px; flex:1; max-width:240px;">
+          <label style="display:block; font-size:0.75rem; font-weight:700; color:#475569; margin-bottom:4px;">
+            Filter by Item / Fabric:
+          </label>
+          <select name="item_id" class="form-control" style="font-weight:600; height:38px; border-radius:8px;" onchange="document.getElementById('ledger-filter-form').submit()">
+            <option value="">-- All Items --</option>
+            @foreach($items as $itm)
+              <option value="{{ $itm->id }}" {{ ($selectedItemId ?? '') == $itm->id ? 'selected' : '' }}>
+                {{ $itm->name }}
+              </option>
+            @endforeach
+          </select>
+        </div>
+
+        <!-- Status Filter -->
+        <div style="width:130px;">
+          <label style="display:block; font-size:0.75rem; font-weight:700; color:#475569; margin-bottom:4px;">
+            Status:
+          </label>
+          <select name="status" class="form-control" style="font-weight:600; height:38px; border-radius:8px;" onchange="document.getElementById('ledger-filter-form').submit()">
+            <option value="all">All Status</option>
+            <option value="Approved" {{ ($selectedStatus ?? '') === 'Approved' ? 'selected' : '' }}>Approved</option>
+            <option value="Pending" {{ ($selectedStatus ?? '') === 'Pending' ? 'selected' : '' }}>Pending</option>
           </select>
         </div>
 
@@ -338,6 +365,7 @@
             <th style="width:80px; text-align:right;">Tax</th>
             <th style="width:110px; text-align:right;">Item Total (₹)</th>
             <th style="width:120px; text-align:right;">Bill Total (₹)</th>
+            <th style="width:100px; text-align:center;">Action</th>
           </tr>
         </thead>
         <tbody>
@@ -420,6 +448,13 @@
                     <td rowspan="{{ $itemCount }}" class="tally-amt" style="vertical-align:middle; font-size:0.95rem; font-weight:800; color:#4338ca; border-left:1px solid #f1f5f9; background:#fcfdff;">
                       ₹{{ number_format($bill->grand_total, 2) }}
                     </td>
+                    <!-- Action Link to Drill Down Transaction -->
+                    <td rowspan="{{ $itemCount }}" style="vertical-align:middle; text-align:center; border-left:1px solid #f1f5f9; background:#fff;">
+                      <a href="{{ route('purchase.orders.show', $bill->id) }}" class="btn btn-secondary btn-sm" style="padding:4px 8px; font-weight:700; font-size:0.75rem; display:inline-flex; align-items:center; gap:4px;" title="View Purchase Bill">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        View
+                      </a>
+                    </td>
                   @endif
                 </tr>
               @endforeach
@@ -441,6 +476,9 @@
                 <td class="tally-amt" style="font-size:0.775rem;">₹{{ number_format($bill->tax_total, 2) }}</td>
                 <td class="tally-amt" style="font-weight:700;">₹{{ number_format($bill->grand_total, 2) }}</td>
                 <td class="tally-amt" style="font-size:0.95rem; font-weight:800; color:#4338ca;">₹{{ number_format($bill->grand_total, 2) }}</td>
+                <td style="text-align:center;">
+                  <a href="{{ route('purchase.orders.show', $bill->id) }}" class="btn btn-secondary btn-sm" style="padding:4px 8px; font-weight:700; font-size:0.75rem;">View</a>
+                </td>
               </tr>
             @endif
           @empty

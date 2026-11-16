@@ -225,9 +225,18 @@
         <!-- Action Buttons -->
         <div style="display:flex; gap:8px;">
           <button type="submit" class="btn btn-primary btn-sm" style="font-weight:700; height:38px;">Apply Filter</button>
-          @if($workerId || $itemId || $status || $fromDate || $toDate || !empty($search))
+          @if($workerId || $itemId || $status || $fromDate || $toDate || !empty($search) || !empty($preset))
             <a href="{{ route('reports.job-work-register') }}" class="btn btn-secondary btn-sm" style="font-weight:700; height:38px; display:inline-flex; align-items:center;">Reset</a>
           @endif
+        </div>
+
+        <!-- Period Presets -->
+        <div style="display:flex; align-items:center; gap:6px; margin-left:auto;">
+          <a href="{{ route('reports.job-work-register', array_merge(request()->except(['from_date', 'to_date', 'preset']), ['preset' => 'today'])) }}" class="btn btn-sm {{ ($preset ?? '') === 'today' ? 'btn-primary' : 'btn-secondary' }}" style="font-weight:700; font-size:0.75rem;">Today</a>
+          <a href="{{ route('reports.job-work-register', array_merge(request()->except(['from_date', 'to_date', 'preset']), ['preset' => 'this_month'])) }}" class="btn btn-sm {{ ($preset ?? '') === 'this_month' ? 'btn-primary' : 'btn-secondary' }}" style="font-weight:700; font-size:0.75rem;">This Month</a>
+          <a href="{{ route('reports.job-work-register', array_merge(request()->except(['from_date', 'to_date', 'preset']), ['preset' => 'last_month'])) }}" class="btn btn-sm {{ ($preset ?? '') === 'last_month' ? 'btn-primary' : 'btn-secondary' }}" style="font-weight:700; font-size:0.75rem;">Last Month</a>
+          <a href="{{ route('reports.job-work-register', array_merge(request()->except(['from_date', 'to_date', 'preset']), ['preset' => 'fy'])) }}" class="btn btn-sm {{ ($preset ?? '') === 'fy' ? 'btn-primary' : 'btn-secondary' }}" style="font-weight:700; font-size:0.75rem;">Current FY</a>
+          <a href="{{ route('reports.job-work-register', array_merge(request()->except(['from_date', 'to_date', 'preset']), ['preset' => 'all'])) }}" class="btn btn-sm {{ ($preset ?? '') === 'all' ? 'btn-primary' : 'btn-secondary' }}" style="font-weight:700; font-size:0.75rem;">All Time</a>
         </div>
 
       </form>
@@ -250,6 +259,7 @@
             <th style="width:100px; text-align:right;">Rate (₹)</th>
             <th style="width:120px; text-align:right;">Total Amount (₹)</th>
             <th style="width:105px; text-align:center;">Status</th>
+            <th style="width:90px; text-align:center;">Action</th>
           </tr>
         </thead>
         <tbody>
@@ -265,7 +275,7 @@
             <tr>
               <!-- 1. Job Order Number with Direct Drill-Down Link -->
               <td>
-                <a href="{{ route('jobwork.assign.edit', $r['order_id']) }}" target="_blank" style="font-weight:800; font-family:var(--font-mono, monospace); color:#4338ca; text-decoration:none; display:inline-flex; align-items:center; gap:4px;" title="View & Edit Job Order">
+                <a href="{{ route('jobwork.assign.show', $r['order_id']) }}" style="font-weight:800; font-family:var(--font-mono, monospace); color:#4338ca; text-decoration:none; display:inline-flex; align-items:center; gap:4px;" title="View Order Details">
                   <span>{{ $r['job_order_no'] }}</span>
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                 </a>
@@ -335,6 +345,14 @@
                   ● {{ $r['status'] }}
                 </span>
               </td>
+
+              <!-- 13. Action: Drill Down Transaction -->
+              <td style="text-align:center;">
+                <a href="{{ route('jobwork.assign.show', $r['order_id']) }}" class="btn btn-secondary btn-sm" style="padding:4px 8px; font-weight:700; font-size:0.75rem; display:inline-flex; align-items:center; gap:4px;" title="View Job Work Order">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  View
+                </a>
+              </td>
             </tr>
           @empty
             <tr>
@@ -369,6 +387,7 @@
             <td style="text-align:right; font-weight:800; font-family:var(--font-mono, monospace); color:#4338ca; font-size:1.05rem;">
               ₹{{ number_format($totalAmountAll, 2) }}
             </td>
+            <td></td>
             <td></td>
           </tr>
         </tfoot>

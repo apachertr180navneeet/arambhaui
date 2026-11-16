@@ -826,6 +826,16 @@ class JobInwardController extends Controller
         });
     }
 
+    public function show(Request $request, $id)
+    {
+        $inward = JobInward::with(['jobAssignment.items.finishedItem', 'jobAssignment.items.rawItem', 'jobWorker'])->findOrFail($id);
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json($inward);
+        }
+        $companySettings = \App\Models\CompanySetting::first();
+        return view('jobwork.inward.show', compact('inward', 'companySettings'));
+    }
+
     public function edit($id)
     {
         $inward = JobInward::with(['jobAssignment.items.finishedItem', 'jobAssignment.items.rawItem', 'jobAssignment.items.item', 'jobWorker'])->findOrFail($id);

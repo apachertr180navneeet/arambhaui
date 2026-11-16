@@ -264,9 +264,14 @@ class PurchaseOrderController extends Controller
         });
     }
 
-    public function show(PurchaseOrder $order)
+    public function show(Request $request, PurchaseOrder $order)
     {
-        return response()->json($order->load(['items', 'vendor', 'inwards']));
+        $order->load(['items', 'vendor', 'inwards']);
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json($order);
+        }
+        $companySettings = \App\Models\CompanySetting::first();
+        return view('purchase.orders.show', compact('order', 'companySettings'));
     }
 
     public function update(Request $request, PurchaseOrder $order)

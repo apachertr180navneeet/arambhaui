@@ -1,743 +1,566 @@
 @extends('layouts.app')
 
-@section('title', 'Issue Outward Job Work Order - aarambh')
+@section('title', 'Aarambh - JOB Work Order (Job Assignment)')
 
 @section('breadcrumb')
   <div class="breadcrumb-item"><a href="{{ route('jobwork.assign.index') }}" style="color:inherit; text-decoration:none;">Job Work & Assign</a></div>
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-  <div class="breadcrumb-item active"><span>Issue Outward Job Order</span></div>
+  <div class="breadcrumb-item active"><span>Job Work Order</span></div>
 @endsection
+
+@php
+  $rawItems = $items->filter(function($i) {
+    return stripos($i->category ?? '', 'raw') !== false 
+        || stripos($i->type ?? '', 'raw') !== false 
+        || stripos($i->category ?? '', 'fabric') !== false 
+        || in_array(strtoupper($i->unit ?? ''), ['MTR', 'METERS', 'METER', 'KG', 'YDS']);
+  });
+  if ($rawItems->isEmpty()) $rawItems = $items;
+
+  $finishedItems = $items->filter(function($i) {
+    return stripos($i->category ?? '', 'finish') !== false 
+        || stripos($i->type ?? '', 'finish') !== false 
+        || in_array(strtoupper($i->unit ?? ''), ['PCS', 'PIECES', 'SETS', 'PCS']);
+  });
+  if ($finishedItems->isEmpty()) $finishedItems = $items;
+@endphp
 
 @push('styles')
 <style>
-  .raw-item-card {
+  .jwo-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    max-width: 1380px;
+    margin: 0 auto;
+  }
+  .jwo-card {
     background: #ffffff;
-    border-radius: var(--radius-xl, 16px);
-    border: 1px solid var(--slate-200, #e2e8f0);
-    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
-    padding: 22px;
-    transition: all 0.2s ease;
-  }
-  .raw-item-card:hover {
-    border-color: #cbd5e1;
-    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.07);
-  }
-  .tons-container {
-    background: #f8fafc;
     border: 1px solid #e2e8f0;
     border-radius: 12px;
-    padding: 16px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+    padding: 20px 24px;
   }
-  .purchased-ton-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: #ffffff;
-    border: 1px solid #cbd5e1;
-    padding: 5px 10px;
-    border-radius: 8px;
-    font-size: 0.8rem;
-    font-weight: 700;
-    color: #334155;
-    cursor: pointer;
-    transition: all 0.15s ease;
-  }
-  .purchased-ton-chip:hover {
-    border-color: #4338ca;
-    background: #eef2ff;
-    color: #4338ca;
-    transform: translateY(-1px);
-  }
-  .purchased-ton-chip.added {
-    background: #ecfdf5;
-    border-color: #a7f3d0;
-    color: #065f46;
-  }
-  .calc-badge {
-    background: #ecfdf5;
-    color: #065f46;
-    border: 1px solid #a7f3d0;
-    padding: 3px 8px;
-    border-radius: 6px;
-    font-size: 0.75rem;
-    font-weight: 700;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    white-space: nowrap;
-  }
-  .than-item-card {
-    background: #ffffff;
-    border: 1.5px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 12px 14px;
-    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
-    transition: all 0.15s ease;
-  }
-  .than-item-card:hover {
-    border-color: #cbd5e1;
-    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
-  }
-  .ton-row {
+  .jwo-section-title {
+    font-size: 0.95rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #1e293b;
+    margin: 0 0 16px 0;
     display: flex;
     align-items: center;
-    gap: 10px;
-    background: #ffffff;
-    border: 1.5px solid #cbd5e1;
-    border-radius: 10px;
-    padding: 8px 12px;
-    transition: all 0.15s ease;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    gap: 8px;
+    border-bottom: 1px solid #f1f5f9;
+    padding-bottom: 10px;
   }
-  .ton-row:hover {
-    border-color: #4338ca;
-    box-shadow: 0 2px 8px rgba(67, 56, 202, 0.1);
-  }
-
-  /* Compact Than Selector & Modal Styles */
-  .modal-than-item {
-    background: #ffffff;
-    border: 1.5px solid #e2e8f0;
-    border-radius: 10px;
-    padding: 10px 12px;
-    cursor: pointer;
-    transition: all 0.15s ease;
-    user-select: none;
-  }
-  .modal-than-item:hover {
-    border-color: #818cf8;
-    background: #f8fafc;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 6px rgba(99, 102, 241, 0.08);
-  }
-  .modal-than-item.selected {
-    border-color: #4338ca;
-    background: #eef2ff;
-    box-shadow: 0 0 0 1.5px #4338ca;
-  }
-  .than-chip-compact {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: #ffffff;
-    border: 1px solid #cbd5e1;
-    color: #1e293b;
-    padding: 3px 8px 3px 10px;
-    border-radius: 8px;
-    font-size: 0.78rem;
-    font-weight: 700;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
-    transition: all 0.15s ease;
-  }
-  .than-chip-compact:hover {
-    border-color: #94a3b8;
-    background: #f8fafc;
-  }
-  .than-chip-remove {
-    background: transparent;
-    border: none;
-    color: #94a3b8;
-    font-size: 1.1rem;
-    line-height: 1;
-    cursor: pointer;
-    padding: 0 2px;
+  .jwo-section-title .badge-num {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    background: #eff6ff;
+    color: #2563eb;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border-radius: 4px;
-    transition: color 0.15s ease;
-  }
-  .than-chip-remove:hover {
-    color: #ef4444;
-  }
-  .than-table-wrap {
-    max-height: 320px;
-    overflow-y: auto;
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
-    background: #ffffff;
-    box-shadow: inset 0 1px 2px rgba(0,0,0,0.03);
-  }
-  .than-compact-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.825rem;
-  }
-  .than-compact-table th {
-    position: sticky;
-    top: 0;
-    background: #f8fafc;
-    color: #475569;
+    font-size: 0.75rem;
     font-weight: 800;
-    text-transform: uppercase;
-    font-size: 0.725rem;
-    letter-spacing: 0.03em;
-    padding: 8px 10px;
-    border-bottom: 1.5px solid #e2e8f0;
-    z-index: 2;
   }
-  .than-compact-table td {
-    padding: 6px 10px;
-    border-bottom: 1px solid #f1f5f9;
-    vertical-align: middle;
-  }
-  .than-compact-table tr:hover td {
-    background: #f8fafc;
-  }
-
-  /* Searchable Combobox Styles */
-  .searchable-select-wrap {
-    position: relative;
-    width: 100%;
-  }
-  .searchable-dropdown-list {
-    position: absolute;
-    top: calc(100% + 4px);
-    left: 0;
-    right: 0;
-    max-height: 260px;
-    overflow-y: auto;
-    background: #ffffff;
-    border: 1.5px solid #cbd5e1;
-    border-radius: 10px;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
-    z-index: 1050;
-    padding: 6px;
-  }
-  .searchable-dropdown-item {
-    padding: 8px 12px;
-    border-radius: 6px;
-    cursor: pointer;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 0.825rem;
-    transition: all 0.12s ease;
-  }
-  .searchable-dropdown-item:hover {
-    background: #eef2ff;
-    color: #4338ca;
-  }
-  .searchable-dropdown-item.selected {
-    background: #e0e7ff;
-    color: #3730a3;
-    font-weight: 700;
-  }
-  .quick-pill-tag {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 0.725rem;
-    font-weight: 700;
-    color: #4338ca;
-    background: #eef2ff;
-    border: 1px solid #c7d2fe;
-    padding: 2px 8px;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.12s ease;
-    user-select: none;
-  }
-  .quick-pill-tag:hover {
-    background: #4338ca;
-    color: #ffffff;
-    border-color: #4338ca;
-  }
-
-  /* Modal Lot Cards & Range Selector */
-  .modal-tab-btn {
-    padding: 6px 14px;
-    border-radius: 8px;
-    font-size: 0.78rem;
-    font-weight: 700;
-    border: 1.5px solid #cbd5e1;
-    background: #ffffff;
-    color: #475569;
-    cursor: pointer;
-    transition: all 0.15s ease;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .modal-tab-btn:hover {
-    background: #f1f5f9;
-    border-color: #94a3b8;
-  }
-  .modal-tab-btn.active {
-    background: #4338ca;
-    color: #ffffff;
-    border-color: #4338ca;
-    box-shadow: 0 1px 4px rgba(67, 56, 202, 0.25);
-  }
-  .modal-lot-card {
-    background: #ffffff;
-    border: 1.5px solid #e2e8f0;
-    border-radius: 12px;
-    overflow: hidden;
-    margin-bottom: 12px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.03);
-    transition: all 0.15s ease;
-  }
-  .modal-lot-card:hover {
-    border-color: #cbd5e1;
-  }
-  .modal-lot-header {
-    background: #f8fafc;
-    padding: 12px 16px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 10px;
-    border-bottom: 1px solid #e2e8f0;
-  }
-  .modal-lot-body {
-    padding: 12px 14px;
+  .jwo-grid-header {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
-    gap: 8px;
-    background: #fafafa;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
   }
-  .modal-range-bar {
-    background: #ffffff;
-    border: 1.5px solid #c7d2fe;
+  .jwo-item-entry-panel {
+    background: #f8fafc;
+    border: 1.5px solid #cbd5e1;
     border-radius: 12px;
-    padding: 14px 16px;
-    margin-bottom: 14px;
-    box-shadow: 0 2px 8px rgba(79, 70, 229, 0.06);
+    padding: 16px 18px;
+    margin-bottom: 18px;
+  }
+  .jwo-item-entry-grid {
+    display: grid;
+    grid-template-columns: 2fr 2fr 1fr 1fr 1fr 1.1fr auto;
+    gap: 10px;
+    align-items: flex-end;
+  }
+  @media (max-width: 1200px) {
+    .jwo-item-entry-grid {
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    }
+  }
+  .jwo-table th {
+    background: #f1f5f9 !important;
+    color: #475569 !important;
+    font-weight: 700 !important;
+    font-size: 0.8rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.03em !important;
+    padding: 10px 12px !important;
+    border-bottom: 2px solid #cbd5e1 !important;
+  }
+  .jwo-table td {
+    padding: 10px 12px !important;
+    font-size: 0.85rem !important;
+    vertical-align: middle !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+  }
+  .jwo-table tbody tr:hover {
+    background-color: #f8fafc !important;
+  }
+  .jwo-summary-box {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 18px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .jwo-summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.875rem;
+    color: #475569;
+  }
+  .jwo-summary-row.total {
+    border-top: 2px dashed #cbd5e1;
+    padding-top: 10px;
+    margin-top: 4px;
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: #0f172a;
+  }
+  .modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(15, 23, 42, 0.6);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    backdrop-filter: blur(2px);
+    padding: 16px;
+  }
+  .modal-box {
+    background: #ffffff;
+    border-radius: 14px;
+    width: 100%;
+    max-width: 600px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+    animation: popIn 0.18s ease-out;
+  }
+  @keyframes popIn {
+    from { transform: scale(0.96); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
   }
 </style>
 @endpush
 
 @section('content')
-<form action="{{ route('jobwork.assign.store') }}" method="POST" id="jw-form" enctype="multipart/form-data">
-  @csrf
+<div class="jwo-container">
 
-  <div style="display:flex; flex-direction:column; gap:22px;">
-    
-    <!-- Top Action Header -->
-    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px;">
-      <div>
-        <div style="display:flex; align-items:center; gap:10px;">
-          <h2 style="margin:0; font-size:1.45rem; font-weight:800; color:var(--slate-900); letter-spacing:-0.02em;">
-            Issue Outward Job Work Order
-          </h2>
-          <span style="font-family:var(--font-mono, monospace); font-weight:800; font-size:0.9rem; background:#eef2ff; color:#4338ca; padding:3px 10px; border-radius:8px; border:1px solid #c7d2fe;">
-            {{ $nextJobOrderNo }}
-          </span>
+  <form id="job-order-form" action="{{ route('jobwork.assign.store') }}" method="POST" enctype="multipart/form-data">
+    @csrf
+
+    <!-- Top Action Bar -->
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:18px;">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <div style="width:44px; height:44px; border-radius:10px; background:#eff6ff; color:#2563eb; display:flex; align-items:center; justify-content:center; box-shadow:0 1px 3px rgba(37,99,235,0.15);">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
         </div>
-        <p style="margin:4px 0 0; font-size:0.85rem; color:var(--slate-500);">
-          Select Raw Material & Purchase Thans, assign Finished Items, and auto-calculate expected finished pieces and wastage.
-        </p>
+        <div>
+          <h1 style="font-size:1.35rem; font-weight:800; color:#0f172a; margin:0; letter-spacing:-0.02em;">
+            Aarambh - JOB Work Order (Job Assignment)
+          </h1>
+          <p style="font-size:0.825rem; color:#64748b; margin:2px 0 0;">
+            Handwritten format: Jobworker, Order No., Date, Delivered Raw Item, Recd Finished Item, Than breakdown & waste calculation.
+          </p>
+        </div>
       </div>
 
       <div style="display:flex; gap:10px; align-items:center;">
-        <a href="{{ route('jobwork.assign.index') }}" class="btn btn-secondary" style="font-weight:700;">Cancel</a>
-        <button type="submit" id="save-jw-btn" class="btn btn-primary" style="display:inline-flex; align-items:center; gap:8px; font-weight:700; box-shadow:0 2px 8px rgba(79, 70, 229, 0.3); padding:10px 22px;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-          Save & Issue Job Order
+        <a href="{{ route('jobwork.assign.index') }}" class="btn btn-secondary" style="font-weight:700; padding:8px 16px;">
+          Cancel
+        </a>
+        <button type="submit" class="btn btn-primary" id="save-jwo-btn" style="background:#2563eb; font-weight:700; padding:8px 22px; display:inline-flex; align-items:center; gap:8px; box-shadow:0 2px 6px rgba(37,99,235,0.3);">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          Save Job Work Order
         </button>
       </div>
     </div>
 
-    <!-- 1. Contractor & Manufacturing Schedule -->
-    <div class="card" style="background:#fff; border-radius:var(--radius-xl, 16px); border:1px solid var(--slate-200, #e2e8f0); box-shadow:var(--shadow-sm); padding:24px;">
-      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--slate-100, #f1f5f9); padding-bottom:12px; margin-bottom:18px;">
-        <h3 style="font-size:0.95rem; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; margin:0; color:var(--slate-800); display:flex; align-items:center; gap:8px;">
-          <span style="width:24px; height:24px; border-radius:6px; background:#eef2ff; color:#4338ca; display:inline-flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:800;">1</span>
-          Contractor & Manufacturing Schedule
-        </h3>
-        <span style="font-size:0.75rem; background:#ecfdf5; color:#059669; font-weight:700; padding:3px 10px; border-radius:9999px; border:1px solid #a7f3d0;">
-          ⚡ Auto Lot Generator Active
-        </span>
+    <!-- 1. FORM HEADER FIELDS (Handwritten Sketch 1) -->
+    <div class="jwo-card" style="margin-bottom:20px;">
+      <div class="jwo-section-title">
+        <span class="badge-num">1</span>
+        <span>Order Header Information</span>
       </div>
 
-      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:18px;">
+      <div class="jwo-grid-header">
         
-        <!-- Job Worker Contractor -->
+        <!-- Jobworker Dropdown -->
         <div class="form-group" style="margin-bottom:0;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-            <label class="form-label" style="font-weight:700; color:var(--slate-800); margin:0;">
-              Job Worker Contractor <span style="color:#ef4444;">*</span>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+            <label class="form-label" style="font-weight:700; font-size:0.825rem; color:#334155; margin:0;">
+              Jobworker <span style="color:#ef4444;">*</span>
             </label>
-            <a href="{{ route('masters.jobworkers.index') }}" target="_blank" style="font-size:0.75rem; color:#4338ca; text-decoration:none; font-weight:600;" title="Open Job Worker Master">+ Manage Workers</a>
+            <a href="{{ route('masters.jobworkers.index') }}" target="_blank" style="font-size:0.75rem; color:#2563eb; text-decoration:none; font-weight:600;">
+              + Add New
+            </a>
           </div>
-          <select name="job_worker_name" id="ja_worker" class="form-control" required onchange="onWorkerSelect(this)">
-            <option value="">-- Select Job Worker --</option>
-            @forelse($jobworkers as $jw)
-              <option value="{{ $jw->name }}" data-id="{{ $jw->id }}" data-rate="{{ $jw->rate_per_piece }}" data-process="{{ $jw->skill_type }}">{{ $jw->name }} ({{ $jw->skill_type ?? 'Contractor' }})</option>
-            @empty
-              <option value="" disabled>No registered Job Workers found in Master</option>
-            @endforelse
+          <select name="job_worker_name" id="jwo-worker-select" class="form-control" required style="font-weight:600;" onchange="handleWorkerSelect(this)">
+            <option value="">Select Job worker</option>
+            @foreach($jobworkers as $jw)
+              <option value="{{ $jw->name }}" 
+                      data-id="{{ $jw->id }}" 
+                      data-phone="{{ $jw->phone ?? '' }}" 
+                      data-process="{{ $jw->process_type ?? 'Stitching' }}">
+                {{ $jw->name }} ({{ $jw->process_type ?? 'General Jobwork' }})
+              </option>
+            @endforeach
           </select>
-          <input type="hidden" name="job_worker_id" id="ja_worker_id">
+          <input type="hidden" name="job_worker_id" id="jwo-worker-id" value="">
         </div>
 
-        <!-- Process / Operation -->
+        <!-- Job work order NO. -->
         <div class="form-group" style="margin-bottom:0;">
-          <label class="form-label" style="font-weight:700; color:var(--slate-800); margin-bottom:6px;">
-            Process / Operation <span style="color:#ef4444;">*</span>
+          <label class="form-label" style="font-weight:700; font-size:0.825rem; color:#334155; margin-bottom:5px;">
+            Job work order NO. <span style="color:#ef4444;">*</span>
           </label>
-          <select name="process_name" id="ja_process" class="form-control" required>
-            <option value="Cutting">Fabric Cutting</option>
-            <option value="Stitching" selected>Stitching & Assembly</option>
-            <option value="Embroidery">Embroidery & Design</option>
-            <option value="Washing & Finishing">Washing & Finishing</option>
-            <option value="Ironing & Packing">Ironing & Packing</option>
-          </select>
+          <input type="text" 
+                 name="job_order_no" 
+                 id="jwo-order-no" 
+                 class="form-control" 
+                 required 
+                 value="{{ old('job_order_no', $nextJobOrderNo) }}" 
+                 placeholder="e.g. JA-2026-001" 
+                 style="font-family:var(--font-mono, monospace); font-weight:700;">
         </div>
 
-        <!-- Auto-Assigned Lot Reference Number -->
+        <!-- Date (Date Picker) -->
         <div class="form-group" style="margin-bottom:0;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-            <label class="form-label" style="font-weight:700; color:var(--slate-800); margin:0;">
-              Lot Reference # <span style="color:#ef4444;">*</span>
+          <label class="form-label" style="font-weight:700; font-size:0.825rem; color:#334155; margin-bottom:5px;">
+            Date <span style="color:#ef4444;">*</span>
+          </label>
+          <input type="date" 
+                 name="issue_date" 
+                 id="jwo-date" 
+                 class="form-control" 
+                 required 
+                 value="{{ date('Y-m-d') }}" 
+                 style="font-weight:600;">
+        </div>
+
+        <!-- Hidden / Supporting Process & Lot fields -->
+        <input type="hidden" name="lot_number" id="jwo-lot-no" value="{{ $nextLotNumber }}">
+        <input type="hidden" name="process_name" id="jwo-process-name" value="Stitching / Jobwork">
+        <input type="hidden" name="maintain_stock" value="1">
+
+      </div>
+    </div>
+
+    <!-- 2. INLINE ITEM ENTRY BAR (Handwritten Sketch 1) -->
+    <div class="jwo-card" style="margin-bottom:20px;">
+      <div class="jwo-section-title">
+        <span class="badge-num">2</span>
+        <span>Item Entry (Delivered Raw Fabric $\rightarrow$ Received Finished Goods)</span>
+      </div>
+
+      <div class="jwo-item-entry-panel">
+        <div class="jwo-item-entry-grid">
+          
+          <!-- Delivered item (Item Master filtered by Raw) -->
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label" style="font-weight:700; font-size:0.8rem; color:#475569; margin-bottom:4px;">
+              Delivered item (Raw) <span style="color:#ef4444;">*</span>
             </label>
-            <button type="button" onclick="autoGenerateLotNo()" style="font-size:0.75rem; color:#4338ca; background:#eef2ff; border:1px solid #c7d2fe; border-radius:6px; padding:2px 8px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:all 0.2s ease;" title="Auto generate unique lot number">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-              Auto Generate
-            </button>
-          </div>
-          <div style="position:relative; display:flex; align-items:center;">
-            <input type="text" name="lot_number" id="ja_lot_number" class="form-control" required value="{{ old('lot_number', $nextLotNumber ?? '') }}" placeholder="e.g. LOT-2026-001" style="font-family:var(--font-mono, monospace); font-weight:800; color:#4338ca; background:#f8fafc; border-color:#c7d2fe; padding-right:75px;">
-            <button type="button" onclick="autoGenerateLotNo()" class="btn btn-secondary btn-sm" style="position:absolute; right:4px; height:calc(100% - 8px); padding:0 10px; font-size:0.75rem; font-weight:700; display:inline-flex; align-items:center; gap:4px; border-radius:6px; background:#f8fafc; color:#334155; border:1px solid #cbd5e1;" title="Regenerate Lot Number">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-              Auto
-            </button>
-          </div>
-          <small style="font-size:0.72rem; color:var(--slate-500); margin-top:4px; display:block;">Unique lot identifier tagged through all production & inward batches.</small>
-        </div>
-
-        <!-- Issue Date -->
-        <div class="form-group" style="margin-bottom:0;">
-          <label class="form-label" style="font-weight:700; color:var(--slate-800); margin-bottom:6px;">
-            Issue Date <span style="color:#ef4444;">*</span>
-          </label>
-          <input type="date" name="issue_date" class="form-control" required value="{{ date('Y-m-d') }}">
-        </div>
-
-        <!-- Target Due Date -->
-        <div class="form-group" style="margin-bottom:0;">
-          <label class="form-label" style="font-weight:700; color:var(--slate-800); margin-bottom:6px;">
-            Target Due Date
-          </label>
-          <input type="date" name="due_date" class="form-control" value="{{ date('Y-m-d', strtotime('+7 days')) }}">
-        </div>
-
-        <!-- Stock Maintenance Mode: Dynamic vs Dummy (Image 1 Requirement 3) -->
-        <div class="form-group" style="margin-bottom:0;">
-          <label class="form-label" style="font-weight:700; color:var(--slate-800); margin-bottom:6px;">
-            Stock Maintenance Mode <span style="color:#ef4444;">*</span>
-          </label>
-          <div style="display:flex; align-items:center; gap:14px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:6px 12px; height:42px;">
-            <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-weight:700; font-size:0.8rem; color:#047857; margin:0;" title="Deducts raw stock and increases finished stock">
-              <input type="radio" name="maintain_stock" value="1" checked style="accent-color:#059669; width:15px; height:15px;">
-              <span>Dynamic (Maintain Stock)</span>
-            </label>
-            <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-weight:700; font-size:0.8rem; color:#b45309; margin:0;" title="Job work without deducting raw materials or adding finished stock">
-              <input type="radio" name="maintain_stock" value="0" style="accent-color:#d97706; width:15px; height:15px;">
-              <span>Dummy (Skip Stock)</span>
-            </label>
-          </div>
-        </div>
-
-      </div>
-    </div>
-
-    <!-- 2. Raw Items, Purchase Thans & Finished Output Section -->
-    <div style="display:flex; flex-direction:column; gap:16px;">
-      
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-        <div>
-          <h3 style="font-size:1.05rem; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; margin:0; color:var(--slate-900); display:flex; align-items:center; gap:8px;">
-            <span style="width:26px; height:26px; border-radius:6px; background:#ecfdf5; color:#059669; display:inline-flex; align-items:center; justify-content:center; font-size:0.8rem; font-weight:800;">2</span>
-            Raw Materials, Purchase Thans & Finished Product Yield
-          </h3>
-          <p style="margin:3px 0 0; font-size:0.825rem; color:var(--slate-500);">
-            Select Raw Material & choose from purchased thans/rolls, pick the target Finished Item, and view automated wastage & finished pieces calculation.
-          </p>
-        </div>
-
-        <button type="button" class="btn btn-primary btn-sm" onclick="addNewRawItemCard()" style="display:inline-flex; align-items:center; gap:6px; font-weight:700; box-shadow:0 2px 6px rgba(79, 70, 229, 0.25);">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Add Another Raw Material
-        </button>
-      </div>
-
-      <!-- Dynamic Raw Items Container -->
-      <div id="raw-items-container" style="display:flex; flex-direction:column; gap:22px;"></div>
-
-      <!-- Add Raw Item Button -->
-      <div style="text-align:center; padding:8px 0;">
-        <button type="button" class="btn btn-secondary" onclick="addNewRawItemCard()" style="border:2px dashed #cbd5e1; background:#f8fafc; color:#334155; font-weight:700; width:100%; padding:14px; display:inline-flex; align-items:center; justify-content:center; gap:8px; border-radius:12px; transition:all 0.2s ease;">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Add Another Raw Item (Multi-Material Job Order)
-        </button>
-      </div>
-
-    </div>
-
-    <!-- 3. Sample / Item Photos Provided to Job Worker (Camera & Gallery) -->
-    <div class="card" style="background:#fff; border-radius:var(--radius-xl, 16px); border:1px solid var(--slate-200, #e2e8f0); box-shadow:var(--shadow-sm); padding:24px;">
-      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--slate-100, #f1f5f9); padding-bottom:14px; margin-bottom:18px; flex-wrap:wrap; gap:12px;">
-        <div>
-          <h3 style="font-size:0.95rem; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; margin:0; color:var(--slate-800); display:flex; align-items:center; gap:8px;">
-            <span style="width:24px; height:24px; border-radius:6px; background:#fef3c7; color:#d97706; display:inline-flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:800;">3</span>
-            Sample / Item Photos Provided to Job Worker
-          </h3>
-          <p style="margin:4px 0 0; font-size:0.825rem; color:var(--slate-500);">
-            Capture live photo via camera or select from gallery to record sample garments, patterns, cuts, or materials handed over to contractor.
-          </p>
-        </div>
-
-        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-          <!-- Direct Mobile/Device Camera Trigger -->
-          <button type="button" class="btn btn-primary btn-sm" onclick="triggerDeviceCamera()" style="display:inline-flex; align-items:center; gap:6px; font-weight:700; background:#0284c7; border-color:#0284c7; box-shadow:0 2px 6px rgba(2, 132, 199, 0.25);">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-            📷 Take Photo (Camera)
-          </button>
-
-          <!-- In-Browser Live Webcam Modal Trigger (for Desktop/Laptop) -->
-          <button type="button" class="btn btn-secondary btn-sm" onclick="openWebcamModal()" style="display:inline-flex; align-items:center; gap:6px; font-weight:700; color:#0369a1; background:#f0f9ff; border-color:#bae6fd;">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2"/></svg>
-            Live Webcam
-          </button>
-
-          <!-- Gallery Picker Trigger -->
-          <button type="button" class="btn btn-secondary btn-sm" onclick="triggerGalleryUpload()" style="display:inline-flex; align-items:center; gap:6px; font-weight:700; background:#ffffff; border-color:#cbd5e1; color:#334155;">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-            🖼️ Pick from Gallery
-          </button>
-        </div>
-      </div>
-
-      <!-- Hidden actual file inputs -->
-      <input type="file" id="cameraFileInput" name="camera_photos[]" accept="image/*" capture="environment" style="display:none;" multiple onchange="handleFileInputChange(this, 'Camera')">
-      <input type="file" id="galleryFileInput" name="gallery_photos[]" accept="image/*" style="display:none;" multiple onchange="handleFileInputChange(this, 'Gallery')">
-
-      <!-- Hidden base64 snapshots container -->
-      <div id="hidden-snapshots-container"></div>
-
-      <!-- Photo Preview Grid -->
-      <div id="photo-preview-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(130px, 1fr)); gap:14px; min-height:110px; border:2px dashed #cbd5e1; border-radius:14px; padding:18px; background:#f8fafc; align-items:center; justify-content:center;">
-        <div id="no-photo-empty" style="grid-column:1 / -1; text-align:center; padding:16px; color:#64748b;">
-          <div style="width:44px; height:44px; margin:0 auto 10px; border-radius:50%; background:#e2e8f0; display:flex; align-items:center; justify-content:center; color:#64748b;">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-          </div>
-          <div style="font-weight:700; font-size:0.9rem; color:#334155;">No sample photos attached yet</div>
-          <p style="margin:4px 0 0; font-size:0.775rem; color:#94a3b8;">Use <strong>📷 Take Photo</strong> on mobile or <strong>🖼️ Pick from Gallery</strong> to upload handover samples.</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- 4. Instructions & Overall Order Summary -->
-    <div class="card" style="background:#fff; border-radius:var(--radius-xl, 16px); border:1px solid var(--slate-200, #e2e8f0); box-shadow:var(--shadow-sm); padding:24px;">
-      <h3 style="font-size:0.95rem; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; margin-top:0; margin-bottom:18px; color:var(--slate-800); border-bottom:1px solid var(--slate-100, #f1f5f9); padding-bottom:10px; display:flex; align-items:center; gap:8px;">
-        <span style="width:24px; height:24px; border-radius:6px; background:#f5f3ff; color:#7c3aed; display:inline-flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:800;">4</span>
-        Production Yield & Contract Terms Summary
-      </h3>
-
-      <div style="display:grid; grid-template-columns: 1.2fr 1fr; gap:24px;">
-        
-        <!-- Instructions -->
-        <div>
-          <label class="form-label" style="font-weight:700; color:var(--slate-800); margin-bottom:6px;">
-            Job Work Instructions & Quality Standards
-          </label>
-          <textarea name="instructions" class="form-control" rows="5" placeholder="Specify cutting patterns, seam stitch density (SPI), thread color matching, packaging details and return delivery deadline..."></textarea>
-        </div>
-
-        <!-- Calculated Summary Box -->
-        <div style="background:#f8fafc; border:1px solid var(--slate-200, #e2e8f0); border-radius:14px; padding:20px; display:flex; flex-direction:column; gap:12px;">
-          <div style="display:flex; justify-content:space-between; font-size:0.9rem; color:#64748b;">
-            <span>Total Raw Materials:</span>
-            <span style="font-weight:700; color:#0f172a;" id="summary-items-count">1 Item</span>
-          </div>
-
-          <div style="display:flex; justify-content:space-between; font-size:0.9rem; color:#64748b;">
-            <span>Total Purchase Thans:</span>
-            <span style="font-weight:700; color:#0f172a;" id="summary-than-count">0 Thans</span>
-          </div>
-
-          <div style="display:flex; justify-content:space-between; font-size:0.9rem; color:#64748b;">
-            <span>Total Raw Quantity Issued:</span>
-            <span style="font-weight:700; color:#0f172a; font-size:0.95rem;" id="summary-total-raw-qty">0.00 Mtr/KG</span>
-          </div>
-
-          <div style="display:flex; justify-content:space-between; font-size:0.9rem; color:#64748b;">
-            <span>Total Expected Wastage:</span>
-            <span style="font-weight:700; color:#dc2626;" id="summary-total-wastage">0.00 Mtr/KG</span>
-          </div>
-
-          <div style="display:flex; justify-content:space-between; font-size:0.9rem; color:#64748b;">
-            <span>Net Raw Material Used:</span>
-            <span style="font-weight:700; color:#059669;" id="summary-net-raw">0.00 Mtr/KG</span>
-          </div>
-
-          <div style="display:flex; justify-content:space-between; font-size:0.9rem; color:#64748b; border-top:1px dashed #cbd5e1; padding-top:10px;">
-            <span>Total Expected Finished Pieces:</span>
-            <span style="font-weight:800; color:#4338ca; font-size:1.15rem;" id="summary-total-pcs">0 Pcs</span>
-          </div>
-
-          <div style="border-top:2px solid #cbd5e1; padding-top:12px; margin-top:4px; display:flex; justify-content:space-between; align-items:baseline;">
-            <span style="font-weight:800; font-size:1.05rem; color:var(--slate-900);">Contract Labor Total Amount:</span>
-            <span style="font-weight:800; font-size:1.4rem; color:#059669;" id="summary-grand-amount">₹0.00</span>
-          </div>
-        </div>
-
-    </div>
-
-    <!-- Bottom Action Bar -->
-    <div style="display:flex; justify-content:flex-end; align-items:center; gap:12px; padding:16px 24px; background:#ffffff; border:1px solid var(--slate-200, #e2e8f0); border-radius:var(--radius-xl, 16px); box-shadow:var(--shadow-sm); margin-top:4px;">
-      <a href="{{ route('jobwork.assign.index') }}" class="btn btn-secondary" style="font-weight:700; padding:10px 20px;">Cancel</a>
-      <button type="submit" id="save-jw-btn-bottom" class="btn btn-primary" style="display:inline-flex; align-items:center; gap:8px; font-weight:700; box-shadow:0 2px 8px rgba(79, 70, 229, 0.3); padding:10px 24px;">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-        Save & Issue Job Order
-      </button>
-    </div>
-
-</form>
-
-<!-- Live Camera / Webcam Snapshot Modal -->
-<div class="modal-backdrop" id="webcamModal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.75); backdrop-filter:blur(4px); z-index:9999; align-items:center; justify-content:center;" onclick="if(event.target===this) closeWebcamModal()">
-  <div style="background:#ffffff; border-radius:18px; width:92%; max-width:540px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.25); overflow:hidden; border:1px solid #cbd5e1;">
-    <div style="padding:16px 20px; background:#0f172a; color:#fff; display:flex; justify-content:space-between; align-items:center;">
-      <div style="display:flex; align-items:center; gap:8px; font-weight:800; font-size:0.95rem;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-        <span>Live Camera - Capture Handover Sample</span>
-      </div>
-      <button type="button" onclick="closeWebcamModal()" style="background:transparent; border:none; color:#94a3b8; font-size:1.4rem; cursor:pointer; line-height:1;">&times;</button>
-    </div>
-    <div style="padding:16px; background:#020617; display:flex; flex-direction:column; align-items:center; gap:12px;">
-      <video id="webcamVideo" autoplay playsinline style="width:100%; max-height:360px; object-fit:contain; border-radius:12px; background:#000;"></video>
-      <canvas id="webcamCanvas" style="display:none;"></canvas>
-      <div id="cameraStatusMsg" style="font-size:0.8rem; color:#94a3b8;">Point camera at sample garment or fabric cut...</div>
-    </div>
-    <div style="padding:14px 20px; background:#f8fafc; border-top:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center;">
-      <button type="button" class="btn btn-secondary btn-sm" onclick="switchCameraFacing()" style="display:inline-flex; align-items:center; gap:5px; font-weight:700;">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/></svg>
-        Switch Camera
-      </button>
-      <div style="display:flex; gap:10px;">
-        <button type="button" class="btn btn-secondary btn-sm" onclick="closeWebcamModal()" style="font-weight:700;">Cancel</button>
-        <button type="button" class="btn btn-primary btn-sm" onclick="captureWebcamSnapshot()" style="background:#0284c7; border-color:#0284c7; display:inline-flex; align-items:center; gap:6px; font-weight:800; padding:8px 18px;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
-          Capture Photo
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Modal: Compact Searchable Lot-Wise & Range Than Selection -->
-<div class="modal-backdrop" id="thanSelectModal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.75); backdrop-filter:blur(4px); z-index:9999; align-items:center; justify-content:center;" onclick="if(event.target===this) closeThanSelectModal()">
-  <div style="background:#ffffff; border-radius:18px; width:95%; max-width:880px; max-height:92vh; display:flex; flex-direction:column; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25); overflow:hidden; border:1px solid #cbd5e1;">
-    <!-- Modal Header -->
-    <div style="padding:16px 22px; background:#0f172a; color:#fff; display:flex; justify-content:space-between; align-items:center;">
-      <div style="display:flex; align-items:center; gap:10px;">
-        <span style="width:34px; height:34px; border-radius:8px; background:rgba(255,255,255,0.12); display:inline-flex; align-items:center; justify-content:center; font-size:1.1rem;">📦</span>
-        <div>
-          <div style="font-weight:800; font-size:1.1rem;" id="thanModalTitle">Select Purchase Thans</div>
-          <div style="font-size:0.75rem; color:#94a3b8;" id="thanModalSubtitle">Choose by Lot/Challan, Range, or individual rolls</div>
-        </div>
-      </div>
-      <button type="button" onclick="closeThanSelectModal()" style="background:transparent; border:none; color:#94a3b8; font-size:1.5rem; cursor:pointer; line-height:1; padding:0 4px;">&times;</button>
-    </div>
-
-    <!-- Modal Controls Bar -->
-    <div style="padding:14px 20px; background:#f8fafc; border-bottom:1px solid #e2e8f0; display:flex; flex-direction:column; gap:10px;">
-      
-      <!-- Top Row: Search & View Mode Tabs -->
-      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
-        <!-- Search Input -->
-        <div style="position:relative; flex:1; min-width:240px; display:flex; align-items:center;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2.5" style="position:absolute; left:12px; pointer-events:none;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input type="text" id="thanModalSearchInput" class="form-control" placeholder="Search Challan #, PO #, Than #, or meters..." oninput="renderThanModalList()" style="padding-left:36px; padding-right:32px; font-weight:600; font-size:0.875rem; height:38px; border-radius:8px;">
-          <button type="button" onclick="document.getElementById('thanModalSearchInput').value=''; renderThanModalList();" id="thanModalClearSearchBtn" style="position:absolute; right:10px; background:transparent; border:none; color:#94a3b8; cursor:pointer; display:none; font-size:1.1rem; line-height:1;">&times;</button>
-        </div>
-
-        <!-- Mode Tabs -->
-        <div style="display:flex; gap:6px; align-items:center;">
-          <button type="button" class="modal-tab-btn active" id="tabBtnLot" onclick="setModalTab('lot')">
-            📦 Lot / Challan View
-          </button>
-          <button type="button" class="modal-tab-btn" id="tabBtnRange" onclick="setModalTab('range')">
-            ⚡ Quick Range
-          </button>
-          <button type="button" class="modal-tab-btn" id="tabBtnGrid" onclick="setModalTab('grid')">
-            🔢 All Thans Grid
-          </button>
-        </div>
-      </div>
-
-      <!-- Quick Range Selector Bar (Expandable or when Range tab active) -->
-      <div id="thanModalRangePanel" class="modal-range-bar" style="display:none;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
-          <span style="font-weight:800; font-size:0.8rem; color:#3730a3; text-transform:uppercase; letter-spacing:0.03em;">
-            ⚡ Quick Sequence Range Selection (e.g. Than 1 to 50)
-          </span>
-          <span style="font-size:0.725rem; color:#64748b;">Validates against available stock records</span>
-        </div>
-        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-          <div style="min-width:180px;">
-            <select id="thanRangeLotSelect" class="form-control" style="font-size:0.8rem; font-weight:700; height:36px; border-radius:6px;">
-              <option value="">-- All Lots / Challans --</option>
+            <select id="entry-delivered-raw" class="form-control" style="font-weight:600;" onchange="calculateEntryWaste()">
+              <option value="">-- Select Raw Fabric --</option>
+              @foreach($rawItems as $rItm)
+                <option value="{{ $rItm->id }}" 
+                        data-name="{{ $rItm->name }}" 
+                        data-code="{{ $rItm->code }}" 
+                        data-stock="{{ $rItm->current_stock ?? 0 }}"
+                        data-unit="{{ $rItm->unit ?? 'MTR' }}">
+                  [Raw] {{ $rItm->name }} ({{ $rItm->code }}) • Stock: {{ (float)($rItm->current_stock ?? 0) }} {{ $rItm->unit ?? 'MTR' }}
+                </option>
+              @endforeach
             </select>
           </div>
-          <div style="display:flex; align-items:center; gap:4px;">
-            <span style="font-size:0.78rem; font-weight:700; color:#475569;">From #:</span>
-            <input type="number" id="thanRangeStart" min="1" step="1" placeholder="Start" class="form-control" style="width:90px; height:36px; font-weight:800; text-align:center;">
+
+          <!-- Recd item (Item Master filtered by Finished) -->
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label" style="font-weight:700; font-size:0.8rem; color:#475569; margin-bottom:4px;">
+              Recd item (Finished) <span style="color:#ef4444;">*</span>
+            </label>
+            <select id="entry-recd-finished" class="form-control" style="font-weight:600;" onchange="calculateEntryWaste()">
+              <option value="">-- Select Finished Good --</option>
+              @foreach($finishedItems as $fItm)
+                <option value="{{ $fItm->id }}" 
+                        data-name="{{ $fItm->name }}" 
+                        data-code="{{ $fItm->code }}"
+                        data-unit="{{ $fItm->unit ?? 'PCS' }}">
+                  [Finished] {{ $fItm->name }} ({{ $fItm->code }})
+                </option>
+              @endforeach
+            </select>
           </div>
-          <div style="display:flex; align-items:center; gap:4px;">
-            <span style="font-size:0.78rem; font-weight:700; color:#475569;">To #:</span>
-            <input type="number" id="thanRangeEnd" min="1" step="1" placeholder="End" class="form-control" style="width:90px; height:36px; font-weight:800; text-align:center;">
+
+          <!-- Qty (Raw Delivered Quantity / Meters) -->
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label" style="font-weight:700; font-size:0.8rem; color:#475569; margin-bottom:4px;">
+              Qty (Raw Mtr)
+            </label>
+            <input type="number" 
+                   id="entry-raw-qty" 
+                   class="form-control" 
+                   step="0.01" 
+                   min="0" 
+                   placeholder="0.00" 
+                   style="font-weight:800; color:#059669;" 
+                   oninput="onEntryQtyInput()">
           </div>
-          <button type="button" class="btn btn-primary btn-xs" onclick="applyRangeSelection(true)" style="height:36px; padding:0 14px; font-weight:800; display:inline-flex; align-items:center; gap:4px;">
-            ✓ Select Range
-          </button>
-          <button type="button" class="btn btn-secondary btn-xs" onclick="applyRangeSelection(false)" style="height:36px; padding:0 12px; font-weight:700; color:#ef4444; border-color:#fecaca;">
-            ✕ Deselect Range
+
+          <!-- Multiple Than Modal Button (+) & Than Input -->
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label" style="font-weight:700; font-size:0.8rem; color:#475569; margin-bottom:4px; display:flex; justify-content:space-between;">
+              <span>Than</span>
+              <a href="javascript:void(0)" onclick="openEntryThanModal()" style="font-size:0.75rem; color:#2563eb; text-decoration:none;" title="Add multiple than roll readings">+ Breakdown</a>
+            </label>
+            <div style="display:flex; gap:4px; align-items:center;">
+              <input type="number" 
+                     id="entry-than-count" 
+                     class="form-control" 
+                     min="0" 
+                     step="1" 
+                     placeholder="0" 
+                     style="font-weight:700;" 
+                     oninput="calculateEntryWaste()">
+              <button type="button" 
+                      class="btn btn-secondary btn-sm" 
+                      onclick="openEntryThanModal()" 
+                      style="padding:7px 10px; background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; font-weight:800;" 
+                      title="Add multiple than meter breakdown">
+                +
+              </button>
+            </div>
+          </div>
+
+          <!-- Expected waste (Auto-calculated / percentage) -->
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label" style="font-weight:700; font-size:0.8rem; color:#475569; margin-bottom:4px;">
+              Expected waste
+            </label>
+            <div style="position:relative; display:flex; align-items:center;">
+              <input type="number" 
+                     id="entry-expected-waste" 
+                     class="form-control" 
+                     step="0.01" 
+                     min="0" 
+                     placeholder="0.00" 
+                     value="0.00"
+                     style="font-weight:700; color:#dc2626; background:#f8fafc;">
+              <span style="position:absolute; right:8px; font-size:0.65rem; font-weight:800; background:#fee2e2; color:#dc2626; padding:2px 5px; border-radius:4px;">
+                Auto
+              </span>
+            </div>
+          </div>
+
+          <!-- Delivery Date -->
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label" style="font-weight:700; font-size:0.8rem; color:#475569; margin-bottom:4px;">
+              Delivery Date
+            </label>
+            <input type="date" 
+                   id="entry-delivery-date" 
+                   class="form-control" 
+                   value="{{ date('Y-m-d', strtotime('+7 days')) }}" 
+                   style="font-weight:600;">
+          </div>
+
+          <!-- Add Item Button -->
+          <div>
+            <button type="button" 
+                    id="btn-add-jwo-item" 
+                    class="btn btn-primary" 
+                    onclick="addItemToJobOrderTable()" 
+                    style="font-weight:700; padding:8px 18px; background:#2563eb; display:inline-flex; align-items:center; gap:6px; white-space:nowrap;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add Item
+            </button>
+          </div>
+
+        </div>
+
+        <!-- Than Breakdown Banner -->
+        <div id="entry-than-chips-line" style="display:none; margin-top:10px; padding:6px 12px; background:#eff6ff; border-radius:6px; font-size:0.8rem; color:#1e40af; align-items:center; justify-content:space-between;">
+          <div>
+            <span style="font-weight:700;">Roll Readings:</span>
+            <span id="entry-than-chips-text">0 Thans</span> • Total Qty: <span id="entry-than-meters-text" style="font-weight:800;">0.00 MTR</span>
+          </div>
+          <button type="button" onclick="clearEntryThans()" style="background:none; border:none; color:#ef4444; font-size:0.75rem; font-weight:700; cursor:pointer;">
+            Clear Than
           </button>
         </div>
-        <div id="thanRangeFeedback" style="display:none; margin-top:8px; font-size:0.78rem; font-weight:700; border-radius:6px; padding:6px 10px;"></div>
       </div>
 
-      <!-- Quick Action Toolbar -->
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-        <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
-          <button type="button" class="btn btn-secondary btn-xs" onclick="modalSelectAllFiltered()" style="font-weight:700; font-size:0.75rem; padding:4px 10px;">
-            ✓ Select All Filtered
-          </button>
-          <button type="button" class="btn btn-secondary btn-xs" onclick="modalDeselectAllFiltered()" style="font-weight:700; font-size:0.75rem; padding:4px 10px;">
-            ✕ Deselect All Filtered
-          </button>
-          <button type="button" class="btn btn-secondary btn-xs" onclick="modalClearAllSelection()" style="font-weight:700; font-size:0.75rem; padding:4px 10px; color:#dc2626;">
-            Clear Selection
-          </button>
+      <!-- 3. LINE ITEMS TABLE (Handwritten Sketch 1) -->
+      <div class="table-responsive" style="border:1px solid #e2e8f0; border-radius:10px; overflow:hidden;">
+        <table class="table jwo-table" id="jwo-items-table" style="width:100%; margin-bottom:0;">
+          <thead>
+            <tr>
+              <th style="width:50px; text-align:center;">SNO.</th>
+              <th style="width:28%;">ITEM (Delivered Raw)</th>
+              <th style="width:24%;">Recd item (Finished)</th>
+              <th style="width:13%; text-align:right;">Qty (MTR)</th>
+              <th style="width:11%; text-align:center;">THAN</th>
+              <th style="width:13%; text-align:right;">Expected WASTE</th>
+              <th style="width:13%; text-align:center;">Delivery Date</th>
+              <th style="width:60px; text-align:center;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="jwo-items-tbody">
+            <!-- Dynamic items rendered via JavaScript -->
+          </tbody>
+          <tfoot id="jwo-table-footer" style="background:#f8fafc; font-weight:800; border-top:2px solid #cbd5e1;">
+            <tr>
+              <td colspan="3" style="text-align:right; font-size:0.875rem; color:#334155;">Total:</td>
+              <td id="footer-total-qty" style="text-align:right; color:#059669; font-size:0.95rem;">0.00</td>
+              <td id="footer-total-than" style="text-align:center; color:#2563eb; font-size:0.95rem;">0</td>
+              <td id="footer-total-waste" style="text-align:right; color:#dc2626; font-size:0.95rem;">0.00</td>
+              <td colspan="2"></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <!-- Empty state banner -->
+      <div id="jwo-empty-banner" style="text-align:center; padding:32px 16px; color:#94a3b8; background:#fff;">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:8px; opacity:0.6;"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>
+        <div style="font-weight:700; font-size:0.95rem; color:#64748b;">No Items Added to Job Work Order Yet</div>
+        <div style="font-size:0.8rem; margin-top:4px;">Select Delivered Raw Item and Recd Finished Item above, then click "Add Item".</div>
+      </div>
+
+    </div>
+
+    <!-- 4. FOOTER & SUMMARY (Handwritten Sketch 1) -->
+    <div style="display:grid; grid-template-columns:1.3fr 1fr; gap:20px; align-items:flex-start;">
+      
+      <!-- Remarks & Photo Attachment -->
+      <div class="jwo-card">
+        <div class="jwo-section-title">
+          <span class="badge-num">3</span>
+          <span>Remarks & Supporting Photo</span>
         </div>
-        <div id="modalSummaryStats" style="font-size:0.8rem; font-weight:700; color:#334155;">
-          <!-- Dynamically populated -->
+
+        <div class="form-group" style="margin-bottom:14px;">
+          <label class="form-label" style="font-weight:700; font-size:0.825rem; color:#334155;">Remark.</label>
+          <textarea name="instructions" 
+                    id="jwo-remarks" 
+                    class="form-control" 
+                    rows="3" 
+                    placeholder="Enter process instructions, shrinkage allowances, stitching specifications or delivery terms..."></textarea>
+        </div>
+
+        <!-- Sample Photo Upload / Camera fallback -->
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label" style="font-weight:700; font-size:0.825rem; color:#334155; display:flex; justify-content:space-between;">
+            <span>Job Sample Photo (Optional)</span>
+            <span style="font-size:0.75rem; color:#64748b;">Camera / Device Photo</span>
+          </label>
+          <input type="file" name="photos[]" class="form-control" accept="image/*" capture="environment">
+        </div>
+      </div>
+
+      <!-- Right Summary (Handwritten Sketch 1) -->
+      <div class="jwo-card">
+        <div class="jwo-section-title">
+          <span class="badge-num">4</span>
+          <span>Order Summary</span>
+        </div>
+
+        <div class="jwo-summary-box">
+          <div class="jwo-summary-row">
+            <span>T. Raw material:</span>
+            <span id="summary-total-raw" style="font-weight:800; color:#059669; font-size:1rem;">0.00 MTR</span>
+          </div>
+
+          <div class="jwo-summary-row">
+            <span>Total Than:</span>
+            <span id="summary-total-than" style="font-weight:800; color:#2563eb; font-size:1rem;">0 Thans</span>
+          </div>
+
+          <div class="jwo-summary-row">
+            <span>Total Expect waste:</span>
+            <span id="summary-total-waste" style="font-weight:800; color:#dc2626; font-size:1rem;">0.00 MTR</span>
+          </div>
+
+          <div class="jwo-summary-row total">
+            <span>Total of Finished Goods:</span>
+            <span id="summary-total-finished" style="color:#0f172a; font-size:1.25rem;">0 PCS</span>
+          </div>
+        </div>
+
+        <!-- Hidden aggregate fields -->
+        <input type="hidden" name="total_than_meters" id="hidden-total-than-meters" value="0">
+        <input type="hidden" name="total_thans" id="hidden-total-thans" value="0">
+        <input type="hidden" name="total_wastage_meters" id="hidden-total-wastage-meters" value="0">
+        <input type="hidden" name="issued_qty" id="hidden-issued-qty" value="0">
+      </div>
+
+    </div>
+
+  </form>
+
+</div>
+
+<!-- Multiple Than Entry Modal -->
+<div class="modal-overlay" id="than-modal" style="display:none;">
+  <div class="modal-box">
+    <div style="padding:16px 20px; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; background:#f8fafc;">
+      <h4 style="margin:0; font-size:1rem; font-weight:800; color:#0f172a;" id="than-modal-title">
+        📦 Multiple Than / Roll Meter Readings
+      </h4>
+      <button type="button" onclick="closeThanModal()" style="background:none; border:none; color:#64748b; font-size:1.4rem; cursor:pointer;">
+        &times;
+      </button>
+    </div>
+
+    <div style="padding:18px 20px;">
+      <p style="font-size:0.8rem; color:#64748b; margin-top:0; margin-bottom:10px;">
+        Enter meters for each than separated by commas or spaces (e.g. <code>100, 110, 95.5, 95.5</code>).
+      </p>
+
+      <textarea id="modal-than-textarea" 
+                class="form-control" 
+                rows="4" 
+                placeholder="100, 110, 95, 105..." 
+                oninput="updateModalThanPreview()" 
+                style="font-family:var(--font-mono, monospace); font-size:0.9rem; font-weight:600;"></textarea>
+
+      <div style="margin-top:14px; background:#eff6ff; border-radius:8px; padding:12px; display:flex; justify-content:space-around; align-items:center;">
+        <div style="text-align:center;">
+          <div style="font-size:0.75rem; color:#64748b; font-weight:700;">TOTAL THANS</div>
+          <div id="modal-preview-count" style="font-size:1.25rem; font-weight:800; color:#2563eb;">0 Thans</div>
+        </div>
+        <div style="width:1px; height:30px; background:#bfdbfe;"></div>
+        <div style="text-align:center;">
+          <div style="font-size:0.75rem; color:#64748b; font-weight:700;">TOTAL METERS</div>
+          <div id="modal-preview-meters" style="font-size:1.25rem; font-weight:800; color:#059669;">0.00 MTR</div>
         </div>
       </div>
     </div>
 
-    <!-- Modal Scrollable Content Container -->
-    <div id="thanModalListContainer" style="padding:16px 20px; overflow-y:auto; flex:1; max-height:440px; background:#f8fafc;">
-      <!-- Dynamically filled with Lot cards or flat Than cards -->
-    </div>
-
-    <!-- Modal Footer -->
-    <div style="padding:14px 22px; background:#ffffff; border-top:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-      <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-        <span id="thanModalTotalSelectedBadge" style="font-weight:800; color:#4338ca; background:#eef2ff; border:1px solid #c7d2fe; padding:5px 12px; border-radius:7px; font-size:0.85rem;">0 Thans Selected | 0.00 Mtr</span>
-        <span id="thanModalYieldBadge" style="font-weight:700; color:#059669; background:#ecfdf5; border:1px solid #a7f3d0; padding:5px 12px; border-radius:7px; font-size:0.825rem; display:none;">Yield: 0 Pcs</span>
-      </div>
-      <div style="display:flex; gap:10px;">
-        <button type="button" class="btn btn-secondary btn-sm" onclick="closeThanSelectModal()" style="font-weight:700; padding:8px 16px;">Cancel</button>
-        <button type="button" class="btn btn-primary btn-sm" onclick="applyThanModalSelection()" id="thanModalApplyBtn" style="font-weight:800; padding:8px 22px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 8px rgba(79, 70, 229, 0.3);">
-          Apply Selection (0)
-        </button>
-      </div>
+    <div style="padding:14px 20px; border-top:1px solid #e2e8f0; display:flex; justify-content:flex-end; gap:10px; background:#f8fafc;">
+      <button type="button" class="btn btn-secondary" onclick="closeThanModal()" style="font-weight:700;">
+        Cancel
+      </button>
+      <button type="button" class="btn btn-primary" onclick="applyModalThans()" style="background:#2563eb; font-weight:700;">
+        Apply to Qty & Than
+      </button>
     </div>
   </div>
 </div>
@@ -746,1903 +569,341 @@
 
 @push('scripts')
 <script>
-  const masterItems = @json($items);
-  const purchasedTonsMap = @json($purchasedTonsByItem);
+  let orderItems = [];
+  let currentModalThans = [];
+  let modalTargetContext = 'entry';
 
-  // Multi-Item State
-  let itemsData = [
-    {
-      raw_item_id: '',
-      raw_item_name: '',
-      finished_item_id: '',
-      finished_item_name: '',
-      consumption_per_pc: 1.50,
-      rate_per_piece: 0.00,
-      thans: [] // Array of { meter: 25.0, wastage: 1.0, usable: 24.0, pieces: 12 }
-    }
-  ];
-
-  function calculateThanValues(meter, manualWastage = null, consumption = 1.5) {
-    const m = Math.max(0, parseFloat(meter) || 0);
-    const c = Math.max(0.0001, parseFloat(consumption) || 1.5);
-    
-    let p = 0;
-    let u = 0;
-    let w = 0;
-
-    if (manualWastage !== null && manualWastage !== undefined && manualWastage !== '' && !isNaN(parseFloat(manualWastage))) {
-      const mw = Math.max(0, parseFloat(manualWastage) || 0);
-      const avail = Math.max(0, m - mw);
-      p = c > 0 ? Math.floor(avail / c) : 0;
-      u = p * c;
-      w = Math.max(0, m - u);
-    } else {
-      p = c > 0 ? Math.floor(m / c) : 0;
-      u = p * c;
-      w = Math.max(0, m - u);
-    }
-
-    return {
-      meter: Math.round(m * 100) / 100,
-      wastage: Math.round(w * 100) / 100,
-      usable: Math.round(u * 100) / 100,
-      pieces: p
-    };
-  }
-
-  function autoGenerateLotNo() {
-    const input = document.getElementById('ja_lot_number');
-    if (!input) return;
-
-    const year = new Date().getFullYear();
-    const rand = Math.floor(100 + Math.random() * 900);
-    input.value = `LOT-${year}-${rand}`;
-
-    input.style.transition = 'all 0.25s ease';
-    input.style.borderColor = '#4338ca';
-    input.style.backgroundColor = '#eef2ff';
-    input.style.boxShadow = '0 0 0 3px rgba(79, 70, 229, 0.2)';
-    setTimeout(() => {
-      input.style.borderColor = '';
-      input.style.backgroundColor = '';
-      input.style.boxShadow = '';
-    }, 500);
-  }
-
-  function onWorkerSelect(select) {
+  function handleWorkerSelect(select) {
     const opt = select.options[select.selectedIndex];
-    const rate = opt ? opt.getAttribute('data-rate') : null;
-    const process = opt ? opt.getAttribute('data-process') : null;
-    const workerId = opt ? opt.getAttribute('data-id') : null;
-
-    if (workerId) {
-      document.getElementById('ja_worker_id').value = workerId;
-    }
-
-    const workerRate = (rate && parseFloat(rate) > 0) ? parseFloat(rate) : 0.00;
-    itemsData.forEach((item) => {
-      item.rate_per_piece = workerRate;
-    });
-    renderAllRawItemCards();
-    calculateOverallTotals();
-
+    const workerId = opt ? opt.getAttribute('data-id') : '';
+    const process = opt ? opt.getAttribute('data-process') : 'Stitching';
+    document.getElementById('jwo-worker-id').value = workerId || '';
     if (process) {
-      const procSelect = document.getElementById('ja_process');
-      if (procSelect) {
-        for (let i = 0; i < procSelect.options.length; i++) {
-          if (procSelect.options[i].value.toLowerCase().includes(process.toLowerCase())) {
-            procSelect.selectedIndex = i;
-            break;
-          }
+      document.getElementById('jwo-process-name').value = process;
+    }
+  }
+
+  function calculateEntryWaste() {
+    const qty = parseFloat(document.getElementById('entry-raw-qty').value || 0);
+    // Typical wastage standard: ~1% to 2% of fabric or 0.02 * qty
+    const waste = Math.round((qty * 0.015) * 100) / 100;
+    const wasteInput = document.getElementById('entry-expected-waste');
+    if (wasteInput && (!wasteInput.value || parseFloat(wasteInput.value) === 0 || wasteInput.dataset.auto === 'true')) {
+      wasteInput.value = waste > 0 ? waste.toFixed(2) : '0.00';
+      wasteInput.dataset.auto = 'true';
+    }
+  }
+
+  function onEntryQtyInput() {
+    document.getElementById('entry-expected-waste').dataset.auto = 'true';
+    calculateEntryWaste();
+  }
+
+  // Than Modal
+  function openEntryThanModal() {
+    modalTargetContext = 'entry';
+    document.getElementById('than-modal-title').textContent = '📦 Entry Than / Roll Meter Readings';
+    document.getElementById('modal-than-textarea').value = currentModalThans.length > 0 ? currentModalThans.join(', ') : (document.getElementById('entry-raw-qty').value || '');
+    updateModalThanPreview();
+    document.getElementById('than-modal').style.display = 'flex';
+  }
+
+  function openRowThanModal(index) {
+    modalTargetContext = index;
+    const item = orderItems[index];
+    if (!item) return;
+
+    document.getElementById('than-modal-title').textContent = `📦 Than Readings for: ${item.raw_item_name}`;
+    document.getElementById('modal-than-textarea').value = (item.thans && item.thans.length > 0) ? item.thans.join(', ') : '';
+    updateModalThanPreview();
+    document.getElementById('than-modal').style.display = 'flex';
+  }
+
+  function closeThanModal() {
+    document.getElementById('than-modal').style.display = 'none';
+  }
+
+  function parseThansFromText(text) {
+    if (!text) return [];
+    const parts = text.split(/[,\s\n\t]+/);
+    const res = [];
+    parts.forEach(p => {
+      const v = parseFloat(p.trim());
+      if (!isNaN(v) && v > 0) {
+        res.push(Math.round(v * 100) / 100);
+      }
+    });
+    return res;
+  }
+
+  function updateModalThanPreview() {
+    const raw = document.getElementById('modal-than-textarea').value;
+    const thans = parseThansFromText(raw);
+    const sum = thans.reduce((a, b) => a + b, 0);
+
+    document.getElementById('modal-preview-count').textContent = thans.length + ' Thans';
+    document.getElementById('modal-preview-meters').textContent = sum.toFixed(2) + ' MTR';
+  }
+
+  function applyModalThans() {
+    const raw = document.getElementById('modal-than-textarea').value;
+    const thans = parseThansFromText(raw);
+    const sum = thans.reduce((a, b) => a + b, 0);
+
+    if (modalTargetContext === 'entry') {
+      currentModalThans = thans;
+      if (thans.length > 0) {
+        document.getElementById('entry-raw-qty').value = sum.toFixed(2);
+        document.getElementById('entry-than-count').value = thans.length;
+        
+        const banner = document.getElementById('entry-than-chips-line');
+        if (banner) {
+          banner.style.display = 'flex';
+          document.getElementById('entry-than-chips-text').textContent = `${thans.length} Thans`;
+          document.getElementById('entry-than-meters-text').textContent = `${sum.toFixed(2)} MTR`;
         }
+        calculateEntryWaste();
       }
-    }
-  }
-
-  function addNewRawItemCard() {
-    const workerSelect = document.getElementById('ja_worker');
-    let defaultRate = 0.00;
-    if (workerSelect && workerSelect.selectedIndex > 0) {
-      const opt = workerSelect.options[workerSelect.selectedIndex];
-      const r = parseFloat(opt.getAttribute('data-rate'));
-      if (r > 0) defaultRate = r;
-    }
-
-    itemsData.push({
-      raw_item_id: '',
-      raw_item_name: '',
-      finished_item_id: '',
-      finished_item_name: '',
-      consumption_per_pc: 1.50,
-      rate_per_piece: defaultRate,
-      thans: []
-    });
-
-    renderAllRawItemCards();
-    calculateOverallTotals();
-  }
-
-  function removeRawItemCard(idx) {
-    if (itemsData.length <= 1) {
-      alert('A job work order must contain at least one raw item.');
-      return;
-    }
-    const item = itemsData[idx];
-    if (item.thans.length > 0) {
-      if (!confirm(`Remove Raw Item #${idx + 1} (${item.raw_item_name || 'Item'}) and its ${item.thans.length} thans?`)) {
-        return;
-      }
-    }
-    itemsData.splice(idx, 1);
-    renderAllRawItemCards();
-    calculateOverallTotals();
-  }
-
-  // --- Searchable Item Combobox Functions ---
-  function getRawItemList() {
-    const list = masterItems.filter(itm => {
-      const cat = (itm.category || '').toLowerCase();
-      const name = (itm.name || '').toLowerCase();
-      return cat.includes('fabric') || cat.includes('raw') || name.includes('fabric') || !itm.raw_meter_per_piece || itm.raw_meter_per_piece <= 0;
-    });
-    return list.length > 0 ? list : masterItems;
-  }
-
-  function getFinishedItemList() {
-    const list = masterItems.filter(itm => {
-      const cat = (itm.category || '').toLowerCase();
-      const name = (itm.name || '').toLowerCase();
-      const hasRatio = (itm.raw_meter_per_piece && itm.raw_meter_per_piece > 0);
-      return !cat.includes('fabric') || hasRatio || name.includes('dupatta') || name.includes('kurti') || name.includes('suit') || name.includes('pant') || name.includes('plazo') || name.includes('palazzo');
-    });
-    return list.length > 0 ? list : masterItems;
-  }
-
-  function openItemDropdown(itemIdx, type) {
-    document.querySelectorAll('.searchable-dropdown-list').forEach(el => el.style.display = 'none');
-    const dd = document.getElementById(`${type}-item-dropdown-${itemIdx}`);
-    if (!dd) return;
-    filterItemDropdown(itemIdx, type, '');
-    dd.style.display = 'block';
-  }
-
-  function closeItemDropdown(itemIdx, type) {
-    const dd = document.getElementById(`${type}-item-dropdown-${itemIdx}`);
-    if (dd) dd.style.display = 'none';
-  }
-
-  function toggleItemDropdown(itemIdx, type) {
-    const dd = document.getElementById(`${type}-item-dropdown-${itemIdx}`);
-    if (dd && dd.style.display === 'block') {
-      closeItemDropdown(itemIdx, type);
     } else {
-      openItemDropdown(itemIdx, type);
-    }
-  }
-
-  function filterItemDropdown(itemIdx, type, query) {
-    const dd = document.getElementById(`${type}-item-dropdown-${itemIdx}`);
-    if (!dd) return;
-    const q = (query || '').toLowerCase().trim();
-    const sourceList = (type === 'raw') ? getRawItemList() : getFinishedItemList();
-    const currentVal = (type === 'raw') ? itemsData[itemIdx]?.raw_item_name : itemsData[itemIdx]?.finished_item_name;
-
-    const filtered = sourceList.filter(itm => {
-      if (!q) return true;
-      return (itm.name || '').toLowerCase().includes(q) ||
-             (itm.code || '').toLowerCase().includes(q) ||
-             (itm.category || '').toLowerCase().includes(q);
-    });
-
-    if (filtered.length === 0) {
-      dd.innerHTML = `<div style="padding:10px 12px; font-size:0.8rem; color:#94a3b8; text-align:center;">No matching items found</div>`;
-      return;
-    }
-
-    dd.innerHTML = filtered.map(itm => {
-      const isSel = (itm.name === currentVal);
-      const rawMtr = itm.raw_meter_per_piece || 0;
-      const metaBadge = type === 'finished' && rawMtr > 0 
-        ? `<span style="background:#eef2ff; color:#4338ca; font-weight:800; font-size:0.7rem; padding:2px 6px; border-radius:4px;">${rawMtr} Mtr/Pc</span>`
-        : `<span style="background:#f1f5f9; color:#64748b; font-size:0.7rem; padding:2px 6px; border-radius:4px;">${itm.category || (type === 'raw' ? 'Fabric' : 'Style')}</span>`;
-
-      return `
-        <div class="searchable-dropdown-item ${isSel ? 'selected' : ''}" 
-             onclick="selectItem(${itemIdx}, '${type}', '${itm.id}', '${itm.name.replace(/'/g, "\\'")}', ${rawMtr})">
-          <div>
-            <strong>${itm.name}</strong> 
-            <span style="font-size:0.725rem; color:#64748b; margin-left:4px;">[${itm.code || 'CODE'}]</span>
-          </div>
-          <div>${metaBadge}</div>
-        </div>
-      `;
-    }).join('');
-  }
-
-  function selectItem(itemIdx, type, id, name, rawMeter) {
-    const item = itemsData[itemIdx];
-    if (!item) return;
-
-    if (type === 'finished') {
-      item.finished_item_id = id || '';
-      item.finished_item_name = name || '';
-      if (rawMeter && parseFloat(rawMeter) > 0) {
-        item.consumption_per_pc = parseFloat(rawMeter);
-      }
-      
-      const searchInp = document.getElementById(`finished-item-search-${itemIdx}`);
-      const nameInp = document.getElementById(`finished-item-name-input-${itemIdx}`);
-      const idInp = document.getElementById(`finished-item-id-input-${itemIdx}`);
-      const consInp = document.getElementById(`cons-input-${itemIdx}`);
-      const ratioHint = document.getElementById(`finished-item-ratio-hint-${itemIdx}`);
-      
-      if (searchInp) searchInp.value = `${name}${item.consumption_per_pc ? ` (${parseFloat(item.consumption_per_pc).toFixed(2)} Mtr/Pc)` : ''}`;
-      if (nameInp) nameInp.value = name;
-      if (idInp) idInp.value = id || '';
-      if (consInp) consInp.value = item.consumption_per_pc;
-      if (ratioHint) ratioHint.innerHTML = `Ratio: <strong>${parseFloat(item.consumption_per_pc).toFixed(2)} Mtr/Pc</strong>`;
-
-      // Recalculate thans yield pieces in-place
-      const cons = item.consumption_per_pc;
-      item.thans.forEach(t => {
-        Object.assign(t, calculateThanValues(t.meter, t.wastage, cons));
-      });
-
-      renderTonsForCard(itemIdx);
-      recalcRawItemRow(itemIdx);
-      calculateOverallTotals();
-      closeItemDropdown(itemIdx, 'finished');
-    } else if (type === 'raw') {
-      item.raw_item_id = id || '';
-      item.raw_item_name = name || '';
-
-      const searchInp = document.getElementById(`raw-item-search-${itemIdx}`);
-      const nameInp = document.getElementById(`raw-item-name-input-${itemIdx}`);
-      const idInp = document.getElementById(`raw-item-id-input-${itemIdx}`);
-      
-      if (searchInp) searchInp.value = name;
-      if (nameInp) nameInp.value = name;
-      if (idInp) idInp.value = id || '';
-
-      closeItemDropdown(itemIdx, 'raw');
-
-      renderAllRawItemCards();
-      calculateOverallTotals();
-
-      // If target finished item is not selected yet, automatically focus & open it
-      setTimeout(() => {
-        const finInp = document.getElementById(`finished-item-search-${itemIdx}`);
-        if (finInp && !item.finished_item_name) {
-          finInp.focus();
-          openItemDropdown(itemIdx, 'finished');
+      const idx = modalTargetContext;
+      if (orderItems[idx]) {
+        orderItems[idx].thans = thans;
+        orderItems[idx].than_count = thans.length;
+        if (thans.length > 0) {
+          orderItems[idx].qty = sum;
         }
-      }, 100);
-    }
-  }
-
-  function populateQuickPills(itemIdx) {
-    const rawPillsContainer = document.getElementById(`raw-quick-pills-${itemIdx}`);
-    const finishedPillsContainer = document.getElementById(`finished-quick-pills-${itemIdx}`);
-
-    if (rawPillsContainer) {
-      const rawList = getRawItemList();
-      const topRaw = rawList.slice(0, 5);
-      rawPillsContainer.innerHTML = `
-        <span style="font-size:0.7rem; color:#64748b; font-weight:700;">Quick Pick:</span>
-        ${topRaw.map(r => `
-          <span class="quick-pill-tag" onclick="selectItem(${itemIdx}, 'raw', '${r.id}', '${r.name.replace(/'/g, "\\'")}', 0)">
-            + ${r.name}
-          </span>
-        `).join('')}
-      `;
-    }
-
-    if (finishedPillsContainer) {
-      const finList = getFinishedItemList();
-      const priorityNames = ['dupatta', 'kurti', 'palazzo', 'pant', 'suit'];
-      const prioritized = [...finList].sort((a, b) => {
-        const aName = (a.name || '').toLowerCase();
-        const bName = (b.name || '').toLowerCase();
-        const aPri = priorityNames.findIndex(p => aName.includes(p));
-        const bPri = priorityNames.findIndex(p => bName.includes(p));
-        if (aPri !== -1 && bPri !== -1) return aPri - bPri;
-        if (aPri !== -1) return -1;
-        if (bPri !== -1) return 1;
-        return 0;
-      });
-      const topFin = prioritized.slice(0, 5);
-      finishedPillsContainer.innerHTML = `
-        <span style="font-size:0.7rem; color:#64748b; font-weight:700;">Quick Pick:</span>
-        ${topFin.map(f => `
-          <span class="quick-pill-tag" onclick="selectItem(${itemIdx}, 'finished', '${f.id}', '${f.name.replace(/'/g, "\\'")}', ${f.raw_meter_per_piece || 0})">
-            + ${f.name}
-          </span>
-        `).join('')}
-      `;
-    }
-  }
-
-  // Document click listener to close open combobox dropdowns
-  document.addEventListener('click', function(e) {
-    if (!e.target.closest('.searchable-select-wrap')) {
-      document.querySelectorAll('.searchable-dropdown-list').forEach(el => el.style.display = 'none');
-    }
-  });
-
-  // Add a purchased ton from the available list
-  function addPurchasedTon(itemIdx, tonData) {
-    let meterVal = 0;
-    let tonMeta = {};
-    if (typeof tonData === 'object' && tonData !== null) {
-      meterVal = parseFloat(tonData.meter) || 0;
-      tonMeta = tonData;
-    } else {
-      meterVal = parseFloat(tonData) || 0;
-    }
-    if (isNaN(meterVal) || meterVal <= 0) return;
-
-    // Check if this than is already selected in this raw item card
-    if (tonMeta.unique_id) {
-      const alreadyExists = itemsData[itemIdx].thans.some(t => t.unique_id === tonMeta.unique_id);
-      if (alreadyExists) {
-        return;
+        renderTable();
+        calculateOrderTotals();
       }
     }
 
-    const cons = parseFloat(itemsData[itemIdx].consumption_per_pc) || 1.5;
-    const thanObj = calculateThanValues(meterVal, null, cons);
-    
-    if (tonMeta.unique_id) thanObj.unique_id = tonMeta.unique_id;
-    if (tonMeta.po_id) thanObj.po_id = tonMeta.po_id;
-    if (tonMeta.po_item_id) thanObj.po_item_id = tonMeta.po_item_id;
-    if (tonMeta.po_number) thanObj.po_number = tonMeta.po_number;
-    if (tonMeta.challan_no) thanObj.challan_no = tonMeta.challan_no;
-    if (tonMeta.than_no) thanObj.purchase_than_no = tonMeta.than_no;
-    if (tonMeta.unit) thanObj.unit = tonMeta.unit;
-
-    itemsData[itemIdx].thans.push(thanObj);
-    renderAllRawItemCards();
-    calculateOverallTotals();
+    closeThanModal();
   }
 
-  // Add all available purchased tons for this raw item
-  function addAllPurchasedTons(itemIdx) {
-    const rawId = itemsData[itemIdx].raw_item_id;
-    const rawName = (itemsData[itemIdx].raw_item_name || '').toLowerCase().trim();
-    const available = (rawId && purchasedTonsMap[rawId]) ? purchasedTonsMap[rawId] : (rawName && purchasedTonsMap[rawName] ? purchasedTonsMap[rawName] : []);
-    
-    if (available.length === 0) return;
-    const cons = parseFloat(itemsData[itemIdx].consumption_per_pc) || 1.5;
-    const currentUniqueIds = new Set(itemsData[itemIdx].thans.map(t => t.unique_id).filter(Boolean));
-
-    available.forEach(t => {
-      if (t.unique_id && currentUniqueIds.has(t.unique_id)) {
-        return;
-      }
-      const thanObj = calculateThanValues(t.meter, null, cons);
-      if (t.unique_id) thanObj.unique_id = t.unique_id;
-      if (t.po_id) thanObj.po_id = t.po_id;
-      if (t.po_item_id) thanObj.po_item_id = t.po_item_id;
-      if (t.po_number) thanObj.po_number = t.po_number;
-      if (t.challan_no) thanObj.challan_no = t.challan_no;
-      if (t.than_no) thanObj.purchase_than_no = t.than_no;
-      if (t.unit) thanObj.unit = t.unit;
-
-      itemsData[itemIdx].thans.push(thanObj);
-    });
-
-    renderAllRawItemCards();
-    calculateOverallTotals();
+  function clearEntryThans() {
+    currentModalThans = [];
+    document.getElementById('entry-than-chips-line').style.display = 'none';
+    document.getElementById('entry-than-count').value = '';
   }
 
-  function addCustomMeterEntry(itemIdx, meterVal = null) {
-    let m = 0;
-    if (meterVal !== null && meterVal !== undefined && meterVal !== '') {
-      m = parseFloat(meterVal);
-    } else {
-      const promptVal = prompt('Enter custom meter quantity (e.g. 12.50 MTR):', '12.50');
-      if (promptVal === null) return;
-      m = parseFloat(promptVal);
+  // Adding item to line items table
+  function addItemToJobOrderTable() {
+    const rawSelect = document.getElementById('entry-delivered-raw');
+    const recdSelect = document.getElementById('entry-recd-finished');
+
+    const rawId = rawSelect.value;
+    const recdId = recdSelect.value;
+
+    if (!rawId) {
+      alert('Please select the Delivered (Raw) Item.');
+      rawSelect.focus();
+      return;
     }
-
-    if (isNaN(m) || m <= 0) {
-      alert('Please enter a valid meter quantity greater than 0.');
+    if (!recdId) {
+      alert('Please select the Received (Finished) Item.');
+      recdSelect.focus();
       return;
     }
 
-    const cons = parseFloat(itemsData[itemIdx].consumption_per_pc) || 1.5;
-    const thanObj = calculateThanValues(m, null, cons);
-    thanObj.unit = 'Mtr';
-    thanObj.po_number = 'Custom';
-    thanObj.challan_no = '';
-    thanObj.unique_id = 'custom_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+    const rawOpt = rawSelect.options[rawSelect.selectedIndex];
+    const recdOpt = recdSelect.options[recdSelect.selectedIndex];
 
-    itemsData[itemIdx].thans.push(thanObj);
-    thanCardCollapseState[itemIdx] = true;
-    renderAllRawItemCards();
-    calculateOverallTotals();
-  }
+    const rawName = rawOpt.getAttribute('data-name') || rawOpt.text;
+    const recdName = recdOpt.getAttribute('data-name') || recdOpt.text;
 
-  function addManualThan(itemIdx) {
-    addCustomMeterEntry(itemIdx, 12.50);
-  }
+    const qty = parseFloat(document.getElementById('entry-raw-qty').value || 0);
+    const thanCount = parseInt(document.getElementById('entry-than-count').value || currentModalThans.length || 0);
+    const expectedWaste = parseFloat(document.getElementById('entry-expected-waste').value || 0);
+    const deliveryDate = document.getElementById('entry-delivery-date').value || '{{ date("Y-m-d", strtotime("+7 days")) }}';
 
-  function removeTon(itemIdx, tonIdx) {
-    itemsData[itemIdx].thans.splice(tonIdx, 1);
-    renderAllRawItemCards();
-    calculateOverallTotals();
-  }
-
-  function updateThanMeter(itemIdx, tonIdx, newMeter) {
-    const val = parseFloat(newMeter);
-    const m = (!isNaN(val) && val >= 0) ? val : 0;
-    const item = itemsData[itemIdx];
-    const than = item.thans[tonIdx];
-    if (!than) return;
-
-    const cons = parseFloat(item.consumption_per_pc) || 1.5;
-    const updated = calculateThanValues(m, null, cons);
-    Object.assign(than, updated);
-
-    const wastageInput = document.getElementById(`than-wastage-input-${itemIdx}-${tonIdx}`);
-    const usableDisp = document.getElementById(`than-usable-display-${itemIdx}-${tonIdx}`);
-    const pcsDisp = document.getElementById(`than-pcs-display-${itemIdx}-${tonIdx}`);
-    const usableHidden = document.getElementById(`than-usable-hidden-${itemIdx}-${tonIdx}`);
-    const pcsHidden = document.getElementById(`than-pieces-hidden-${itemIdx}-${tonIdx}`);
-
-    if (wastageInput) wastageInput.value = updated.wastage;
-    if (usableDisp) usableDisp.textContent = `${updated.usable.toFixed(2)} Mtr`;
-    if (pcsDisp) pcsDisp.textContent = `${updated.pieces} Pcs`;
-    if (usableHidden) usableHidden.value = updated.usable;
-    if (pcsHidden) pcsHidden.value = updated.pieces;
-
-    recalcRawItemRow(itemIdx);
-    calculateOverallTotals();
-  }
-
-  function updateThanWastage(itemIdx, tonIdx, newWastage) {
-    const val = parseFloat(newWastage);
-    const w = (!isNaN(val) && val >= 0) ? val : 0;
-    const item = itemsData[itemIdx];
-    const than = item.thans[tonIdx];
-    if (!than) return;
-
-    const cons = parseFloat(item.consumption_per_pc) || 1.5;
-    const updated = calculateThanValues(than.meter, w, cons);
-    Object.assign(than, updated);
-
-    const usableDisp = document.getElementById(`than-usable-display-${itemIdx}-${tonIdx}`);
-    const pcsDisp = document.getElementById(`than-pcs-display-${itemIdx}-${tonIdx}`);
-    const usableHidden = document.getElementById(`than-usable-hidden-${itemIdx}-${tonIdx}`);
-    const pcsHidden = document.getElementById(`than-pieces-hidden-${itemIdx}-${tonIdx}`);
-
-    if (usableDisp) usableDisp.textContent = `${updated.usable.toFixed(2)} Mtr`;
-    if (pcsDisp) pcsDisp.textContent = `${updated.pieces} Pcs`;
-    if (usableHidden) usableHidden.value = updated.usable;
-    if (pcsHidden) pcsHidden.value = updated.pieces;
-
-    recalcRawItemRow(itemIdx);
-    calculateOverallTotals();
-  }
-
-  function clearAllTons(itemIdx) {
-    if (itemsData[itemIdx].thans.length === 0) return;
-    if (confirm(`Clear all selected thans for Raw Item #${itemIdx + 1}?`)) {
-      itemsData[itemIdx].thans = [];
-      renderAllRawItemCards();
-      calculateOverallTotals();
+    if (qty <= 0) {
+      alert('Please enter a valid Raw Material Quantity greater than 0.');
+      document.getElementById('entry-raw-qty').focus();
+      return;
     }
-  }
 
-  function onConsumptionChange(itemIdx, val) {
-    const c = parseFloat(val);
-    itemsData[itemIdx].consumption_per_pc = !isNaN(c) && c > 0 ? c : 1.5;
-    
-    // Recalculate each Than's pieces and scrap under this new consumption
-    const cons = itemsData[itemIdx].consumption_per_pc;
-    itemsData[itemIdx].thans.forEach(t => {
-      const calcs = calculateThanValues(t.meter, null, cons);
-      Object.assign(t, calcs);
-    });
-    
-    renderTonsForCard(itemIdx);
-    recalcRawItemRow(itemIdx);
-    calculateOverallTotals();
-  }
+    // Finished pieces estimate: (Qty - Waste) / 1.5 consumption
+    const usableMtr = Math.max(0, qty - expectedWaste);
+    const estPcs = Math.max(1, Math.floor(usableMtr / 1.5));
 
-  function onRateChange(itemIdx, val) {
-    const r = parseFloat(val);
-    itemsData[itemIdx].rate_per_piece = !isNaN(r) && r >= 0 ? r : 0;
-    recalcRawItemRow(itemIdx);
-    calculateOverallTotals();
-  }
-
-  // Main Yield and Quantity Recalculation for Card
-  function recalcRawItemRow(itemIdx) {
-    const item = itemsData[itemIdx];
-    if (!item) return;
-
-    let totalRaw = 0;
-    let totalWastage = 0;
-    let totalUsable = 0;
-    let totalPcs = 0;
-
-    item.thans.forEach(t => {
-      totalRaw += (parseFloat(t.meter) || 0);
-      totalWastage += (parseFloat(t.wastage) || 0);
-      totalUsable += (parseFloat(t.usable) || 0);
-      totalPcs += (parseInt(t.pieces) || 0);
+    orderItems.push({
+      raw_item_id: rawId,
+      raw_item_name: rawName,
+      finished_item_id: recdId,
+      finished_item_name: recdName,
+      qty: qty,
+      than_count: thanCount,
+      expected_waste: expectedWaste,
+      delivery_date: deliveryDate,
+      thans: [...currentModalThans],
+      production_pcs: estPcs
     });
 
-    const rate = parseFloat(item.rate_per_piece) || 0;
-    const lineTotal = Math.round(totalPcs * rate * 100) / 100;
+    // Reset inputs
+    rawSelect.value = '';
+    recdSelect.value = '';
+    document.getElementById('entry-raw-qty').value = '';
+    document.getElementById('entry-than-count').value = '';
+    document.getElementById('entry-expected-waste').value = '0.00';
+    clearEntryThans();
 
-    // Update form elements
-    const pcsInput = document.getElementById(`pieces-input-${itemIdx}`);
-    if (pcsInput) pcsInput.value = totalPcs;
-
-    const wastageInput = document.getElementById(`wastage-input-${itemIdx}`);
-    if (wastageInput) wastageInput.value = totalWastage.toFixed(2);
-
-    const hiddenRawQty = document.getElementById(`hidden-raw-qty-${itemIdx}`);
-    if (hiddenRawQty) hiddenRawQty.value = totalRaw.toFixed(2);
-
-    // Update Display Badges
-    const bRawQty = document.getElementById(`card-badge-raw-qty-${itemIdx}`);
-    const bThansCount = document.getElementById(`card-badge-tons-count-${itemIdx}`);
-    const bPcs = document.getElementById(`card-badge-pcs-${itemIdx}`);
-    const bTotal = document.getElementById(`card-badge-total-${itemIdx}`);
-    const titleDisp = document.getElementById(`card-title-display-${itemIdx}`);
-    const countBadge = document.getElementById(`card-step3-count-badge-${itemIdx}`);
-
-    if (bRawQty) bRawQty.textContent = `${totalRaw.toFixed(2)} Mtr/KG`;
-    if (bThansCount) bThansCount.textContent = `${item.thans.length} Thans`;
-    if (bPcs) bPcs.textContent = `${totalPcs} Pcs`;
-    if (bTotal) bTotal.textContent = `₹${lineTotal.toFixed(2)}`;
-    if (titleDisp) titleDisp.textContent = item.raw_item_name || `Raw Material #${itemIdx + 1}`;
-    if (countBadge) countBadge.textContent = `${item.thans.length} Selected`;
-
-    const footerRawTotal = document.getElementById(`tons-total-display-${itemIdx}`);
-    if (footerRawTotal) {
-      footerRawTotal.innerHTML = `
-        <span style="font-weight:800; color:#0f172a;">${totalRaw.toFixed(2)} Mtr/KG <span style="font-size:0.8rem; color:#64748b; font-weight:600;">(${item.thans.length} Thans)</span></span>
-        <span style="color:#cbd5e1;">•</span>
-        <span style="font-weight:700; color:#dc2626; font-size:0.85rem;">Wastage: ${totalWastage.toFixed(2)} Mtr</span>
-        <span style="color:#cbd5e1;">•</span>
-        <span style="font-weight:700; color:#059669; font-size:0.85rem;">Usable: ${totalUsable.toFixed(2)} Mtr</span>
-        <span style="color:#cbd5e1;">•</span>
-        <span style="font-weight:800; color:#4338ca; font-size:0.95rem;">Yield: ${totalPcs} Pcs</span>
-      `;
-    }
+    renderTable();
+    calculateOrderTotals();
   }
 
-  function renderAllRawItemCards() {
-    const container = document.getElementById('raw-items-container');
-    if (!container) return;
+  function renderTable() {
+    const tbody = document.getElementById('jwo-items-tbody');
+    const emptyBanner = document.getElementById('jwo-empty-banner');
+    tbody.innerHTML = '';
 
-    container.innerHTML = '';
+    if (orderItems.length === 0) {
+      emptyBanner.style.display = 'block';
+      return;
+    }
 
-    itemsData.forEach((item, itemIdx) => {
-      const card = document.createElement('div');
-      card.className = 'card raw-item-card';
-      card.id = `raw-card-${itemIdx}`;
+    emptyBanner.style.display = 'none';
 
-      // Options for Raw Items
-      let rawOptions = `<option value="">-- Select Raw Item / Fabric --</option>`;
-      masterItems.forEach(itm => {
-        const isSel = (item.raw_item_name && (itm.name === item.raw_item_name || itm.id == item.raw_item_id)) ? 'selected' : '';
-        rawOptions += `<option value="${itm.name}" data-id="${itm.id}" data-code="${itm.code || ''}" ${isSel}>${itm.name} [${itm.code || 'ITEM'}] (${itm.category || 'Raw Material'})</option>`;
-      });
+    orderItems.forEach((item, index) => {
+      const tr = document.createElement('tr');
 
-      // Options for Finished Items
-      let finishedOptions = `<option value="">-- Select Target Finished Product --</option>`;
-      masterItems.forEach(itm => {
-        const isSel = (item.finished_item_name && (itm.name === item.finished_item_name || itm.id == item.finished_item_id)) ? 'selected' : '';
-        const rawMtr = itm.raw_meter_per_piece || 0;
-        finishedOptions += `<option value="${itm.name}" data-id="${itm.id}" data-code="${itm.code || ''}" data-raw-meter="${rawMtr}" ${isSel}>${itm.name} [${itm.code || 'STYLE'}] ${rawMtr > 0 ? `(${rawMtr} Mtr/Pc)` : ''}</option>`;
-      });
+      let thanHtml = item.than_count;
+      if (item.thans && item.thans.length > 0) {
+        thanHtml = `<button type="button" class="btn btn-secondary btn-xs" onclick="openRowThanModal(${index})" style="background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; font-weight:700; font-size:0.75rem; padding:2px 6px;">
+          ${item.thans.length} Thans 📝
+        </button>`;
+      }
 
-      // Available Purchase Thans for this raw item
-      const rawId = item.raw_item_id;
-      const rawName = (item.raw_item_name || '').toLowerCase().trim();
-      const availablePurchases = (rawId && purchasedTonsMap[rawId]) ? purchasedTonsMap[rawId] : (rawName && purchasedTonsMap[rawName] ? purchasedTonsMap[rawName] : []);
-      
-      const allSelectedUniqueIds = new Set();
-      itemsData.forEach(itm => {
-        (itm.thans || []).forEach(t => {
-          if (t.unique_id) allSelectedUniqueIds.add(t.unique_id);
-        });
-      });
-
-      const remainingAvailable = availablePurchases.filter(p => !p.unique_id || !allSelectedUniqueIds.has(p.unique_id));
-
-      let totalRaw = 0;
-      let totalWastage = 0;
-      let totalPcs = 0;
-      item.thans.forEach(t => {
-        totalRaw += (parseFloat(t.meter) || 0);
-        totalWastage += (parseFloat(t.wastage) || 0);
-        totalPcs += (parseInt(t.pieces) || 0);
-      });
-      const rate = parseFloat(item.rate_per_piece) || 0;
-      const lineTotal = Math.round(totalPcs * rate * 100) / 100;
-
-      card.innerHTML = `
-        <!-- Card Header -->
-        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--slate-100, #f1f5f9); padding-bottom:12px; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
-          <div style="display:flex; align-items:center; gap:10px;">
-            <span style="width:28px; height:28px; border-radius:8px; background:#eef2ff; color:#4338ca; display:inline-flex; align-items:center; justify-content:center; font-size:0.85rem; font-weight:800;">
-              #${itemIdx + 1}
-            </span>
-            <div>
-              <div style="font-weight:800; font-size:1.05rem; color:var(--slate-900);" id="card-title-display-${itemIdx}">
-                ${item.raw_item_name || 'Raw Material #' + (itemIdx + 1)}
-              </div>
-              <div style="font-size:0.75rem; color:var(--slate-500);">
-                Output: <strong style="color:#4338ca;">${item.finished_item_name || 'Select Finished Product'}</strong>
-              </div>
-            </div>
-          </div>
-
-          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-            <span class="badge" style="background:#f1f5f9; color:#334155; border:1px solid #cbd5e1; font-weight:700; font-size:0.8rem;" id="card-badge-tons-count-${itemIdx}">
-              ${item.thans.length} Thans
-            </span>
-            <span class="badge" style="background:#eef2ff; color:#4338ca; border:1px solid #c7d2fe; font-weight:800; font-size:0.85rem;" id="card-badge-raw-qty-${itemIdx}">
-              ${totalRaw.toFixed(2)} Mtr/KG
-            </span>
-            <span class="badge" style="background:#ecfdf5; color:#059669; border:1px solid #a7f3d0; font-weight:800; font-size:0.85rem;" id="card-badge-pcs-${itemIdx}">
-              ${totalPcs} Pcs
-            </span>
-            <span class="badge" style="background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; font-weight:800; font-size:0.85rem;" id="card-badge-total-${itemIdx}">
-              ₹${lineTotal.toFixed(2)}
-            </span>
-
-            ${itemsData.length > 1 ? `
-              <button type="button" class="btn btn-secondary btn-sm" onclick="removeRawItemCard(${itemIdx})" style="color:#ef4444; font-weight:700; padding:4px 8px; border-color:#fecaca;" title="Remove this entire raw material block">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                Remove
-              </button>
-            ` : ''}
-          </div>
-        </div>
-
-        <input type="hidden" name="items[${itemIdx}][raw_item_id]" value="${item.raw_item_id}">
-        <input type="hidden" name="items[${itemIdx}][finished_item_id]" value="${item.finished_item_id}">
-        <input type="hidden" id="hidden-raw-qty-${itemIdx}" name="items[${itemIdx}][than_meters]" value="${totalRaw.toFixed(2)}">
-
-        <!-- Row 1: Searchable Raw Item Select & Target Finished Item Select -->
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-bottom:14px;">
-          
-          <!-- Step 1: Select Raw Item -->
-          <div class="form-group" style="margin-bottom:0;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-              <label class="form-label" style="font-weight:700; color:var(--slate-800); margin:0;">
-                1. Select Raw Item / Fabric <span style="color:#ef4444;">*</span>
-              </label>
-              <a href="{{ route('masters.items.index') }}" target="_blank" style="font-size:0.75rem; color:#4338ca; text-decoration:none; font-weight:600;">+ Items Master</a>
-            </div>
-
-            <div class="searchable-select-wrap" id="raw-item-wrap-${itemIdx}">
-              <div style="position:relative;">
-                <input type="text" 
-                       id="raw-item-search-${itemIdx}" 
-                       class="form-control" 
-                       placeholder="🔍 Search Raw Item / Fabric..." 
-                       value="${item.raw_item_name || ''}" 
-                       autocomplete="off"
-                       onclick="openItemDropdown(${itemIdx}, 'raw')"
-                       onfocus="openItemDropdown(${itemIdx}, 'raw')"
-                       oninput="filterItemDropdown(${itemIdx}, 'raw', this.value)"
-                       style="font-weight:700; height:40px; border-radius:8px; padding-right:32px; background:#ffffff;">
-                <button type="button" onclick="toggleItemDropdown(${itemIdx}, 'raw')" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:transparent; border:none; color:#64748b; font-size:0.85rem; cursor:pointer; padding:4px;">▾</button>
-              </div>
-              <input type="hidden" id="raw-item-name-input-${itemIdx}" name="items[${itemIdx}][raw_item_name]" value="${item.raw_item_name || ''}" required>
-              <input type="hidden" id="raw-item-id-input-${itemIdx}" name="items[${itemIdx}][raw_item_id]" value="${item.raw_item_id || ''}">
-              <div id="raw-item-dropdown-${itemIdx}" class="searchable-dropdown-list" style="display:none;"></div>
-            </div>
-
-            <!-- Quick Pick Pills for Raw Fabrics -->
-            <div style="display:flex; align-items:center; gap:5px; margin-top:6px; flex-wrap:wrap;" id="raw-quick-pills-${itemIdx}"></div>
-          </div>
-
-          <!-- Step 2: Select Finished Item -->
-          <div class="form-group" style="margin-bottom:0;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-              <label class="form-label" style="font-weight:700; color:var(--slate-800); margin:0;">
-                2. Select Target Finished Item <span style="color:#ef4444;">*</span>
-              </label>
-              <span style="font-size:0.725rem; color:var(--slate-500);" id="finished-item-ratio-hint-${itemIdx}">
-                ${item.consumption_per_pc ? `Ratio: <strong>${parseFloat(item.consumption_per_pc).toFixed(2)} Mtr/Pc</strong>` : 'Auto-loads consumption ratio'}
-              </span>
-            </div>
-
-            <div class="searchable-select-wrap" id="finished-item-wrap-${itemIdx}">
-              <div style="position:relative;">
-                <input type="text" 
-                       id="finished-item-search-${itemIdx}" 
-                       class="form-control" 
-                       placeholder="🔍 Search Finished Product (e.g. Dupatta, Kurti)..." 
-                       value="${item.finished_item_name ? `${item.finished_item_name}${item.consumption_per_pc ? ` (${parseFloat(item.consumption_per_pc).toFixed(2)} Mtr/Pc)` : ''}` : ''}" 
-                       autocomplete="off"
-                       onclick="openItemDropdown(${itemIdx}, 'finished')"
-                       onfocus="openItemDropdown(${itemIdx}, 'finished')"
-                       oninput="filterItemDropdown(${itemIdx}, 'finished', this.value)"
-                       style="font-weight:700; height:40px; border-radius:8px; padding-right:32px; background:#ffffff;">
-                <button type="button" onclick="toggleItemDropdown(${itemIdx}, 'finished')" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:transparent; border:none; color:#64748b; font-size:0.85rem; cursor:pointer; padding:4px;">▾</button>
-              </div>
-              <input type="hidden" id="finished-item-name-input-${itemIdx}" name="items[${itemIdx}][finished_item_name]" value="${item.finished_item_name || ''}" required>
-              <input type="hidden" id="finished-item-id-input-${itemIdx}" name="items[${itemIdx}][finished_item_id]" value="${item.finished_item_id || ''}">
-              <div id="finished-item-dropdown-${itemIdx}" class="searchable-dropdown-list" style="display:none;"></div>
-            </div>
-
-            <!-- Quick Pick Pills for Finished Styles -->
-            <div style="display:flex; align-items:center; gap:5px; margin-top:6px; flex-wrap:wrap;" id="finished-quick-pills-${itemIdx}"></div>
-          </div>
-
-        </div>
-
-        <!-- Section A: Compact Purchase Thans Selection & Breakdown -->
-        <div class="tons-container" style="margin-top:14px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:14px; padding:16px;">
-          
-          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
-            <div style="font-weight:800; font-size:0.875rem; color:#1e293b; text-transform:uppercase; letter-spacing:0.04em; display:flex; align-items:center; gap:8px;">
-              <span>3. Purchase Thans for ${item.raw_item_name || 'Raw Material'}</span>
-              <span class="calc-badge" style="font-size:0.775rem;" id="card-step3-count-badge-${itemIdx}">${item.thans.length} Selected</span>
-            </div>
-            
-            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-              <button type="button" class="btn btn-secondary btn-xs" onclick="addCustomMeterEntry(${itemIdx})" style="font-weight:700; font-size:0.75rem; padding:5px 12px; background:#fff; color:#4338ca; border-color:#c7d2fe; display:inline-flex; align-items:center; gap:5px;" title="Manually enter custom meters (e.g. 12.50 MTR)">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="12" y2="12"/></svg>
-                Add Custom Meter / Than
-              </button>
-              ${item.raw_item_name ? `
-                <button type="button" class="btn btn-primary btn-xs" onclick="openThanSelectModal(${itemIdx})" style="font-weight:700; font-size:0.75rem; padding:5px 12px; display:inline-flex; align-items:center; gap:5px; box-shadow:0 1px 4px rgba(79, 70, 229, 0.25);">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                  🔍 Select / Manage Thans (${availablePurchases.length} in Stock)
-                </button>
-              ` : ''}
-              ${item.thans.length > 0 ? `
-                <button type="button" class="btn btn-secondary btn-xs" onclick="clearAllTons(${itemIdx})" style="font-weight:700; font-size:0.75rem; padding:5px 12px; color:#dc2626; border-color:#fecaca; background:#ffffff;">
-                  Clear Selection
-                </button>
-              ` : ''}
-            </div>
-          </div>
-
-          <!-- Empty State Box (When 0 selected) -->
-          <div id="tons-empty-box-${itemIdx}" style="text-align:center; padding:16px 14px; color:#64748b; border:1.5px dashed #cbd5e1; border-radius:10px; background:#ffffff; margin-top:8px; ${item.thans.length > 0 ? 'display:none;' : 'display:block;'}">
-            ${!item.raw_item_name ? `
-              <div style="font-size:0.8rem; color:#64748b; margin-bottom:8px;">Please select a <strong>Raw Item</strong> above or add a custom meter quantity.</div>
-              <button type="button" class="btn btn-secondary btn-xs" onclick="addCustomMeterEntry(${itemIdx})" style="font-weight:700; color:#4338ca; border-color:#c7d2fe; background:#fff;">
-                + Add Custom Meter (e.g. 12.50 MTR)
-              </button>
-            ` : `
-              <div style="font-weight:700; font-size:0.85rem; color:#475569; margin-bottom:3px;">No Purchase Thans or Custom Meters selected yet</div>
-              <p style="font-size:0.75rem; color:#94a3b8; margin:0 0 8px;">Choose from ${availablePurchases.length} available rolls in stock or enter custom meter quantities.</p>
-              <div style="display:flex; justify-content:center; gap:8px; flex-wrap:wrap;">
-                <button type="button" class="btn btn-secondary btn-xs" onclick="addCustomMeterEntry(${itemIdx})" style="font-weight:700; color:#4338ca; border-color:#c7d2fe; background:#fff;">
-                  + Add Custom Meter (e.g. 12.50 MTR)
-                </button>
-                ${availablePurchases.length > 0 ? `
-                  <button type="button" class="btn btn-primary btn-xs" onclick="openThanSelectModal(${itemIdx})" style="font-weight:700;">Open Thans Selector (${availablePurchases.length} Available)</button>
-                ` : ''}
-              </div>
-            `}
-          </div>
-
-          <!-- Selected Thans Summary & Compact Chips -->
-          <div id="tons-chips-wrapper-${itemIdx}" style="${item.thans.length > 0 ? 'display:block;' : 'display:none;'} margin-top:8px; background:#ffffff; border:1px solid #e2e8f0; border-radius:10px; padding:10px 12px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
-              <span style="font-size:0.75rem; font-weight:800; color:#475569; text-transform:uppercase;">
-                Selected Locations / Thans:
-              </span>
-              <button type="button" class="btn btn-secondary btn-xs" onclick="openThanSelectModal(${itemIdx})" style="font-size:0.725rem; font-weight:700; color:#4338ca;">
-                Edit Selection in Modal
-              </button>
-            </div>
-            <div id="tons-chips-container-${itemIdx}" style="display:flex; flex-wrap:wrap; gap:6px; align-items:center;">
-              <!-- Chips populated by renderTonsForCard -->
-            </div>
-          </div>
-
-          <!-- Collapsible Breakdown Drawer Toggle -->
-          <div id="tons-collapse-bar-${itemIdx}" style="${item.thans.length > 0 ? 'display:block;' : 'display:none;'} margin-top:8px;">
-            <button type="button" id="tons-toggle-btn-${itemIdx}" class="btn btn-secondary" onclick="toggleThanDetails(${itemIdx})" style="width:100%; display:flex; justify-content:space-between; align-items:center; padding:7px 12px; border-radius:8px; border:1px solid #e2e8f0; background:#ffffff; transition:all 0.15s ease;">
-              <span id="tons-toggle-btn-text-${itemIdx}" style="font-weight:700; font-size:0.78rem; color:#334155;">
-                ▼ View & Edit Than Breakdown Table (${item.thans.length} Thans)
-              </span>
-              <span style="font-size:0.725rem; color:#64748b; font-weight:600;">
-                Click to expand/collapse individual entries
-              </span>
-            </button>
-
-            <!-- Collapsible Table -->
-            <div id="tons-table-wrapper-${itemIdx}" class="than-table-wrap" style="margin-top:6px; display:none;">
-              <table class="than-compact-table">
-                <thead>
-                  <tr>
-                    <th style="width:75px;">Than #</th>
-                    <th>Challan / PO Ref</th>
-                    <th style="width:130px; text-align:right;">Than Qty (Mtr)</th>
-                    <th style="width:130px; text-align:right;">Wastage (Mtr)</th>
-                    <th style="width:110px; text-align:right;">Usable Qty</th>
-                    <th style="width:100px; text-align:center;">Yield Output</th>
-                    <th style="width:45px; text-align:center;">Del</th>
-                  </tr>
-                </thead>
-                <tbody id="tons-table-body-${itemIdx}">
-                  <!-- Rows populated by renderTonsForCard -->
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- Total Raw Quantity Footer under this Raw Item -->
-          <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px dashed #cbd5e1; padding-top:12px; margin-top:12px; font-size:0.875rem; flex-wrap:wrap; gap:8px;">
-            <span style="font-weight:700; color:#475569;">Raw Material Summary (${item.raw_item_name || 'Raw Item'}):</span>
-            <div id="tons-total-display-${itemIdx}" style="display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
-              <!-- Handled by recalcRawItemRow -->
-            </div>
-          </div>
-
-        </div>
-
-        <!-- Section B: Output Specification, Wastage & Expected Pieces Calculation -->
-        <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:16px; margin-top:16px;">
-          <div style="font-weight:800; font-size:0.85rem; color:#334155; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
-            <span>4. Output Specifications & Contract Labor Rate</span>
-            <span style="font-size:0.75rem; color:#64748b; font-weight:600; text-transform:none;">Formula: FLOOR(Usable / Requirement) per Than</span>
-          </div>
-
-          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(170px, 1fr)); gap:14px;">
-            
-            <!-- Consumption per Piece -->
-            <div class="form-group" style="margin-bottom:0;">
-              <label class="form-label" style="font-weight:700; color:var(--slate-800); font-size:0.8rem; margin-bottom:4px;">
-                Finished Product Req. (Mtr/Pc) <span style="color:#ef4444;">*</span>
-              </label>
-              <input type="number" step="0.001" min="0.001" id="cons-input-${itemIdx}" name="items[${itemIdx}][avg_consumption]" class="form-control" value="${item.consumption_per_pc}" style="font-weight:700; height:40px;" oninput="onConsumptionChange(${itemIdx}, this.value)">
-              <small style="font-size:0.7rem; color:#64748b; margin-top:2px; display:block;">Meters required per 1 finished item</small>
-            </div>
-
-            <!-- Expected Wastage -->
-            <div class="form-group" style="margin-bottom:0;">
-              <label class="form-label" style="font-weight:700; color:#dc2626; font-size:0.8rem; margin-bottom:4px;">
-                Total Expected Wastage (Mtr)
-              </label>
-              <input type="number" step="0.01" min="0" id="wastage-input-${itemIdx}" name="items[${itemIdx}][wastage_meters]" class="form-control" readonly value="${totalWastage.toFixed(2)}" style="font-weight:800; color:#dc2626; height:40px; background:#fff1f2; border-color:#fecaca;" title="Sum of all individual than wastages">
-              <small style="font-size:0.7rem; color:#64748b; margin-top:2px; display:block;">Auto-summed from all thans</small>
-            </div>
-
-            <!-- Expected Finished Pieces -->
-            <div class="form-group" style="margin-bottom:0;">
-              <label class="form-label" style="font-weight:700; color:#4338ca; font-size:0.8rem; margin-bottom:4px;">
-                Total Expected Finished Pieces <span style="color:#ef4444;">*</span>
-              </label>
-              <div style="position:relative;">
-                <input type="number" step="1" min="0" id="pieces-input-${itemIdx}" name="items[${itemIdx}][production_pcs]" class="form-control" readonly value="${totalPcs}" style="font-weight:800; color:#4338ca; padding-right:38px; background:#eef2ff; border-color:#c7d2fe; height:40px;" title="Sum of finished products from all thans">
-                <span style="position:absolute; right:10px; top:50%; transform:translateY(-50%); font-size:0.75rem; color:#4338ca; font-weight:800;">Pcs</span>
-              </div>
-              <small style="font-size:0.7rem; color:#64748b; margin-top:2px; display:block;">Auto-summed from all thans</small>
-            </div>
-
-            <!-- Contractor Rate -->
-            <div class="form-group" style="margin-bottom:0;">
-              <label class="form-label" style="font-weight:700; color:var(--slate-800); font-size:0.8rem; margin-bottom:4px;">
-                Contractor Rate / Pc (₹) <span style="color:#ef4444;">*</span>
-              </label>
-              <div style="position:relative;">
-                <span style="position:absolute; left:10px; top:50%; transform:translateY(-50%); font-weight:700; color:#64748b;">₹</span>
-                <input type="number" step="0.5" min="0" name="items[${itemIdx}][rate_per_piece]" class="form-control" required value="${parseFloat(item.rate_per_piece).toFixed(2)}" style="padding-left:24px; font-weight:700; height:40px;" oninput="onRateChange(${itemIdx}, this.value)">
-              </div>
-              <small style="font-size:0.7rem; color:#64748b; margin-top:2px; display:block;">Rate per finished piece</small>
-            </div>
-
-          </div>
-        </div>
+      tr.innerHTML = `
+        <td style="text-align:center; font-weight:700; color:#64748b;">${index + 1}</td>
+        <td>
+          <div style="font-weight:700; color:#0f172a;">${item.raw_item_name}</div>
+          <span style="font-size:0.7rem; font-weight:700; background:#ecfdf5; color:#059669; border:1px solid #a7f3d0; padding:1px 5px; border-radius:4px;">Raw</span>
+          <!-- Hidden inputs for form submit -->
+          <input type="hidden" name="items[${index}][raw_item_id]" value="${item.raw_item_id}">
+          <input type="hidden" name="items[${index}][raw_item_name]" value="${item.raw_item_name}">
+          <input type="hidden" name="items[${index}][finished_item_id]" value="${item.finished_item_id}">
+          <input type="hidden" name="items[${index}][finished_item_name]" value="${item.finished_item_name}">
+          <input type="hidden" name="items[${index}][than_meters]" value="${item.qty}">
+          <input type="hidden" name="items[${index}][production_pcs]" value="${item.production_pcs}">
+          <input type="hidden" name="items[${index}][wastage_meters]" value="${item.expected_waste}">
+          <input type="hidden" name="items[${index}][than_count]" value="${item.than_count}">
+          <input type="hidden" name="items[${index}][thans]" value='${JSON.stringify(item.thans || [])}'>
+        </td>
+        <td>
+          <div style="font-weight:700; color:#0f172a;">${item.finished_item_name}</div>
+          <span style="font-size:0.7rem; font-weight:700; background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; padding:1px 5px; border-radius:4px;">Finished</span>
+        </td>
+        <td style="text-align:right;">
+          <input type="number" step="0.01" min="0" 
+                 class="form-control" 
+                 value="${item.qty}" 
+                 oninput="handleRowQtyChange(${index}, this.value)" 
+                 style="text-align:right; font-weight:800; color:#059669; width:95px; display:inline-block; padding:4px 6px;">
+        </td>
+        <td style="text-align:center; font-weight:700; color:#2563eb;">
+          ${thanHtml}
+        </td>
+        <td style="text-align:right;">
+          <input type="number" step="0.01" min="0" 
+                 class="form-control" 
+                 value="${item.expected_waste}" 
+                 oninput="handleRowWasteChange(${index}, this.value)" 
+                 style="text-align:right; font-weight:700; color:#dc2626; width:85px; display:inline-block; padding:4px 6px;">
+        </td>
+        <td style="text-align:center; font-weight:600; color:#475569;">
+          ${item.delivery_date}
+        </td>
+        <td style="text-align:center;">
+          <button type="button" 
+                  onclick="deleteRow(${index})" 
+                  class="btn btn-secondary btn-xs" 
+                  style="color:#ef4444; border:1px solid #fecdd3; background:#fff1f2; padding:4px 8px; border-radius:6px; cursor:pointer;" 
+                  title="Delete Row">
+            &times;
+          </button>
+        </td>
       `;
 
-      container.appendChild(card);
-      renderTonsForCard(itemIdx);
-      recalcRawItemRow(itemIdx);
-      populateQuickPills(itemIdx);
+      tbody.appendChild(tr);
     });
   }
 
-  const thanCardCollapseState = {};
-
-  function toggleThanDetails(itemIdx) {
-    thanCardCollapseState[itemIdx] = !thanCardCollapseState[itemIdx];
-    const tableWrap = document.getElementById(`tons-table-wrapper-${itemIdx}`);
-    const toggleBtnText = document.getElementById(`tons-toggle-btn-text-${itemIdx}`);
-    const toggleBtn = document.getElementById(`tons-toggle-btn-${itemIdx}`);
-
-    if (tableWrap) {
-      tableWrap.style.display = thanCardCollapseState[itemIdx] ? 'block' : 'none';
-    }
-    if (toggleBtnText) {
-      const item = itemsData[itemIdx];
-      const count = (item && item.thans) ? item.thans.length : 0;
-      toggleBtnText.textContent = thanCardCollapseState[itemIdx] 
-        ? `▲ Hide Than Breakdown Table (${count} Thans)` 
-        : `▼ View & Edit Than Breakdown Table (${count} Thans)`;
-    }
-    if (toggleBtn) {
-      toggleBtn.style.background = thanCardCollapseState[itemIdx] ? '#eef2ff' : '#ffffff';
-      toggleBtn.style.borderColor = thanCardCollapseState[itemIdx] ? '#c7d2fe' : '#e2e8f0';
-    }
+  function handleRowQtyChange(index, val) {
+    orderItems[index].qty = parseFloat(val) || 0;
+    calculateOrderTotals();
   }
 
-  function renderTonsForCard(itemIdx) {
-    const item = itemsData[itemIdx];
-    if (!item) return;
-
-    const emptyBox = document.getElementById(`tons-empty-box-${itemIdx}`);
-    const chipsWrapper = document.getElementById(`tons-chips-wrapper-${itemIdx}`);
-    const chipsContainer = document.getElementById(`tons-chips-container-${itemIdx}`);
-    const collapseBar = document.getElementById(`tons-collapse-bar-${itemIdx}`);
-    const tableBody = document.getElementById(`tons-table-body-${itemIdx}`);
-    const tableWrap = document.getElementById(`tons-table-wrapper-${itemIdx}`);
-    const toggleBtnText = document.getElementById(`tons-toggle-btn-text-${itemIdx}`);
-    const toggleBtn = document.getElementById(`tons-toggle-btn-${itemIdx}`);
-
-    if (!emptyBox) return;
-
-    if (item.thans.length === 0) {
-      emptyBox.style.display = 'block';
-      if (chipsWrapper) chipsWrapper.style.display = 'none';
-      if (collapseBar) collapseBar.style.display = 'none';
-      if (tableBody) tableBody.innerHTML = '';
-      return;
-    }
-
-    emptyBox.style.display = 'none';
-    if (chipsWrapper) chipsWrapper.style.display = 'block';
-    if (collapseBar) collapseBar.style.display = 'block';
-
-    // 1. Render Compact Chips
-    if (chipsContainer) {
-      chipsContainer.innerHTML = '';
-      const maxVisibleChips = 8;
-      const displayThans = item.thans.slice(0, maxVisibleChips);
-
-      displayThans.forEach((than, tIdx) => {
-        const chip = document.createElement('span');
-        chip.className = 'than-chip-compact';
-        chip.innerHTML = `
-          <span>Than #${tIdx + 1}: ${parseFloat(than.meter).toFixed(1)}m${than.challan_no ? ` <span style="color:#64748b; font-size:0.7rem;">[CH #${than.challan_no}]</span>` : ''}</span>
-          <button type="button" class="than-chip-remove" onclick="removeTon(${itemIdx}, ${tIdx})" title="Remove Than #${tIdx + 1}">&times;</button>
-        `;
-        chipsContainer.appendChild(chip);
-      });
-
-      if (item.thans.length > maxVisibleChips) {
-        const overflowBtn = document.createElement('button');
-        overflowBtn.type = 'button';
-        overflowBtn.className = 'than-chip-compact';
-        overflowBtn.style.background = '#eef2ff';
-        overflowBtn.style.color = '#4338ca';
-        overflowBtn.style.borderColor = '#c7d2fe';
-        overflowBtn.style.cursor = 'pointer';
-        overflowBtn.title = 'Click to view & manage all thans';
-        overflowBtn.textContent = `+ ${item.thans.length - maxVisibleChips} more thans (View All / Edit)`;
-        overflowBtn.onclick = () => openThanSelectModal(itemIdx);
-        chipsContainer.appendChild(overflowBtn);
-      }
-    }
-
-    // 2. Render Table Rows
-    if (tableBody) {
-      tableBody.innerHTML = '';
-      item.thans.forEach((than, tIdx) => {
-        const tr = document.createElement('tr');
-
-        const challanBadge = than.challan_no ? `
-          <span style="background:#f1f5f9; color:#475569; font-size:0.75rem; font-weight:700; padding:2px 7px; border-radius:4px; border:1px solid #cbd5e1;" title="Purchase Challan Reference">
-            Challan #${than.challan_no}${than.purchase_than_no ? ` (Than #${than.purchase_than_no})` : ''}
-          </span>
-        ` : (than.po_number ? `
-          <span style="background:#f1f5f9; color:#475569; font-size:0.75rem; font-weight:700; padding:2px 7px; border-radius:4px; border:1px solid #cbd5e1;">
-            PO #${than.po_number}
-          </span>
-        ` : '<span style="color:#94a3b8; font-size:0.75rem;">Custom</span>');
-
-        tr.innerHTML = `
-          <td>
-            <span style="background:#eef2ff; color:#4338ca; font-weight:800; font-size:0.8rem; padding:2px 7px; border-radius:5px; border:1px solid #c7d2fe;">
-              #${tIdx + 1}
-            </span>
-            <input type="hidden" id="than-no-hidden-${itemIdx}-${tIdx}" name="items[${itemIdx}][thans][${tIdx}][than_no]" value="${tIdx + 1}">
-            <input type="hidden" id="than-usable-hidden-${itemIdx}-${tIdx}" name="items[${itemIdx}][thans][${tIdx}][usable]" value="${than.usable}">
-            <input type="hidden" id="than-pieces-hidden-${itemIdx}-${tIdx}" name="items[${itemIdx}][thans][${tIdx}][pieces]" value="${than.pieces}">
-            <input type="hidden" name="items[${itemIdx}][thans][${tIdx}][unique_id]" value="${than.unique_id || ''}">
-            <input type="hidden" name="items[${itemIdx}][thans][${tIdx}][po_id]" value="${than.po_id || ''}">
-            <input type="hidden" name="items[${itemIdx}][thans][${tIdx}][po_item_id]" value="${than.po_item_id || ''}">
-            <input type="hidden" name="items[${itemIdx}][thans][${tIdx}][po_number]" value="${than.po_number || ''}">
-            <input type="hidden" name="items[${itemIdx}][thans][${tIdx}][challan_no]" value="${than.challan_no || ''}">
-            <input type="hidden" name="items[${itemIdx}][thans][${tIdx}][purchase_than_no]" value="${than.purchase_than_no || (than.than_no || '')}">
-          </td>
-          <td>
-            ${challanBadge}
-          </td>
-          <td>
-            <input type="number" step="0.01" min="0" value="${than.meter}" name="items[${itemIdx}][thans][${tIdx}][meter]" 
-              id="than-meter-input-${itemIdx}-${tIdx}"
-              class="form-control" 
-              style="font-weight:800; font-size:0.875rem; padding:4px 8px; height:34px; border-radius:6px; border:1.5px solid #cbd5e1; text-align:right; width:100%; color:#0f172a;"
-              oninput="updateThanMeter(${itemIdx}, ${tIdx}, this.value)"
-              onfocus="this.select()">
-          </td>
-          <td>
-            <input type="number" step="0.01" min="0" value="${than.wastage}" name="items[${itemIdx}][thans][${tIdx}][wastage]" 
-              id="than-wastage-input-${itemIdx}-${tIdx}"
-              class="form-control" 
-              style="font-weight:800; font-size:0.875rem; padding:4px 8px; height:34px; border-radius:6px; border:1.5px solid #fecaca; background:#fffbfb; text-align:right; width:100%; color:#dc2626;"
-              oninput="updateThanWastage(${itemIdx}, ${tIdx}, this.value)"
-              onfocus="this.select()">
-          </td>
-          <td style="text-align:right;">
-            <div id="than-usable-display-${itemIdx}-${tIdx}" style="font-weight:800; color:#065f46; font-size:0.85rem;">
-              ${than.usable.toFixed(2)} Mtr
-            </div>
-          </td>
-          <td style="text-align:center;">
-            <span style="display:inline-flex; align-items:center; background:#ecfdf5; border:1px solid #a7f3d0; padding:2px 8px; border-radius:6px;">
-              <strong style="font-size:0.85rem; color:#047857;" id="than-pcs-display-${itemIdx}-${tIdx}">${than.pieces} Pcs</strong>
-            </span>
-          </td>
-          <td style="text-align:center;">
-            <button type="button" onclick="removeTon(${itemIdx}, ${tIdx})" title="Remove than" style="background:#fee2e2; border:none; color:#dc2626; width:24px; height:24px; border-radius:5px; display:inline-flex; align-items:center; justify-content:center; font-size:1.1rem; font-weight:700; cursor:pointer; line-height:1; padding:0; margin:auto;">&times;</button>
-          </td>
-        `;
-
-        tableBody.appendChild(tr);
-      });
-    }
-
-    // 3. Update Toggle Bar State
-    const isExpanded = thanCardCollapseState[itemIdx] === true;
-    if (tableWrap) tableWrap.style.display = isExpanded ? 'block' : 'none';
-    if (toggleBtnText) {
-      toggleBtnText.textContent = isExpanded 
-        ? `▲ Hide Than Breakdown Table (${item.thans.length} Thans)` 
-        : `▼ View & Edit Than Breakdown Table (${item.thans.length} Thans)`;
-    }
-    if (toggleBtn) {
-      toggleBtn.style.background = isExpanded ? '#eef2ff' : '#ffffff';
-      toggleBtn.style.borderColor = isExpanded ? '#c7d2fe' : '#e2e8f0';
-    }
+  function handleRowWasteChange(index, val) {
+    orderItems[index].expected_waste = parseFloat(val) || 0;
+    calculateOrderTotals();
   }
 
-  // --- Modal Logic for Than Multi-Selection ---
-  let activeModalItemIdx = null;
-  let modalSelectedUniqueIds = new Set();
+  function deleteRow(index) {
+    orderItems.splice(index, 1);
+    renderTable();
+    calculateOrderTotals();
+  }
 
-  function openThanSelectModal(itemIdx) {
-    activeModalItemIdx = itemIdx;
-    const item = itemsData[itemIdx];
-    if (!item) return;
+  function calculateOrderTotals() {
+    let totalQty = 0;
+    let totalThan = 0;
+    let totalWaste = 0;
+    let totalFinishedPcs = 0;
 
-    const rawId = item.raw_item_id;
-    const rawName = (item.raw_item_name || '').toLowerCase().trim();
-    const availablePurchases = (rawId && purchasedTonsMap[rawId]) ? purchasedTonsMap[rawId] : (rawName && purchasedTonsMap[rawName] ? purchasedTonsMap[rawName] : []);
-
-    if (availablePurchases.length === 0) {
-      if (confirm(`No purchase thans found in stock for "${item.raw_item_name || 'selected raw item'}".\n\nWould you like to enter a custom meter quantity (e.g. 12.50 MTR)?`)) {
-        addCustomMeterEntry(itemIdx);
-      }
-      return;
-    }
-
-    modalSelectedUniqueIds = new Set();
-    (item.thans || []).forEach(t => {
-      if (t.unique_id) modalSelectedUniqueIds.add(t.unique_id);
+    orderItems.forEach(it => {
+      totalQty += it.qty;
+      totalThan += it.than_count;
+      totalWaste += it.expected_waste;
+      totalFinishedPcs += (it.production_pcs || Math.max(1, Math.floor(Math.max(0, it.qty - it.expected_waste) / 1.5)));
     });
 
-    document.getElementById('thanModalTitle').textContent = `Select Purchase Thans (${item.raw_item_name || 'Raw Material'})`;
-    document.getElementById('thanModalSubtitle').textContent = `${availablePurchases.length} total thans in stock available for allocation`;
-    
-    const searchInput = document.getElementById('thanModalSearchInput');
-    if (searchInput) searchInput.value = '';
+    // Update table footer auto-sums
+    document.getElementById('footer-total-qty').textContent = totalQty.toFixed(2);
+    document.getElementById('footer-total-than').textContent = totalThan;
+    document.getElementById('footer-total-waste').textContent = totalWaste.toFixed(2);
 
-    renderThanModalList();
-    
-    const modal = document.getElementById('thanSelectModal');
-    if (modal) {
-      modal.style.display = 'flex';
-      if (searchInput) setTimeout(() => searchInput.focus(), 50);
-    }
+    // Update summary card
+    document.getElementById('summary-total-raw').textContent = `${totalQty.toFixed(2)} MTR`;
+    document.getElementById('summary-total-than').textContent = `${totalThan} Thans`;
+    document.getElementById('summary-total-waste').textContent = `${totalWaste.toFixed(2)} MTR`;
+    document.getElementById('summary-total-finished').textContent = `${totalFinishedPcs} PCS`;
+
+    // Hidden inputs
+    document.getElementById('hidden-total-than-meters').value = totalQty.toFixed(2);
+    document.getElementById('hidden-total-thans').value = totalThan;
+    document.getElementById('hidden-total-wastage-meters').value = totalWaste.toFixed(2);
+    document.getElementById('hidden-issued-qty').value = totalFinishedPcs;
   }
 
-  function closeThanSelectModal() {
-    const modal = document.getElementById('thanSelectModal');
-    if (modal) modal.style.display = 'none';
-    activeModalItemIdx = null;
-  }
-
-  let modalActiveTab = 'lot'; // 'lot', 'range', 'grid'
-  const lotCollapseState = {};
-
-  function setModalTab(tab) {
-    modalActiveTab = tab;
-    const btnLot = document.getElementById('tabBtnLot');
-    const btnRange = document.getElementById('tabBtnRange');
-    const btnGrid = document.getElementById('tabBtnGrid');
-    if (btnLot) btnLot.className = `modal-tab-btn ${tab === 'lot' ? 'active' : ''}`;
-    if (btnRange) btnRange.className = `modal-tab-btn ${tab === 'range' ? 'active' : ''}`;
-    if (btnGrid) btnGrid.className = `modal-tab-btn ${tab === 'grid' ? 'active' : ''}`;
-
-    const rangePanel = document.getElementById('thanModalRangePanel');
-    if (rangePanel) {
-      rangePanel.style.display = (tab === 'range') ? 'block' : 'none';
-    }
-
-    renderThanModalList();
-  }
-
-  function getOtherCardsUniqueIds() {
-    const set = new Set();
-    itemsData.forEach((otherItm, oIdx) => {
-      if (oIdx !== activeModalItemIdx) {
-        (otherItm.thans || []).forEach(t => {
-          if (t.unique_id) set.add(t.unique_id);
-        });
-      }
-    });
-    return set;
-  }
-
-  function groupPurchasesByLot(purchases) {
-    const map = new Map();
-    purchases.forEach(p => {
-      const challan = p.challan_no || p.po_number || 'General Lot';
-      const key = `lot_${challan}`;
-      if (!map.has(key)) {
-        map.set(key, {
-          key: key,
-          challan_no: challan,
-          po_number: p.po_number || '',
-          date: p.date || '',
-          unit: p.unit || 'Mtr',
-          thans: [],
-          totalMeters: 0
-        });
-      }
-      const entry = map.get(key);
-      entry.thans.push(p);
-      entry.totalMeters += (parseFloat(p.meter) || 0);
-    });
-    return Array.from(map.values());
-  }
-
-  function populateRangeLotSelect(lots) {
-    const sel = document.getElementById('thanRangeLotSelect');
-    if (!sel) return;
-    const curVal = sel.value;
-    let opts = `<option value="">-- All Lots / Challans (${lots.length}) --</option>`;
-    lots.forEach(l => {
-      opts += `<option value="${l.challan_no}" ${curVal === l.challan_no ? 'selected' : ''}>Challan #${l.challan_no} (${l.thans.length} Thans, ${l.totalMeters.toFixed(1)}m)</option>`;
-    });
-    sel.innerHTML = opts;
-  }
-
-  function toggleLotExpand(lotKey) {
-    lotCollapseState[lotKey] = !lotCollapseState[lotKey];
-    const body = document.getElementById(`lot-body-${lotKey}`);
-    const btn = document.getElementById(`lot-toggle-btn-${lotKey}`);
-    if (body) {
-      body.style.display = lotCollapseState[lotKey] ? 'none' : 'grid';
-    }
-    if (btn) {
-      btn.textContent = lotCollapseState[lotKey] ? '▶ Expand' : '▼ Collapse';
-    }
-  }
-
-  function selectWholeLot(lotChallan) {
-    if (activeModalItemIdx === null) return;
-    const item = itemsData[activeModalItemIdx];
-    const rawId = item.raw_item_id;
-    const rawName = (item.raw_item_name || '').toLowerCase().trim();
-    const availablePurchases = (rawId && purchasedTonsMap[rawId]) ? purchasedTonsMap[rawId] : (rawName && purchasedTonsMap[rawName] ? purchasedTonsMap[rawName] : []);
-
-    const otherCardsUniqueIds = getOtherCardsUniqueIds();
-
-    availablePurchases.forEach(p => {
-      const matchLot = (p.challan_no === lotChallan || p.po_number === lotChallan);
-      if (matchLot && !otherCardsUniqueIds.has(p.unique_id)) {
-        modalSelectedUniqueIds.add(p.unique_id);
-      }
-    });
-
-    renderThanModalList();
-  }
-
-  function deselectWholeLot(lotChallan) {
-    if (activeModalItemIdx === null) return;
-    const item = itemsData[activeModalItemIdx];
-    const rawId = item.raw_item_id;
-    const rawName = (item.raw_item_name || '').toLowerCase().trim();
-    const availablePurchases = (rawId && purchasedTonsMap[rawId]) ? purchasedTonsMap[rawId] : (rawName && purchasedTonsMap[rawName] ? purchasedTonsMap[rawName] : []);
-
-    availablePurchases.forEach(p => {
-      const matchLot = (p.challan_no === lotChallan || p.po_number === lotChallan);
-      if (matchLot) {
-        modalSelectedUniqueIds.delete(p.unique_id);
-      }
-    });
-
-    renderThanModalList();
-  }
-
-  function applyRangeSelection(isSelect) {
-    if (activeModalItemIdx === null) return;
-    const item = itemsData[activeModalItemIdx];
-    const rawId = item.raw_item_id;
-    const rawName = (item.raw_item_name || '').toLowerCase().trim();
-    const availablePurchases = (rawId && purchasedTonsMap[rawId]) ? purchasedTonsMap[rawId] : (rawName && purchasedTonsMap[rawName] ? purchasedTonsMap[rawName] : []);
-
-    const lotFilter = document.getElementById('thanRangeLotSelect')?.value || '';
-    const startNum = parseInt(document.getElementById('thanRangeStart')?.value) || 0;
-    const endNum = parseInt(document.getElementById('thanRangeEnd')?.value) || 0;
-    const feedback = document.getElementById('thanRangeFeedback');
-
-    if (startNum <= 0 || endNum <= 0) {
-      if (feedback) {
-        feedback.style.display = 'block';
-        feedback.style.background = '#fef2f2';
-        feedback.style.color = '#dc2626';
-        feedback.textContent = 'Please enter valid Start and End Than numbers (greater than 0).';
-      }
-      return;
-    }
-
-    if (startNum > endNum) {
-      if (feedback) {
-        feedback.style.display = 'block';
-        feedback.style.background = '#fef2f2';
-        feedback.style.color = '#dc2626';
-        feedback.textContent = 'Start Than # must be less than or equal to End Than #.';
-      }
-      return;
-    }
-
-    const otherCardsUniqueIds = getOtherCardsUniqueIds();
-    let count = 0;
-    let meters = 0;
-
-    availablePurchases.forEach(p => {
-      if (lotFilter && p.challan_no !== lotFilter && p.po_number !== lotFilter) return;
-      const tNum = parseInt(p.than_no) || 0;
-      if (tNum >= startNum && tNum <= endNum) {
-        if (otherCardsUniqueIds.has(p.unique_id)) return;
-        if (isSelect) {
-          modalSelectedUniqueIds.add(p.unique_id);
-        } else {
-          modalSelectedUniqueIds.delete(p.unique_id);
-        }
-        count++;
-        meters += (parseFloat(p.meter) || 0);
-      }
-    });
-
-    if (feedback) {
-      feedback.style.display = 'block';
-      if (count > 0) {
-        feedback.style.background = isSelect ? '#ecfdf5' : '#f8fafc';
-        feedback.style.color = isSelect ? '#047857' : '#475569';
-        feedback.textContent = isSelect 
-          ? `✓ Successfully selected ${count} Thans (${meters.toFixed(2)} Mtr) for range #${startNum} to #${endNum}${lotFilter ? ` in Challan #${lotFilter}` : ''}.`
-          : `✓ Deselected ${count} Thans for range #${startNum} to #${endNum}.`;
-      } else {
-        feedback.style.background = '#fffbeb';
-        feedback.style.color = '#b45309';
-        feedback.textContent = `No available thans found matching Than #${startNum} to #${endNum}${lotFilter ? ` in Challan #${lotFilter}` : ''}.`;
-      }
-    }
-
-    renderThanModalList();
-  }
-
-  function renderThanModalList() {
-    if (activeModalItemIdx === null) return;
-    const item = itemsData[activeModalItemIdx];
-    const container = document.getElementById('thanModalListContainer');
-    if (!container || !item) return;
-
-    const rawId = item.raw_item_id;
-    const rawName = (item.raw_item_name || '').toLowerCase().trim();
-    const availablePurchases = (rawId && purchasedTonsMap[rawId]) ? purchasedTonsMap[rawId] : (rawName && purchasedTonsMap[rawName] ? purchasedTonsMap[rawName] : []);
-
-    const query = (document.getElementById('thanModalSearchInput')?.value || '').toLowerCase().trim();
-    const clearBtn = document.getElementById('thanModalClearSearchBtn');
-    if (clearBtn) clearBtn.style.display = query ? 'inline-flex' : 'none';
-
-    const otherCardsUniqueIds = getOtherCardsUniqueIds();
-
-    const filtered = availablePurchases.filter(p => {
-      if (otherCardsUniqueIds.has(p.unique_id)) return false;
-      if (!query) return true;
-      const matchChallan = (p.challan_no || '').toString().toLowerCase().includes(query);
-      const matchThan = (p.than_no || '').toString().toLowerCase().includes(query);
-      const matchPO = (p.po_number || '').toString().toLowerCase().includes(query);
-      const matchMeter = (p.meter || '').toString().toLowerCase().includes(query);
-      const matchLabel = (p.label || '').toString().toLowerCase().includes(query);
-      return matchChallan || matchThan || matchPO || matchMeter || matchLabel;
-    });
-
-    const lots = groupPurchasesByLot(availablePurchases.filter(p => !otherCardsUniqueIds.has(p.unique_id)));
-    populateRangeLotSelect(lots);
-
-    if (filtered.length === 0) {
-      container.innerHTML = `
-        <div style="text-align:center; padding:36px 16px; color:#64748b;">
-          <div style="font-size:1.8rem; margin-bottom:8px;">🔍</div>
-          <div style="font-weight:700; font-size:0.95rem; color:#334155;">No matching Thans found</div>
-          <div style="font-size:0.8rem; color:#94a3b8; margin-top:4px;">Try refining your search keyword.</div>
-        </div>
-      `;
-      updateThanModalStats(availablePurchases.length, 0);
-      return;
-    }
-
-    if (modalActiveTab === 'lot') {
-      const filteredLots = groupPurchasesByLot(filtered);
-
-      container.innerHTML = filteredLots.map(lot => {
-        let lotSelectedCount = 0;
-        let lotSelectedMeters = 0;
-        lot.thans.forEach(t => {
-          if (modalSelectedUniqueIds.has(t.unique_id)) {
-            lotSelectedCount++;
-            lotSelectedMeters += (parseFloat(t.meter) || 0);
-          }
-        });
-
-        const isCollapsed = (lotCollapseState[lot.key] === true);
-
-        return `
-          <div class="modal-lot-card" id="lot-card-${lot.key}">
-            <div class="modal-lot-header">
-              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                <span style="font-weight:800; font-size:0.925rem; color:#1e293b;">
-                  📦 Challan #${lot.challan_no}
-                </span>
-                <span style="background:#eef2ff; color:#4338ca; border:1px solid #c7d2fe; font-size:0.75rem; font-weight:800; padding:2px 8px; border-radius:5px;">
-                  ${lot.thans.length} Thans &bull; ${lot.totalMeters.toFixed(2)} ${lot.unit}
-                </span>
-                ${lot.date ? `<span style="color:#64748b; font-size:0.75rem;">${lot.date}</span>` : ''}
-                <span style="font-size:0.75rem; font-weight:800; color:${lotSelectedCount > 0 ? '#059669' : '#94a3b8'}; background:${lotSelectedCount > 0 ? '#ecfdf5' : '#f1f5f9'}; border:1px solid ${lotSelectedCount > 0 ? '#a7f3d0' : '#e2e8f0'}; padding:2px 8px; border-radius:5px;">
-                  ${lotSelectedCount}/${lot.thans.length} Selected (${lotSelectedMeters.toFixed(2)} Mtr)
-                </span>
-              </div>
-              <div style="display:flex; gap:6px; align-items:center;">
-                <button type="button" class="btn btn-secondary btn-xs" onclick="selectWholeLot('${lot.challan_no}')" style="font-weight:700; color:#4338ca; border-color:#c7d2fe; background:#ffffff;">
-                  ✓ Select Entire Lot
-                </button>
-                <button type="button" class="btn btn-secondary btn-xs" onclick="deselectWholeLot('${lot.challan_no}')" style="font-weight:700; color:#ef4444; border-color:#fecaca; background:#ffffff;">
-                  ✕ Deselect Lot
-                </button>
-                <button type="button" class="btn btn-secondary btn-xs" id="lot-toggle-btn-${lot.key}" onclick="toggleLotExpand('${lot.key}')" style="font-weight:700;">
-                  ${isCollapsed ? '▶ Expand' : '▼ Collapse'}
-                </button>
-              </div>
-            </div>
-            <div class="modal-lot-body" id="lot-body-${lot.key}" style="display:${isCollapsed ? 'none' : 'grid'};">
-              ${lot.thans.map(p => renderSingleThanCardHtml(p)).join('')}
-            </div>
-          </div>
-        `;
-      }).join('');
-    } else {
-      // Grid or Range mode (renders responsive grid of than cards)
-      container.innerHTML = `
-        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(210px, 1fr)); gap:10px;">
-          ${filtered.map(p => renderSingleThanCardHtml(p)).join('')}
-        </div>
-      `;
-    }
-
-    updateThanModalStats(availablePurchases.length, filtered.length);
-  }
-
-  function renderSingleThanCardHtml(p) {
-    const isSelected = modalSelectedUniqueIds.has(p.unique_id);
-    const isPartial = p.original_meter && p.used_meter > 0;
-    return `
-      <div class="modal-than-item ${isSelected ? 'selected' : ''}" 
-           id="modal-than-${p.unique_id}"
-           onclick="toggleModalThanItem('${p.unique_id}')">
-        <div style="display:flex; align-items:flex-start; gap:10px;">
-          <input type="checkbox" id="modal-chk-${p.unique_id}" ${isSelected ? 'checked' : ''} style="margin-top:3px; pointer-events:none; accent-color:#4338ca; width:16px; height:16px;">
-          <div style="flex:1; min-width:0;">
-            <div style="display:flex; justify-content:space-between; align-items:center; gap:6px;">
-              <span style="font-weight:800; font-size:0.85rem; color:#1e293b;">Than #${p.than_no}</span>
-              <span style="font-weight:800; font-size:0.85rem; color:#059669; font-family:monospace;">${parseFloat(p.meter).toFixed(2)} ${p.unit || 'Mtr'}</span>
-            </div>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:3px; font-size:0.75rem; color:#64748b;">
-              <span>Challan #${p.challan_no}</span>
-              ${p.date ? `<span style="font-size:0.7rem; color:#94a3b8;">${p.date}</span>` : ''}
-            </div>
-            ${isPartial ? `
-              <div style="font-size:0.68rem; color:#d97706; font-weight:700; margin-top:3px; background:#fffbeb; padding:1px 6px; border-radius:4px; display:inline-block;">
-                ⚡ ${parseFloat(p.meter).toFixed(2)} rem of ${parseFloat(p.original_meter).toFixed(2)} ${p.unit}
-              </div>
-            ` : ''}
-          </div>
-        </div>
-      </div>
-    `;
-  }
-
-  function toggleModalThanItem(uniqueId) {
-    if (modalSelectedUniqueIds.has(uniqueId)) {
-      modalSelectedUniqueIds.delete(uniqueId);
-    } else {
-      modalSelectedUniqueIds.add(uniqueId);
-    }
-
-    const el = document.getElementById(`modal-than-${uniqueId}`);
-    const chk = document.getElementById(`modal-chk-${uniqueId}`);
-    if (el) {
-      if (modalSelectedUniqueIds.has(uniqueId)) {
-        el.classList.add('selected');
-        if (chk) chk.checked = true;
-      } else {
-        el.classList.remove('selected');
-        if (chk) chk.checked = false;
-      }
-    }
-
-    const item = itemsData[activeModalItemIdx];
-    const rawId = item.raw_item_id;
-    const rawName = (item.raw_item_name || '').toLowerCase().trim();
-    const availablePurchases = (rawId && purchasedTonsMap[rawId]) ? purchasedTonsMap[rawId] : (rawName && purchasedTonsMap[rawName] ? purchasedTonsMap[rawName] : []);
-    
-    updateThanModalStats(availablePurchases.length);
-  }
-
-  function modalSelectAllFiltered() {
-    if (activeModalItemIdx === null) return;
-    const item = itemsData[activeModalItemIdx];
-    const rawId = item.raw_item_id;
-    const rawName = (item.raw_item_name || '').toLowerCase().trim();
-    const availablePurchases = (rawId && purchasedTonsMap[rawId]) ? purchasedTonsMap[rawId] : (rawName && purchasedTonsMap[rawName] ? purchasedTonsMap[rawName] : []);
-    
-    const query = (document.getElementById('thanModalSearchInput')?.value || '').toLowerCase().trim();
-    const otherCardsUniqueIds = getOtherCardsUniqueIds();
-
-    availablePurchases.forEach(p => {
-      if (otherCardsUniqueIds.has(p.unique_id)) return;
-      if (query) {
-        const matchChallan = (p.challan_no || '').toString().toLowerCase().includes(query);
-        const matchThan = (p.than_no || '').toString().toLowerCase().includes(query);
-        const matchPO = (p.po_number || '').toString().toLowerCase().includes(query);
-        const matchMeter = (p.meter || '').toString().toLowerCase().includes(query);
-        const matchLabel = (p.label || '').toString().toLowerCase().includes(query);
-        if (!(matchChallan || matchThan || matchPO || matchMeter || matchLabel)) return;
-      }
-      if (p.unique_id) {
-        modalSelectedUniqueIds.add(p.unique_id);
-      }
-    });
-
-    renderThanModalList();
-  }
-
-  function modalDeselectAllFiltered() {
-    if (activeModalItemIdx === null) return;
-    const item = itemsData[activeModalItemIdx];
-    const rawId = item.raw_item_id;
-    const rawName = (item.raw_item_name || '').toLowerCase().trim();
-    const availablePurchases = (rawId && purchasedTonsMap[rawId]) ? purchasedTonsMap[rawId] : (rawName && purchasedTonsMap[rawName] ? purchasedTonsMap[rawName] : []);
-    
-    const query = (document.getElementById('thanModalSearchInput')?.value || '').toLowerCase().trim();
-
-    availablePurchases.forEach(p => {
-      if (query) {
-        const matchChallan = (p.challan_no || '').toString().toLowerCase().includes(query);
-        const matchThan = (p.than_no || '').toString().toLowerCase().includes(query);
-        const matchPO = (p.po_number || '').toString().toLowerCase().includes(query);
-        const matchMeter = (p.meter || '').toString().toLowerCase().includes(query);
-        const matchLabel = (p.label || '').toString().toLowerCase().includes(query);
-        if (!(matchChallan || matchThan || matchPO || matchMeter || matchLabel)) return;
-      }
-      if (p.unique_id) {
-        modalSelectedUniqueIds.delete(p.unique_id);
-      }
-    });
-
-    renderThanModalList();
-  }
-
-  function modalClearAllSelection() {
-    modalSelectedUniqueIds.clear();
-    renderThanModalList();
-  }
-
-  function updateThanModalStats(totalAvailable) {
-    if (activeModalItemIdx === null) return;
-    const item = itemsData[activeModalItemIdx];
-    const rawId = item.raw_item_id;
-    const rawName = (item.raw_item_name || '').toLowerCase().trim();
-    const availablePurchases = (rawId && purchasedTonsMap[rawId]) ? purchasedTonsMap[rawId] : (rawName && purchasedTonsMap[rawName] ? purchasedTonsMap[rawName] : []);
-
-    let selectedMeters = 0;
-    let selectedCount = 0;
-    availablePurchases.forEach(p => {
-      if (modalSelectedUniqueIds.has(p.unique_id)) {
-        selectedCount++;
-        selectedMeters += (parseFloat(p.meter) || 0);
-      }
-    });
-
-    const badge = document.getElementById('thanModalTotalSelectedBadge');
-    if (badge) {
-      badge.textContent = `${selectedCount} Thans Selected | ${selectedMeters.toFixed(2)} Mtr`;
-    }
-
-    const cons = parseFloat(item.consumption_per_pc) || 1.5;
-    const yieldBadge = document.getElementById('thanModalYieldBadge');
-    if (yieldBadge) {
-      if (selectedCount > 0) {
-        const estYield = Math.floor(selectedMeters / cons);
-        yieldBadge.style.display = 'inline-block';
-        yieldBadge.textContent = `Yield: ~${estYield.toLocaleString()} Pcs (${item.finished_item_name || 'Finished Product'})`;
-      } else {
-        yieldBadge.style.display = 'none';
-      }
-    }
-
-    const stats = document.getElementById('modalSummaryStats');
-    if (stats) {
-      stats.innerHTML = `${selectedCount} of ${totalAvailable} Selected &bull; <strong style="color:#059669;">${selectedMeters.toFixed(2)} Mtr</strong>`;
-    }
-
-    const applyBtn = document.getElementById('thanModalApplyBtn');
-    if (applyBtn) {
-      applyBtn.textContent = `Apply Selection (${selectedCount})`;
-    }
-  }
-
-  function applyThanModalSelection() {
-    if (activeModalItemIdx === null) return;
-    const item = itemsData[activeModalItemIdx];
-    if (!item) return;
-
-    const rawId = item.raw_item_id;
-    const rawName = (item.raw_item_name || '').toLowerCase().trim();
-    const availablePurchases = (rawId && purchasedTonsMap[rawId]) ? purchasedTonsMap[rawId] : (rawName && purchasedTonsMap[rawName] ? purchasedTonsMap[rawName] : []);
-    const cons = parseFloat(item.consumption_per_pc) || 1.5;
-
-    // 1. Keep any custom thans (those without unique_id)
-    const customThans = (item.thans || []).filter(t => !t.unique_id);
-
-    // 2. Build map of already existing thans with unique_id to preserve user-edited wastages
-    const existingMap = new Map();
-    (item.thans || []).forEach(t => {
-      if (t.unique_id) existingMap.set(t.unique_id, t);
-    });
-
-    // 3. For each unique_id in modalSelectedUniqueIds, keep existing or create new
-    const updatedThans = [...customThans];
-    const visitedUids = new Set();
-    availablePurchases.forEach(p => {
-      if (p.unique_id && modalSelectedUniqueIds.has(p.unique_id)) {
-        visitedUids.add(p.unique_id);
-        if (existingMap.has(p.unique_id)) {
-          updatedThans.push(existingMap.get(p.unique_id));
-        } else {
-          const thanObj = calculateThanValues(p.meter, null, cons);
-          thanObj.unique_id = p.unique_id;
-          if (p.po_id) thanObj.po_id = p.po_id;
-          if (p.po_item_id) thanObj.po_item_id = p.po_item_id;
-          if (p.po_number) thanObj.po_number = p.po_number;
-          if (p.challan_no) thanObj.challan_no = p.challan_no;
-          if (p.than_no) thanObj.purchase_than_no = p.than_no;
-          if (p.unit) thanObj.unit = p.unit;
-          updatedThans.push(thanObj);
-        }
-      }
-    });
-
-    // In case existing thans had a unique_id that was selected and not in availablePurchases list
-    existingMap.forEach((thanObj, uid) => {
-      if (modalSelectedUniqueIds.has(uid) && !visitedUids.has(uid)) {
-        updatedThans.push(thanObj);
-      }
-    });
-
-    itemsData[activeModalItemIdx].thans = updatedThans;
-    closeThanSelectModal();
-    renderAllRawItemCards();
-    calculateOverallTotals();
-  }
-
-  function calculateOverallTotals() {
-    let grandTotalRaw = 0;
-    let grandTotalThans = 0;
-    let grandTotalWastage = 0;
-    let grandTotalPcs = 0;
-    let grandTotalAmount = 0;
-
-    itemsData.forEach(item => {
-      let itemRaw = 0;
-      let itemWastage = 0;
-      let itemPcs = 0;
-
-      item.thans.forEach(t => {
-        itemRaw += (parseFloat(t.meter) || 0);
-        itemWastage += (parseFloat(t.wastage) || 0);
-        itemPcs += (parseInt(t.pieces) || 0);
-      });
-
-      const itemRate = parseFloat(item.rate_per_piece) || 0;
-
-      grandTotalRaw += itemRaw;
-      grandTotalThans += item.thans.length;
-      grandTotalWastage += itemWastage;
-      grandTotalPcs += itemPcs;
-      grandTotalAmount += (itemPcs * itemRate);
-    });
-
-    const netRaw = Math.max(0, grandTotalRaw - grandTotalWastage);
-
-    const elItems = document.getElementById('summary-items-count');
-    const elThans = document.getElementById('summary-than-count');
-    const elRaw = document.getElementById('summary-total-raw-qty');
-    const elWastage = document.getElementById('summary-total-wastage');
-    const elNet = document.getElementById('summary-net-raw');
-    const elPcs = document.getElementById('summary-total-pcs');
-    const elAmount = document.getElementById('summary-grand-amount');
-
-    if (elItems) elItems.textContent = itemsData.length + (itemsData.length === 1 ? ' Item' : ' Items');
-    if (elThans) elThans.textContent = grandTotalThans + ' Thans';
-    if (elRaw) elRaw.textContent = grandTotalRaw.toFixed(2) + ' Mtr/KG';
-    if (elWastage) elWastage.textContent = grandTotalWastage.toFixed(2) + ' Mtr/KG';
-    if (elNet) elNet.textContent = netRaw.toFixed(2) + ' Mtr/KG';
-    if (elPcs) elPcs.textContent = grandTotalPcs.toLocaleString('en-IN') + ' Pcs';
-    if (elAmount) elAmount.textContent = '₹' + grandTotalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  }
-
-  document.getElementById('jw-form')?.addEventListener('submit', function(e) {
-    if (itemsData.length === 0) {
+  // Form submit validation
+  document.getElementById('job-order-form')?.addEventListener('submit', function(e) {
+    if (orderItems.length === 0) {
       e.preventDefault();
-      alert('Please add at least one raw item to this job work order.');
+      alert('Please add at least one line item to the Job Work Order.');
       return false;
     }
-
-    let hasMissingRaw = false;
-    let hasMissingFinished = false;
-    let hasZeroTons = false;
-    let hasZeroPcs = false;
-
-    itemsData.forEach((item, idx) => {
-      if (!item.raw_item_name) {
-        hasMissingRaw = true;
-      }
-      if (!item.finished_item_name) {
-        hasMissingFinished = true;
-      }
-      if (item.thans.length === 0) {
-        hasZeroTons = true;
-      }
-      
-      let itemTotalPcs = 0;
-      item.thans.forEach(t => {
-        itemTotalPcs += (parseInt(t.pieces) || 0);
-      });
-      if (itemTotalPcs <= 0 && item.thans.length > 0) {
-        hasZeroPcs = true;
-      }
-    });
-
-    if (hasMissingRaw) {
+    const worker = document.getElementById('jwo-worker-select').value;
+    if (!worker) {
       e.preventDefault();
-      alert('Please select a Raw Item for all entries.');
-      return false;
-    }
-
-    if (hasMissingFinished) {
-      e.preventDefault();
-      alert('Please select a Target Finished Item for all entries.');
-      return false;
-    }
-
-    if (hasZeroTons) {
-      e.preventDefault();
-      alert('Please select or add at least one Than for each raw item.');
-      return false;
-    }
-
-    if (hasZeroPcs) {
-      e.preventDefault();
-      alert('Please verify expected finished pieces quantity (Yield Pcs > 0) for each Than.');
+      alert('Please select a Job worker.');
+      document.getElementById('jwo-worker-select').focus();
       return false;
     }
   });
 
-  // Photo management state
-  let photoItems = [];
+  // Ensure modal and action handlers are globally accessible on window
+  window.openEntryThanModal = openEntryThanModal;
+  window.openRowThanModal = openRowThanModal;
+  window.closeThanModal = closeThanModal;
+  window.applyModalThans = applyModalThans;
+  window.updateModalThanPreview = updateModalThanPreview;
+  window.addEntryLineItem = addEntryLineItem;
+  window.deleteItem = deleteItem;
+  window.editItem = editItem;
 
-  function triggerDeviceCamera() {
-    const camInput = document.getElementById('cameraFileInput');
-    if (camInput) {
-      camInput.click();
-    }
-  }
-
-  function triggerGalleryUpload() {
-    const galInput = document.getElementById('galleryFileInput');
-    if (galInput) {
-      galInput.click();
-    }
-  }
-
-  let webcamStream = null;
-  let currentFacingMode = 'environment';
-
-  async function openWebcamModal() {
-    const modal = document.getElementById('webcamModal');
-    if (modal) modal.style.display = 'flex';
-    await startWebcamStream();
-  }
-
-  async function startWebcamStream() {
-    const video = document.getElementById('webcamVideo');
-    const msg = document.getElementById('cameraStatusMsg');
-    if (!video) return;
-
-    if (webcamStream) {
-      webcamStream.getTracks().forEach(t => t.stop());
-    }
-
-    try {
-      webcamStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: currentFacingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
-        audio: false
-      });
-      video.srcObject = webcamStream;
-      if (msg) msg.textContent = 'Camera active. Frame sample and click "Capture Photo".';
-    } catch (err) {
-      console.warn('Webcam stream error:', err);
-      if (msg) msg.textContent = 'Webcam not available directly. Switching to device camera file capture...';
-      setTimeout(() => {
-        closeWebcamModal();
-        triggerDeviceCamera();
-      }, 1000);
-    }
-  }
-
-  async function switchCameraFacing() {
-    currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
-    await startWebcamStream();
-  }
-
-  function closeWebcamModal() {
-    const modal = document.getElementById('webcamModal');
-    if (modal) modal.style.display = 'none';
-    if (webcamStream) {
-      webcamStream.getTracks().forEach(t => t.stop());
-      webcamStream = null;
-    }
-  }
-
-  function captureWebcamSnapshot() {
-    const video = document.getElementById('webcamVideo');
-    const canvas = document.getElementById('webcamCanvas');
-    if (!video || !canvas) return;
-
-    canvas.width = video.videoWidth || 640;
-    canvas.height = video.videoHeight || 480;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
-
-    const photoId = 'snap_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
-    photoItems.push({
-      id: photoId,
-      source: 'Camera',
-      dataUrl: dataUrl,
-      isSnapshot: true,
-      name: 'Camera Snapshot'
-    });
-
-    renderPhotoPreviews();
-    closeWebcamModal();
-    if (window.UI && UI.showToast) {
-      UI.showToast('Captured', 'Sample photo captured successfully', 'success');
-    }
-  }
-
-  function handleFileInputChange(input, source) {
-    if (!input.files || input.files.length === 0) return;
-
-    Array.from(input.files).forEach(file => {
-      if (!file.type.startsWith('image/')) return;
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        const photoId = 'file_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
-        photoItems.push({
-          id: photoId,
-          source: source,
-          dataUrl: e.target.result,
-          file: file,
-          name: file.name,
-          isSnapshot: false
-        });
-        renderPhotoPreviews();
-      };
-      reader.readAsDataURL(file);
-    });
-  }
-
-  function removePhotoItem(id) {
-    photoItems = photoItems.filter(p => p.id !== id);
-    renderPhotoPreviews();
-  }
-
-  function renderPhotoPreviews() {
-    const grid = document.getElementById('photo-preview-grid');
-    const snapshotsContainer = document.getElementById('hidden-snapshots-container');
-    if (!grid) return;
-
-    if (photoItems.length === 0) {
-      grid.innerHTML = `
-        <div id="no-photo-empty" style="grid-column:1 / -1; text-align:center; padding:16px; color:#64748b;">
-          <div style="width:44px; height:44px; margin:0 auto 10px; border-radius:50%; background:#e2e8f0; display:flex; align-items:center; justify-content:center; color:#64748b;">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-          </div>
-          <div style="font-weight:700; font-size:0.9rem; color:#334155;">No sample photos attached yet</div>
-          <p style="margin:4px 0 0; font-size:0.775rem; color:#94a3b8;">Use <strong>📷 Take Photo</strong> on mobile or <strong>🖼️ Pick from Gallery</strong> to upload handover samples.</p>
-        </div>
-      `;
-      if (snapshotsContainer) snapshotsContainer.innerHTML = '';
-      return;
-    }
-
-    let html = '';
-    let snapshotInputs = '';
-
-    photoItems.forEach((p, idx) => {
-      const isCam = p.source === 'Camera';
-      const badgeBg = isCam ? '#e0f2fe' : '#f1f5f9';
-      const badgeColor = isCam ? '#0369a1' : '#475569';
-      const badgeIcon = isCam ? '📷' : '🖼️';
-
-      html += `
-        <div style="position:relative; background:#ffffff; border:1px solid #cbd5e1; border-radius:12px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
-          <div style="height:110px; background:#0f172a; overflow:hidden; position:relative; cursor:pointer;" onclick="window.open('${p.dataUrl}', '_blank')">
-            <img src="${p.dataUrl}" alt="Sample ${idx + 1}" style="width:100%; height:100%; object-fit:cover;">
-            <span style="position:absolute; top:6px; left:6px; background:${badgeBg}; color:${badgeColor}; font-size:0.68rem; font-weight:800; padding:2px 6px; border-radius:4px; border:1px solid rgba(0,0,0,0.06);">
-              ${badgeIcon} ${p.source}
-            </span>
-          </div>
-          <div style="padding:6px 8px; display:flex; justify-content:space-between; align-items:center; background:#ffffff;">
-            <span style="font-size:0.72rem; color:#64748b; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:85px;">
-              ${p.name || 'Sample #' + (idx + 1)}
-            </span>
-            <button type="button" onclick="removePhotoItem('${p.id}')" style="background:#fee2e2; border:1px solid #fca5a5; color:#dc2626; border-radius:6px; width:22px; height:22px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-weight:800; font-size:0.75rem;" title="Remove this photo">
-              &times;
-            </button>
-          </div>
-        </div>
-      `;
-
-      if (p.isSnapshot) {
-        snapshotInputs += `<input type="hidden" name="camera_snapshots[]" value="${p.dataUrl}">`;
-      }
-    });
-
-    grid.innerHTML = html;
-    if (snapshotsContainer) {
-      snapshotsContainer.innerHTML = snapshotInputs;
-    }
-  }
-
-  document.addEventListener('DOMContentLoaded', () => {
-    renderAllRawItemCards();
-    calculateOverallTotals();
+  document.addEventListener('DOMContentLoaded', function() {
+    renderTable();
+    calculateOrderTotals();
   });
 </script>
 @endpush

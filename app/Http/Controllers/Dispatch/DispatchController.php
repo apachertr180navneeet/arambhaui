@@ -477,9 +477,14 @@ class DispatchController extends Controller
         });
     }
 
-    public function show(DispatchChallan $challan)
+    public function show(Request $request, DispatchChallan $challan)
     {
-        return response()->json($challan->load('items.item'));
+        $challan->load(['items.item', 'customer']);
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json($challan);
+        }
+        $companySettings = \App\Models\CompanySetting::first();
+        return view('dispatch.challans.show', compact('challan', 'companySettings'));
     }
 
     public function destroy(DispatchChallan $challan)

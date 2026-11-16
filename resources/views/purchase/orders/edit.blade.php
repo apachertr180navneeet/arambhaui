@@ -1108,6 +1108,17 @@
     }
   });
 
+  // Ensure global modal & action accessibility on window
+  window.openEntryThanModal = openEntryThanModal;
+  window.openRowThanModal = openRowThanModal;
+  window.closeThanModal = closeThanModal;
+  window.applyModalThans = applyModalThans;
+  window.updateModalThanPreview = updateModalThanPreview;
+  window.addEntryLineItem = addEntryLineItem;
+  window.deleteItem = deleteItem;
+  window.editItem = editItem;
+  window.autoGenerateChallanNo = autoGenerateChallanNo;
+
   document.addEventListener('DOMContentLoaded', () => {
     const vSel = document.getElementById('vendor-select');
     if (vSel && vSel.value) {
