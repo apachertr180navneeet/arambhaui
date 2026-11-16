@@ -50,11 +50,12 @@ class AppServiceProvider extends ServiceProvider
         }
 
         try {
-            if (Schema::hasTable('company_settings')) {
-                $companySettings = CompanySetting::all()->pluck('value', 'key')->toArray();
-            } else {
-                $companySettings = [];
-            }
+            $companySettings = \Illuminate\Support\Facades\Cache::remember('company_settings_shared', 3600, function () {
+                if (Schema::hasTable('company_settings')) {
+                    return CompanySetting::all()->pluck('value', 'key')->toArray();
+                }
+                return [];
+            });
         } catch (\Throwable $e) {
             $companySettings = [];
         }

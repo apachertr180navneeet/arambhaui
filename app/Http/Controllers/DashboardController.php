@@ -23,33 +23,28 @@ class DashboardController extends Controller
     {
         $user = Auth::user();
 
-        // High-level KPI metrics calculated from database
-        $totalCustomers = Customer::count();
-        $totalVendors = Vendor::count();
-        $totalJobWorkers = JobWorker::count();
-        $totalItems = Item::count();
-        $totalPOs = PurchaseOrder::count();
-        $totalActiveVouchers = QrVoucher::where('status', 'Active')->count();
-        $totalRedeemedVouchers = QrVoucher::where('status', 'Redeemed')->count();
-        $totalChallans = DispatchChallan::count();
-        $totalPendingAssignments = JobAssignment::whereIn('status', ['Issued', 'In Progress', 'Partial Ready'])->count();
-        $lowStockItems = Item::whereRaw('current_stock <= min_stock')->get();
+        // High-level KPI metrics cached for 30 seconds for lightning-fast dashboard response
+        $stats = \Illuminate\Support\Facades\Cache::remember('dashboard_kpi_stats', 30, function () {
+            return [
+                'totalCustomers' => Customer::count(),
+                'totalVendors' => Vendor::count(),
+                'totalJobWorkers' => JobWorker::count(),
+                'totalItems' => Item::count(),
+                'totalPOs' => PurchaseOrder::count(),
+                'totalActiveVouchers' => QrVoucher::where('status', 'Active')->count(),
+                'totalRedeemedVouchers' => QrVoucher::where('status', 'Redeemed')->count(),
+                'totalChallans' => DispatchChallan::count(),
+                'totalPendingAssignments' => JobAssignment::whereIn('status', ['Issued', 'In Progress', 'Partial Ready'])->count(),
+                'lowStockItems' => Item::whereRaw('current_stock <= min_stock')->get(),
+            ];
+        });
+
+        $lowStockItems = $stats['lowStockItems'] ?? collect([]);
+        $stats['lowStockCount'] = $lowStockItems->count();
+
         $recentPOs = PurchaseOrder::with('vendor')->latest()->take(5)->get();
         $recentJobOrders = JobAssignment::latest()->take(5)->get();
         $recentVouchers = QrVoucher::latest()->take(5)->get();
-
-        $stats = [
-            'totalCustomers' => $totalCustomers,
-            'totalVendors' => $totalVendors,
-            'totalJobWorkers' => $totalJobWorkers,
-            'totalItems' => $totalItems,
-            'totalPOs' => $totalPOs,
-            'totalActiveVouchers' => $totalActiveVouchers,
-            'totalRedeemedVouchers' => $totalRedeemedVouchers,
-            'totalChallans' => $totalChallans,
-            'totalPendingAssignments' => $totalPendingAssignments,
-            'lowStockCount' => $lowStockItems->count()
-        ];
 
         return view('dashboard.index', compact('user', 'stats', 'lowStockItems', 'recentPOs', 'recentJobOrders', 'recentVouchers'));
     }

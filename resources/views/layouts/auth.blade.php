@@ -24,14 +24,14 @@
     };
   </script>
 
-  <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+  <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono with display=swap -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
   <!-- Application Stylesheets -->
-  <link rel="stylesheet" href="{{ asset('css/main.css') }}">
-  <link rel="stylesheet" href="{{ asset('css/forms.css') }}">
+  <link rel="stylesheet" href="{{ asset('css/main.css') }}?v=1.2">
+  <link rel="stylesheet" href="{{ asset('css/forms.css') }}?v=1.2">
   
   <style>
     body.auth-page {
@@ -41,7 +41,7 @@
       align-items: center;
       justify-content: center;
       padding: 24px;
-      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
     }
     .auth-container {
       width: 100%;

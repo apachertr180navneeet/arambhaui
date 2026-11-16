@@ -118,6 +118,15 @@
 @endsection
 
 @section('scripts')
+<style>
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  .animate-spin {
+    animation: spin 0.8s linear infinite;
+  }
+</style>
 <script>
   function togglePasswordVisibility() {
     const passwordInput = document.getElementById('password');
@@ -131,11 +140,75 @@
     }
   }
 
-  document.getElementById('login-form')?.addEventListener('submit', function() {
+  function showLoginError(msg) {
+    let existingAlert = document.getElementById('login-error-alert');
+    if (existingAlert) existingAlert.remove();
+
+    const alertDiv = document.createElement('div');
+    alertDiv.id = 'login-error-alert';
+    alertDiv.className = 'alert alert-danger';
+    alertDiv.style.marginBottom = '18px';
+    alertDiv.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>${msg}</span>`;
+    
+    const form = document.getElementById('login-form');
+    if (form && form.parentNode) {
+      form.parentNode.insertBefore(alertDiv, form);
+    }
+  }
+
+  document.getElementById('login-form')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
     const btn = document.getElementById('submit-btn');
+    const originalContent = btn ? btn.innerHTML : '';
+    
+    let existingAlert = document.getElementById('login-error-alert');
+    if (existingAlert) existingAlert.remove();
+
     if (btn) {
       btn.disabled = true;
       btn.innerHTML = '<svg class="animate-spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg><span>Signing in...</span>';
+    }
+
+    const form = this;
+    const formData = new FormData(form);
+
+    try {
+      const response = await fetch(form.action, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+        },
+        body: formData
+      });
+
+      const data = await response.json().catch(() => null);
+
+      if (response.ok && data && data.success) {
+        if (btn) {
+          btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg><span>Success! Redirecting...</span>';
+        }
+        window.location.href = data.redirect || '{{ route("dashboard") }}';
+        return;
+      }
+
+      let errorMsg = (data && data.message) ? data.message : 'The provided credentials do not match our records.';
+      if (data && data.errors) {
+        const firstKey = Object.keys(data.errors)[0];
+        if (firstKey && data.errors[firstKey] && data.errors[firstKey][0]) {
+          errorMsg = data.errors[firstKey][0];
+        }
+      }
+
+      showLoginError(errorMsg);
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = originalContent;
+      }
+    } catch (err) {
+      // Fallback to native submission if AJAX fails
+      form.submit();
     }
   });
 </script>

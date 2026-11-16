@@ -64,39 +64,20 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-  <!-- Application Stylesheets with Cache Busting -->
-  <link rel="stylesheet" href="{{ asset('css/main.css') }}?v={{ time() }}">
-  <link rel="stylesheet" href="{{ asset('css/sidebar.css') }}?v={{ time() }}">
-  <link rel="stylesheet" href="{{ asset('css/dashboard.css') }}?v={{ time() }}">
-  <link rel="stylesheet" href="{{ asset('css/tables.css') }}?v={{ time() }}">
-  <link rel="stylesheet" href="{{ asset('css/forms.css') }}?v={{ time() }}">
-  <link rel="stylesheet" href="{{ asset('css/qr.css') }}?v={{ time() }}">
-  <link rel="stylesheet" href="{{ asset('css/print.css') }}?v={{ time() }}">
+  <!-- Application Stylesheets with Versioned Cache -->
+  <link rel="stylesheet" href="{{ asset('css/main.css') }}?v=1.2">
+  <link rel="stylesheet" href="{{ asset('css/sidebar.css') }}?v=1.3">
+  <link rel="stylesheet" href="{{ asset('css/dashboard.css') }}?v=1.2">
+  <link rel="stylesheet" href="{{ asset('css/tables.css') }}?v=1.2">
+  <link rel="stylesheet" href="{{ asset('css/forms.css') }}?v=1.2">
+  <link rel="stylesheet" href="{{ asset('css/qr.css') }}?v=1.2">
+  <link rel="stylesheet" href="{{ asset('css/print.css') }}?v=1.2">
 
-  <!-- QR Scanning Engines: html5-qrcode + jsQR (multi-CDN resilient fallbacks) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
-  <script>
-    if (typeof Html5Qrcode === 'undefined') {
-      document.write('<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"><\/script>');
-    }
-  </script>
-  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
-  <script>
-    if (typeof jsQR === 'undefined') {
-      document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"><\/script>');
-    }
-    if (typeof jsQR === 'undefined') {
-      document.write('<script src="https://unpkg.com/jsqr@1.4.0/dist/jsQR.js"><\/script>');
-    }
-  </script>
-
-  <!-- SweetAlert2 library with fallback -->
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-  <script>
-    if (typeof Swal === 'undefined') {
-      document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/sweetalert2/11.10.7/sweetalert2.all.min.js"><\/script>');
-    }
-  </script>
+  @if(request()->is('qr*') || request()->is('*scan*'))
+  <!-- QR Scanning Engines: only loaded on QR scanner pages -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js" defer></script>
+  @endif
 
   @stack('styles')
 </head>
@@ -202,8 +183,7 @@
               <svg class="nav-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
             </a>
             <div class="nav-submenu">
-              <a href="{{ route('purchase.orders.index') }}" class="submenu-link {{ request()->routeIs('purchase.orders.index') ? 'active' : '' }}">Purchase Entries</a>
-              <a href="{{ route('purchase.ledger') }}" class="submenu-link {{ request()->routeIs('purchase.ledger') ? 'active' : '' }}">Purchase Ledger (Tally)</a>
+              <a href="{{ route('purchase.orders.index') }}" class="submenu-link {{ request()->routeIs('purchase.orders.*') ? 'active' : '' }}">Purchase Entries</a>
               <a href="{{ route('purchase.payment-mapping') }}" class="submenu-link {{ request()->routeIs('purchase.payment-mapping') ? 'active' : '' }}">Payment Mapping</a>
             </div>
           </div>
@@ -470,13 +450,21 @@
   </script>
   @endif
 
+  <!-- SweetAlert2 library with fallback -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script>
+    if (typeof Swal === 'undefined') {
+      document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/sweetalert2/11.10.7/sweetalert2.all.min.js"><\/script>');
+    }
+  </script>
+
   <!-- Core ERP Client Utilities (Modals, Toasts, Table Filters, CSV Export, Print, QR Helpers) -->
-  <script src="{{ asset('js/data.js') }}?v={{ time() }}"></script>
-  <script src="{{ asset('js/state.js') }}?v={{ time() }}"></script>
-  <script src="{{ asset('js/components.js') }}?v={{ time() }}"></script>
-  <script src="{{ asset('js/charts.js') }}?v={{ time() }}"></script>
-  <script src="{{ asset('js/qr.js') }}?v={{ time() }}"></script>
-  <script src="{{ asset('js/blade-shell.js') }}?v={{ time() }}"></script>
+  <script src="{{ asset('js/data.js') }}?v=1.2"></script>
+  <script src="{{ asset('js/state.js') }}?v=1.2"></script>
+  <script src="{{ asset('js/components.js') }}?v=1.2"></script>
+  <script src="{{ asset('js/charts.js') }}?v=1.2"></script>
+  <script src="{{ asset('js/qr.js') }}?v=1.2"></script>
+  <script src="{{ asset('js/blade-shell.js') }}?v=1.2"></script>
 
   <script>
     // Global SweetAlert Toast Configuration

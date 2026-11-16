@@ -136,6 +136,7 @@ class AdminController extends Controller
         }
 
         try {
+            \Illuminate\Support\Facades\Cache::forget('company_settings_shared');
             \Illuminate\Support\Facades\Artisan::call('view:clear');
         } catch (\Throwable $e) {}
 
