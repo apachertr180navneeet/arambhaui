@@ -63,13 +63,38 @@
   }
   .se-item-entry-grid {
     display: grid;
-    grid-template-columns: 2.3fr 1fr 1.1fr 1fr 0.9fr 1.1fr auto auto;
-    gap: 10px;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 12px 14px;
     align-items: flex-end;
   }
-  @media (max-width: 1200px) {
+  .se-col-item { grid-column: span 6; }
+  .se-col-rate { grid-column: span 3; }
+  .se-col-unit { grid-column: span 3; }
+  .se-col-qty  { grid-column: span 3; }
+  .se-col-than { grid-column: span 2; }
+  .se-col-tax  { grid-column: span 2; }
+  .se-col-btn  { grid-column: span 3; }
+  .se-col-more { grid-column: span 2; }
+
+  @media (max-width: 992px) {
     .se-item-entry-grid {
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      grid-template-columns: repeat(6, 1fr);
+    }
+    .se-col-item { grid-column: span 6 !important; }
+    .se-col-rate { grid-column: span 3 !important; }
+    .se-col-unit { grid-column: span 3 !important; }
+    .se-col-qty  { grid-column: span 3 !important; }
+    .se-col-than { grid-column: span 3 !important; }
+    .se-col-tax  { grid-column: span 2 !important; }
+    .se-col-btn  { grid-column: span 2 !important; }
+    .se-col-more { grid-column: span 2 !important; }
+  }
+  @media (max-width: 640px) {
+    .se-item-entry-grid {
+      grid-template-columns: 1fr;
+    }
+    .se-col-item, .se-col-rate, .se-col-unit, .se-col-qty, .se-col-than, .se-col-tax, .se-col-btn, .se-col-more {
+      grid-column: span 1 !important;
     }
   }
   .se-table th {
@@ -330,8 +355,8 @@
       <div class="se-item-entry-panel">
         <div class="se-item-entry-grid">
           
-          <!-- Item Master Dropdown (Raw + Finished) -->
-          <div class="form-group" style="margin-bottom:0;">
+          <!-- LINE 1: Item Master Dropdown (Raw + Finished) -->
+          <div class="form-group se-col-item" style="margin-bottom:0;">
             <label class="form-label" style="font-weight:700; font-size:0.8rem; color:#475569; margin-bottom:4px;">
               Item (Item Master: Raw + Finished)
             </label>
@@ -359,8 +384,8 @@
             </select>
           </div>
 
-          <!-- Rate -->
-          <div class="form-group" style="margin-bottom:0;">
+          <!-- LINE 1: Rate -->
+          <div class="form-group se-col-rate" style="margin-bottom:0;">
             <label class="form-label" style="font-weight:700; font-size:0.8rem; color:#475569; margin-bottom:4px;">
               Rate (₹)
             </label>
@@ -374,8 +399,22 @@
                    oninput="calculateEntryPreview()">
           </div>
 
-          <!-- Qty -->
-          <div class="form-group" style="margin-bottom:0;">
+          <!-- LINE 1: Unit Dropdown -->
+          <div class="form-group se-col-unit" style="margin-bottom:0;">
+            <label class="form-label" style="font-weight:700; font-size:0.8rem; color:#475569; margin-bottom:4px;">
+              Unit
+            </label>
+            <select id="entry-unit" class="form-control" style="font-weight:600;">
+              <option value="MTR" selected>MTR</option>
+              <option value="PCS">PCS</option>
+              <option value="KG">KG</option>
+              <option value="YDS">YDS</option>
+              <option value="SET">SET</option>
+            </select>
+          </div>
+
+          <!-- LINE 2: Qty -->
+          <div class="form-group se-col-qty" style="margin-bottom:0;">
             <label class="form-label" style="font-weight:700; font-size:0.8rem; color:#475569; margin-bottom:4px;">
               Qty
             </label>
@@ -389,8 +428,8 @@
                    oninput="calculateEntryPreview()">
           </div>
 
-          <!-- Than Modal Button (+) -->
-          <div class="form-group" style="margin-bottom:0;">
+          <!-- LINE 2: Than Modal Button (+) -->
+          <div class="form-group se-col-than" style="margin-bottom:0;">
             <label class="form-label" style="font-weight:700; font-size:0.8rem; color:#475569; margin-bottom:4px; display:flex; justify-content:space-between;">
               <span>Multiple Than</span>
             </label>
@@ -398,28 +437,14 @@
                     id="entry-than-btn" 
                     class="btn btn-secondary w-full" 
                     onclick="openEntryThanModal()" 
-                    style="width:100%; font-weight:700; padding:8px 10px; background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; display:inline-flex; align-items:center; justify-content:center; gap:6px;">
+                    style="width:100%; height:38px; font-weight:700; padding:8px 10px; background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; display:inline-flex; align-items:center; justify-content:center; gap:6px;">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               <span id="entry-than-btn-text">Than</span>
             </button>
           </div>
 
-          <!-- Unit Dropdown -->
-          <div class="form-group" style="margin-bottom:0;">
-            <label class="form-label" style="font-weight:700; font-size:0.8rem; color:#475569; margin-bottom:4px;">
-              Unit
-            </label>
-            <select id="entry-unit" class="form-control" style="font-weight:600;">
-              <option value="MTR" selected>MTR</option>
-              <option value="PCS">PCS</option>
-              <option value="KG">KG</option>
-              <option value="YDS">YDS</option>
-              <option value="SET">SET</option>
-            </select>
-          </div>
-
-          <!-- Tax % -->
-          <div class="form-group" style="margin-bottom:0;">
+          <!-- LINE 2: Tax % -->
+          <div class="form-group se-col-tax" style="margin-bottom:0;">
             <label class="form-label" style="font-weight:700; font-size:0.8rem; color:#475569; margin-bottom:4px;">
               Tax %
             </label>
@@ -431,24 +456,24 @@
             </select>
           </div>
 
-          <!-- Add Item Button -->
-          <div>
+          <!-- LINE 2: Add Item Button -->
+          <div class="se-col-btn">
             <button type="button" 
                     id="btn-add-item" 
                     class="btn btn-primary" 
                     onclick="addItemToSalesTable()" 
-                    style="font-weight:700; padding:8px 16px; background:#2563eb; display:inline-flex; align-items:center; gap:6px; white-space:nowrap;">
+                    style="width:100%; height:38px; font-weight:700; padding:8px 16px; background:#2563eb; display:inline-flex; align-items:center; justify-content:center; gap:6px; white-space:nowrap;">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               Add Item
             </button>
           </div>
 
-          <!-- Add More Button (Opens Modal) -->
-          <div>
+          <!-- LINE 2: Add More Button (Opens Modal) -->
+          <div class="se-col-more">
             <button type="button" 
                     class="btn btn-secondary" 
                     onclick="openBulkItemsModal()" 
-                    style="font-weight:700; padding:8px 14px; background:#f8fafc; color:#0f172a; border:1px solid #cbd5e1; display:inline-flex; align-items:center; gap:6px; white-space:nowrap;"
+                    style="width:100%; height:38px; font-weight:700; padding:8px 14px; background:#f8fafc; color:#0f172a; border:1px solid #cbd5e1; display:inline-flex; align-items:center; justify-content:center; gap:6px; white-space:nowrap;"
                     title="Add multiple items together via popup modal">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="8" height="8" x="3" y="3" rx="1"/><rect width="8" height="8" x="13" y="3" rx="1"/><rect width="8" height="8" x="3" y="13" rx="1"/><rect width="8" height="8" x="13" y="13" rx="1"/></svg>
               Add more

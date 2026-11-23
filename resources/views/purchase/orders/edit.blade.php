@@ -110,13 +110,36 @@
   }
   .pe-item-entry-grid {
     display: grid;
-    grid-template-columns: 2.2fr 1fr 1.1fr 1fr 0.9fr 1.1fr auto;
-    gap: 12px;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 12px 14px;
     align-items: flex-end;
   }
-  @media (max-width: 1100px) {
+  .pe-col-item  { grid-column: span 6; }
+  .pe-col-rate  { grid-column: span 3; }
+  .pe-col-unit  { grid-column: span 3; }
+  .pe-col-qty   { grid-column: span 4; }
+  .pe-col-tax   { grid-column: span 2; }
+  .pe-col-total { grid-column: span 3; }
+  .pe-col-btn   { grid-column: span 3; }
+
+  @media (max-width: 992px) {
     .pe-item-entry-grid {
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      grid-template-columns: repeat(6, 1fr);
+    }
+    .pe-col-item  { grid-column: span 6; }
+    .pe-col-rate  { grid-column: span 3; }
+    .pe-col-unit  { grid-column: span 3; }
+    .pe-col-qty   { grid-column: span 3; }
+    .pe-col-tax   { grid-column: span 3; }
+    .pe-col-total { grid-column: span 3; }
+    .pe-col-btn   { grid-column: span 3; }
+  }
+  @media (max-width: 640px) {
+    .pe-item-entry-grid {
+      grid-template-columns: 1fr;
+    }
+    .pe-col-item, .pe-col-rate, .pe-col-unit, .pe-col-qty, .pe-col-tax, .pe-col-total, .pe-col-btn {
+      grid-column: span 1 !important;
     }
   }
   .pe-table th {
@@ -306,8 +329,8 @@
 
         <div class="pe-item-entry-grid">
           
-          <!-- Fabric / Item Dropdown -->
-          <div>
+          <!-- LINE 1: Fabric / Item Dropdown -->
+          <div class="pe-col-item">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
               <label class="form-label" style="font-size:0.75rem; font-weight:700; margin:0; color:#334155;">Fabric / Item (Item Master) <span style="color:#ef4444;">*</span></label>
               <a href="{{ route('masters.items.index') }}" target="_blank" style="font-size:0.7rem; color:#2563eb; text-decoration:none; font-weight:600;">+ New Item</a>
@@ -322,8 +345,8 @@
             </select>
           </div>
 
-          <!-- Rate Input -->
-          <div>
+          <!-- LINE 1: Rate Input -->
+          <div class="pe-col-rate">
             <label class="form-label" style="font-size:0.75rem; font-weight:700; margin-bottom:4px; color:#334155;">Rate (₹) <span style="color:#ef4444;">*</span></label>
             <div style="position:relative;">
               <span style="position:absolute; left:10px; top:50%; transform:translateY(-50%); font-weight:700; color:#64748b; font-size:0.8rem;">₹</span>
@@ -331,21 +354,8 @@
             </div>
           </div>
 
-          <!-- Quantity Input with Than Modal Trigger -->
-          <div>
-            <label class="form-label" style="font-size:0.75rem; font-weight:700; margin-bottom:4px; color:#334155;">Qty <span style="color:#ef4444;">*</span></label>
-            <div style="display:flex; align-items:center; gap:4px;">
-              <input type="number" id="entry-qty" class="form-control" step="0.01" min="0.01" placeholder="0.00" oninput="onEntryQtyManualInput()" style="font-weight:800; color:#059669; font-size:0.95rem;">
-              <!-- Add Multiple Than Button (Single clean plus icon) -->
-              <button type="button" class="btn btn-secondary btn-sm" onclick="openEntryThanModal()" title="Add / Paste multiple than meter readings" style="padding:6px 10px; font-size:0.75rem; font-weight:800; background:#eff6ff; color:#2563eb; border-color:#bfdbfe; white-space:nowrap; display:inline-flex; align-items:center; gap:4px;">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                <span id="entry-than-btn-text">Than</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- Unit Dropdown -->
-          <div>
+          <!-- LINE 1: Unit Dropdown -->
+          <div class="pe-col-unit">
             <label class="form-label" style="font-size:0.75rem; font-weight:700; margin-bottom:4px; color:#334155;">Unit</label>
             <select id="entry-unit" class="form-control" style="font-weight:700; font-size:0.85rem;">
               <option value="MTR" selected>MTR (Meters)</option>
@@ -357,8 +367,21 @@
             </select>
           </div>
 
-          <!-- Tax % Dropdown -->
-          <div>
+          <!-- LINE 2: Quantity Input with Than Modal Trigger -->
+          <div class="pe-col-qty">
+            <label class="form-label" style="font-size:0.75rem; font-weight:700; margin-bottom:4px; color:#334155;">Qty <span style="color:#ef4444;">*</span></label>
+            <div style="display:flex; align-items:center; gap:4px;">
+              <input type="number" id="entry-qty" class="form-control" step="0.01" min="0.01" placeholder="0.00" oninput="onEntryQtyManualInput()" style="font-weight:800; color:#059669; font-size:0.95rem;">
+              <!-- Add Multiple Than Button (Single clean plus icon) -->
+              <button type="button" class="btn btn-secondary btn-sm" onclick="openEntryThanModal()" title="Add / Paste multiple than meter readings" style="padding:6px 10px; font-size:0.75rem; font-weight:800; background:#eff6ff; color:#2563eb; border-color:#bfdbfe; white-space:nowrap; display:inline-flex; align-items:center; gap:4px;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <span id="entry-than-btn-text">Than</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- LINE 2: Tax % Dropdown -->
+          <div class="pe-col-tax">
             <label class="form-label" style="font-size:0.75rem; font-weight:700; margin-bottom:4px; color:#334155;">Tax %</label>
             <select id="entry-tax" class="form-control" onchange="calculateEntryPreview()" style="font-weight:700; font-size:0.85rem;">
               <option value="5" selected>5%</option>
@@ -368,17 +391,17 @@
             </select>
           </div>
 
-          <!-- Line Preview Info (Amt + Tax) -->
-          <div>
+          <!-- LINE 2: Line Preview Info (Amt + Tax) -->
+          <div class="pe-col-total">
             <label class="form-label" style="font-size:0.75rem; font-weight:700; margin-bottom:4px; color:#334155;">Line Total</label>
             <div id="entry-preview-total" style="height:38px; display:flex; align-items:center; font-weight:800; font-size:0.95rem; color:#1e293b; background:#ffffff; border:1px solid #cbd5e1; border-radius:6px; padding:0 10px;">
               ₹0.00
             </div>
           </div>
 
-          <!-- Add Item / Add More Button -->
-          <div>
-            <button type="button" id="btn-add-item-to-table" class="btn btn-primary" onclick="addItemToTable()" style="height:38px; font-weight:700; display:inline-flex; align-items:center; gap:6px; white-space:nowrap; padding:0 18px; box-shadow:0 2px 6px rgba(37, 99, 235, 0.25);">
+          <!-- LINE 2: Add Item Button -->
+          <div class="pe-col-btn">
+            <button type="button" id="btn-add-item-to-table" class="btn btn-primary" onclick="addItemToTable()" style="height:38px; width:100%; font-weight:700; display:inline-flex; align-items:center; justify-content:center; gap:6px; white-space:nowrap; padding:0 18px; box-shadow:0 2px 6px rgba(37, 99, 235, 0.25);">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               <span>Add Item</span>
             </button>

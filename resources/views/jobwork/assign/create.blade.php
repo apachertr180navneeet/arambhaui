@@ -80,13 +80,36 @@
   }
   .jwo-item-entry-grid {
     display: grid;
-    grid-template-columns: 2fr 2fr 1fr 1fr 1fr 1.1fr auto;
-    gap: 10px;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 12px 14px;
     align-items: flex-end;
   }
-  @media (max-width: 1200px) {
+  .jwo-col-raw      { grid-column: span 6; }
+  .jwo-col-finished { grid-column: span 6; }
+  .jwo-col-qty      { grid-column: span 3; }
+  .jwo-col-than     { grid-column: span 2; }
+  .jwo-col-waste    { grid-column: span 2; }
+  .jwo-col-date     { grid-column: span 3; }
+  .jwo-col-btn      { grid-column: span 2; }
+
+  @media (max-width: 992px) {
     .jwo-item-entry-grid {
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      grid-template-columns: repeat(6, 1fr);
+    }
+    .jwo-col-raw      { grid-column: span 6 !important; }
+    .jwo-col-finished { grid-column: span 6 !important; }
+    .jwo-col-qty      { grid-column: span 3 !important; }
+    .jwo-col-than     { grid-column: span 3 !important; }
+    .jwo-col-waste    { grid-column: span 2 !important; }
+    .jwo-col-date     { grid-column: span 2 !important; }
+    .jwo-col-btn      { grid-column: span 2 !important; }
+  }
+  @media (max-width: 640px) {
+    .jwo-item-entry-grid {
+      grid-template-columns: 1fr;
+    }
+    .jwo-col-raw, .jwo-col-finished, .jwo-col-qty, .jwo-col-than, .jwo-col-waste, .jwo-col-date, .jwo-col-btn {
+      grid-column: span 1 !important;
     }
   }
   .jwo-table th {
@@ -272,8 +295,8 @@
       <div class="jwo-item-entry-panel">
         <div class="jwo-item-entry-grid">
           
-          <!-- Delivered item (Item Master filtered by Raw) -->
-          <div class="form-group" style="margin-bottom:0;">
+          <!-- LINE 1: Delivered item (Item Master filtered by Raw) -->
+          <div class="form-group jwo-col-raw" style="margin-bottom:0;">
             <label class="form-label" style="font-weight:700; font-size:0.8rem; color:#475569; margin-bottom:4px;">
               Delivered item (Raw) <span style="color:#ef4444;">*</span>
             </label>
@@ -291,8 +314,8 @@
             </select>
           </div>
 
-          <!-- Recd item (Item Master filtered by Finished) -->
-          <div class="form-group" style="margin-bottom:0;">
+          <!-- LINE 1: Recd item (Finished Goods) -->
+          <div class="form-group jwo-col-finished" style="margin-bottom:0;">
             <label class="form-label" style="font-weight:700; font-size:0.8rem; color:#475569; margin-bottom:4px;">
               Recd item (Finished) <span style="color:#ef4444;">*</span>
             </label>
@@ -309,8 +332,8 @@
             </select>
           </div>
 
-          <!-- Qty (Raw Delivered Quantity / Meters) -->
-          <div class="form-group" style="margin-bottom:0;">
+          <!-- LINE 2: Qty (Raw Delivered Quantity / Meters) -->
+          <div class="form-group jwo-col-qty" style="margin-bottom:0;">
             <label class="form-label" style="font-weight:700; font-size:0.8rem; color:#475569; margin-bottom:4px;">
               Qty (Raw Mtr)
             </label>
@@ -324,8 +347,8 @@
                    oninput="onEntryQtyInput()">
           </div>
 
-          <!-- Multiple Than Modal Button (+) & Than Input -->
-          <div class="form-group" style="margin-bottom:0;">
+          <!-- LINE 2: Multiple Than Modal Button (+) & Than Input -->
+          <div class="form-group jwo-col-than" style="margin-bottom:0;">
             <label class="form-label" style="font-weight:700; font-size:0.8rem; color:#475569; margin-bottom:4px; display:flex; justify-content:space-between;">
               <span>Than</span>
               <a href="javascript:void(0)" onclick="openEntryThanModal()" style="font-size:0.75rem; color:#2563eb; text-decoration:none;" title="Add multiple than roll readings">+ Breakdown</a>
@@ -349,8 +372,8 @@
             </div>
           </div>
 
-          <!-- Expected waste (Auto-calculated / percentage) -->
-          <div class="form-group" style="margin-bottom:0;">
+          <!-- LINE 2: Expected waste (Auto-calculated / percentage) -->
+          <div class="form-group jwo-col-waste" style="margin-bottom:0;">
             <label class="form-label" style="font-weight:700; font-size:0.8rem; color:#475569; margin-bottom:4px;">
               Expected waste
             </label>
@@ -369,8 +392,8 @@
             </div>
           </div>
 
-          <!-- Delivery Date -->
-          <div class="form-group" style="margin-bottom:0;">
+          <!-- LINE 2: Delivery Date -->
+          <div class="form-group jwo-col-date" style="margin-bottom:0;">
             <label class="form-label" style="font-weight:700; font-size:0.8rem; color:#475569; margin-bottom:4px;">
               Delivery Date
             </label>
@@ -381,13 +404,13 @@
                    style="font-weight:600;">
           </div>
 
-          <!-- Add Item Button -->
-          <div>
+          <!-- LINE 2: Add Item Button -->
+          <div class="jwo-col-btn">
             <button type="button" 
                     id="btn-add-jwo-item" 
                     class="btn btn-primary" 
                     onclick="addItemToJobOrderTable()" 
-                    style="font-weight:700; padding:8px 18px; background:#2563eb; display:inline-flex; align-items:center; gap:6px; white-space:nowrap;">
+                    style="width:100%; height:38px; font-weight:700; padding:8px 18px; background:#2563eb; display:inline-flex; align-items:center; justify-content:center; gap:6px; white-space:nowrap;">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               Add Item
             </button>

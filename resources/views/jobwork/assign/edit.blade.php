@@ -110,9 +110,37 @@
   }
   .jwo-item-entry-grid {
     display: grid;
-    grid-template-columns: 1.8fr 1.8fr 1fr 44px 1fr 1fr 1.1fr auto;
-    gap: 10px;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 12px 14px;
     align-items: flex-end;
+  }
+  .jwo-col-raw      { grid-column: span 6; }
+  .jwo-col-finished { grid-column: span 6; }
+  .jwo-col-qty      { grid-column: span 3; }
+  .jwo-col-than     { grid-column: span 2; }
+  .jwo-col-waste    { grid-column: span 2; }
+  .jwo-col-date     { grid-column: span 3; }
+  .jwo-col-btn      { grid-column: span 2; }
+
+  @media (max-width: 992px) {
+    .jwo-item-entry-grid {
+      grid-template-columns: repeat(6, 1fr);
+    }
+    .jwo-col-raw      { grid-column: span 6 !important; }
+    .jwo-col-finished { grid-column: span 6 !important; }
+    .jwo-col-qty      { grid-column: span 3 !important; }
+    .jwo-col-than     { grid-column: span 3 !important; }
+    .jwo-col-waste    { grid-column: span 2 !important; }
+    .jwo-col-date     { grid-column: span 2 !important; }
+    .jwo-col-btn      { grid-column: span 2 !important; }
+  }
+  @media (max-width: 640px) {
+    .jwo-item-entry-grid {
+      grid-template-columns: 1fr;
+    }
+    .jwo-col-raw, .jwo-col-finished, .jwo-col-qty, .jwo-col-than, .jwo-col-waste, .jwo-col-date, .jwo-col-btn {
+      grid-column: span 1 !important;
+    }
   }
   .jwo-table {
     width: 100%;
@@ -225,9 +253,6 @@
     .jwo-header-grid {
       grid-template-columns: 1fr;
     }
-    .jwo-item-entry-grid {
-      grid-template-columns: 1fr 1fr;
-    }
     .jwo-bottom-grid {
       grid-template-columns: 1fr;
     }
@@ -329,8 +354,8 @@
     <div class="jwo-item-entry-panel">
       <div class="jwo-item-entry-grid">
         
-        <!-- Delivered item (Item Master filtered by Raw) -->
-        <div class="form-group" style="margin-bottom:0;">
+        <!-- LINE 1: Delivered item (Item Master filtered by Raw) -->
+        <div class="form-group jwo-col-raw" style="margin-bottom:0;">
           <label class="form-label" style="font-weight:700; font-size:0.8rem; color:#475569; margin-bottom:4px;">
             Delivered item (Raw) <span style="color:#ef4444;">*</span>
           </label>
@@ -348,8 +373,8 @@
           </select>
         </div>
 
-        <!-- Recd item (Item Master filtered by Finished) -->
-        <div class="form-group" style="margin-bottom:0;">
+        <!-- LINE 1: Recd item (Item Master filtered by Finished) -->
+        <div class="form-group jwo-col-finished" style="margin-bottom:0;">
           <label class="form-label" style="font-weight:700; font-size:0.8rem; color:#475569; margin-bottom:4px;">
             Recd item (Finished) <span style="color:#ef4444;">*</span>
           </label>
@@ -366,8 +391,8 @@
           </select>
         </div>
 
-        <!-- Qty (Number input) -->
-        <div class="form-group" style="margin-bottom:0;">
+        <!-- LINE 2: Qty (Number input) -->
+        <div class="form-group jwo-col-qty" style="margin-bottom:0;">
           <label class="form-label" style="font-weight:700; font-size:0.8rem; color:#475569; margin-bottom:4px;">
             Qty (Mtr) <span style="color:#ef4444;">*</span>
           </label>
@@ -381,32 +406,32 @@
                  oninput="calculateEntryWaste()">
         </div>
 
-        <!-- + Button (supports adding multiple / than modal) -->
-        <div class="form-group" style="margin-bottom:0; display:flex; align-items:center;">
-          <button type="button" 
-                  class="btn-quick-add" 
-                  title="Add Multiple Than Breakdown" 
-                  onclick="openThanModalForEntry()">
-            +
-          </button>
-        </div>
-
-        <!-- Than (Number input) -->
-        <div class="form-group" style="margin-bottom:0;">
-          <label class="form-label" style="font-weight:700; font-size:0.8rem; color:#475569; margin-bottom:4px;">
-            Than <span style="color:#ef4444;">*</span>
+        <!-- LINE 2: Than with (+) Modal Button -->
+        <div class="form-group jwo-col-than" style="margin-bottom:0;">
+          <label class="form-label" style="font-weight:700; font-size:0.8rem; color:#475569; margin-bottom:4px; display:flex; justify-content:space-between;">
+            <span>Than <span style="color:#ef4444;">*</span></span>
+            <a href="javascript:void(0)" onclick="openThanModalForEntry()" style="font-size:0.75rem; color:#2563eb; text-decoration:none;" title="Add multiple than roll readings">+ Breakdown</a>
           </label>
-          <input type="number" 
-                 step="1" 
-                 min="1" 
-                 id="entry-than-count" 
-                 class="form-control" 
-                 placeholder="0" 
-                 style="font-weight:700; text-align:center;">
+          <div style="display:flex; gap:4px; align-items:center;">
+            <input type="number" 
+                   step="1" 
+                   min="1" 
+                   id="entry-than-count" 
+                   class="form-control" 
+                   placeholder="0" 
+                   style="font-weight:700; text-align:center;">
+            <button type="button" 
+                    class="btn btn-secondary btn-sm" 
+                    onclick="openThanModalForEntry()" 
+                    style="padding:7px 10px; background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; font-weight:800;" 
+                    title="Add Multiple Than Breakdown">
+              +
+            </button>
+          </div>
         </div>
 
-        <!-- Expected waste (Auto-calculated read-only) -->
-        <div class="form-group" style="margin-bottom:0;">
+        <!-- LINE 2: Expected waste (Auto-calculated read-only) -->
+        <div class="form-group jwo-col-waste" style="margin-bottom:0;">
           <label class="form-label" style="font-weight:700; font-size:0.8rem; color:#475569; margin-bottom:4px;">
             Expected waste (Auto)
           </label>
@@ -421,8 +446,8 @@
                  style="background:#f1f5f9; font-weight:700; text-align:right; color:#d97706;">
         </div>
 
-        <!-- Delivery Date -->
-        <div class="form-group" style="margin-bottom:0;">
+        <!-- LINE 2: Delivery Date -->
+        <div class="form-group jwo-col-date" style="margin-bottom:0;">
           <label class="form-label" style="font-weight:700; font-size:0.8rem; color:#475569; margin-bottom:4px;">
             Delivery Date
           </label>
@@ -433,12 +458,12 @@
                  style="font-weight:600;">
         </div>
 
-        <!-- Add Item Button -->
-        <div class="form-group" style="margin-bottom:0;">
+        <!-- LINE 2: Add Item Button -->
+        <div class="jwo-col-btn">
           <button type="button" 
                   class="btn btn-primary" 
                   onclick="addItemToJobOrderTable()" 
-                  style="font-weight:700; padding:9px 18px; display:inline-flex; align-items:center; gap:6px;">
+                  style="width:100%; height:38px; font-weight:700; padding:8px 18px; display:inline-flex; align-items:center; justify-content:center; gap:6px; white-space:nowrap;">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
             Add Item
           </button>

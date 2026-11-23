@@ -91,9 +91,33 @@
   }
   .jwi-item-entry-grid {
     display: grid;
-    grid-template-columns: 2.2fr 1.1fr 44px 1fr 1.1fr auto;
-    gap: 12px;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 12px 14px;
     align-items: flex-end;
+  }
+  .jwi-col-item  { grid-column: span 7; }
+  .jwi-col-waste { grid-column: span 5; }
+  .jwi-col-qty   { grid-column: span 4; }
+  .jwi-col-than  { grid-column: span 4; }
+  .jwi-col-btn   { grid-column: span 4; }
+
+  @media (max-width: 992px) {
+    .jwi-item-entry-grid {
+      grid-template-columns: repeat(6, 1fr);
+    }
+    .jwi-col-item  { grid-column: span 6 !important; }
+    .jwi-col-waste { grid-column: span 6 !important; }
+    .jwi-col-qty   { grid-column: span 3 !important; }
+    .jwi-col-than  { grid-column: span 3 !important; }
+    .jwi-col-btn   { grid-column: span 6 !important; }
+  }
+  @media (max-width: 640px) {
+    .jwi-item-entry-grid {
+      grid-template-columns: 1fr;
+    }
+    .jwi-col-item, .jwi-col-waste, .jwi-col-qty, .jwi-col-than, .jwi-col-btn {
+      grid-column: span 1 !important;
+    }
   }
   .jwi-table {
     width: 100%;
@@ -204,9 +228,6 @@
   }
   @media (max-width: 992px) {
     .jwi-header-grid {
-      grid-template-columns: 1fr 1fr;
-    }
-    .jwi-item-entry-grid {
       grid-template-columns: 1fr 1fr;
     }
     .jwi-bottom-grid {
@@ -332,8 +353,8 @@
     <div class="jwi-item-entry-panel">
       <div class="jwi-item-entry-grid">
         
-        <!-- ITEM recd (Finished Goods Dropdown) -->
-        <div class="form-group" style="margin-bottom:0;">
+        <!-- LINE 1: ITEM recd (Finished Goods Dropdown) -->
+        <div class="form-group jwi-col-item" style="margin-bottom:0;">
           <label class="form-label" style="font-weight:700; font-size:0.8rem; color:#475569; margin-bottom:4px;">
             ITEM recd (Finished Goods) <span style="color:#ef4444;">*</span>
           </label>
@@ -355,46 +376,8 @@
           <input type="hidden" id="entry-rem-balance" value="0">
         </div>
 
-        <!-- Qty (Number input) -->
-        <div class="form-group" style="margin-bottom:0;">
-          <label class="form-label" style="font-weight:700; font-size:0.8rem; color:#475569; margin-bottom:4px;">
-            Qty <span style="color:#ef4444;">*</span>
-          </label>
-          <input type="number" 
-                 step="0.01" 
-                 min="0.01" 
-                 id="entry-inward-qty" 
-                 class="form-control" 
-                 placeholder="0.00" 
-                 style="font-weight:700; text-align:right;">
-        </div>
-
-        <!-- + Button (Multiple Than modal / Quick Add) -->
-        <div class="form-group" style="margin-bottom:0; display:flex; align-items:center;">
-          <button type="button" 
-                  class="btn-quick-add" 
-                  title="Add Multiple Than Breakdown" 
-                  onclick="openThanModalForEntry()">
-            +
-          </button>
-        </div>
-
-        <!-- THAN (Number input) -->
-        <div class="form-group" style="margin-bottom:0;">
-          <label class="form-label" style="font-weight:700; font-size:0.8rem; color:#475569; margin-bottom:4px;">
-            THAN <span style="color:#ef4444;">*</span>
-          </label>
-          <input type="number" 
-                 step="1" 
-                 min="0" 
-                 id="entry-than-count" 
-                 class="form-control" 
-                 placeholder="0" 
-                 style="font-weight:700; text-align:center;">
-        </div>
-
-        <!-- Actual waste (Manual number input) -->
-        <div class="form-group" style="margin-bottom:0;">
+        <!-- LINE 1: Actual waste (Manual number input) -->
+        <div class="form-group jwi-col-waste" style="margin-bottom:0;">
           <label class="form-label" style="font-weight:700; font-size:0.8rem; color:#475569; margin-bottom:4px;">
             Actual waste
           </label>
@@ -408,12 +391,50 @@
                  style="font-weight:700; text-align:right;">
         </div>
 
-        <!-- Add Item Button -->
-        <div class="form-group" style="margin-bottom:0;">
+        <!-- LINE 2: Qty with + Than Button -->
+        <div class="form-group jwi-col-qty" style="margin-bottom:0;">
+          <label class="form-label" style="font-weight:700; font-size:0.8rem; color:#475569; margin-bottom:4px; display:flex; justify-content:space-between;">
+            <span>Qty <span style="color:#ef4444;">*</span></span>
+            <a href="javascript:void(0)" onclick="openThanModalForEntry()" style="font-size:0.75rem; color:#2563eb; text-decoration:none;" title="Add multiple than roll readings">+ Than Modal</a>
+          </label>
+          <div style="display:flex; gap:6px; align-items:center;">
+            <input type="number" 
+                   step="0.01" 
+                   min="0.01" 
+                   id="entry-inward-qty" 
+                   class="form-control" 
+                   placeholder="0.00" 
+                   style="font-weight:700; text-align:right;">
+            <button type="button" 
+                    class="btn-quick-add" 
+                    title="Add Multiple Than Breakdown" 
+                    onclick="openThanModalForEntry()"
+                    style="flex-shrink:0;">
+              +
+            </button>
+          </div>
+        </div>
+
+        <!-- LINE 2: THAN (Number input) -->
+        <div class="form-group jwi-col-than" style="margin-bottom:0;">
+          <label class="form-label" style="font-weight:700; font-size:0.8rem; color:#475569; margin-bottom:4px;">
+            THAN <span style="color:#ef4444;">*</span>
+          </label>
+          <input type="number" 
+                 step="1" 
+                 min="0" 
+                 id="entry-than-count" 
+                 class="form-control" 
+                 placeholder="0" 
+                 style="font-weight:700; text-align:center;">
+        </div>
+
+        <!-- LINE 2: Add Item Button -->
+        <div class="jwi-col-btn">
           <button type="button" 
                   class="btn btn-primary" 
                   onclick="addItemToInwardTable()" 
-                  style="font-weight:700; padding:9px 18px; display:inline-flex; align-items:center; gap:6px;">
+                  style="width:100%; height:38px; font-weight:700; padding:8px 18px; display:inline-flex; align-items:center; justify-content:center; gap:6px; white-space:nowrap;">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
             Add Item
           </button>
